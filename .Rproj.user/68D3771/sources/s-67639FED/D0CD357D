@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1514934158985.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2785842051",
+    "id" : "D0CD357D",
+    "lastKnownWriteTime" : 1514934472,
+    "last_content_update" : 1514934472093,
+    "path" : "C:/GitHub/MSEtool/R/MSEtool-package.R",
+    "project_path" : "R/MSEtool-package.R",
+    "properties" : {
+        "cursorPosition" : "11,37",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
