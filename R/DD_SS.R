@@ -19,7 +19,7 @@
 #' @seealso DD_TMB
 #' @import TMB
 #' @importFrom stats nlminb
-#' @useDynLib MSEtool
+#' @useDynLib MSE
 DD_SS <- function(x, Data, reps = 100) {
   dependencies = "Data@vbLinf, Data@CV_vbLinf, Data@vbK, Data@CV_vbK, Data@vbt0, Data@CV_vbt0, Data@Mort, Data@CV_Mort, Data@wla, Data@wlb"
   Linfc <- trlnorm(reps, Data@vbLinf[x], Data@CV_vbLinf[x])
@@ -80,7 +80,6 @@ DD_SS <- function(x, Data, reps = 100) {
                    wa_DD = data$wa_DD, E_hist = data$E_hist, C_hist = data$C_hist,
                    UMSYprior = data$UMSYprior)
   TACfilter(TAC)
-
 }
 class(DD_SS) <- "Output"
 

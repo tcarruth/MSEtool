@@ -1,5 +1,5 @@
 ---
-title: "MSEtool"
+title: "MSE"
 subtitle: "Development, Testing and Implementation of Management Procedures for Data-Rich Fisheries (v1.1)"
 author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>) 
          Adrian Hordyk  (<a.hordyk@oceans.ubc.ca>),

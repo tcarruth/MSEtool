@@ -21,7 +21,7 @@
 #' @seealso DD_SS
 #' @import TMB
 #' @importFrom stats nlminb
-#' @useDynLib MSEtool
+#' @useDynLib MSE
 DD_TMB <- function(x, Data, reps = 100) {
   dependencies = "Data@vbLinf, Data@CV_vbLinf, Data@vbK, Data@CV_vbK, Data@vbt0, Data@CV_vbt0, Data@Mort, Data@CV_Mort, Data@wla, Data@wlb"
   Linfc <- trlnorm(reps, Data@vbLinf[x], Data@CV_vbLinf[x])

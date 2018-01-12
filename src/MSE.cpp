@@ -1,6 +1,5 @@
-#define TMB_LIB_INIT R_init_MSEtool
+#define TMB_LIB_INIT R_init_MSE
 #include <TMB.hpp>
-#include <cppad/cppad.hpp>
 #include "../inst/include/functions.h"
 
 template<class Type>

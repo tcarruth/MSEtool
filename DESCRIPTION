@@ -1,4 +1,4 @@
-Package: MSEtool
+Package: MSE
 Type: Package
 Title: Management Strategy Evaluation Toolkit
 Version: 1.1.0
@@ -17,4 +17,4 @@ LazyLoad: yes
 RoxygenNote: 6.0.1
 Suggests: knitr 
 VignetteBuilder: knitr
-BugReports: https://github.com/tcarruth/MSEtool/issues
+BugReports: https://github.com/tcarruth/MSE/issues
