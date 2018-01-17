@@ -13,9 +13,9 @@
 #' @param printstats Should the r4ss function SS_output return info on data that was read in?
 #' @param verbose Should the r4ss function SS_ouput return detailed messages?
 #' @author T. Carruthers
-#' @export SS2DLM
+#' @export SS2OM
 #' @importFrom r4ss SS_output
-SS2DLM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="No source provided",
+SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="No source provided",
                  Author="No author provided",printstats=F,verbose=T){
   
   message("-- Using function SS_output of package r4ss to extract data from SS file structure --")

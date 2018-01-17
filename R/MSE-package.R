@@ -1,4 +1,4 @@
-#' Management Strategy Evaluation Toolkit
+#' Management Strategy Evaluation
 #'
 #' Simulation testing and implementation of data-rich fishery management procedures
 #'

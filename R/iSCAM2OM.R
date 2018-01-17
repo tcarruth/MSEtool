@@ -22,8 +22,8 @@
 #' @importFrom coda mcmc
 #' @importFrom graphics arrows contour
 #' @importFrom stats acf aggregate qnorm window
-#' @export iSCAM2DLM
-iSCAM2DLM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No source provided",
+#' @export iSCAM2OM
+iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No source provided",
                  length_timestep=1,Author="No author provided"){
   
   message("-- Using function of Chris Grandin (DFO PBS) to extract data from iSCAM file structure --")
