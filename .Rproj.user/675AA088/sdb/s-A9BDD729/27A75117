@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "\n# === Build script for Atlantic Cod in NAFO 4X5Y =======================\n\nlibrary(DLMtool)\n\nsetwd(\"C:/Users/Tom/Dropbox/MSE EC/CS/Cod\")\n\nOM<-XL2OM(\"Cod_4X5Y_DFO.xlsx\")\nOM@nsim<-200\n\n# --- cpars --------------------------------------------------------\n\nyrs<-1970:2015\nproyears<-OM@proyears<-18\nnyears<-length(yrs)\nmaxage<-OM@maxage\nnsim<-200\n\n# get VPA selectivity and apical F\nFage<-read.csv(\"data/Fage.csv\",header=F)\n\n# Base model uses the 2-period M assumption\nFmat<-t(matrix(as.numeric(Fage[3,2:ncol(Fage)]),nrow=15)) # row 3 is the two period M model\nsel<-Fmat[,2:15]\n\nFapical<-apply(sel,1,max)\nsel<-sel/Fapical\nnyearssel<-dim(sel)[1]# == 29 == (2008-1980+1)\nnagesel<-dim(sel)[2] # == 14\n\nV <- array(NA, dim = c(nsim, maxage, nyears + proyears))\n# 1980-2008, ages 1 - 14\nVind2008<-as.matrix(expand.grid(1:nsim,1:nagesel,10+(1:nyearssel)))\nV[Vind2008]<-sel[cbind(Vind2008[,3]-10,Vind2008[,2])]\n\n# 1980-2008, ages 15-20\nVindolder<-as.matrix(expand.grid(1:nsim,(nagesel+1):maxage,10+(1:nyearssel)))\nV[Vindolder]<-V[cbind(Vindolder[,1],rep(14,nrow(Vindolder)),Vindolder[,3])]\n\n# 1970-1979, ages 1-20\nselold<-apply(V[1,,11:14],1,mean) # old selectivity is mean over first 4 years 1980-1983\nselold<-selold/max(selold)\nVindrest<-as.matrix(expand.grid(1:nsim,1:maxage,1:10))\nV[Vindrest]<-selold[Vindrest[,2]]\n\n# 2008-(2016+proyears), ages 1-20\nselrecent<-apply(V[1,,10+nyearssel+(-3:0)],1,mean) # recent selectivity is mean over last 4 years 2005-2008\nselrecent<-selrecent/max(selrecent)\nVindrest<-as.matrix(expand.grid(1:nsim,1:maxage,(10+nyearssel+1):(nyears+proyears)))\nV[Vindrest]<-selrecent[Vindrest[,2]]\n\nFtrend2015<-read.csv(\"data/Ftrend.csv\",header=F)[,2]\nFind<-array(rep(Ftrend2015,each=nsim),c(nsim,nyears))[,1:26]\nM1years<-1996-1970\nM<-c(rep(0.2,M1years ),rep(0.6,nyears+proyears-M1years))\nMarray <- array(rep(M,each=nsim), dim=c(nsim, nyears + proyears))\n\nrecdevs<-read.csv(\"data/recdevs.csv\",header=T)$recdev\nprocsd<-sd(recdevs)\nprocmu <- -0.5 * (procsd)^2  # adjusted log normal mean\nAC<-acf(recdevs)$acf[2,1,1]\n\nOM@Perr<-rep(procsd,2)\nOM@AC=rep(AC,2)\n\nPerr<-array(NA,c(nsim,nyears+proyears+maxage-1))\nPerr<-matrix(rnorm(nsim*(maxage+nyears+proyears-1),rep(procmu,maxage+nyears+proyears-1),rep(procsd,maxage+nyears+proyears-1)),nrow=nsim)\nPerr[,10+(1:nyearssel)]<-rep(recdevs,each=nsim) # generate a bunch of simulations with uncertainty\nfor (y in nyears:(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5\nPerr[,10+(1:nyearssel)]<-rep(recdevs,each=nsim) # generate a bunch of simulations with uncertainty\nPerr<-exp(Perr)\n\nOM@cpars<-list(V=V,Find=Find,Marray=Marray,Perr=Perr)\n\nnew_nyears<-sum(OM@cpars$Marray[1,]==0.2)\nnew_proyears<-OM@nyears+OM@proyears-new_nyears\nOM@proyears<-new_proyears\nOM@nyears<-new_nyears\nOM_null<-OM\nOM_alt<-OM\nOM_null@cpars$Marray<-array(0.2,dim(OM_null@cpars$Marray))\n\nsaveRDS(OM_alt, file=\"OM_alt.Rdata\")\nsaveRDS(OM_null, file=\"OM_null.Rdata\")\n\n\n# === End of OM build =============================================================================\n\n\n\n\n",
+    "created" : 1516216525562.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2246950620",
+    "id" : "27A75117",
+    "lastKnownWriteTime" : 1516230367,
+    "last_content_update" : 1516231086791,
+    "path" : "C:/Users/Tom/Dropbox/MSE EC/CS/Cod/Build.R",
+    "project_path" : null,
+    "properties" : {
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
