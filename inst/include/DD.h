@@ -1,46 +1,34 @@
+
 //template<class Type>
-//  Type objective_function<Type>::operator() ()
+//Type objective_function<Type>::operator() ()
 //{
   using namespace density;
 
-  //-------DATA-------//
-    //So_DD
   DATA_SCALAR( So_DD );
-  //Alpha_DD
   DATA_SCALAR( Alpha_DD );
-  //Rho_DD
   DATA_SCALAR( Rho_DD );
-  //ny_DD
   DATA_INTEGER( ny_DD );
-  //k_DD
   DATA_INTEGER( k_DD );
-  //wa_DD
   DATA_SCALAR( wa_DD );
-  //E_hist
   DATA_VECTOR( E_hist );
-  //C_hist
   DATA_VECTOR( C_hist );
-  //Umsy - prior
   DATA_VECTOR( UMSYprior );
 
-  //-------PARAMETERS-------//
-    //Umsy
-  PARAMETER( log_UMSY_DD );
-  //MSY
+  PARAMETER( logit_UMSY_DD );
   PARAMETER( log_MSY_DD );
-  //q
   PARAMETER( log_q_DD );
 
-  //--PARAMETER TRANSFORMATION
-  Type UMSY_DD = exp(log_UMSY_DD);
+  Type UMSY_DD = 1/(1 + exp(-logit_UMSY_DD));
   Type MSY_DD = exp(log_MSY_DD);
   Type q_DD = exp(log_q_DD);
 
-  //-------FRONT END-------//
-    //--DECLARING DERIVED VALUES
+  //--DECLARING DERIVED VALUES
   Type SS_DD = So_DD * (1 - UMSY_DD);
   Type Spr_DD = (SS_DD * Alpha_DD/(1 - SS_DD) + wa_DD)/(1 - Rho_DD * SS_DD);
-  Type DsprDu_DD = -So_DD * (Rho_DD/(1 - Rho_DD * SS_DD) * (Spr_DD + 1)/(1 - Rho_DD * SS_DD) * (Alpha_DD/(1 - SS_DD) + SS_DD * Alpha_DD/pow((1 - SS_DD),2)));
+  Type DsprDu_DD = (Alpha_DD + Spr_DD * (1 + Rho_DD - 2 * Rho_DD * SS_DD))/((1 - Rho_DD * SS_DD) * (1 - SS_DD));
+  DsprDu_DD += Alpha_DD * SS_DD/((1 - Rho_DD * SS_DD) * pow(1 - SS_DD, 2));
+  DsprDu_DD -= Spr_DD/(1 - SS_DD);
+  DsprDu_DD *= -So_DD;
   Type Arec_DD = 1/(pow(1 - UMSY_DD,2) * (Spr_DD + UMSY_DD * DsprDu_DD));
   Type Brec_DD = UMSY_DD * (Arec_DD * Spr_DD - 1/(1 - UMSY_DD))/MSY_DD;
   Type Spr0_DD = (So_DD * Alpha_DD/(1 - So_DD) + wa_DD)/(1 - Rho_DD * So_DD);
@@ -54,35 +42,39 @@
   vector<Type> B_DD(ny_DDp);
   vector<Type> N_DD(ny_DDp);
   vector<Type> R_DD(ny_DDk);
-  vector<Type> Rec_dev_DD(ny_DDp);
+
+  vector<Type> Surv_DD(ny_DD);
+  vector<Type> Cpred_DD(ny_DD);
+  vector<Type> Sp_DD(ny_DD);
+  vector<Type> U_DD(ny_DD);
+  vector<Type> relU_DD(ny_DD);
 
   //--INITIALIZE
   B_DD(0) = Bo_DD;
   N_DD(0) = No_DD;
-  R_DD.fill(Ro_DD);
-
-  //--STORAGE VECTORS
-  vector<Type> Surv_DD(ny_DD);
-  vector<Type> Cpred_DD(ny_DD);
-  vector<Type> Sp_DD(ny_DD);
+  for(int tt=0;tt<k_DD;tt++) R_DD(tt) = Ro_DD;
 
   for(int tt=0; tt<ny_DD; tt++){
-    Surv_DD(tt) = So_DD * exp(-q_DD * E_hist(tt));
-    //Cpred_DD(tt) = B_DD(tt) * (1 - exp(-q_DD * E_hist(tt)));
-    //Cpred TRAP
-    //if(Cpred_DD(tt) < tiny) Cpred_DD(tt) = tiny;
-    Cpred_DD(tt) = CppAD::CondExpGt(B_DD(tt) * (1 - exp(-q_DD * E_hist(tt))), Type(1e-15), B_DD(tt) * (1 - exp(-q_DD * E_hist(tt))), Type(1e-15));
+    U_DD(tt) = 1 - exp(-q_DD * E_hist(tt));
+    relU_DD(tt) = U_DD(tt)/UMSY_DD;
+    Surv_DD(tt) = So_DD * (1 - U_DD(tt));
+    Cpred_DD(tt) = CppAD::CondExpGt(U_DD(tt) * B_DD(tt), Type(1e-15), U_DD(tt) * B_DD(tt), Type(1e-15));
     Sp_DD(tt) = B_DD(tt) - Cpred_DD(tt);
 
-    R_DD[tt + k_DD] = Arec_DD * Sp_DD(tt)/(1 + Brec_DD * Sp_DD(tt));
-    B_DD[tt + 1] = Surv_DD(tt) * (Alpha_DD * N_DD(tt) + Rho_DD * B_DD(tt)) + wa_DD * R_DD[tt + 1];
-    N_DD[tt + 1] = Surv_DD(tt) * N_DD(tt) + R_DD[tt + 1];
+    R_DD(tt + k_DD) = Arec_DD * Sp_DD(tt)/(1 + Brec_DD * Sp_DD(tt));
+    B_DD(tt + 1) = Surv_DD(tt) * (Alpha_DD * N_DD(tt) + Rho_DD * B_DD(tt)) + wa_DD * R_DD(tt + 1);
+    N_DD(tt + 1) = Surv_DD(tt) * N_DD(tt) + R_DD(tt + 1);
   }
 
   //--ARGUMENTS FOR NLL
-  vector<Type> lCpred_DD = log(Cpred_DD);
-  vector<Type> lC_hist = log(C_hist);
-  Type lUMSYprior = log(UMSYprior(0));
+  Type sigma = calc_sigma(C_hist, Cpred_DD);
+
+  // The following conditions must be met for positive values
+  // of Arec_DD and Brec_DD, respectively:
+  // umsy * DsprDu + Spr_DD > 0 and Arec_DD * Spr_DD * (1 - UMSY_DD) - 1 > 0
+  // Thus, create a likelihood penalty of 1000 when either condition is not met
+  Type penalty = CppAD::CondExpGt(Spr_DD + UMSY_DD * DsprDu_DD, Type(0), Type(0), Type(UMSY_DD * 1e3));
+  penalty += CppAD::CondExpGt(Arec_DD * Spr_DD * (1 - UMSY_DD) - 1, Type(0), Type(0), Type(UMSY_DD * 1e3));
 
   // Objective function
   //creates storage for jnll and sets value to 0
@@ -90,17 +82,21 @@
   jnll_comp.setZero();
 
   for(int tt=0; tt<ny_DD; tt++){
-    jnll_comp(0) -= dnorm(lCpred_DD(tt), lC_hist(tt), Type(0.25), true);
+    jnll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred_DD(tt)), sigma, true);
   }
-  jnll_comp(1) -= dlognorm(UMSY_DD, lUMSYprior, UMSYprior(1), true);
+  jnll_comp(1) -= dbeta(UMSY_DD, UMSYprior(0), UMSYprior(1), true);
 
-  //Summing individual jnll
-  Type jnll = jnll_comp.sum();
+  //Summing individual jnll and penalties
+  Type jnll = jnll_comp.sum() + penalty;
 
   //-------REPORTING-------//
+  Type TAC = UMSY_DD * B_DD(ny_DD);
+  Type h = Arec_DD * (0.2 * Bo_DD)/(1 + Brec_DD * (0.2 * Bo_DD))/Ro_DD;
+
   ADREPORT( UMSY_DD );
   ADREPORT( MSY_DD );
   ADREPORT( q_DD );
+  REPORT( sigma );
   REPORT( jnll_comp );
   REPORT( jnll );
   REPORT( Arec_DD );
@@ -112,6 +108,14 @@
   REPORT( B_DD );
   REPORT( N_DD );
   REPORT( R_DD );
+  REPORT( U_DD );
+  REPORT( relU_DD );
+  REPORT( TAC );
+  REPORT( h );
+  REPORT( Ro_DD );
+  REPORT( No_DD );
+  REPORT( Bo_DD );
+  REPORT( penalty );
 
   return jnll;
-//  }
+//}
