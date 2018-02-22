@@ -1,39 +1,36 @@
-#' (In development) State Space Delay - Difference Stock Assessment with UMSY and MSY leading using TMB
+#' State-Space Delay-Difference Stock Assessment in TMB with UMSY and MSY as leading parameters
 #'
-#' A state-space delay-difference assessment that estimates the TAC (with recruitment deviations
-#' as a state space variable) using a time-series of catches and a relative abundance index and coded with TMB
+#' A delay-difference assessment that estimates the TAC using a
+#' time-series of catches and a relative abundance index and coded in TMB.
+#' Recruitment deviations from the stock-recruit relationship are estimated as a
+#' state space variable. The model is conditioned on effort and estimates
+#' predicted catch.
 #'
 #' @param x A position in a data-limited methods data object
 #' @param Data A data-limited methods data object
 #' @param reps The number of stochastic samples of the TAC recommendation
-#' @return A numeric vector of TAC recommendations
+#' @param report Indicates whether report will be produced for Data object.
+#' @return A numeric vector of TAC recommendations. If \code{report = TRUE}, a list of
+#' model and TAC output is returned.
 #' @note Similar to many other assessment
-#' models it depends on a whole host of dubious assumptions such as temporally
-#' stationary productivity and proportionality between the abundance index and
-#' real abundance. Unsurprisingly the extent to which these assumptions are
+#' models it depends on assumptions such as stationary productivity and
+#' proportionality between the abundance index and real abundance.
+#' Unsurprisingly the extent to which these assumptions are
 #' violated tends to be the biggest driver of performance for this method.
-#' @author T. Carruthers & Z. Siders. Zach Siders coded the TMB function
+#' The observation error standard deviation is fixed according to the
+#' presumed CV of the catch and the process error (recruitment) standard deviation
+#' is estimated.
+#' @author Q. Huynh
 #' @references Method based on equations of Carl Walters (bug him with
-#' questions and expect colourful responses)
+#' questions and expect colourful responses).
 #' @export DD_SS
-#' @seealso DD_TMB
+#' @seealso \code{\link{DD_TMB}}
 #' @import TMB
 #' @importFrom stats nlminb
-#' @useDynLib MSEtool
-DD_SS <- function(x, Data, reps = 100) {
-  dependencies = "Data@vbLinf, Data@CV_vbLinf, Data@vbK, Data@CV_vbK, Data@vbt0, Data@CV_vbt0, Data@Mort, Data@CV_Mort, Data@wla, Data@wlb"
-  Linfc <- trlnorm(reps, Data@vbLinf[x], Data@CV_vbLinf[x])
-  Kc <- trlnorm(reps, Data@vbK[x], Data@CV_vbK[x])
-  if (Data@vbt0[x] != 0 & Data@CV_vbt0[x] != tiny) {
-    t0c <- -trlnorm(reps, -Data@vbt0[x], Data@CV_vbt0[x])
-  } else {
-    t0c <- rep(Data@vbt0[x], reps)
-  }
-  t0c[!is.finite(t0c)] <- 0
-  Mdb <- trlnorm(reps, Data@Mort[x], Data@CV_Mort[x])  # CV of 0.5 as in MacCall 2009
-  a <- Data@wla[x]
-  b <- Data@wlb[x]
-
+#' @importFrom mvtnorm rmvnorm
+#' @useDynLib MSE
+DD_SS <- function(x, Data, reps = 100, report = FALSE) {
+  dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
   la <- Data@vbLinf[x] * (1 - exp(-Data@vbK[x] * ((age - Data@vbt0[x]))))
@@ -45,43 +42,53 @@ DD_SS <- function(x, Data, reps = 100) {
   E_hist <- C_hist/Data@Ind[x, yind]
   E_hist <- E_hist/mean(E_hist)
   ny_DD <- length(C_hist)
-  params <- log(c(Data@Mort[x], mean(C_hist, na.rm = T), Data@Mort[x]))
   k_DD <- ceiling(a50V)  # get age nearest to 50% vulnerability (ascending limb)
   k_DD[k_DD > Data@MaxAge/2] <- ceiling(Data@MaxAge/2)  # to stop stupidly high estimates of age at 50% vulnerability
   Rho_DD <- (wa[k_DD + 2] - Winf)/(wa[k_DD + 1] - Winf)
   Alpha_DD <- Winf * (1 - Rho_DD)
   So_DD <- exp(-Data@Mort[x])  # get So survival rate
   wa_DD <- wa[k_DD]
-  UMSYprior <- c(1 - exp(-Data@Mort[x] * 0.5), 0.3)
+  UMSYpriorpar <- c(1 - exp(-Data@Mort[x] * 0.5), 0.3) # Prior for UMSY is that corresponding to F = 0.5 M with CV = 0.3
+  UMSYprior <- c(alphaconv(UMSYpriorpar[1], prod(UMSYpriorpar)), betaconv(UMSYpriorpar[1], prod(UMSYpriorpar))) # Convert to beta parameters
+  AvC <- mean(C_hist, na.rm = TRUE)
+  sigmaC <- max(0.05, sdconv(AvC, AvC * Data@CV_Cat[x]))
 
-  data <- list(So_DD = So_DD, Alpha_DD = Alpha_DD, Rho_DD = Rho_DD, ny_DD = ny_DD, k_DD = k_DD,
+  data <- list(model = "DD_SS", So_DD = So_DD, Alpha_DD = Alpha_DD, Rho_DD = Rho_DD, ny_DD = ny_DD, k_DD = k_DD,
                wa_DD = wa_DD, E_hist = E_hist, C_hist = C_hist, UMSYprior = UMSYprior)
-  params <- list(model = "DD_SS", log_UMSY_DD = log(Data@Mort[x]),
-                 log_MSY_DD = log(mean(C_hist, na.rm = T)), log_q_DD = log(Data@Mort[x]),
-                 log_rec_dev = rep(0, ny_DD), sigma_R = 0.5)
+  params <- list(logit_UMSY_DD = log(UMSYpriorpar[1]/(1 - UMSYpriorpar[1])),
+                 log_MSY_DD = log(3 * AvC), log_q_DD = log(Data@Mort[x]),
+                 log_sigma_DD = log(sigmaC),
+                 log_tau_DD = log(0.3), log_rec_dev = rep(0, ny_DD - k_DD))
   info <- list(data = data, params = params)
 
-  browser()
+  obj <- MakeADFun(data = info$data, parameters = info$params, random = 'log_rec_dev',
+                   map = list(log_sigma_DD = factor(NA)), DLL = "MSE", silent = TRUE)
+  opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
 
-  # Fit model
-  Obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool",
-                   random = "log_rec_dev", silent = TRUE)
-  Opt <- nlminb(start = Obj$par, objective = Obj$fn, gradient = Obj$gr)
-  SD <- sdreport(Obj)
+  if(reps == 1) TAC <- obj$report()$TAC
+  if(reps > 1) {
+    SD <- sdreport(obj, getReportCovariance = FALSE)
+    samps <- rmvnorm(reps, opt$par, round(SD$cov.fixed, 4))
+    TAC <- rep(NA, reps)
+    for (i in 1:reps) {
+      params.new <- list(logit_UMSY_DD = samps[i, 1], log_MSY_DD = samps[i, 2],
+                         log_q_DD = samps[i, 3], log_sigma_DD = log(sigmaC),
+                         log_tau_DD = samps[i, 4],
+                         log_rec_dev = obj$report()$log_rec_dev)
+      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSE")
+      TAC[i] <- obj.samp$report()$TAC
+    }
+  }
+  Rec <- new("Rec")
+  Rec@TAC <- TACfilter(TAC)
 
-  SDval <- SD$value
-  SDsd <- sapply(SDval,function(x) (x^2)^0.5*0.1)
-  TAC <- rep(NA, reps)
-  samps <- cbind(rnorm(reps, SDval[1], SDsd[1]), rnorm(reps, SDval[2], SDsd[2]), rnorm(reps, SDval[3], SDsd[3]))
-  if (reps == 1)  samps <- matrix(c(SDval[1], SDval[2], SDval[3]), nrow = 1)
-  for (i in 1:reps)
-    TAC[i] <- DD_R(samps[i, ], opty = 2, So_DD = data$So_DD, Alpha_DD = data$Alpha_DD,
-                   Rho_DD = data$Rho_DD, ny_DD = data$ny_DD, k_DD = data$k_DD,
-                   wa_DD = data$wa_DD, E_hist = data$E_hist, C_hist = data$C_hist,
-                   UMSYprior = data$UMSYprior)
-  TACfilter(TAC)
-
+  if(report) {
+    return(list(Rec = Rec, TAC = TAC, info = info, obj = obj, opt = opt,
+                Data = Data, dependencies = dependencies))
+  } else {
+    return(Rec)
+  }
 }
-class(DD_SS) <- "Output"
+class(DD_SS) <- "MP"
 
 

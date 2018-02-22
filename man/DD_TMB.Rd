@@ -2,9 +2,9 @@
 % Please edit documentation in R/DD_TMB.R
 \name{DD_TMB}
 \alias{DD_TMB}
-\title{(In development) Delay - Difference Stock Assessment with UMSY and MSY leading using TMB}
+\title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, reps = 100)
+DD_TMB(x, Data, reps = 100, report = FALSE)
 }
 \arguments{
 \item{x}{A position in a data-limited methods data object}
@@ -12,28 +12,32 @@ DD_TMB(x, Data, reps = 100)
 \item{Data}{A data-limited methods data object}
 
 \item{reps}{The number of stochastic samples of the TAC recommendation}
+
+\item{report}{Indicates whether report will be produced for Data object.}
 }
 \value{
-A numeric vector of TAC recommendations
+A numeric vector of TAC recommendations. If \code{report = TRUE}, a list of
+model and TAC output is returned.
 }
 \description{
 A simple delay-difference assessment that estimates the TAC using a
-time-series of catches and a relative abundance index and coded with TMB
+time-series of catches and a relative abundance index and coded in TMB. The model
+is conditioned on effort and estimates predicted catch.
 }
 \note{
 This DD model is observation error only and has does not estimate
 process error (recruitment deviations). Similar to many other assessment
-models it depends on a whole host of dubious assumptions such as temporally
-stationary productivity and proportionality between the abundance index and
-real abundance. Unsurprisingly the extent to which these assumptions are
+models it depends on assumptions such as stationary productivity and
+proportionality between the abundance index and real abundance.
+Unsurprisingly the extent to which these assumptions are
 violated tends to be the biggest driver of performance for this method.
 }
 \references{
 Method based on equations of Carl Walters (bug him with
-questions and expect colourful responses)
+questions and expect colourful responses).
 }
 \seealso{
-DD_SS
+\code{\link{DD_SS}}
 }
 \author{
 T. Carruthers & Z. Siders. Zach Siders coded the TMB function
