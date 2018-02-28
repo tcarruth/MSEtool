@@ -1,11 +1,11 @@
-Package: MSE
+Package: MSEtool
 Type: Package
 Title: Management Strategy Evaluation Toolkit
 Version: 1.1.0
-Date: 2017-11-27
+Date: 2018-2-26
 Authors@R: c(person("Tom","Carruthers",,"t.carruthers@oceans.ubc.ca",role=c("aut","cre")),person("Adrian","Hordyk",,"a.hordyk@oceans.ubc.ca",role="aut"), person("Quang","Huynh",,"q.huynh@oceans.ubc.ca",role="aut"))
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
-Description: Development, simulation testing and implementation of management procedures for data-rich fisheries
+Description: Simulation tools for informing data-rich fisheries
 License: GPL-2
 Depends: 
   R(>= 2.10.0),
@@ -17,4 +17,4 @@ LazyLoad: yes
 RoxygenNote: 6.0.1
 Suggests: knitr 
 VignetteBuilder: knitr
-BugReports: https://github.com/tcarruth/MSE/issues
+BugReports: https://github.com/tcarruth/MSEtool/issues
