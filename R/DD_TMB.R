@@ -4,12 +4,9 @@
 #' time-series of catches and a relative abundance index and coded in TMB. The model
 #' is conditioned on effort and estimates predicted catch.
 #'
-#' @param x A position in a data-limited methods data object
-#' @param Data A data-limited methods data object
-#' @param reps The number of stochastic samples of the TAC recommendation
-#' @param report Indicates whether report will be produced for Data object.
-#' @return A numeric vector of TAC recommendations. If \code{report = TRUE}, a list of
-#' model and TAC output is returned.
+#' @param Data A data-limited methods data object.
+#' @return An object of \code{\linkS4class{Assessment}} containing objects and output
+#' from TMB.
 #' @note This DD model is observation error only and has does not estimate
 #' process error (recruitment deviations). Similar to many other assessment
 #' models it depends on assumptions such as stationary productivity and
@@ -17,16 +14,20 @@
 #' Unsurprisingly the extent to which these assumptions are
 #' violated tends to be the biggest driver of performance for this method.
 #' @author T. Carruthers & Z. Siders. Zach Siders coded the TMB function
-#' @references Method based on equations of Carl Walters (bug him with
-#' questions and expect colourful responses).
+#' @references
+#' Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify
+#' fisheries stock status using only fisheries catch data. Fisheries Research 119-120:66-79.
+#'
+#' Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,
+#' Dynamics and Uncertainty. Chapman and Hall, New York.
 #' @export DD_TMB
 #' @seealso \code{\link{DD_SS}}
 #' @import TMB
 #' @importFrom stats nlminb
-#' @importFrom mvtnorm rmvnorm
 #' @useDynLib MSEtool
-DD_TMB <- function(x, Data, reps = 100, report = FALSE) {
-  dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind"
+DD_TMB <- function(Data) {
+  dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
+  x <- 1 # Legacy of Data structure
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
   la <- Data@vbLinf[x] * (1 - exp(-Data@vbK[x] * ((age - Data@vbt0[x]))))
@@ -77,4 +78,4 @@ DD_TMB <- function(x, Data, reps = 100, report = FALSE) {
     return(Rec)
   }
 }
-class(DD_TMB) <- "MP"
+class(DD_TMB) <- "Assess"

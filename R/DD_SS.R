@@ -6,12 +6,9 @@
 #' state space variable. The model is conditioned on effort and estimates
 #' predicted catch.
 #'
-#' @param x A position in a data-limited methods data object
 #' @param Data A data-limited methods data object
-#' @param reps The number of stochastic samples of the TAC recommendation
-#' @param report Indicates whether report will be produced for Data object.
-#' @return A numeric vector of TAC recommendations. If \code{report = TRUE}, a list of
-#' model and TAC output is returned.
+#' @return An object of \code{\linkS4class{Assessment}} containing objects and output
+#' from TMB.
 #' @note Similar to many other assessment
 #' models it depends on assumptions such as stationary productivity and
 #' proportionality between the abundance index and real abundance.
@@ -21,16 +18,20 @@
 #' presumed CV of the catch and the process error (recruitment) standard deviation
 #' is estimated.
 #' @author Q. Huynh
-#' @references Method based on equations of Carl Walters (bug him with
-#' questions and expect colourful responses).
+#' @references
+#' Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify
+#' fisheries stock status using only fisheries catch data. Fisheries Research 119-120:66-79.
+#'
+#' Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,
+#' Dynamics and Uncertainty. Chapman and Hall, New York.
 #' @export DD_SS
 #' @seealso \code{\link{DD_TMB}}
 #' @import TMB
 #' @importFrom stats nlminb
-#' @importFrom mvtnorm rmvnorm
 #' @useDynLib MSEtool
-DD_SS <- function(x, Data, reps = 100, report = FALSE) {
+DD_SS <- function(Data) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
+  x <- 1 # Legacy of Data structure
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
   la <- Data@vbLinf[x] * (1 - exp(-Data@vbK[x] * ((age - Data@vbt0[x]))))
@@ -59,9 +60,9 @@ DD_SS <- function(x, Data, reps = 100, report = FALSE) {
                  log_MSY_DD = log(3 * AvC), log_q_DD = log(Data@Mort[x]),
                  log_sigma_DD = log(sigmaC),
                  log_tau_DD = log(0.3), log_rec_dev = rep(0, ny_DD - k_DD))
-  info <- list(data = data, params = params)
+  info <- list(data = data, params = params, sigma = sigmaC)
 
-  obj <- MakeADFun(data = info$data, parameters = info$params, random = 'log_rec_dev',
+  obj <- MakeADFun(data = info$data, parameters = info$params, random = "log_rec_dev",
                    map = list(log_sigma_DD = factor(NA)), DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
 
@@ -89,6 +90,6 @@ DD_SS <- function(x, Data, reps = 100, report = FALSE) {
     return(Rec)
   }
 }
-class(DD_SS) <- "MP"
+class(DD_SS) <- "Assess"
 
 
