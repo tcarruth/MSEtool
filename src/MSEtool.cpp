@@ -21,11 +21,8 @@ Type objective_function<Type>::operator() ()
         } else
           if(model == "grav") {
             #include "../inst/include/grav.h"
-          } else
-            if(model == "grav_Pbyarea") {
-              #include "../inst/include/grav_Pbyarea.h"
-            } else {
-              error("No model found.");
+          } else {
+            error("No model found.");
           }
 
   return 0;

@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "\n# Movement matrix calculation functions\n\n\n#' Calculates movement matrices from user inputs\n#'\n#' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area\n#' @param fracs A vector nareas long of fractions of unfished stock biomass in each area\n#' @param visc A vector of the probability of individuals staying in each area\n#' @param efracs A log error term for sampling stock fractions from the fracs vector\n#' @param evisc A vector of log error terms for sampling visc by area\n#' @author T. Carruthers\n#' @export makemov\n#' @import TMB\n#' @importFrom stats nlminb\n#' @importFrom mvtnorm rmvnorm\n#' @useDynLib MSEtool\nmakemov<-function(fracs=rep(0.2,5),muprob=0.5,efracs=0.1,evisc=rep(0.1,5),OM=NULL){\n\n\n # library(DLMtool)\n#  fracs=rep(0.2,5)\n#  muprob=0.9\n#  efracs=0.1\n#  evisc=rep(0.1,5)\n#  OM=testOM\n\n  nareas<-length(fracs)\n  data <- list(model = \"grav\",fracs = fracs, muprob = muprob, nareas = nareas)\n\n  params <- list(logit_frac = rep(0,nareas-1), log_visc = 0)\n  info <- list(data = data, params = params)\n\n  obj <- MakeADFun(data = info$data, parameters = info$params, DLL = \"MSEtool\", silent = TRUE)\n  opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)\n\n  if(reps == 1) TAC <- obj$report()$TAC\n  if(reps > 1) {\n    SD <- sdreport(obj, getReportCovariance = FALSE)\n    samps <- rmvnorm(reps, opt$par, round(SD$cov.fixed, 4))\n    TAC <- rep(NA, reps)\n    for (i in 1:reps) {\n      params.new <- list(logit_UMSY_DD = samps[i, 1], log_MSY_DD = samps[i, 2],\n                         log_q_DD = samps[i, 3])\n      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = \"MSEtool\")\n      TAC[i] <- obj.samp$report()$TAC\n    }\n  }\n  Rec <- new(\"Rec\")\n  Rec@TAC <- TACfilter(TAC)\n\n}\n\n\n",
+    "created" : 1519838648482.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "799175537",
+    "id" : "32FB8FB",
+    "lastKnownWriteTime" : 1519859298,
+    "last_content_update" : 1519859298233,
+    "path" : "C:/GitHub/MSE/R/Movement_calcs.R",
+    "project_path" : "R/Movement_calcs.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
