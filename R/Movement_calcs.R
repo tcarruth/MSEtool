@@ -17,18 +17,10 @@
 #' @useDynLib MSEtool
 makemov<-function(fracs=rep(0.2,5),muprob=0.5,efracs=0.1,evisc=rep(0.1,5),OM=NULL){
 
-
- # library(DLMtool)
-#  fracs=rep(0.2,5)
-#  muprob=0.9
-#  efracs=0.1
-#  evisc=rep(0.1,5)
-#  OM=testOM
-
   nareas<-length(fracs)
   data <- list(model = "grav",fracs = fracs, muprob = muprob, nareas = nareas)
 
-  params <- list(logit_frac = rep(0,nareas-1), log_visc = 0)
+  params <- list(log_visc = 0,log_grav = rep(0,nareas-1))
   info <- list(data = data, params = params)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)

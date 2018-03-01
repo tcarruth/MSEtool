@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1519877636611.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4050582135",
+    "id" : "5EC5B8F6",
+    "lastKnownWriteTime" : 1519889316,
+    "last_content_update" : 1519889316322,
+    "path" : "C:/GitHub/MSE/inst/include/grav.h",
+    "project_path" : "inst/include/grav.h",
+    "properties" : {
+        "cursorPosition" : "11,31",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "h"
+}

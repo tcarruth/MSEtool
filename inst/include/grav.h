@@ -8,83 +8,98 @@
   DATA_SCALAR( muprob );
   DATA_INTEGER( nareas );
 
-  PARAMETER_VECTOR( log_grav );
   PARAMETER( log_visc );
+  PARAMETER_VECTOR( log_grav );
 
-  vector<Type> log_grav_p = log_grav; // this is a vector, not sure what will happen here
-  Type log_visc_p = log_visc;
-  Type gsum;
-  Type psum;
-  Type sigma;
-  Type obj;
+  Type psum = Type(0);
+  Type sigma = Type(0);
+  sigma=0.2;
 
   // -- Declarations
   matrix<Type> grav(nareas,nareas);
   matrix<Type> mov(nareas,nareas);
   matrix<Type> transN(nareas,nareas);
   vector<Type> idist(nareas);
+  vector<Type> tdist(nareas);
+  vector<Type> gsum(nareas);
+  vector<Type> Nsum(nareas);
+
+  // Zero inits
+  grav.setZero();
+  mov.setZero();
+  idist.setZero();
+  tdist.setZero();
+  gsum.setZero();
+  Nsum.setZero();
+
+  //transN.setZero();
 
   // Map out gravity terms accounting for viscosity, gravity of area 1 is fixed to zero
-  for(int af=1; af<nareas; af++){ // area from
-    grav(af,1) = 0;
-    for(int at=2; af<nareas; af++){ // area to
-      grav(af,at) = log_grav_p(at-1);
+  for(int af=0; af<nareas; af++){ // area from
+    //grav(af,0) = 0.0;
+    for(int at=1; at<nareas; at++){ // area to
+      grav(af,at) = log_grav(at-1);
     }
-    grav(af,af)+=grav(af,af)+log_visc_p; // add viscosity
+    grav(af,af)+=grav(af,af)+log_visc; // add viscosity
   }
 
   // Calculate logit fractions (movement to area from area)
-  for(int af=1; af<nareas; af++){
-    gsum=0.0;
-    for(int at=1; af<nareas; af++){
-      gsum+=exp(grav(af,at)); // sum up gravity terms
+  for(int af=0; af<nareas; af++){
+
+    for(int at=0; at<nareas; at++){
+      gsum(af)+=exp(grav(af,at)); // sum up gravity terms by from area
     }
-    for(int at=1; af<nareas; af++){
-      mov(af,at)+=exp(grav(af,at))/gsum; // calculate logit mov probs by row (area from)
+
+    for(int at=0; at<nareas; at++){
+      mov(af,at)=exp(grav(af,at))/gsum(af); // calculate logit mov probs by row (area from)
     }
+
   }
 
+  //std::cout<<mov<<std::endl;
   // Run a convergence to a stable distribution
-  for(int af=1; af<nareas; af++){
+  for(int af=0; af<nareas; af++){
     idist(af)=1.0/nareas;
   }
 
-  for(int tt =1; tt<20; tt++){
-    for(int af=1; af<nareas; af++){
-      for(int at=1; at<nareas; at++){
+  for(int tt =0; tt<20; tt++){
+     //tdist=idist*mov;
+     //idist=tdist;
+    for(int af=0; af<nareas; af++){
+      for(int at=0; at<nareas; at++){
         transN(af,at)=idist(af)*mov(af,at);
       }
     }
-    for(int at=1; at<nareas; at++){
-      gsum=0.0;
-      for(int af=1; af<nareas; af++){
-        gsum+=transN(af,at);
+
+    Nsum.setZero();
+
+    for(int at=0; at<nareas; at++){
+      for(int af=0; af<nareas; af++){
+        Nsum(at)+=transN(af,at);
       }
-      idist(at)=gsum;
+      idist(at)=Nsum(at);
     }
+
   }
 
-  psum=0.0;
-  for(int aa=1; aa<nareas; aa++){
-    psum+=mov(aa,aa)/nareas;
+  for(int aa=0; aa<nareas; aa++){
+    psum+=mov(aa,aa)/nareas;  // mean probability of staying
   }
 
-  sigma = 0.1000;
-
-  gsum=0.0;
-  for(int aa=1; aa<nareas; aa++){
-    gsum-=dnorm(log(idist(aa)), log(fracs(aa)), sigma, true);
+  Type nll = Type(0);
+  for(int aa=0; aa<nareas; aa++){
+    nll-=dnorm(log(idist(aa)), log(fracs(aa)), sigma, true);
   }
 
-  gsum-=dnorm(log(psum), log(muprob), sigma, true);
-
-  obj = gsum;
+  nll -= dnorm(log(psum), log(muprob), sigma, true);
 
   //-------REPORTING-------//
-  ADREPORT( log_grav_p );
-  ADREPORT( log_visc_p );
+  ADREPORT( log_grav );
+  ADREPORT( log_visc );
   REPORT( idist );
   REPORT( transN );
+  REPORT( mov );
 
-  return obj;
+  return nll;
+
 //}

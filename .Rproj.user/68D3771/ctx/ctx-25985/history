@@ -1,0 +1,31 @@
+install.packages("TMB")
+library(MSEtool)
+fracs=rep(0.2,5)
+muprob=0.9
+efracs=0.1
+evisc=rep(0.1,5)
+OM=testOM
+nareas<-length(fracs)
+data <- list(model = "grav",fracs = fracs, muprob = muprob, nareas = nareas)
+params <- list(logit_frac = rep(0,nareas-1), log_visc = 0)
+info <- list(data = data, params = params)
+obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
+library(DLMtool)
+obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
+library(TMB)
+obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
+nareas<-length(fracs)
+data <- list(model = "grav",fracs = fracs, muprob = muprob, nareas = nareas)
+params <- list(log_grav = rep(0,nareas-1), log_visc = 0)
+info <- list(data = data, params = params)
+obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
+opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
+opt
+obj
+obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
+opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
+opt
+info$data
+info$params
+obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = FALSE)
+opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)

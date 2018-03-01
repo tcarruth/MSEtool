@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1519885316551.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1870588532",
+    "id" : "A88090BE",
+    "lastKnownWriteTime" : 1519774688,
+    "last_content_update" : 1519774688,
+    "path" : "C:/GitHub/DLMDev/Testing/mov cpars test.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "58,0",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

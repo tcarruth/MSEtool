@@ -1,2 +1,32 @@
 [
+    {
+        "definitions" : [
+        ],
+        "file" : "C:/GitHub/MSE/inst/include/DD.h",
+        "file_last_write" : 1516342999
+    },
+    {
+        "definitions" : [
+        ],
+        "file" : "C:/GitHub/MSE/inst/include/DD_SS.h",
+        "file_last_write" : 1516342999
+    },
+    {
+        "definitions" : [
+        ],
+        "file" : "C:/GitHub/MSE/inst/include/functions.h",
+        "file_last_write" : 1516342999
+    },
+    {
+        "definitions" : [
+        ],
+        "file" : "C:/GitHub/MSE/inst/include/grav.h",
+        "file_last_write" : 1519889316
+    },
+    {
+        "definitions" : [
+        ],
+        "file" : "C:/GitHub/MSE/src/MSEtool.cpp",
+        "file_last_write" : 1519876204
+    }
 ]

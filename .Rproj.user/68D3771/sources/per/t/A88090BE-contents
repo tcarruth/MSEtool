@@ -1,0 +1,61 @@
+
+#  Test of custom cpars
+
+library(DLMextra)
+OM<-testOM #Rougheye_Rockfish_BC_SRA
+
+nareas<-2
+movy<-array(runif(OM@nsim*nareas*nareas),c(OM@nsim,nareas,nareas))
+movy<-movy/array(apply(movy,c(1,2),sum),dim(movy))
+OM@cpars<-list(mov=movy)
+system.time(MSE2<-runMSE(OM,MPs=c("MRnoreal","AvC","FMSYref")))
+Tplot(MSE2)
+
+nareas<-3
+movy<-array(runif(OM@nsim*nareas*nareas),c(OM@nsim,nareas,nareas))
+movy<-movy/array(apply(movy,c(1,2),sum),dim(movy))
+OM@cpars<-list(mov=movy)
+system.time(MSE3<-runMSE(OM,MPs=c("MRnoreal","AvC","FMSYref")))
+Tplot(MSE3)
+
+nareas<-4
+movy<-array(runif(OM@nsim*nareas*nareas),c(OM@nsim,nareas,nareas))
+movy<-movy/array(apply(movy,c(1,2),sum),dim(movy))
+OM@cpars<-list(mov=movy)
+system.time(MSE4<-runMSE(OM,MPs=c("MRnoreal","AvC","FMSYref")))
+Tplot(MSE4)
+
+nareas<-10
+movy<-array(runif(OM@nsim*nareas*nareas),c(OM@nsim,nareas,nareas))
+movy<-movy/array(apply(movy,c(1,2),sum),dim(movy))
+OM@cpars<-list(mov=movy)
+system.time(MSE10<-runMSE(OM,MPs=c("MRnoreal","AvC","FMSYref")))
+Tplot(MSE10)
+
+
+
+nareas<-50
+movy<-array(runif(OM@nsim*nareas*nareas),c(OM@nsim,nareas,nareas))
+movy<-movy/array(apply(movy,c(1,2),sum),dim(movy))
+OM@cpars<-list(mov=movy)
+system.time(MSE50<-runMSE(OM,MPs=c("MRnoreal","AvC","FMSYref")))
+Tplot(MSE50)
+
+
+nareas<-100
+movy<-array(runif(OM@nsim*nareas*nareas),c(OM@nsim,nareas,nareas))
+movy<-movy/array(apply(movy,c(1,2),sum),dim(movy))
+OM@cpars<-list(mov=movy)
+system.time(MSE100<-runMSE(OM,MPs=c("MRnoreal","AvC","FMSYref")))
+Tplot(MSE100)
+
+
+# Debugging preliminaries
+
+MPs = c("AvC","DCAC","FMSYref","curE","matlenlim", "MRreal")
+CheckMPs = FALSE; timelimit = 1; Hist=FALSE; ntrials=50; fracD=0.05; CalcBlow=FALSE; 
+HZN=2; Bfrac=0.5; AnnualMSY=FALSE; silent=FALSE; PPD=FALSE; parallel=FALSE; 
+save_name=NULL
+
+fileys<-list.files("C:/GitHub/DLMtool/R")
+for(i in 1:length(fileys))source(paste0("C:/Github/DLMtool/R/",fileys[i]))

@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1519885328701.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "758843783",
+    "id" : "B7033522",
+    "lastKnownWriteTime" : 1519925438,
+    "last_content_update" : 1519925438665,
+    "path" : "C:/GitHub/DLMDev/Testing/Movement gravity model TMB.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "9,16",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 9,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
