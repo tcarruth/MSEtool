@@ -13,10 +13,17 @@ Type objective_function<Type>::operator() ()
     if(model == "DD_SS") {
       #include "../inst/include/DD_SS.h"
     } else
-      if(model =="grav"){
-		#include "../inst/include/grav.h"
-      }else
-        error("No model found.");
+      if(model =="SP") {
+        #include "../inst/include/SP.h"
+      } else
+        if(model == "SP_SS") {
+          #include "../inst/include/SP_SS.h"
+        } else
+          if(model == "grav") {
+            #include "../inst/include/grav.h"
+          } else {
+            error("No model found.");
+          }
 
   return 0;
 }
