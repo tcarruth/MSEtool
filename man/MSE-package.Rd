@@ -4,7 +4,7 @@
 \name{MSE-package}
 \alias{MSE-package}
 \alias{MSE}
-\title{Management Strategy Evaluation Toolkit}
+\title{Management Strategy Evaluation}
 \description{
 Simulation testing and implementation of data-rich fishery management procedures
 }
