@@ -4,7 +4,7 @@
 \alias{DD_TMB}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, reps = 100, report = FALSE)
+DD_TMB(x, Data, reps = 100, Assessment = FALSE)
 }
 \arguments{
 \item{x}{A position in a data-limited methods data object}
@@ -13,11 +13,11 @@ DD_TMB(x, Data, reps = 100, report = FALSE)
 
 \item{reps}{The number of stochastic samples of the TAC recommendation}
 
-\item{report}{Indicates whether report will be produced for Data object.}
+\item{Assessment}{Indicates whether variables and assessment results will be produced from MP.}
 }
 \value{
-A numeric vector of TAC recommendations. If \code{report = TRUE}, a list of
-model and TAC output is returned.
+If \code{Assessment = TRUE}, an object of class \code{Assessment}.
+Otherwise, an object of class \code{Rec}.
 }
 \description{
 A simple delay-difference assessment that estimates the TAC using a
