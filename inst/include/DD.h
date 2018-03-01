@@ -12,7 +12,7 @@
   DATA_SCALAR( wa_DD );
   DATA_VECTOR( E_hist );
   DATA_VECTOR( C_hist );
-  DATA_VECTOR( UMSYprior );
+  //DATA_VECTOR( UMSYprior );
 
   PARAMETER( logit_UMSY_DD );
   PARAMETER( log_MSY_DD );
@@ -23,6 +23,7 @@
   Type q_DD = exp(log_q_DD);
 
   //--DECLARING DERIVED VALUES
+  Type BMSY_DD = MSY_DD/UMSY_DD;
   Type SS_DD = So_DD * (1 - UMSY_DD);
   Type Spr_DD = (SS_DD * Alpha_DD/(1 - SS_DD) + wa_DD)/(1 - Rho_DD * SS_DD);
   Type DsprDu_DD = (Alpha_DD + Spr_DD * (1 + Rho_DD - 2 * Rho_DD * SS_DD))/((1 - Rho_DD * SS_DD) * (1 - SS_DD));
@@ -40,6 +41,7 @@
   int ny_DDp = ny_DD + 1;
   int ny_DDk = ny_DD + k_DD;
   vector<Type> B_DD(ny_DDp);
+  vector<Type> relB_DD(ny_DDp);
   vector<Type> N_DD(ny_DDp);
   vector<Type> R_DD(ny_DDk);
 
@@ -51,6 +53,7 @@
 
   //--INITIALIZE
   B_DD(0) = Bo_DD;
+  relB_DD(0) = B_DD(0)/BMSY_DD;
   N_DD(0) = No_DD;
   for(int tt=0;tt<k_DD;tt++) R_DD(tt) = Ro_DD;
 
@@ -63,11 +66,12 @@
 
     R_DD(tt + k_DD) = Arec_DD * Sp_DD(tt)/(1 + Brec_DD * Sp_DD(tt));
     B_DD(tt + 1) = Surv_DD(tt) * (Alpha_DD * N_DD(tt) + Rho_DD * B_DD(tt)) + wa_DD * R_DD(tt + 1);
+	relB_DD(tt + 1) = B_DD(tt + 1)/BMSY_DD;
     N_DD(tt + 1) = Surv_DD(tt) * N_DD(tt) + R_DD(tt + 1);
   }
 
   //--ARGUMENTS FOR NLL
-  Type sigma = calc_sigma(C_hist, Cpred_DD);
+  Type sigma_DD = calc_sigma(C_hist, Cpred_DD);
 
   // The following conditions must be met for positive values
   // of Arec_DD and Brec_DD, respectively:
@@ -82,21 +86,22 @@
   jnll_comp.setZero();
 
   for(int tt=0; tt<ny_DD; tt++){
-    jnll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred_DD(tt)), sigma, true);
+    jnll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred_DD(tt)), sigma_DD, true);
   }
-  jnll_comp(1) -= dbeta(UMSY_DD, UMSYprior(0), UMSYprior(1), true);
+  //jnll_comp(1) -= dbeta(UMSY_DD, UMSYprior(0), UMSYprior(1), true);
 
   //Summing individual jnll and penalties
   Type jnll = jnll_comp.sum() + penalty;
 
   //-------REPORTING-------//
   Type TAC = UMSY_DD * B_DD(ny_DD);
-  Type h = Arec_DD * (0.2 * Bo_DD)/(1 + Brec_DD * (0.2 * Bo_DD))/Ro_DD;
+  Type h = Arec_DD * Spr0_DD / (4 + Arec_DD * Spr0_DD);
 
   ADREPORT( UMSY_DD );
   ADREPORT( MSY_DD );
   ADREPORT( q_DD );
-  REPORT( sigma );
+  ADREPORT( sigma_DD );
+  REPORT( sigma_DD );
   REPORT( jnll_comp );
   REPORT( jnll );
   REPORT( Arec_DD );
@@ -110,8 +115,10 @@
   REPORT( R_DD );
   REPORT( U_DD );
   REPORT( relU_DD );
+  REPORT( relB_DD );
   REPORT( TAC );
   REPORT( h );
+  REPORT( BMSY_DD );
   REPORT( Ro_DD );
   REPORT( No_DD );
   REPORT( Bo_DD );
