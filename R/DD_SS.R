@@ -28,7 +28,7 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @importFrom mvtnorm rmvnorm
-#' @useDynLib MSE
+#' @useDynLib MSEtool
 DD_SS <- function(x, Data, reps = 100, report = FALSE) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -62,7 +62,7 @@ DD_SS <- function(x, Data, reps = 100, report = FALSE) {
   info <- list(data = data, params = params)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = 'log_rec_dev',
-                   map = list(log_sigma_DD = factor(NA)), DLL = "MSE", silent = TRUE)
+                   map = list(log_sigma_DD = factor(NA)), DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
 
   if(reps == 1) TAC <- obj$report()$TAC
@@ -75,7 +75,7 @@ DD_SS <- function(x, Data, reps = 100, report = FALSE) {
                          log_q_DD = samps[i, 3], log_sigma_DD = log(sigmaC),
                          log_tau_DD = samps[i, 4],
                          log_rec_dev = obj$report()$log_rec_dev)
-      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSE")
+      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSEtool")
       TAC[i] <- obj.samp$report()$TAC
     }
   }
