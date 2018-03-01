@@ -24,7 +24,7 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @importFrom mvtnorm rmvnorm
-#' @useDynLib MSE
+#' @useDynLib MSEtool
 DD_TMB <- function(x, Data, reps = 100, report = FALSE) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -53,7 +53,7 @@ DD_TMB <- function(x, Data, reps = 100, report = FALSE) {
                  log_MSY_DD = log(3 * AvC), log_q_DD = log(Data@Mort[x]))
   info <- list(data = data, params = params)
 
-  obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSE", silent = TRUE)
+  obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
   if(reps == 1) TAC <- obj$report()$TAC
   if(reps > 1) {
@@ -63,7 +63,7 @@ DD_TMB <- function(x, Data, reps = 100, report = FALSE) {
     for (i in 1:reps) {
       params.new <- list(logit_UMSY_DD = samps[i, 1], log_MSY_DD = samps[i, 2],
                          log_q_DD = samps[i, 3])
-      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSE")
+      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSEtool")
       TAC[i] <- obj.samp$report()$TAC
     }
   }

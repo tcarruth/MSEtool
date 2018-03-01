@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "#define TMB_LIB_INIT R_init_MSEtool\n#include <TMB.hpp>\n#include \"../inst/include/functions.h\"\n\ntemplate<class Type>\nType objective_function<Type>::operator() ()\n{\n  DATA_STRING(model);\n\n  if(model == \"DD\") {\n    #include \"../inst/include/DD.h\"\n  } else\n    if(model == \"DD_SS\") {\n      #include \"../inst/include/DD_SS.h\"\n    } else\n      if(model ==\"grav\"){\n\t\t#include \"../inst/include/grav.h\"\n      }else\n        error(\"No model found.\");\n\n  return 0;\n}\n",
+    "created" : 1519859306329.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "429277575",
+    "id" : "7A6A10F",
+    "lastKnownWriteTime" : 1519859327,
+    "last_content_update" : 1519859327323,
+    "path" : "C:/GitHub/MSE/src/MSEtool.cpp",
+    "project_path" : "src/MSEtool.cpp",
+    "properties" : {
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "cpp"
+}
