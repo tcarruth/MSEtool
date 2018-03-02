@@ -4,30 +4,32 @@
 #' The model uses time-series of catches and a relative abundance index and coded in TMB.
 #' The model is conditioned on catch and estimates a predicted index.
 #'
-#' @param x A position in a data-limited methods data object
 #' @param Data A data-limited methods data object
-#' @param reps The number of stochastic samples of the TAC recommendation
-#' @param report Indicates whether report will be produced for Data object.
 #' @param n The exponent of the production function, which is fixed in the model.
 #' Typically fixed at n = 2, where the biomass at MSY is half of carrying capacity.
-#' @param B1frac The biomass to carrying capacity ratio in the first year of the model.
-#' A value of 1 assumes virgin conditions.
-#' @param Assessment Indicates whether variables and assessment results will be produced from MP.
-#' @return If \code{Assessment = TRUE}, an object of class \code{Assessment}.
-#' Otherwise, an object of class \code{Rec}.
+#' @param B1frac The biomass to carrying capacity ratio in the first year of the model,
+#' which is fixed. A value of 1 assumes virgin conditions in the first year.
+#' @return An object of \code{\linkS4class{Assessment}} containing objects and output
+#' from TMB.
 #' @note The model is parameterized with UMSY and MSY as leading parameters.
 #' Virgin conditions are assumed in the first year of the time series and
 #' the production function is assumed to be symmetric.
 #' @author Q. Huynh
-#' @references Fletcher, Pella and Tomlinson
+#' @references
+#' Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system.
+#' Fishery Bulletin 76:515:521.
+#'
+#' Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
+#' Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 #' @export SP_SS
 #' @seealso \code{\link{SP}}
 #' @import TMB
 #' @importFrom stats nlminb
 #' @importFrom mvtnorm rmvnorm
-#' @useDynLib MSE
-SP_SS <- function(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE) {
+#' @useDynLib MSEtool
+SP_SS <- function(Data, n = 2, B1frac = 1) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
+  x <- 1
   yind <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- yind:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
@@ -54,28 +56,8 @@ SP_SS <- function(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE) {
                    random = "log_B_dev", DLL = "MSE", silent = TRUE)
   opt <- nlminb(obj$par, obj$fn, obj$gr)
 
-  if(reps == 1) TAC <- obj$report()$TAC
-  if(reps > 1) {
-    SD <- sdreport(obj, getReportCovariance = FALSE)
-    samps <- rmvnorm(reps, opt$par, round(SD$cov.fixed, 4))
-    TAC <- rep(NA, reps)
-    for (i in 1:reps) {
-      params.new <- list(logit_UMSY = samps[i, 1], log_MSY = samps[i, 2],
-                         log_B1frac = log(1), log_n = log(2), log_sigma = log(sigmaI),
-                         log_tau = samps[i, 3], log_B_dev = obj$env$last.par.best[obj$env$random])
-      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSE")
-      TAC[i] <- obj.samp$report()$TAC
-    }
-  }
-  Rec <- new("Rec")
-  Rec@TAC <- TACfilter(TAC)
-
-  if(Assessment) {
-    if(!exists("SD")) SD <- sdreport(obj, getReportCovariance = FALSE)
-    return(return_Assessment())
-  } else {
-    return(Rec)
-  }
+  Assessment <- return_Assessment()
+  return(Assessment)
 }
-class(SP_SS) <- "MP"
+class(SP_SS) <- "Assess"
 
