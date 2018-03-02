@@ -2,7 +2,7 @@
 #' @importFrom stats qqnorm qqline
 generate_report_DD_SS <- function(Assessment, figure = TRUE, save_figure = FALSE,
                                    save_dir = getwd()) {
-  assign_Assessment_var()
+  assign_Assessment_slots()
 
   Year <- info$Year
   ny_DD <- info$data$ny_DD
@@ -424,8 +424,8 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
 #' @importFrom gplots rich.colors
 retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE,
                                 save_figure = FALSE, save_dir = getwd()) {
-								
-  assign_Assessment_var()
+
+  assign_Assessment_slots()
   data <- info$data
   ny_DD <- data$ny_DD
   k_DD <- data$k_DD
