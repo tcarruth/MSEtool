@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1519967947194.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "3FB194D4",
+    "lastKnownWriteTime" : 1515472035,
+    "last_content_update" : 1519967966383,
+    "path" : "C:/GitHub/DLMDev/Case_Studies/Arrowtooth_Flounder_BC_DFO/Build.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "15,33",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
