@@ -112,6 +112,9 @@
   ADREPORT( q_DD );
   ADREPORT( sigma_DD );
   ADREPORT( tau_DD );
+  REPORT( UMSY_DD );
+  REPORT( MSY_DD );
+  REPORT( q_DD );
   REPORT( sigma_DD );
   REPORT( tau_DD );
   REPORT( jnll_comp );

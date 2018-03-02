@@ -55,7 +55,6 @@
 	if(y<n_y-1) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
   }
 
-  Type TAC = UMSY * Biomass(n_y);
   Type nll = nll_comp.sum();
 
   ADREPORT(UMSY);
@@ -64,12 +63,14 @@
   ADREPORT(n);
   ADREPORT(q);
   ADREPORT(tau);
-  REPORT(sigma);
-  REPORT(tau);
-  REPORT(gamma);
+  REPORT(UMSY);
+  REPORT(MSY);
   REPORT(B1frac);
   REPORT(n);
   REPORT(q);
+  REPORT(sigma);
+  REPORT(tau);
+  REPORT(gamma);
   REPORT(r);
   REPORT(K);
   REPORT(BMSY);
@@ -79,7 +80,8 @@
   REPORT(U);
   REPORT(relU);
   REPORT(log_B_dev);
-  REPORT(TAC);
+  REPORT(nll_comp);
+  REPORT(nll);
 
   return nll;
 

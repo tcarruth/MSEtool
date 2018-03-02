@@ -48,19 +48,19 @@
     if(Index(y)>0) nll -= dnorm(log(Index(y)), log(Ipred(y)), sigma, true);
   }
 
-  Type TAC = UMSY * Biomass(n_y);
-
   ADREPORT(UMSY);
   ADREPORT(MSY);
   ADREPORT(B1frac);
   ADREPORT(n);
   ADREPORT(q);
   ADREPORT(sigma);
-  REPORT(sigma);
-  REPORT(gamma);
+  REPORT(UMSY);
+  REPORT(MSY);
   REPORT(B1frac);
   REPORT(n);
   REPORT(q);
+  REPORT(sigma);
+  REPORT(gamma);
   REPORT(r);
   REPORT(K);
   REPORT(BMSY);
@@ -69,7 +69,7 @@
   REPORT(relB);
   REPORT(U);
   REPORT(relU);
-  REPORT(TAC);
+  REPORT(nll);
 
   return nll;
 

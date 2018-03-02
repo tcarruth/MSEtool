@@ -94,13 +94,15 @@
   Type jnll = jnll_comp.sum() + penalty;
 
   //-------REPORTING-------//
-  Type TAC = UMSY_DD * B_DD(ny_DD);
   Type h = Arec_DD * Spr0_DD / (4 + Arec_DD * Spr0_DD);
 
   ADREPORT( UMSY_DD );
   ADREPORT( MSY_DD );
   ADREPORT( q_DD );
   ADREPORT( sigma_DD );
+  REPORT( UMSY_DD );
+  REPORT( MSY_DD );
+  REPORT( q_DD );
   REPORT( sigma_DD );
   REPORT( jnll_comp );
   REPORT( jnll );
@@ -116,7 +118,6 @@
   REPORT( U_DD );
   REPORT( relU_DD );
   REPORT( relB_DD );
-  REPORT( TAC );
   REPORT( h );
   REPORT( BMSY_DD );
   REPORT( Ro_DD );
