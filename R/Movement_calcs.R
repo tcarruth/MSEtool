@@ -98,7 +98,7 @@ makemov<-function(fracs=c(0.1,0.2,0.3,0.4),prob=c(0.5,0.8,0.9,0.95)){
   obj.new<-MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
 
   obj.new$report()$mov
-  validateTMB(obj.new)
+  #validateTMB(obj.new)
 
 }
 
