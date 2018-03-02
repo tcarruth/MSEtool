@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "\nlibrary(MSEtool)\nlibrary(DLMtool)\nlibrary(TMB)\n\n\ntestgravpars<-function(fracs,prob,log_grav,log_visc){\n\n  nareas<-length(fracs)\n\n  if(length(prob)==1){ # if the user is specifying mean probability of staying\n\n    grav<-array(NA,c(nareas,nareas))\n    grav[,1]<-0\n    for(at in 2:nareas)grav[,at]<-log_grav[at-1]\n    for(aa in 1:nareas)grav[aa,aa]<-grav[aa,aa]+log_visc\n    mov<-exp(grav)\n    mov<-mov/apply(mov,1,sum)\n    idist<-rep(1/nareas,nareas)\n    for(i in 1:50)idist<-apply(idist*mov,2,sum)\n\n    print(data.frame(fracs=fracs,idist=idist))\n    print(paste(\"prob =\",prob,\" modeled prob =\",round(mean(mov[cbind(1:nareas,1:nareas)]),4)))\n\n  }else if(length(prob)==nareas){\n\n    grav<-array(NA,c(nareas,nareas))\n    grav[,1]<-0\n    for(at in 2:nareas)grav[,at]<-log_grav[at-1]\n    for(aa in 1:nareas)grav[aa,aa]<-grav[aa,aa]+log_visc[aa]\n    mov<-exp(grav)\n    mov<-mov/apply(mov,1,sum)\n    idist<-rep(1/nareas,nareas)\n    for(i in 1:50)idist<-apply(idist*mov,2,sum)\n\n    print(data.frame(fracs=fracs,idist=idist))\n    print(data.frame(prob=prob,mod_prob=round(mov[cbind(1:nareas,1:nareas)],4)))\n\n  }\n\n}\n\n\n\n# ==== Single mean probability of staying specified ========================\n\nnareas<-50\nfracs=runif(nareas)\nfracs<-fracs/sum(fracs)\nprob=0.4\nOM=testOM\n\ndata <- list(model = \"grav\",fracs = fracs, prob = prob, nareas = nareas)\n\nparams <- list(log_visc = 0,log_grav = rep(0,nareas-1))\ninfo <- list(data = data, params = params)\n\nobj <- MakeADFun(data = info$data, parameters = info$params, DLL = \"MSEtool\", silent = TRUE)\nopt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr,control=list(eval.max=1000,iter.max=1000))\n\nparams.new <- list(log_visc=opt$par[1],log_grav=opt$par[2:nareas])\n\nobj.get <- MakeADFun(data = info$data, parameters = params.new, DLL = \"MSEtool\")\nobj.get$report()$mov\nobj.get$report()$grav\n\ntestgravpars(fracs,prob,log_grav=opt$par[2:nareas],log_visc=opt$par[1])\n\n\n# === Vector of probabilities specified =======\n\nnareas<-6\nfracs=runif(nareas)\nfracs<-fracs/sum(fracs)\nprob=runif(nareas)\nOM=testOM\n\ndata <- list(model = \"grav_Pbyarea\",fracs = fracs, prob = prob, nareas = nareas)\n\nparams <- list(log_visc = rep(0,nareas),log_grav = rep(0,nareas-1))\ninfo <- list(data = data, params = params)\n\nobj <- MakeADFun(data = info$data, parameters = info$params, DLL = \"MSEtool\", silent = TRUE)\nopt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr,control=list(eval.max=1000,iter.max=1000))\n\nparams.new <- list(log_visc=opt$par[1:nareas],log_grav=opt$par[nareas+(1:(nareas-1))])\n\nobj.get <- MakeADFun(data = info$data, parameters = params.new, DLL = \"MSEtool\")\nobj.get$report()$mov\nobj.get$report()$grav\n\ntestgravpars(fracs,prob,log_visc=opt$par[1:nareas],log_grav=opt$par[nareas+(1:(nareas-1))])\n\n\n\n\n\n\n\n# === if source code required =====================\n\nfileys<-list.files(\"C:/GitHub/DLMtool/R\")\nfor(i in 1:length(fileys))source(paste0(\"C:/Github/DLMtool/R/\",fileys[i]))\n\nData<-SimulatedData\nx<-1\nreps<=100\n",
+    "created" : 1519925778263.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "577572600",
+    "id" : "AF79A858",
+    "lastKnownWriteTime" : 1519942309,
+    "last_content_update" : 1519942309840,
+    "path" : "C:/GitHub/DLMDev/Testing/Movement gravity model TMB.R",
+    "project_path" : null,
+    "properties" : {
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

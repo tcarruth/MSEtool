@@ -5,7 +5,7 @@
   using namespace density;
 
   DATA_VECTOR( fracs );
-  DATA_SCALAR( muprob );
+  DATA_SCALAR( prob );
   DATA_INTEGER( nareas );
 
   PARAMETER( log_visc );
@@ -13,7 +13,7 @@
 
   Type psum = Type(0);
   Type sigma = Type(0);
-  sigma=0.2;
+  sigma=0.1;
 
   // -- Declarations
   matrix<Type> grav(nareas,nareas);
@@ -31,16 +31,17 @@
   tdist.setZero();
   gsum.setZero();
   Nsum.setZero();
-
-  //transN.setZero();
+  transN.setZero();
 
   // Map out gravity terms accounting for viscosity, gravity of area 1 is fixed to zero
   for(int af=0; af<nareas; af++){ // area from
-    //grav(af,0) = 0.0;
+    grav(af,0) = 0.0;
     for(int at=1; at<nareas; at++){ // area to
       grav(af,at) = log_grav(at-1);
     }
-    grav(af,af)+=grav(af,af)+log_visc; // add viscosity
+  }
+  for(int af=0; af<nareas; af++){
+    grav(af,af)+=log_visc;
   }
 
   // Calculate logit fractions (movement to area from area)
@@ -62,7 +63,7 @@
     idist(af)=1.0/nareas;
   }
 
-  for(int tt =0; tt<20; tt++){
+  for(int tt =0; tt<50; tt++){
      //tdist=idist*mov;
      //idist=tdist;
     for(int af=0; af<nareas; af++){
@@ -88,17 +89,20 @@
 
   Type nll = Type(0);
   for(int aa=0; aa<nareas; aa++){
-    nll-=dnorm(log(idist(aa)), log(fracs(aa)), sigma, true);
+    //nll-=dnorm(log(idist(aa)), log(fracs(aa)), sigma, true);
+    nll-=dnorm(idist(aa), fracs(aa), sigma, true);
   }
-
-  nll -= dnorm(log(psum), log(muprob), sigma, true);
+  nll -= dnorm(psum, prob, sigma, true);
+  //nll -= dnorm(log(psum), log(muprob), sigma, true);
 
   //-------REPORTING-------//
   ADREPORT( log_grav );
   ADREPORT( log_visc );
   REPORT( idist );
   REPORT( transN );
+  REPORT( grav );
   REPORT( mov );
+  REPORT( grav );
 
   return nll;
 
