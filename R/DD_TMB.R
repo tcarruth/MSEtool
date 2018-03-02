@@ -35,6 +35,7 @@ DD_TMB <- function(Data) {
   a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x],  Data@L50[x])
   a50V <- max(a50V, 1)
   yind <- (1:length(Data@Cat[x, ]))[!is.na(Data@Cat[x, ] + Data@Ind[x,   ])]
+  Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   E_hist <- C_hist/Data@Ind[x, yind]
   E_hist <- E_hist/mean(E_hist)
@@ -46,36 +47,19 @@ DD_TMB <- function(Data) {
   So_DD <- exp(-Data@Mort[x])  # get So survival rate
   wa_DD <- wa[k_DD]
   UMSYpriorpar <- c(1 - exp(-Data@Mort[x] * 0.5), 0.3) # Prior for UMSY is that corresponding to F = 0.5 M with CV = 0.3
-  UMSYprior <- c(alphaconv(UMSYpriorpar[1], prod(UMSYpriorpar)), betaconv(UMSYpriorpar[1], prod(UMSYpriorpar))) # Convert to beta parameters
+  #UMSYprior <- c(alphaconv(UMSYpriorpar[1], prod(UMSYpriorpar)), betaconv(UMSYpriorpar[1], prod(UMSYpriorpar))) # Convert to beta parameters
   AvC <- mean(C_hist, na.rm = TRUE)
   data <- list(model = "DD", So_DD = So_DD, Alpha_DD = Alpha_DD, Rho_DD = Rho_DD, ny_DD = ny_DD, k_DD = k_DD,
-               wa_DD = wa_DD, E_hist = E_hist, C_hist = C_hist, UMSYprior = UMSYprior)
+               wa_DD = wa_DD, E_hist = E_hist, C_hist = C_hist)
   params <- list(logit_UMSY_DD = log(UMSYpriorpar[1]/(1 - UMSYpriorpar[1])),
                  log_MSY_DD = log(3 * AvC), log_q_DD = log(Data@Mort[x]))
-  info <- list(data = data, params = params)
+  info <- list(Year = Year, data = data, params = params)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(start = obj$par, objective = obj$fn, gradient = obj$gr)
-  if(reps == 1) TAC <- obj$report()$TAC
-  if(reps > 1) {
-    SD <- sdreport(obj, getReportCovariance = FALSE)
-    samps <- rmvnorm(reps, opt$par, round(SD$cov.fixed, 4))
-    TAC <- rep(NA, reps)
-    for (i in 1:reps) {
-      params.new <- list(logit_UMSY_DD = samps[i, 1], log_MSY_DD = samps[i, 2],
-                         log_q_DD = samps[i, 3])
-      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSEtool")
-      TAC[i] <- obj.samp$report()$TAC
-    }
-  }
-  Rec <- new("Rec")
-  Rec@TAC <- TACfilter(TAC)
+  SD <- sdreport(obj)
 
-  if(report) {
-    return(list(Rec = Rec, TAC = TAC, info = info, obj = obj, opt = opt,
-                Data = Data, dependencies = dependencies))
-  } else {
-    return(Rec)
-  }
+  Assessment <- return_Assessment()
+  return(Assessment)
 }
 class(DD_TMB) <- "Assess"
