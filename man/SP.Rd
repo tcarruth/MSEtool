@@ -4,28 +4,20 @@
 \alias{SP}
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
-SP(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE)
+SP(Data, n = 2, B1frac = 1)
 }
 \arguments{
-\item{x}{A position in a data-limited methods data object}
-
 \item{Data}{A data-limited methods data object}
-
-\item{reps}{The number of stochastic samples of the TAC recommendation}
 
 \item{n}{The exponent of the production function, which is fixed in the model.
 Typically fixed at n = 2, where the biomass at MSY is half of carrying capacity.}
 
 \item{B1frac}{The biomass to carrying capacity ratio in the first year of the model.
 A value of 1 assumes virgin conditions.}
-
-\item{Assessment}{Indicates whether variables and assessment results will be produced from MP.}
-
-\item{report}{Indicates whether report will be produced for Data object.}
 }
 \value{
-If \code{Assessment = TRUE}, an object of class \code{Assessment}.
-Otherwise, an object of class \code{Rec}.
+An object of \code{\linkS4class{Assessment}} containing objects and output
+from TMB.
 }
 \description{
 A surplus production model that estimates the TAC using a
@@ -33,12 +25,16 @@ time-series of catches and a relative abundance index and coded in TMB.
 The model is conditioned on catch and estimates a predicted index.
 }
 \note{
-The model is parameterized with UMSY and MSY as leading parameters.
-Virgin conditions are assumed in the first year of the time series and
+The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
+leading parameters. Virgin conditions are assumed in the first year of the time series and
 the production function is assumed to be symmetric.
 }
 \references{
-Fletcher, Pella and Tomlinson
+Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system.
+Fishery Bulletin 76:515:521.
+
+Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
+Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 }
 \seealso{
 \code{\link{SP_SS}}

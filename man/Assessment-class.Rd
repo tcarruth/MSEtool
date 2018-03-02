@@ -5,18 +5,81 @@
 \alias{Assessment-class}
 \title{Assessment Class}
 \description{
-An S4 class that contains objects from an assessment called in an MP.
+An S4 class that contains objects from a function of class Assess.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{MP}}{Name of the MP.}
+\item{\code{Model}}{Name of the assessment model.}
 
-\item{\code{Rec}}{An object of class \code{\link[DLMtool]\linkS4class{Rec}} which contains
-the management recommendation from the MP.}
+\item{\code{MSY}}{Maximum sustainable yield.}
 
-\item{\code{info}}{A data frame containing the data and starting value of estimated parameters
-(excluding nuisance parameters with analytic solutions) for the assessment.}
+\item{\code{UMSY}}{Exploitation at maximum sustainable yield.}
+
+\item{\code{FMSY}}{Instantaneous fishing mortality rate at maximum sustainable yield.}
+
+\item{\code{BMSY}}{Biomass at maximum sustainable yield.}
+
+\item{\code{B0}}{Biomass at virgin equilibrium.}
+
+\item{\code{R0}}{Recruitment at virgin equilibrium.}
+
+\item{\code{N0}}{Abundance at virgin equilibrium.}
+
+\item{\code{SSB0}}{Spawning stock biomass at virgin equilibrium.}
+
+\item{\code{h}}{Steepness at virgin equilibrium.}
+
+\item{\code{U}}{Time series of exploitation.}
+
+\item{\code{U_UMSY}}{Time series of relative exploitation.}
+
+\item{\code{F}}{Time series of fishing mortality.}
+
+\item{\code{F_FMSY}}{Time series of fishing mortality relative to MSY.}
+
+\item{\code{B}}{Time series of biomass.}
+
+\item{\code{B_BMSY}}{Time series of relative biomass relative to MSY.}
+
+\item{\code{B_B0}}{Time series of depletion.}
+
+\item{\code{SSB}}{Time series of spawning stock biomass.}
+
+\item{\code{SSB_SSBMSY}}{Time series of spawning stock biomass relative to MSY.}
+
+\item{\code{SSB_SSB0}}{Time series of spawning stock depletion.}
+
+\item{\code{N}}{Time series of population abundance.}
+
+\item{\code{R}}{Time series of recruitment.}
+
+\item{\code{N_at_age}}{Time series of numbers-at-age.}
+
+\item{\code{C_at_age}}{Time series of catch-at-age.}
+
+\item{\code{selectivity}}{Selectivity-at-age.}
+
+\item{\code{Catch}}{Predicted catch.}
+
+\item{\code{Index}}{Predicted Index.}
+
+\item{\code{Random}}{A vector of estimated random effects.}
+
+\item{\code{Random_SE}}{A vector of standard errors of the random effects.}
+
+\item{\code{NLL}}{Negative log-likelihood of the model (integrated across random effects).}
+
+\item{\code{NLL_Catch}}{Negative log-likelihood of the catch component.}
+
+\item{\code{NLL_Index}}{Negative log-likelihood of the index component.}
+
+\item{\code{NLL_C_at_age}}{Negative log-likelihood of the catch-at-age component.}
+
+\item{\code{NLL_random}}{Marginal negative log-likelihood of the random effects.}
+
+\item{\code{info}}{A list containing the data and starting values of estimated parameters
+for the assessment.}
 
 \item{\code{obj}}{A list with components returned from \code{\link[TMB]{MakeADFun}}.}
 
@@ -25,11 +88,11 @@ the management recommendation from the MP.}
 \item{\code{SD}}{Parameter estimates and their standard errors, obtained from
 \code{\link[TMB]{sdreport}}.}
 
-\item{\code{report}}{A list of model output reported from TMB executable, i.e. \code{obj$report()}.}
+\item{\code{TMB_report}}{A list of model output reported from the TMB executable, i.e. \code{obj$report()}.}
 
-\item{\code{Data}}{An object of class \code{\link[DLMtool]\linkS4class{Data}} for
-implementing the MP.}
-
-\item{\code{dependencies}}{A character string of data types used for the MP.}
+\item{\code{dependencies}}{A character string of data types used for the assessment.}
 }}
 
+\author{
+Q. Huynh
+}

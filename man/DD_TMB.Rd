@@ -4,20 +4,14 @@
 \alias{DD_TMB}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, reps = 100, Assessment = FALSE)
+DD_TMB(Data)
 }
 \arguments{
-\item{x}{A position in a data-limited methods data object}
-
-\item{Data}{A data-limited methods data object}
-
-\item{reps}{The number of stochastic samples of the TAC recommendation}
-
-\item{Assessment}{Indicates whether variables and assessment results will be produced from MP.}
+\item{Data}{A data-limited methods data object.}
 }
 \value{
-If \code{Assessment = TRUE}, an object of class \code{Assessment}.
-Otherwise, an object of class \code{Rec}.
+An object of \code{\linkS4class{Assessment}} containing objects and output
+from TMB.
 }
 \description{
 A simple delay-difference assessment that estimates the TAC using a
@@ -33,8 +27,11 @@ Unsurprisingly the extent to which these assumptions are
 violated tends to be the biggest driver of performance for this method.
 }
 \references{
-Method based on equations of Carl Walters (bug him with
-questions and expect colourful responses).
+Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify
+fisheries stock status using only fisheries catch data. Fisheries Research 119-120:66-79.
+
+Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,
+Dynamics and Uncertainty. Chapman and Hall, New York.
 }
 \seealso{
 \code{\link{DD_SS}}
