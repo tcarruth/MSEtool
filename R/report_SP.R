@@ -3,7 +3,7 @@
 #' @importFrom stats qqnorm qqline
 generate_report_SP <- function(Assessment, figure = TRUE, save_figure = FALSE,
                                    save_dir = getwd()) {
-  assign_Assessment_var()
+  assign_Assessment_slots()
 
   Year <- info$Year
   n_y <- info$data$n_y
@@ -305,7 +305,7 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = TRUE,
 #' @importFrom gplots rich.colors
 retrospective_SP <- function(Assessment, nyr, figure = TRUE,
                              save_figure = FALSE, save_dir = getwd()) {
-  assign_Assessment_var()
+  assign_Assessment_slots()
 
   data <- info$data
   n_y <- data$n_y
