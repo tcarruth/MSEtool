@@ -1,33 +1,58 @@
 # Call from inside MP
 return_Assessment <- function() {
-  output <- mget(c('Rec', 'info', 'obj', 'opt', 'SD', 'Data', 'dependencies'),
-                 envir = parent.frame())
   Call.history <- sys.calls()
   lCall <- length(Call.history)
-  MP <- as.character(Call.history[[lCall-1]])[1]
-  SD <- output$SD
-  class(SD) <- "list"
-  Assessment <- new("Assessment", MP = MP, Rec = output$Rec, info = output$info,
-                    obj = output$obj, opt = output$opt, SD = SD, report = output$obj$report(),
-                    Data = output$Data, dependencies = output$dependencies)
+  Model <- as.character(Call.history[[lCall-1]])[1]
+
+  output <- mget(c('info', 'obj', 'opt', 'SD', 'dependencies'),
+                 envir = parent.frame())
+  report <- output$obj$report()
+
+  if(Model == "DD_TMB") {
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    k <- output$info$data$k_DD
+    Yearplusk <- c(Year, (max(Year)+1):(max(Year)+k))
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY_DD, UMSY = report$UMSY_DD, BMSY = report$BMSY_DD,
+                      B0 = report$Bo_DD, R0 = report$Ro_DD, N0 = report$No_DD,
+                      SSB0 = report$Bo_DD, h = report$h,
+                      U = structure(report$U_DD, names = Year),
+                      U_UMSY = structure(report$relU_DD, names = Year),
+                      B = structure(report$B_DD, names = Yearplusone),
+                      B_BMSY = structure(report$relB_DD, names = Yearplusone),
+                      B_B0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
+                      SSB = structure(report$B_DD, names = Yearplusone),
+                      SSB_SSBMSY = structure(report$relB_DD, names = Yearplusone),
+                      SSB_SSB0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
+                      N = structure(report$N_DD, names = Yearplusone),
+                      R = structure(report$R_DD, names = Yearplusk),
+                      Catch = structure(report$Cpred_DD, names = Year),
+                      NLL = report$jnll,
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies)
+  }
+  if(Model == "DD_SS") {
+
+  }
+
   return(Assessment)
 }
 
-# Call from inside generate_report()
-assign_Assessment_var <- function() {
+
+# Call from inside generate_plots() and summary.Assessment
+assign_Assessment_slots <- function() {
   Assessment <- get("Assessment", envir = parent.frame())
   Nslots <- length(slotNames(Assessment))
   for(i in 1:Nslots) {
     assign(slotNames(Assessment)[i], slot(Assessment, slotNames(Assessment)[i]),
            envir = parent.frame())
   }
-  SD <- get("SD", envir = parent.frame())
-  class(SD) <- "sdreport"
-  assign("SD", SD, envir = parent.frame())
   invisible()
 }
 
-# Call from inside generate_report(), profile_likelihood(), retrospective(),
+# Call from inside generate_plots(), profile_likelihood(), retrospective(),
 prepare_to_save_figure <- function() {
   MP <- get("MP", envir = parent.frame())
   base.dir <- get("save_dir", envir = parent.frame()) # by default: getwd()
