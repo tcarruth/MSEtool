@@ -28,7 +28,7 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @importFrom mvtnorm rmvnorm
-#' @useDynLib MSE
+#' @useDynLib MSEtool
 SP <- function(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE) {
   dependencies = "Data@Cat, Data@Ind"
   yind <- which(!is.na(Data@Cat[x, ]))[1]
@@ -50,7 +50,7 @@ SP <- function(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE) {
 
   obj <- MakeADFun(data = info$data, parameters = info$params,
                    map = list(log_B1frac = factor(NA), log_n = factor(NA)),
-                   DLL = "MSE", silent = TRUE)
+                   DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(obj$par, obj$fn, obj$gr, obj$he)
 
   if(reps == 1) TAC <- obj$report()$TAC
@@ -61,7 +61,7 @@ SP <- function(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE) {
     for (i in 1:reps) {
       params.new <- list(logit_UMSY = samps[i, 1], log_MSY = samps[i, 2],
                          log_B1frac = log(B1frac), log_n = log(n))
-      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSE")
+      obj.samp <- MakeADFun(data = info$data, parameters = params.new, DLL = "MSEtool")
       TAC[i] <- obj.samp$report()$TAC
     }
   }
@@ -75,4 +75,4 @@ SP <- function(x, Data, reps = 100, n = 2, B1frac = 1, Assessment = FALSE) {
     return(Rec)
   }
 }
-class(SP) <- "MP"
+class(SP) <- "Assess"

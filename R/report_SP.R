@@ -334,7 +334,7 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
     data$Index <- Index
 
     obj <- MakeADFun(data = data, parameters = params, map = map,
-                     DLL = "MSE", silent = TRUE)
+                     DLL = "MSEtool", silent = TRUE)
     opt <- nlminb(obj$par, obj$fn, obj$gr, obj$he)
 
     if(opt$convergence == 0) {

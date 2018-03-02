@@ -89,11 +89,11 @@
 
   Type nll = Type(0);
   for(int aa=0; aa<nareas; aa++){
-    //nll-=dnorm(log(idist(aa)), log(fracs(aa)), sigma, true);
-    nll-=dnorm(idist(aa), fracs(aa), sigma, true);
+    nll-=dnorm(log(idist(aa)), log(fracs(aa)), sigma, true);
+    //nll-=dnorm(idist(aa), fracs(aa), sigma, true);
   }
-  nll -= dnorm(psum, prob, sigma, true);
-  //nll -= dnorm(log(psum), log(muprob), sigma, true);
+  //nll -= dnorm(psum, prob, sigma, true);
+  nll -= dnorm(log(psum), log(prob), sigma, true);
 
   //-------REPORTING-------//
   ADREPORT( log_grav );
@@ -102,7 +102,10 @@
   REPORT( transN );
   REPORT( grav );
   REPORT( mov );
-  REPORT( grav );
+  REPORT( log_grav );
+  REPORT( log_visc );
+  REPORT( prob );
+  REPORT( fracs );
 
   return nll;
 

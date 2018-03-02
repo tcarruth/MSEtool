@@ -33,12 +33,14 @@ time-series of catches and a relative abundance index and coded in TMB.
 The model is conditioned on catch and estimates a predicted index.
 }
 \note{
-The model is parameterized with UMSY and MSY as leading parameters.
-Virgin conditions are assumed in the first year of the time series and
+The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
+leading parameters. Virgin conditions are assumed in the first year of the time series and
 the production function is assumed to be symmetric.
 }
 \references{
-Fletcher, Pella and Tomlinson
+Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
+
+Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model. Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 }
 \seealso{
 \code{\link{SP_SS}}

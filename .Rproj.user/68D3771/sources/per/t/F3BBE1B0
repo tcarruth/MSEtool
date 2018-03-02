@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "2137207072",
+    "hash" : "184534469",
     "id" : "F3BBE1B0",
-    "lastKnownWriteTime" : 1519877431,
-    "last_content_update" : 1519877431771,
+    "lastKnownWriteTime" : 1519964253,
+    "last_content_update" : 1519964253,
     "path" : "C:/GitHub/MSE/NAMESPACE",
     "project_path" : "NAMESPACE",
     "properties" : {
-        "cursorPosition" : "31,29",
-        "scrollLine" : "0"
+        "cursorPosition" : "31,25",
+        "scrollLine" : "46"
     },
     "relative_order" : 1,
     "source_on_save" : false,

@@ -326,7 +326,7 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
                    log_q_DD = Assessment@obj$env$last.par.best[3])
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = list(logit_UMSY_DD = factor(NA), log_MSY_DD = factor(NA)),
-                     DLL = "MSE", silent = TRUE)
+                     DLL = "MSEtool", silent = TRUE)
     opt <- try(nlminb(obj$par, obj$fn, obj$gr, obj$he))
     if(!inherits(opt, "try-error")) {
       if(opt$convergence == 0) nll[i] <- opt$objective
@@ -392,7 +392,7 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
     data$C_hist <- C_hist_ret
     data$E_hist <- E_hist_ret
 
-    obj <- MakeADFun(data = data, parameters = params, DLL = "MSE", silent = TRUE)
+    obj <- MakeADFun(data = data, parameters = params, DLL = "MSEtool", silent = TRUE)
     opt <- nlminb(obj$par, obj$fn, obj$gr, obj$he)
 
     if(opt$convergence == 0) {

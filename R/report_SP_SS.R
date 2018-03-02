@@ -302,7 +302,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
                      map = list(logit_UMSY = factor(NA), log_MSY = factor(NA),
                                 log_B1frac = factor(NA), log_n = factor(NA),
                                 log_sigma = factor(NA)), random = "log_B_dev",
-                     DLL = "MSE", silent = TRUE)
+                     DLL = "MSEtool", silent = TRUE)
     opt <- try(nlminb(obj$par, obj$fn, obj$gr))
     if(!inherits(opt, "try-error")) {
       if(opt$convergence == 0) nll[i] <- opt$objective
@@ -372,7 +372,7 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
     params$log_B_dev <- rep(0, n_y_ret - 1)
 
     obj <- MakeADFun(data = data, parameters = params, map = map,
-                     DLL = "MSE", silent = TRUE)
+                     DLL = "MSEtool", silent = TRUE)
     opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, obj$he), error = function(e) e)
 
     if(!inherits(opt, "error")) {

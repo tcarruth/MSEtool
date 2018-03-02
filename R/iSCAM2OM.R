@@ -1,23 +1,23 @@
 # === OM specification using iSCAM stock assessment ====================
 
 
-#' Reads MLE estimates from iSCAM file structure into an operating model 
+#' Reads MLE estimates from iSCAM file structure into an operating model
 #'
-#' @description A function that uses the file location of a fitted iSCAM 
-#' model including input files to population the various slots of an 
-#' operating model parameter estimates. iSCAM2DLM relies on several 
+#' @description A function that uses the file location of a fitted iSCAM
+#' model including input files to population the various slots of an
+#' operating model parameter estimates. iSCAM2OM relies on several
 #' functions written by Chris Grandin (DFO PBS).
 #' @param iSCAMdir A folder with iSCAM input and output files in it
-#' @param nsim The number of simulations to take for parameters with 
+#' @param nsim The number of simulations to take for parameters with
 #' uncertainty (for OM@cpars custom parameters)
 #' @param proyears The number of MSE projection years
 #' @param mcmc Whether to use mcmc samples to create custom parameters cpars
 #' @param Name The name of the operating model
 #' @param Source Reference to assessment documentation e.g. a url
-#' @param length_timestep How long is a model time step in years 
+#' @param length_timestep How long is a model time step in years
 #' (e.g. a quarterly model is 0.25, a monthly model 1/12)
 #' @param Author Who did the assessment
-#' @author T. Carruthers 
+#' @author T. Carruthers
 #' @importFrom grDevices dev.off gray jpeg png
 #' @importFrom coda mcmc
 #' @importFrom graphics arrows contour
@@ -25,17 +25,17 @@
 #' @export iSCAM2OM
 iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No source provided",
                  length_timestep=1,Author="No author provided"){
-  
+
   message("-- Using function of Chris Grandin (DFO PBS) to extract data from iSCAM file structure --")
 
   replist<-load.iscam.files(iSCAMdir)
-    
+
   message("-- End of iSCAM extraction operations --")
-  
+
   # print(names(replist))
   #  print(replist$dat$to)
   if(replist$dat$num.sex>1)message("More than one sex was modelled with iSCAM, DLMtool currently does not include sex specific-parameters and will use growth etc from the first sex specified by iSCAM")
-  
+
   OM<-new('OM',DLMtool::Albacore, DLMtool::Generic_Fleet, DLMtool::Generic_Obs, DLMtool::Perfect_Imp)
   OM@nsim<-nsim
   OM@proyears<-proyears
@@ -43,18 +43,18 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   # The trouble is that DLMtool is an annual model so if the SS model is seasonal we need to aggregate overseasons
   # The reason for the code immediately below (and length_timestep) is that some SS models just assume quarterly timesteps with no way of knowing this (other than maxage and M possibly)!
   #if(is.na(length_timestep)){
-    
+
    # if((replist$endyr-replist$startyr+1)>100){
     #  nseas<-1/replist$seasduration[1] # too many  years for industrial fishing so assumes a quarterly model
     #}else{
     #  nseas=1
     #}
-    
+
   #}else{
    # nseas<-1/length_timestep
   #}
   nseas<-1/length_timestep
-  
+
   if(is.null(Name)){
     OM@Name=iSCAMdir
   }else{
@@ -64,14 +64,14 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   OM@nyears<-nyears<-(replist$dat$end.yr-replist$dat$start.yr+1)/nseas
   yind<-(1:nyears)*nseas
   yind2<-rep(1:nyears,each=nseas)
-  
+
   # === Stock parameters =========================================================================================================
-  
- 
+
+
   OM@maxage<-maxage<-replist$dat$end.age
-  
+
   aind<-rep(1:OM@maxage,each=nseas)[1:maxage]
-  
+
   muLinf=replist$dat$linf[1]
   cvLinf=0.025
   muK=replist$dat$k[1]
@@ -81,55 +81,55 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   K<-out[,2]
   OM@K<-quantile(K,c(0.025,0.975))
   OM@Linf<-quantile(Linf,c(0.025,0.975))
-  
-  OM@t0=rep(replist$dat$to,2) # t0 is not 
+
+  OM@t0=rep(replist$dat$to,2) # t0 is not
   OM@Msd<-OM@Ksd<-OM@Linfsd<-OM@Mgrad<-OM@Kgrad<-OM@Linfgrad<-c(0,0)
   L50=Linf*(1-exp(-K*(replist$dat$age.at.50.mat-mean(OM@t0))))
   OM@a=replist$dat$lw.alpha
   OM@b=replist$dat$lw.beta
-  
- 
-  
+
+
+
    #SSB0<-replist$mpd$sbo*1000
   R0<-replist$mpd$ro*1E6
   surv<-exp(cumsum(c(0,rep(-replist$mpd$m,maxage-1))))
-  
+
   SSBpR<-sum(replist$mpd$d3_wt_mat[1,]*surv)/1000 # in kg per recruit
   SSB0<-SSBpR*R0
-  
+
   rbar<-replist$mpd$rbar #mean recruitment
   RD<-replist$mpd$delta
-  
+
   ageM<-replist$dat$age.at.50.mat
   ageMsd<-replist$dat$sd.at.50.mat
-  
-   
- 
+
+
+
   #OM@R0<-rep(replist$mpd$rho,2)
-  
+
   ageArray<-array(rep(1:maxage,each=nsim),c(nsim,maxage))
   Len_age<-Linf*(1-exp(-K*(ageArray-mut0)))
   Wt_age<-array(OM@a*Len_age^OM@b, dim = c(nsim, maxage, nyears)) /1000 #in kg
-   
-  # SO FAR: Wt_age K Linf  
-  
+
+  # SO FAR: Wt_age K Linf
+
   OM@M<-rep(replist$mpd$m,2)
   OM@R0<-rep(R0,2)
- 
+
 
   rec<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
   SSB<-(replist$mpd$sbt*1000)[1:length(rec)]
-  
+
   hs<-SRopt(nsim,SSB,rec,SSBpR,plot=F,type="BH")
   OM@h<-quantile(hs,c(0.025,0.975))
-  OM@SRrel<-replist$mpd$rectype # This is the default 
- 
+  OM@SRrel<-replist$mpd$rectype # This is the default
+
   # SO FAR OM:     Name, nsim, proyears, nyears, maxage, R0, M, Msd, Mgrad, h, SRrel, Linf, K, t0, Ksd, Kgrad, Linfsd, Linfgrad, recgrad, a, b,
   # SO FAR cpars:  Wt_age, K Linf hs
-  
-    
+
+
   OM@D<-rep(replist$mpd$sbt[length(replist$mpd$sbt)]/replist$mpd$sbo,2)
-  
+
   # Movement modelling ----------------------------
   nASSareas<-replist$dat$num.areas
   if(nASSareas==1){ # mixed stock
@@ -140,99 +140,99 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
     OM@Frac_area_1<-OM@Size_area_1<-rep(0.5,2)
     OM@Prob_staying<-rep(0.5,2)
   }
-    
+
   OM@Source<-paste0(Source,". Author: ",Author,".")
-  
+
   # Maturity --------------------------------------
-  
+
   Mat_age<- 1/(1 + exp((ageM - (1:maxage))/ageMsd))
 
   muLen_age<-muLinf*(1-exp(-muK*((1:maxage)-mut0)))
-  
+
   # Currently using linear interpolation of mat vs len, is robust and very close to true logistic model predictions
-  
+
   L50<-LinInterp(Mat_age,muLen_age,0.5)
   OM@L50<-rep(L50,2)
-  
+
   L95<-LinInterp(Mat_age,muLen_age,0.95)
   OM@L50_95<-rep(L95-L50,2)
-  
-  
+
+
   # Fleet parameters ============================================================================================================
-  
+
   # Vulnerability --------------------------------------------
-  
+
   F_at_age<-t(replist$mpd$F)
   Ftab<-cbind(expand.grid(1:dim(F_at_age)[1],1:dim(F_at_age)[2]),as.vector(F_at_age))
-  
+
   if(nseas>1){
    sumF<-aggregate(Ftab[,3],by=list(aind[Ftab[,1]],Ftab[,2]),mean,na.rm=T)
    sumF<-aggregate(sumF[,3],by=list(sumF[,1],yind2[sumF[,2]]),sum,na.rm=T)
   }else{
    sumF<-Ftab
   }
-  
-  V <- array(NA, dim = c(nsim, maxage, nyears + proyears)) 
+
+  V <- array(NA, dim = c(nsim, maxage, nyears + proyears))
   V[,,1:nyears]<-rep(sumF[,3],each=nsim) # for some reason SS doesn't predict F in final year
   V[,,(nyears+1):(nyears+proyears)]<-V[,,nyears]
-  
+
   Find<-apply(V,c(1,3),max,na.rm=T) # get apical F
-  
+
   ind<-as.matrix(expand.grid(1:nsim,1:maxage,1:(nyears+proyears)))
   V[ind]<-V[ind]/Find[ind[,c(1,3)]]
-   
+
   # guess at length parameters # this is over ridden anyway
-  
+
   muFage<-as.vector(apply(F_at_age[,ceiling(ncol(F_at_age)*0.75):ncol(F_at_age)],1,mean))
   Vuln<-muFage/max(muFage,na.rm=T)
-  
+
   OM@L5<-rep(LinInterp(Vuln,muLen_age,0.05,ascending=T,zeroint=T),2)                            # not used if V is in cpars
   OM@LFS<-rep(muLen_age[which.min((exp(Vuln)-exp(1.05))^2 * 1:length(Vuln))],2)  # not used if V is in cpars
   OM@Vmaxlen<-rep(mean(Vuln[(length(Vuln)-(nseas+1)):length(Vuln)],na.rm=T),2)  # not used if V is in cpars
-  
+
   OM@isRel="FALSE" # these are real lengths not relative to length at 50% maturity
-  
+
   # -- Recruitment -----------------------------------------------
-  
-  
+
+
   recs<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
   nrecs<-length(recs)
   recdevs<-replist$mpd$delta# last year is mean recruitment
   #recdevs<-replist[length(replist$recruit$dev)-nyears)]
   #recdevs[is.na(recdevs)]<-0
   OM@AC<-rep(acf(recdevs)$acf[2,1,1],2)
-  
+
   Perrest<-matrix(rnorm(nsim*(nyears-1),rep(recdevs,each=nsim),0.2),nrow=nsim)
   procsd<-apply(Perrest,1,sd,na.rm=T)
   procmu <- -0.5 * (procsd)^2  # adjusted log normal mean
-  
+
   Perr<-array(NA,c(nsim,nyears+proyears+maxage-1))
   Perr<-matrix(rnorm(nsim*(maxage+nyears+proyears-1),rep(procmu,maxage+nyears+proyears-1),rep(procsd,maxage+nyears+proyears-1)),nrow=nsim)
   Perr[,(maxage-1)+1:(nyears-1)]<-Perrest # generate a bunch of simulations with uncertainty
- 
+
   OM@Perr<-quantile(procsd,c(0.025,0.975)) # uniform range is a point estimate from assessment MLE
   AC<-mean(OM@AC)
-  for (y in nyears:(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5  
+  for (y in nyears:(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
   Perr<-exp(Perr)
-  
-  
+
+
   # --- Fishing mortality rate index ---------------------------
-  
+
   Find<-Find[,1:nyears] # is only historical years
   Find<-Find/apply(Find,1,mean,na.rm=T)
-  
+
   # SO FAR OM:     Name, nsim, proyears, nyears, maxage, R0, M, Msd, Mgrad, h, SRrel, Linf, K, t0, Ksd, Kgrad, Linfsd, Linfgrad, recgrad, a, b,
   #                Size_area_1, Frac_area_1, Prob_Staying, Source, L50, L50_95, SelYears, AbsSelYears, L5, LFS, Vmaxlen, L5Lower, L5Upper,
   #                LFSLower, LFSUpper, VmaxLower, VmaxUpper, isRel,
   # SO FAR cpars:  Wt_age, K Linf hs, Perr, Find
-  
- 
-  
+
+
+
   #plot(replist$cpue$Obs,replist$cpue$Exp)
-   
+
   OM@Spat_targ<-rep(1,2)
   OM@Esd<-quantile(apply((Find[,1:(nyears-1)]-Find[,2:nyears])/Find[,2:nyears],1,sd),c(0.05,0.95))
-  
+
   OM@Period<-rep(NaN,2)
   OM@Amplitude<-rep(NaN,2)
   OM@EffYears<-1:nyears
@@ -240,61 +240,61 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   OM@EffUpper<-Find[1,]
   OM@qinc<-c(0,0)
   OM@qcv<-OM@Esd
-  
-  
+
+
   # Observation model parameters ==============================================================================
-  
+
   # Index observations -------------------------------------------------------
   sizeinds<-lapply(replist$dat$indices,nrow)
-  
+
   Io<-replist$dat$indices[[which.max(sizeinds)]]
   Ip<-replist$mpd$sbt[1:nyears][Io[,1]-replist$dat$start.yr+1]
   Io<-Io[,2]/mean(Io[,2])
   Ip<-Ip/mean(Ip)
-  
-  
+
+
   OM@Iobs<-rep(sd(Io-Ip),2)
-  
+
   getbeta<-function(beta,x,y){
     x<-x^beta
     x<-x/mean(x)
     sum((y-x)^2)
   }
   OM@beta<-rep(optimize(getbeta,x=Ip,y=Io,interval=c(0.1,10))$minimum,2)
- 
+
   #F_FMSY<-replist$derived_quants[grep("F_",replist$derived_quants[,1]),2]
   #Fref<-F_FMSY[length(F_FMSY)]
   #Bref<-replist$Kobe[nrow(replist$Kobe),2]
   #OBJ<-obj$likelihoods_used[1,1]
   #gmax<-obj$maximum_gradient_component
- 
+
   Wt_age2<-array(NA, dim = c(nsim, maxage, nyears+proyears))
   Wt_age2[,,1:nyears]<-Wt_age
   Wt_age2[,,nyears+1:proyears]<-rep(Wt_age[,,nyears],proyears)
-  
-  
-  
-  
+
+
+
+
   # --- mcmc functionality ------------------------------------
-  
+
   if(mcmc){
-    
+
     message("Attempting to read mcmc file to assign posterior samples to custom parameters")
-    
+
     model.dir=paste0(iSCAMdir,"/mcmc")
-    
+
     if(!file.exists(model.dir))stop(paste("Could not find the mcmc subfolder:",model.dir))
-    
+
     tmp<-read.mcmc(model.dir)
     nmcmc<-nrow(tmp$params)
-    
+
     if(nsim<nmcmc){
       samp<-sample(1:nmcmc,size=nsim)
     }else{
       message("You requested a greater number of simulations than the number of mcmc samples that are available - sampling with replacement")
       samp<-sample(1:nmcmc,size=nsim,replace=T)
     }
-    
+
     #@nyears<-nyears<-ncol(tmp$sbt[[1]])
     M<-tmp$params$m_gs1[samp]
     OM@M<-quantile(M,c(0.05,0.95))
@@ -302,60 +302,60 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
     OM@h<-quantile(hs,c(0.05,0.95))
     R0<-(1E6)*tmp$params$ro_gr1[samp]
     OM@R0<-quantile(R0, c(0.05,0.95))
-    
+
     ssb_r <-replist$mpd$bo/replist$mpd$sbo
     D<-tmp$sbt[[1]][samp,nyears]/tmp$params$bo[samp]*ssb_r
     OM@D<-quantile(D,c(0.05,0.95))
-    
+
     recdevs<-tmp$rdev[[1]]
-   
+
     procsd<-apply(recdevs[samp,],1,sd)
     OM@Perr<-quantile(procsd,c(0.05,0.95))
-    
+
     #recs<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
     nrecs<-ncol(recdevs)
     AC<-apply(recdevs[samp,],1,function(x)acf(x)$acf[2,1,1])
     OM@AC<-quantile(AC,c(0.05,0.95))
-    
+
     procmu <- -0.5 * (procsd)^2  # adjusted log normal mean
-    
+
     Perr<-matrix(rnorm(nsim*(maxage+nyears+proyears-1),rep(procmu,maxage+nyears+proyears-1),rep(procsd,maxage+nyears+proyears-1)),nrow=nsim)
     Perr[,maxage:(maxage+nyears-1)]<-as.matrix(recdevs[samp,]) # there is one less year of estimated recruitment
-  
-    for (y in c(2:(maxage-1),(-1:(proyears-1))+(maxage+nyears))) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5  
+
+    for (y in c(2:(maxage-1),(-1:(proyears-1))+(maxage+nyears))) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
     Perr<-exp(Perr)
-    
+
     nfleet<-length(tmp$ft[[1]])
     FM<-tmp$ft[[1]][[1]][samp,1:nyears]
     for(ff in 2:nfleet)FM<-FM+tmp$ft[[1]][[ff]][samp,1:nyears]
     Find<-as.matrix(FM/apply(FM,1,mean))
-    
-    
+
+
     OM@cpars<-list(V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find,D=D,M=M,R0=R0,AC=AC)
-  
+
   }else{
-    
+
     OM@cpars<-list(R0=rep(R0,nsim),V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find)
-    
+
   }
-  
-  
-  
- 
+
+
+
+
   OM
- 
+
 }
 
 
 #' Reads iSCAM files into a hierarchical R list object
 #'
-#' @description A function for reading iSCAM input and output files 
-#' into R 
+#' @description A function for reading iSCAM input and output files
+#' into R
 #' @param model.dir An iSCAM directory
 #' @param burnin The initial mcmc samples to be discarded
-#' @param thin The degree of chain thinning 1 in every thin 
+#' @param thin The degree of chain thinning 1 in every thin
 #' iterations is kept
-#' @param verbose Should detailed outputs be provided. 
+#' @param verbose Should detailed outputs be provided.
 #' @author Chris Grandin (DFO PBS)
 #' @export load.iscam.files
 load.iscam.files <- function(model.dir,
@@ -365,7 +365,7 @@ load.iscam.files <- function(model.dir,
   ## Load all the iscam files for output and input, and return the model object.
   ## If MCMC directory is present, load that and perform calculations for mcmc
   ##  parameters.
-  
+
   starter.file.name <- "iscam.dat"
   par.file <- "iscam.par"
   rep.file <- "iscam.rep"
@@ -378,7 +378,7 @@ load.iscam.files <- function(model.dir,
   mcmc.vuln.biomass.file <- "iscam_vbt_mcmc.csv"
   mcmc.proj.file <- "iscammcmc_proj_Gear1.csv"
   mpd.proj.file <- "iscammpd_proj_Gear1.csv"
-  
+
   model <- list()
   model$path <- model.dir
   ## Get the names of the input files
@@ -386,7 +386,7 @@ load.iscam.files <- function(model.dir,
   model$dat.file <- inp.files[[1]]
   model$ctl.file <- inp.files[[2]]
   model$proj.file <- inp.files[[3]]
-  
+
   ## Load the input files
   model$dat <- read.data.file(model$dat.file)
   model$ctl <- read.control.file(model$ctl.file,
@@ -401,7 +401,7 @@ load.iscam.files <- function(model.dir,
   model$mcmc <- NA
   ## Set the mcmc path. This doesn't mean it exists.
   model$mcmcpath <- file.path(model.dir, "mcmc")
-  
+
   ## If it has an 'mcmc' sub-directory, load it
   if(dir.exists(model$mcmcpath)){
     model$mcmc <- read.mcmc(model$mcmcpath)
@@ -415,12 +415,12 @@ load.iscam.files <- function(model.dir,
   model
 }
 
-#' Reads iSCAM Data, Control and Projection files 
+#' Reads iSCAM Data, Control and Projection files
 #'
-#' @description A function for returning the three types of 
-#' iSCAM input and output files 
+#' @description A function for returning the three types of
+#' iSCAM input and output files
 #' @param path File path
-#' @param filename The filename  
+#' @param filename The filename
 #' @author Chris Grandin (DFO PBS)
 #' @export fetch.file.names
 fetch.file.names <- function(path, ## Full path to the file
@@ -429,7 +429,7 @@ fetch.file.names <- function(path, ## Full path to the file
   ## 1. Data file name
   ## 2. Control file name
   ## 3. Projection file name
-  
+
   ## Get the path the file is in
   d <- readLines(file.path(path, filename), warn = FALSE)
   ## Remove comments
@@ -442,7 +442,7 @@ fetch.file.names <- function(path, ## Full path to the file
 }
 
 
-#' Reads iSCAM Rep file 
+#' Reads iSCAM Rep file
 #'
 #' @description A function for returning the results of the
 #' .rep iscam file
@@ -466,13 +466,13 @@ read.report.file <- function(fn){
   #
   # A label must start with an alphabetic character followed by
   # any number of alphanumeric characters (includes underscore and .)
-  
+
   dat <- readLines(fn, warn = FALSE)
   # Remove preceeding and trailing whitespace on all elements,
   #  but not 'between' whitespace.
   dat <- gsub("^[[:blank:]]+", "", dat)
   dat <- gsub("[[:blank:]]+$", "", dat)
-  
+
   # Find the line indices of the labels
   # Labels start with an alphabetic character followed by
   # zero or more alphanumeric characters
@@ -481,7 +481,7 @@ read.report.file <- function(fn){
   nobj <- length(objs) # Number of objects
   ret  <- list()
   indname <- 0
-  
+
   for(obj in 1:nobj){
     indname <- match(objs[obj], dat)
     if(obj != nobj){ # If this is the last object
@@ -525,7 +525,7 @@ read.report.file <- function(fn){
 
 
 
-#' Reads iSCAM dat file 
+#' Reads iSCAM dat file
 #'
 #' @description A function for returning the results of the
 #' .dat iscam file
@@ -538,17 +538,17 @@ read.data.file <- function(file = NULL,
   ## Read in the iscam datafile given by 'file'
   ## Parses the file into its constituent parts
   ## And returns a list of the contents
-  
+
   data <- readLines(file, warn=FALSE)
   tmp <- list()
   ind <- 0
-  
+
   # Remove any empty lines
   data <- data[data != ""]
-  
+
   # remove preceeding whitespace if it exists
   data <- gsub("^[[:blank:]]+", "", data)
-  
+
   # Get the element number for the "Gears" names if present
   dat <- grep("^#.*Gears:.+", data)
   tmp$has.gear.names <- FALSE
@@ -558,7 +558,7 @@ read.data.file <- function(file = NULL,
     tmp$gear.names <- gsub("^[[:blank:]]+", "", gear.names)
     tmp$has.gear.names <- TRUE
   }
-  
+
   ## Get the element number for the "IndexGears" names if present
   ## dat <- grep("^#.*IndexGears:.+",data)
   ## tmp$hasIndexGearNames <- FALSE
@@ -569,7 +569,7 @@ read.data.file <- function(file = NULL,
   ##   tmp$indexGearNames <- gsub("^[[:blank:]]+","",indexGearNames)
   ##   tmp$hasIndexGearNames <- TRUE
   ## }
-  
+
   ## # Get the element number for the "AgeGears" names if present (gears with age comp data)
   ## dat <- grep("^#.*AgeGears:.+",data)
   ## tmp$hasAgeGearNames <- FALSE
@@ -580,21 +580,21 @@ read.data.file <- function(file = NULL,
   ##   tmp$ageGearNames <- gsub("^[[:blank:]]+","",ageGearNames)
   ##   tmp$hasAgeGearNames <- TRUE
   ## }
-  
+
   ## Get the element number for the "CatchUnits" if present
   dat <- grep("^#.*CatchUnits:.+", data)
   if(length(dat > 0)){
     catch.units.str <- gsub("^#.*CatchUnits:(.+)", "\\1", data[dat])
     tmp$catch.units <- gsub("^[[:blank:]]+", "", catch.units.str)
   }
-  
+
   ## Get the element number for the "IndexUnits" if present
   dat <- grep("^#.*IndexUnits:.+", data)
   if(length(dat > 0)){
     index.units.str <- gsub("^#.*IndexUnits:(.+)", "\\1", data[dat])
     tmp$index.units <- gsub("^[[:blank:]]+", "", index.units.str)
   }
-  
+
   ## Save the number of specimens per year (comment at end of each age comp
   ##  line), eg. #135 means 135 specimens contributed to the age proportions for
   ##  that year
@@ -611,19 +611,19 @@ read.data.file <- function(file = NULL,
   ## age.n is now a vector of values of N for the age comp data.
   ## The individual gears have not yet been parsed out, this will
   ##  happen later when the age comps are read in.
-  
+
   ## Get the element numbers which start with #.
   dat <- grep("^#.*", data)
   ## Remove the lines that start with #.
   dat <- data[-dat]
-  
+
   ## Remove comments which come at the end of a line
   dat <- gsub("#.*", "", dat)
-  
+
   ## Remove preceeding and trailing whitespace
   dat <- gsub("^[[:blank:]]+", "", dat)
   dat <- gsub("[[:blank:]]+$", "", dat)
-  
+
   ## Now we have a nice bunch of string elements which are the inputs for iscam.
   ## Here we parse them into a list structure
   ## This is dependent on the current format of the DAT file and needs to
@@ -636,13 +636,13 @@ read.data.file <- function(file = NULL,
   tmp$start.age  <- as.numeric(dat[ind <- ind + 1])
   tmp$end.age    <- as.numeric(dat[ind <- ind + 1])
   tmp$num.gears  <- as.numeric(dat[ind <- ind + 1])
-  
+
   ## Gear allocation
   tmp$gear.alloc  <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   if(!tmp$has.gear.names){
     tmp$gear.names <- 1:length(tmp$gear.alloc)
   }
-  
+
   ## Age-schedule and population parameters
   tmp$linf      <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   tmp$k         <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
@@ -653,17 +653,17 @@ read.data.file <- function(file = NULL,
   tmp$sd.at.50.mat  <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   tmp$use.mat   <- as.numeric(dat[ind <- ind + 1])
   tmp$mat.vec   <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
-  
+
   ## Delay-difference options
   tmp$dd.k.age   <- as.numeric(dat[ind <- ind + 1])
   tmp$dd.alpha.g <- as.numeric(dat[ind <- ind + 1])
   tmp$dd.rho.g   <- as.numeric(dat[ind <- ind + 1])
   tmp$dd.wk      <- as.numeric(dat[ind <- ind + 1])
-  
+
   ## Catch data
   tmp$num.catch.obs <- as.numeric(dat[ind <- ind + 1])
   tmp$catch         <- matrix(NA, nrow = tmp$num.catch.obs, ncol = 7)
-  
+
   for(row in 1:tmp$num.catch.obs){
     tmp$catch[row,] <- as.numeric(strsplit(dat[ind <- ind + 1], "[[:blank:]]+")[[1]])
   }
@@ -688,7 +688,7 @@ read.data.file <- function(file = NULL,
   ##if(!tmp$hasAgeGearNames){
   ##  tmp$ageGearNames <- 1:length(tmp$nagears)
   ##}
-  
+
   tmp$num.age.gears.vec       <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   tmp$num.age.gears.start.age <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   tmp$num.age.gears.end.age   <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
@@ -727,7 +727,7 @@ read.data.file <- function(file = NULL,
   tmp$num.weight.tab <- as.numeric(dat[ind <- ind + 1])
   tmp$num.weight.obs <- as.numeric(dat[ind <- ind + 1])
   tmp$waa <- NULL
-  
+
   if(tmp$num.weight.obs > 0){
     ## Parse the weight-at-age data
     nrows       <- tmp$num.weight.obs
@@ -744,7 +744,7 @@ read.data.file <- function(file = NULL,
                                      "sex",
                                      tmp$start.age:tmp$end.age)
   }
-  
+
   ## Annual Mean Weight data
   ## Catch data
   tmp$num.mean.weight <- as.numeric(dat[ind <- ind + 1])
@@ -767,7 +767,7 @@ read.data.file <- function(file = NULL,
 }
 
 
-#' Reads iSCAM control file 
+#' Reads iSCAM control file
 #'
 #' @description A function for returning the results of the
 #' iscam control file
@@ -787,7 +787,7 @@ read.control.file <- function(file = NULL,
   ## num.gears is the total number of gears in the datafile
   ## num.age.gears in the number of gears with age composition information in the
   ##  datafile
-  
+
   if(is.null(num.gears)){
     cat("You must supply the total number of gears (num.gears). ",
          "Returning NULL.")
@@ -798,20 +798,20 @@ read.control.file <- function(file = NULL,
          "(num.age.gears). Returning NULL.")
     return(NULL)
   }
-  
+
   data <- readLines(file, warn = FALSE)
-  
+
   ## Remove any empty lines
   data <- data[data != ""]
-  
+
   ## Remove preceeding whitespace if it exists
   data <- gsub("^[[:blank:]]+", "", data)
-  
+
   ## Get the element numbers which start with #.
   dat <- grep("^#.*", data)
   ## Remove the lines that start with #.
   dat <- data[-dat]
-  
+
   ## Save the parameter names, since they are comments and will be deleted in
   ##  subsequent steps.
   ## To get the npar, remove any comments and preceeding and trailing
@@ -831,11 +831,11 @@ read.control.file <- function(file = NULL,
   ## Now that parameter names are stored, parse the file.
   ##  remove comments which come at the end of a line
   dat <- gsub("#.*", "", dat)
-  
+
   ## Remove preceeding and trailing whitespace
   dat <- gsub("^[[:blank:]]+", "", dat)
   dat <- gsub("[[:blank:]]+$", "", dat)
-  
+
   ## Now we have a nice bunch of string elements which are the inputs for iscam.
   ## Here we parse them into a list structure.
   ## This is dependent on the current format of the CTL file and needs to
@@ -851,7 +851,7 @@ read.control.file <- function(file = NULL,
   colnames(tmp$params) <- c("ival","lb","ub","phz","prior","p1","p2")
   ## param.names is retreived at the beginning of this function
   rownames(tmp$params) <- param.names
-  
+
   ## Age and size composition control parameters and likelihood types
   nrows <- 8
   ncols <- num.age.gears
@@ -872,7 +872,7 @@ read.control.file <- function(file = NULL,
                               "degfreephase")
   ## Ignore the int check value
   ind <- ind + 1
-  
+
   ## Selectivity parameters for all gears
   nrows <- 10
   ncols <- num.gears
@@ -893,7 +893,7 @@ read.control.file <- function(file = NULL,
                          "penwtdome",
                          "penwttvs",
                          "nselblocks")
-  
+
   ## Start year for time blocks, one for each gear
   max.block <- max(tmp$sel[10,])
   tmp$start.yr.time.block <- matrix(nrow = num.gears, ncol = max.block)
@@ -908,7 +908,7 @@ read.control.file <- function(file = NULL,
     }
     tmp$start.yr.time.block[ng,] <- tmp.vec
   }
-  
+
   ## Priors for survey Q, one column for each survey
   tmp$num.indices <- as.numeric(dat[ind <- ind + 1])
   nrows <- 3
@@ -923,7 +923,7 @@ read.control.file <- function(file = NULL,
   rownames(tmp$surv.q) <- c("priortype",
                             "priormeanlog",
                             "priorsd")
-  
+
   ## Controls for fitting to mean weight data
   tmp$fit.mean.weight <- as.numeric(dat[ind <- ind + 1])
   tmp$num.mean.weight.cv <- as.numeric(dat[ind <- ind + 1])
@@ -932,7 +932,7 @@ read.control.file <- function(file = NULL,
   for(val in 1:n.vals){
     tmp$weight.sig[val] <- as.numeric(dat[ind <- ind + 1])
   }
-  
+
   ## Miscellaneous controls
   n.rows <- 16
   tmp$misc <- matrix(NA, nrow = n.rows, ncol = 1)
@@ -962,7 +962,7 @@ read.control.file <- function(file = NULL,
 }
 
 
-#' Reads iSCAM projection file 
+#' Reads iSCAM projection file
 #'
 #' @description A function for returning the results of the
 #' iscam projection file
@@ -975,44 +975,44 @@ read.projection.file <- function(file = NULL,
   ## Read in the projection file given by 'file'
   ## Parses the file into its constituent parts
   ##  and returns a list of the contents
-  
+
   data <- readLines(file, warn = FALSE)
-  
+
   ## Remove any empty lines
   data <- data[data != ""]
-  
+
   ## remove preceeding whitespace if it exists
   data <- gsub("^[[:blank:]]+", "", data)
-  
+
   ## Get the element numbers which start with #.
   dat <- grep("^#.*", data)
   ## remove the lines that start with #.
   dat <- data[-dat]
-  
+
   ## remove comments which come at the end of a line
   dat <- gsub("#.*", "", dat)
-  
+
   ## remove preceeding and trailing whitespace
   dat <- gsub("^[[:blank:]]+", "", dat)
   dat <- gsub("[[:blank:]]+$", "", dat)
-  
+
   ## Now we have a nice bunch of string elements which are the inputs for iscam.
   ## Here we parse them into a list structure.
   ## This is dependent on the current format of the DAT file and needs to
   ##  be updated whenever the proj file changes format.
   tmp <- list()
   ind <- 0
-  
+
   ## Get the TAC values
   tmp$num.tac  <- as.numeric(dat[ind <- ind + 1])
   for(tac in 1:tmp$num.tac){
     ## Read in the tacs, one, per line
     tmp$tac.vec[tac] <- as.numeric(dat[ind <- ind + 1])
   }
-  
+
   ## If the tac vector is on one line
   ##tmp$tac.vec <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
-  
+
   ## Get the control options vector
   tmp$num.ctl.options <- as.numeric(dat[ind <- ind + 1])
   n.rows <- tmp$num.ctl.options
@@ -1037,7 +1037,7 @@ read.projection.file <- function(file = NULL,
   tmp
 }
 
-#' Reads iSCAM parameter file 
+#' Reads iSCAM parameter file
 #'
 #' @description A function for returning the results of the
 #' iscam .par file
@@ -1050,11 +1050,11 @@ read.par.file <- function(file = NULL,
   ## Read in the parameter estimates file given by 'file'
   ## Parses the file into its constituent parts
   ## And returns a list of the contents
-  
+
   data <- readLines(file, warn = FALSE)
   tmp <- list()
   ind <- 0
-  
+
   ## Remove preceeding #
   conv.check <- gsub("^#[[:blank:]]*", "", data[1])
   ## Remove all letters, except 'e'
@@ -1072,14 +1072,14 @@ read.par.file <- function(file = NULL,
   conv.check <- strsplit(conv.check, " +")[[1]]
   conv.check <- conv.check[grep("^[[:digit:]]", conv.check)]
   ## The following values are saved for appending to the tmp list later
-  
+
   num.params   <- conv.check[1]
   obj.fun.val <-  format(conv.check[2], digits = 6, scientific = FALSE)
   max.gradient <-  format(conv.check[3], digits = 8, scientific = FALSE)
-  
+
   ##Remove the first line from the par data since we already parsed it and saved the values
   data <- data[-1]
-  
+
   ## At this point, every odd line is a comment and every even line is the value.
   ## Parse the names from the odd lines (oddData) and parse the
   ## values from the even lines (evenData)
@@ -1087,27 +1087,27 @@ read.par.file <- function(file = NULL,
   even.elem <- seq(2, length(data), 2)
   odd.data <- data[odd.elem]
   even.data <- data[even.elem]
-  
+
   ## Remove preceeding and trailing whitespace if it exists from both
   ##  names and values.
   names <- gsub("^[[:blank:]]+", "", odd.data)
   names <- gsub("[[:blank:]]+$", "", names)
   values <- gsub("^[[:blank:]]+", "", even.data)
   values <- gsub("[[:blank:]]+$", "", values)
-  
+
   ## Remove the preceeding # and whitespace and the trailing : from the names
   pattern <- "^#[[:blank:]]*(.*)[[:blank:]]*:"
   names <- sub(pattern, "\\1", names)
-  
+
   ## Remove any square brackets from the names
   names <- gsub("\\[|\\]", "", names)
-  
+
   data.length <- length(names)
   for(item in 1:(data.length)){
     tmp[[item]] <-
       as.numeric(strsplit(values[ind <- ind + 1], "[[:blank:]]+")[[1]])
   }
-  
+
   names(tmp) <- names
   tmp$num.params <- num.params
   tmp$obj.fun.val <- as.numeric(obj.fun.val)
@@ -1129,7 +1129,7 @@ read.mcmc <- function(model.dir = NULL,
   ##  model.dir.
   ## Returns a list of the mcmc outputs, or NULL if there was a problem or
   ##  there are no MCMC outputs.
-  
+
 
   mcmc.file <- "iscam_mcmc.csv"
   mcmc.biomass.file <- "iscam_sbt_mcmc.csv"
@@ -1140,8 +1140,8 @@ read.mcmc <- function(model.dir = NULL,
   mcmc.vuln.biomass.file <- "iscam_vbt_mcmc.csv"
   mcmc.proj.file <- "iscammcmc_proj_Gear1.csv"
   mpd.proj.file <- "iscammpd_proj_Gear1.csv"
-  
-  
+
+
   if(is.null(model.dir)){
     cat("You must supply a directory name (model.dir). Returning NULL.")
     return(NULL)
@@ -1154,7 +1154,7 @@ read.mcmc <- function(model.dir = NULL,
   mcmcutfn   <- file.path(model.dir, mcmc.fishing.mort.u.file)
   mcmcvbtfn  <- file.path(model.dir, mcmc.vuln.biomass.file)
   mcmcprojfn <- file.path(model.dir, mcmc.proj.file)
-  
+
   tmp        <- list()
   if(file.exists(mcmcfn)){
     tmp$params <- read.csv(mcmcfn)
@@ -1198,13 +1198,13 @@ extract.group.matrices <- function(data = NULL,
   ## or more digits representing the group number and prefix is the string
   ## given as an argument to the function.
   ## Returns a list of matrices, one element per group.
-  
+
   if(is.null(data) || is.null(prefix)){
     cat("You must give two arguments (data & prefix). Returning NULL.")
     return(NULL)
   }
   tmp <- list()
-  
+
   names <- names(data)
   pattern <- paste0(prefix, "([[:digit:]]+)_[[:digit:]]+")
   groups  <- sub(pattern, "\\1", names)
@@ -1219,7 +1219,7 @@ extract.group.matrices <- function(data = NULL,
     ## Remove the group number in the name, as it is not needed anymore
     pattern      <- paste0(prefix, "[[:digit:]]+_([[:digit:]]+)")
     group.names   <- sub(pattern, "\\1", group.names)
-    
+
     # Now, the data must be extracted
     # Get the column numbers that this group are included in
     dat <- data[,grep(group.pattern, names)]
@@ -1239,12 +1239,12 @@ extract.area.sex.matrices <- function(data = NULL,
   ##  to the function.
   ## Returns a list (area-sex) of lists (gears) of matrices, one element
   ##  per group.
-  
+
   if(is.null(data) || is.null(prefix)){
     cat("You must give two arguments (data & prefix). Returning NULL.")
     return(NULL)
   }
-  
+
   names <- names(data)
   pattern <- paste0(prefix, "([[:digit:]]+)_gear[[:digit:]]+_[[:digit:]]+")
   groups  <- sub(pattern, "\\1", names)
@@ -1292,10 +1292,10 @@ calc.mcmc <- function(model,
   ## thin - the thinning to apply to the posterior samples
   ## lower - lower quantile for confidence interval calcs
   ## upper - upper quantile for confidence interval calcs
-  
+
   mcmc.thin <- function(mcmc.dat){
     ## apply burnin and thinning to the data
-    
+
     nm <- names(mcmc.dat)
     mcmc.obj <- apply(mcmc.dat, 2, mcmc)
     mcmc.window <- NULL
@@ -1309,16 +1309,16 @@ calc.mcmc <- function(model,
     names(mcmc.window) <- nm
     mcmc.window
   }
-  
+
   probs <- c(lower, 0.5, upper)
-  
+
   ## Parameters
   mc <- model$mcmc
   params.dat <- mc$params
   params.dat <- strip.areas.groups(params.dat)
   params.dat <- strip.static.params(model, params.dat)
   nm <- names(params.dat)
-  
+
   p.dat <- params.dat[ , -which(nm %in% c("msy",
                                           "fmsy",
                                           "bmsy",
@@ -1328,7 +1328,7 @@ calc.mcmc <- function(model,
   p.names <- names(p.dat)
   p.dat <- mcmc.thin(p.dat)
   p.quants <- apply(p.dat, 2, quantile, prob = probs)
-  
+
   ## Reference points
   r.dat <- params.dat[ , which(nm %in% c("msy",
                                          "fmsy",
@@ -1338,7 +1338,7 @@ calc.mcmc <- function(model,
   r.names <- names(r.dat)
   r.dat <- mcmc.thin(r.dat)
   r.quants <- apply(r.dat, 2, quantile, prob = probs)
-  
+
   ## Spawning biomass
   sbt.dat <- mcmc.thin(mc$sbt[[1]])
   sbt.quants <- apply(sbt.dat,
@@ -1394,7 +1394,7 @@ calc.mcmc <- function(model,
                                   quantile,
                                   prob = lower,
                                   na.rm = TRUE)})
-  
+
   sapply(c("p.dat",
            "p.quants",
            "r.dat",
@@ -1425,12 +1425,12 @@ strip.areas.groups <- function(dat){
   ##  removes 'f' which is assumed to be the objective function value. Note
   ##  that q1, q2, q3... will stay the same and m1 and m2 will remain if the
   ##  model was two-sex.
-  
+
   pnames <- names(dat)
   ## M will only ever be 1 or 2, for each sex
   pnames <- gsub("m_gs1", "m1", pnames)
   pnames <- gsub("m_gs2", "m2", pnames)
-  
+
   pnames <- gsub("msy1", "msy", pnames)
   pnames <- gsub("fmsy1", "fmsy", pnames)
   pnames <- gsub("SSB1", "ssb", pnames)
@@ -1446,12 +1446,12 @@ strip.static.params <- function(model, dat){
   ## Strip out the static (non-estimated) parameters from the mcmc output data
   ##  for the given scenario. We only need to see estimated parameters on the
   ##  diagnostic plots. If there are no static parameters, NULL will be returned
-  
+
   # Check the control file to see which parameters were static
   inp <- as.data.frame(model$ctl$param)
   static <- inp[inp$phz <= 0,]
   snames <- rownames(static)
-  
+
   ## Now remove those from the mcmc data
   pnames <- names(dat)
   ## remove the log_ stuff from the input parameter names
@@ -1465,7 +1465,7 @@ strip.static.params <- function(model, dat){
   }
   ## The following also removes "m" in a combined sex model
   dat <- dat[,!(pnames %in% snames)]
-  
+
   ## Remove static selectivity params
   sel.params <- as.data.frame(model$ctl$sel)
   est.phase <- sel.params["estphase",]
@@ -1496,34 +1496,34 @@ strip.static.params <- function(model, dat){
 
 #' Combines indices into a single index using linear modelling
 #'
-#' @description iSCAM assessments often make use of multiple indices of abundance. 
-#' The DLMtool data object and MPs currently only make use of a single index. 
+#' @description iSCAM assessments often make use of multiple indices of abundance.
+#' The DLMtool data object and MPs currently only make use of a single index.
 #' combiSCAMinds is a function that creates a single index from many using
-#' linear modelling. It is a simple way of providing initial calculations of 
-#' management recommendations and it should be noted that this process 
+#' linear modelling. It is a simple way of providing initial calculations of
+#' management recommendations and it should be noted that this process
 #' is important and in a real application would require due diligence (ie
-#' peer reviewed data workshop). 
+#' peer reviewed data workshop).
 #' @param idata List: the indices recorded in a read from an iSCAM data folder, e.g. replist$data$indices
 #' @param Year Integer vector: the years of the DLMtool data object ie Data@Year
 #' @param fleeteffect Logical: should a fleet effect be added to the linear model?
-#' @author T. Carruthers 
+#' @author T. Carruthers
 #' @export iSCAMinds
 iSCAMinds<-function(idata,Year,fleeteffect=T){
-  
+
   ind<-NULL
   for(i in 1:length(idata)){
-    
+
     edat<-as.data.frame(idata[[i]])
     index<-edat$it/mean(edat$it)
     ind<-rbind(ind,cbind(edat$iyr,rep(i,nrow(edat)),index))
-    
+
   }
-  
+
   ind<-as.data.frame(ind)
   names(ind)<-c("Y","FF","I")
   ind$Y<-as.factor(ind$Y)
   ind$FF<-as.factor(ind$FF)
-  
+
   if(fleeteffect)lm<-lm(log(I)~Y+FF,dat=ind)
   if(!fleeteffect)lm<-lm(log(I)~Y,dat=ind)
   Years<-Year[Year%in%ind$Y]
@@ -1535,27 +1535,27 @@ iSCAMinds<-function(idata,Year,fleeteffect=T){
   ind<-rep(NA,length(Year))
   ind[Year%in%Years]<-exp(pred)/(mean(exp(pred)))
   as.data.frame(cbind(Year,ind))
-  
+
 }
 
 #' Combines all iSCAM age composition data across fleets
 #'
-#' @description iSCAM assessments are often fitted to numerous fleets that have differing 
+#' @description iSCAM assessments are often fitted to numerous fleets that have differing
 #' age selectivities. iSCAMcomps is a simple way of providing the aggregate catch at age
-#' data. It should be noted that this process is important and in a real application would 
-#' require due diligence (ie peer reviewed data workshop). 
+#' data. It should be noted that this process is important and in a real application would
+#' require due diligence (ie peer reviewed data workshop).
 #' @param replist S3 class object: the output from a read from an iSCAM data folder
 #' @param Year Integer vector: the years of the DLMtool data object ie Data@Year
-#' @author T. Carruthers 
+#' @author T. Carruthers
 #' @export iSCAMcomps
 iSCAMcomps<-function(replist,Year){
-  
+
   ny<-length(Year)
   na<-replist$dat$end.age
   CAA<-array(0,c(ny,na))
   compdat<-replist$dat$age.comps
   compN<-replist$dat$age.gears.n
-  
+
   for(i in 1:length(compdat)){
     comp<-as.data.frame(compdat[[i]])
     cN<-as.numeric(compN[[i]])
@@ -1566,12 +1566,12 @@ iSCAMcomps<-function(replist,Year){
     cNind<-rep(1:length(ind),na)
     CAA[CAAind]<-CAA[CAAind]+ceiling(comp[compind]*cN[cNind])
   }
-  
+
   CAA
 }
 
 LinInt<-function(x){
-  
+
   nas<-is.na(x)
   ind0<-(1:length(x))[nas]
   ind1<-ind0-1
@@ -1582,17 +1582,17 @@ LinInt<-function(x){
 
 #' Reads data from iSCAM file structure into a DLMtool Data object
 #'
-#' @description A function that uses the file location of a fitted iSCAM 
-#' model including input files to population the various slots of an 
-#' data object. iSCAM2DLM relies on several functions written by Chris 
+#' @description A function that uses the file location of a fitted iSCAM
+#' model including input files to population the various slots of an
+#' data object. iSCAM2OM relies on several functions written by Chris
 #' Grandin (DFO PBS).
 #' @param iSCAMdir A folder with iSCAM input and output files in it
 #' @param Name The name of the operating model
 #' @param Source Reference to assessment documentation e.g. a url
-#' @param length_timestep How long is a model time step in years 
+#' @param length_timestep How long is a model time step in years
 #' (e.g. a quarterly model is 0.25, a monthly model 1/12)
 #' @param Author Who did the assessment
-#' @author T. Carruthers 
+#' @author T. Carruthers
 #' @importFrom grDevices dev.off gray jpeg png
 #' @importFrom coda mcmc
 #' @importFrom graphics arrows contour
@@ -1600,20 +1600,20 @@ LinInt<-function(x){
 #' @export iSCAM2Data
 iSCAM2Data<-function(iSCAMdir,Name=NULL,Source="No source provided",
                      length_timestep=1,Author="No author provided"){
-  
+
   message("-- Using function of Chris Grandin (DFO PBS) to extract data from iSCAM file structure --")
-  
+
   replist<-load.iscam.files(iSCAMdir)
-  
+
   message("-- End of iSCAM extraction operations --")
-  
-  Data <- new("Data") 
+
+  Data <- new("Data")
   if(!is.null(Name)){
     Data@Name<-Name
   }else{
     Data@Name<-replist$path
   }
-  
+
   catdat<-as.data.frame(replist$dat$catch)
   Data@Cat<-matrix(catdat$value,nrow=1)
   Data@Year<-catdat$year
@@ -1637,19 +1637,19 @@ iSCAM2Data<-function(iSCAMdir,Name=NULL,Source="No source provided",
   Data@Bref<-BMSY
   SSB<-replist$mpd$sbt
   B<-replist$mpd$bt
-  
+
   SSB0<-replist$mpd$sbo
   depletion<-SSB[length(SSB)-((ny-1):0)]/SSB0
   mult<-mean(inddat$ind/depletion)
   Data@Iref<-Data@BMSY_B0*mult
-  
+
   Data@vbLinf=replist$dat$linf[1]
   Data@vbK=replist$dat$k[1]
   Data@vbt0=replist$dat$to[1]
   Data@L50= Data@vbLinf*(1-exp(-Data@vbK*(replist$dat$age.at.50.mat-Data@vbt0)))
   A95= -(replist$dat$sd.at.50.mat*log(1/0.95-1)-replist$dat$age.at.50.mat)
   Data@L95=Data@vbLinf*(1-exp(-Data@vbK*(A95-Data@vbt0)))
-  
+
   Data@MaxAge<-replist$dat$end.age
   FF<-replist$mpd$F
   sel<-FF/apply(FF,1,max)
@@ -1674,9 +1674,9 @@ iSCAM2Data<-function(iSCAMdir,Name=NULL,Source="No source provided",
   Data@MPeff<-1
   Data@LHYear<-ny
   Data@Misc<-list(WARNING="!! this dataset was created automatically using an alpha version of iSCAM2Data and should be treated with caution !!")
-  
-  Data 
-  
+
+  Data
+
 }
 
 
