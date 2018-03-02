@@ -30,11 +30,9 @@ leading parameters. Virgin conditions are assumed in the first year of the time 
 the production function is assumed to be symmetric.
 }
 \references{
-Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system.
-Fishery Bulletin 76:515:521.
+Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
 
-Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
-Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
+Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model. Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 }
 \seealso{
 \code{\link{SP_SS}}

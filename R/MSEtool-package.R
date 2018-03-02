@@ -2,8 +2,8 @@
 #'
 #' Simulation testing and implementation of data-rich fishery management procedures
 #'
-#' @name MSE-package
-#' @aliases MSE-package MSE
+#' @name MSEtool-package
+#' @aliases MSEtool-package MSEtool
 #' @docType package
 #' @author Tom Carruthers \email{t.carruthers@@fisheries.ubc.ca}
 #' @author Adrian Hordyk \email{a.hordyk@oceans.ubc.ca}
@@ -33,7 +33,7 @@ NULL
 #' \dontrun{
 #' # --- Application to real fishery data ---
 #'
-#' library(MSE)
+#' library(MSEtool)
 #' setup()                        # setup parallel processing
 #' mydata<-new('Data')            # create a new DLM data object and define:
 #' mydata@Year<-2001:2010         # years

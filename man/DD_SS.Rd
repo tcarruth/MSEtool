@@ -4,7 +4,7 @@
 \alias{DD_SS}
 \title{State-Space Delay-Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_SS(Data, reps = 100)
+DD_SS(Data)
 }
 \arguments{
 \item{Data}{A data-limited methods data object}

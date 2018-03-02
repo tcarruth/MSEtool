@@ -53,7 +53,7 @@ SP_SS <- function(Data, n = 2, B1frac = 1) {
   obj <- MakeADFun(data = info$data, parameters = info$params,
                    map = list(log_B1frac = factor(NA), log_n = factor(NA),
                               log_sigma = factor(NA)),
-                   random = "log_B_dev", DLL = "MSE", silent = TRUE)
+                   random = "log_B_dev", DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(obj$par, obj$fn, obj$gr)
 
   Assessment <- return_Assessment()

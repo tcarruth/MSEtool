@@ -1,4 +1,4 @@
-# Internal DLMtool functions that are also needed for MSE
+# Internal DLMtool functions that are also needed for MSEtool
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
 
 

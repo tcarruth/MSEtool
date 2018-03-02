@@ -164,7 +164,7 @@ write_html_foot <- function(file_name, append = TRUE) {
              '',
              paste0('This file was created on ', Sys.time()),
              '<br/>',
-             paste0('MSE R package version ', packageVersion("MSE"))
+             paste0('MSEtool R package version ', packageVersion("MSEtool"))
   )
   end.file <- c('</body></html>')
   write(c(stamp, end.file), file = file_name, append = append)

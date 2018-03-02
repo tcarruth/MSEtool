@@ -2,22 +2,20 @@
 % Please edit documentation in R/Movement_calcs.R
 \name{makemov}
 \alias{makemov}
-\title{Calculates movement matrices from user inputs}
+\title{Calculates movement matrices from user inputs for fraction in each area (fracs) and probability of staying in areas (prob)}
 \usage{
-makemov(fracs = rep(0.2, 5), muprob = 0.5, efracs = 0.1,
-  evisc = rep(0.1, 5), OM = NULL)
+makemov(fracs = c(0.1, 0.2, 0.3, 0.4), prob = c(0.5, 0.8, 0.9, 0.95))
 }
 \arguments{
 \item{fracs}{A vector nareas long of fractions of unfished stock biomass in each area}
 
-\item{efracs}{A log error term for sampling stock fractions from the fracs vector}
-
-\item{evisc}{A vector of log error terms for sampling visc by area}
-
-\item{visc}{A vector of the probability of individuals staying in each area}
+\item{prob}{A vector of the probability of individuals staying in each area or a single value for the mean probability of staying among all areas}
 }
 \description{
 A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
+}
+\examples{
+makemov(fracs=c(0.1,0.5,0.2,0.2),prob=c(0.9,0.5,0.3,0.8))
 }
 \author{
 T. Carruthers

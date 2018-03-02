@@ -49,7 +49,7 @@ SP <- function(Data, n = 2, B1frac = 1) {
 
   obj <- MakeADFun(data = info$data, parameters = info$params,
                    map = list(log_B1frac = factor(NA), log_n = factor(NA)),
-                   DLL = "MSE", silent = TRUE)
+                   DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(obj$par, obj$fn, obj$gr, obj$he)
 
   Assessment <- return_Assessment()
