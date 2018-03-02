@@ -4,10 +4,12 @@
         "-IC:/RBuildTools/3.4/mingw_64/x86_64-w64-mingw32/include",
         "-IC:/RBuildTools/3.4/mingw_64/x86_64-w64-mingw32/include/c++",
         "-IC:/RBuildTools/3.4/mingw_64/x86_64-w64-mingw32/include/c++/x86_64-w64-mingw32",
+        "-IC:/Users/tcar_/Documents/R/win-library/3.4/TMB/include",
+        "-IC:/Users/tcar_/Documents/R/win-library/3.4/RcppEigen/include",
         "-IC:/PROGRA~1/R/R-34~1.3/include",
         "-DNDEBUG"
     ],
-    "hash" : "1519876204",
+    "hash" : "1519964442",
     "is_cpp" : true,
     "pch" : ""
 }

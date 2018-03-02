@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1519964645197.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "7A1DFD22",
+    "lastKnownWriteTime" : 1519964992,
+    "last_content_update" : 1519964992084,
+    "path" : "C:/GitHub/MSEtool/R/Movement_calcs.R",
+    "project_path" : "R/Movement_calcs.R",
+    "properties" : {
+        "cursorPosition" : "126,27",
+        "scrollLine" : "114"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

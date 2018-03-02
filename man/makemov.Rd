@@ -14,6 +14,9 @@ makemov(fracs = c(0.1, 0.2, 0.3, 0.4), prob = c(0.5, 0.8, 0.9, 0.95))
 \description{
 A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
 }
+\examples{
+makemov(fracs=c(0.1,0.5,0.2,0.2),prob=c(0.9,0.5,0.3,0.8))
+}
 \author{
 T. Carruthers
 }

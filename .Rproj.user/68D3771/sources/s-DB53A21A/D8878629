@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "2772008386",
+    "hash" : "0",
     "id" : "D8878629",
     "lastKnownWriteTime" : 1519963358,
     "last_content_update" : 1519963358,
-    "path" : "C:/GitHub/MSE/R/iSCAM2OM.R",
+    "path" : "C:/GitHub/MSEtool/R/iSCAM2OM.R",
     "project_path" : "R/iSCAM2OM.R",
     "properties" : {
         "cursorPosition" : "1676,0",
-        "scrollLine" : "1660"
+        "scrollLine" : "0"
     },
     "relative_order" : 7,
     "source_on_save" : false,
