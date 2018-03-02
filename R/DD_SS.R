@@ -29,7 +29,7 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-DD_SS <- function(Data, reps = 100) {
+DD_SS <- function(Data) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   x <- 1 # Legacy of Data structure
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
