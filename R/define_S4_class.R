@@ -52,6 +52,7 @@ setOldClass("sdreport")
 #' @slot TMB_report A list of model output reported from the TMB executable, i.e. \code{obj$report()}.
 #' @slot dependencies A character string of data types used for the assessment.
 #' @author Q. Huynh
+#' @exportClass Assessment
 setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
                                  UMSY = "numeric", FMSY = "numeric", BMSY = "numeric",
                                  B0 = "numeric", R0 = "numeric", N0 = "numeric",
@@ -80,7 +81,7 @@ setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
 #' data(Red_snapper)
 #' output <- DD_TMB(Red_snapper)
 #' summary(output)
-#' @export
+#' @exportMethod summary
 setMethod("summary", signature(object = "Assessment"), function(object) {
   f <- get(paste0("summary_", object@Model))
   f(object)
@@ -99,7 +100,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' output <- DD_TMB(Red_snapper)
 #' plot(output, save_figure = FALSE)
 #'
-#' @export
+#' @exportMethod plot
 setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {
   old.warning <- options()$warn
   options(warn = -1)
