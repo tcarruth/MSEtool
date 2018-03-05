@@ -1,7 +1,6 @@
-html_report <- function(plot_dir, model, captions = NULL, input_parameters = NULL,
-                        model_estimates = NULL, derived_quantities = NULL,
-                        report_type = c("Index", "Data", "Assessment", "Life_history",
-                                        "Profile_likelihood", "Retrospective")) {
+html_report <- function(plot_dir, model, captions = NULL,
+                        report_type = c("Index", "Data", "Assessment", "Life_History",
+                                        "Profile_Likelihood", "Retrospective"), ...) {
   report_type <- match.arg(report_type)
   if(is.null(model)) stop("Need model name.")
   htmlname <- paste0(report_type, ".html")
@@ -14,16 +13,15 @@ html_report <- function(plot_dir, model, captions = NULL, input_parameters = NUL
     header <- c("<h2>Home</h2>")
     write(header, file = filename, append = TRUE, sep = "\n")
 
-    if(!is.null(input_parameters)) write_table(input_parameters, filename, "Input parameters")
-    if(!is.null(model_estimates)) write_table(model_estimates, filename, "Model estimates")
-    if(!is.null(derived_quantities)) write_table(derived_quantities, filename, "Derived quantities")
+    dots <- list(...)
+    for(i in 1:length(dots)) write_table(dots[[i]], filename, make_subtitle(names(dots)[i]))
 
     write_html_foot(filename)
   }
   else {
     write_html_head(report_type, filename, model)
 
-    header <- c("<h2>", report_type, "</h2>")
+    header <- c("<h2>", make_subtitle(report_type), "</h2>")
     body <- paste0("<p><a href='", captions[, 1], "'><img src='", captions[, 1], "' border=0 width=500></a><br/>",
                    captions[, 2], "</p>")
     output <- c(header, body)
@@ -122,11 +120,12 @@ write_html_head <- function(title, file_name, model, append = FALSE) {
     '<ul id="navlist">',
     '<li><a href="Index.html">Home</a></li>'
   )
-  if(include_life_history) output <- c(output, '<li><a href="Life_history.html">Life history</a></li>')
+  if(include_life_history) output <- c(output, '<li><a href="Life_History.html">Life History</a></li>')
+
   output <- c(output,
     '<li><a href="Data.html">Data</a></li>',
     '<li><a href="Assessment.html">Assessment</a></li>',
-    '<li><a href="Profile_likelihood.html">Profile Likelihood</a></li>',
+    '<li><a href="Profile_Likelihood.html">Profile Likelihood</a></li>',
     '<li><a href="Retrospective.html">Retrospective</a></li>',
     '</ul>',
     '</div>',
@@ -164,9 +163,16 @@ write_html_foot <- function(file_name, append = TRUE) {
              '',
              paste0('This file was created on ', Sys.time()),
              '<br/>',
-             paste0('MSEtool R package version ', packageVersion("MSEtool"))
+             paste0('MSEtool R package version ', packageVersion("MSEtool")),
+             '<br/>',
+             R.version$version.string
   )
   end.file <- c('</body></html>')
   write(c(stamp, end.file), file = file_name, append = append)
   invisible()
+}
+
+make_subtitle <- function(x) {
+  x <- strsplit(x, "_")[[1]]
+  paste0(toupper(substring(x, 1, 1)), substring(x, 2), collapse = " ")
 }
