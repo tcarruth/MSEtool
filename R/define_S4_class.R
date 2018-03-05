@@ -68,7 +68,7 @@ setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
                                  NLL_Random = "numeric",
                                  info = "list", obj = "list",
                                  opt = "list", SD = "sdreport", TMB_report = "list",
-                                 dependencies = "character"))
+                                 dependencies = "character", Data = "Data"))
 
 
 #' Summary of Assessment object
@@ -81,7 +81,7 @@ setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
 #' output <- DD_TMB(Red_snapper)
 #' summary(output)
 #' @export
-setMethod("summary", "Assessment", function(object) {
+setMethod("summary", signature(object = "Assessment"), function(object) {
   f <- get(paste0("summary_", object@Model))
   f(object)
 })
@@ -101,6 +101,10 @@ setMethod("summary", "Assessment", function(object) {
 #'
 #' @export
 setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {
+  old.warning <- options()$warn
+  options(warn = -1)
+  on.exit(options(warn = old.warning))
+
   f <- get(paste0("generate_plots_", x@Model))
   f(x, save_figure = save_figure, save_dir = save_dir)
 })
