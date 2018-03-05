@@ -4,7 +4,7 @@ return_Assessment <- function() {
   lCall <- length(Call.history)
   Model <- as.character(Call.history[[lCall-1]])[1]
 
-  output <- mget(c('info', 'obj', 'opt', 'SD', 'dependencies'),
+  output <- mget(c('Data', 'info', 'obj', 'opt', 'SD', 'dependencies'),
                  envir = parent.frame())
   report <- output$obj$report()
 
@@ -31,8 +31,10 @@ return_Assessment <- function() {
                       NLL = report$jnll,
                       info = output$info, obj = output$obj, opt = output$opt,
                       SD = output$SD, TMB_report = report,
-                      dependencies = output$dependencies)
+                      dependencies = output$dependencies,
+                      Data = output$Data)
   }
+
   if(Model == "DD_SS") {
 
   }
@@ -54,10 +56,10 @@ assign_Assessment_slots <- function() {
 
 # Call from inside generate_plots(), profile_likelihood(), retrospective(),
 prepare_to_save_figure <- function() {
-  MP <- get("MP", envir = parent.frame())
+  Model <- get("Model", envir = parent.frame())
   base.dir <- get("save_dir", envir = parent.frame()) # by default: getwd()
-  MP.dir <- paste0("plots_", MP)
-  plot.dir <- file.path(base.dir, MP.dir)
+  Model.dir <- paste0("plots_", Model)
+  plot.dir <- file.path(base.dir, Model.dir)
 
   if(!dir.exists(plot.dir)) {
     message(paste0("Creating directory: \n", plot.dir, "\n"))
@@ -318,8 +320,8 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
                             obs_upper = NULL, obs_lower = NULL, fit_linewidth = 3,
                             fit_color = "red", label = "Observed data") {
   old.warning <- options()$warn
-  on.exit(options(warn = old.warning), add = TRUE)
   options(warn = -1)
+  on.exit(options(warn = old.warning))
 
   # Without CV interval
   if(is.null(obs_CV)) {
@@ -545,7 +547,7 @@ plot_composition <- function(Year, obs, fit = NULL,
 #' @param Data An object of class \code{\link[DLMtool]\linkS4class{Data}}.
 #' @param save_figure Indicates whether figures will be saved to directory.
 #' @param save_dir The directory to which figures will be saved. By default: \code{getwd()}
-#' @param MP Name of MP to save into appropriate sub-directory (optional).
+#' @param Model Name of assessment model to save into appropriate sub-directory (optional).
 #' @return Plots of length-at-age, weight-at-age, and weight-at-length
 #' (if appropriate parameters are available).
 #'
@@ -555,11 +557,8 @@ plot_composition <- function(Year, obs, fit = NULL,
 #' @export plot_life_history
 #' @examples plot_life_history(Red_snapper)
 plot_life_history <- function(Data, save_figure = FALSE, save_dir = getwd(),
-                              MP = NULL) {
-
-  if(save_figure) {
-    prepare_to_save_figure()
-  }
+                              Model = NULL) {
+  if(save_figure) prepare_to_save_figure()
 
   # Plot growth
   # Need: Linf, K, t0, Maxage

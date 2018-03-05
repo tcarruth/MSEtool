@@ -8,7 +8,7 @@ profile_likelihood(Assessment, figure = TRUE, save_figure = TRUE,
   save_dir = getwd(), ...)
 }
 \arguments{
-\item{Assessment}{An S4 object of assessment output generated from an MP.}
+\item{Assessment}{An S4 object of class Assessment.}
 
 \item{figure}{Indicates whether a figure will be plotted.}
 

@@ -8,7 +8,7 @@ retrospective(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
   save_dir = getwd())
 }
 \arguments{
-\item{Assessment}{An S4 object of assessment output generated from an MP.}
+\item{Assessment}{An S4 object of Assessment output..}
 
 \item{nyr}{The maximum number of years to remove for the retrospective analysis.}
 
