@@ -71,7 +71,7 @@
     Sp_DD(tt) = B_DD(tt) - Cpred_DD(tt);
 
     R_DD(tt + k_DD) = Arec_DD * Sp_DD(tt)/(1 + Brec_DD * Sp_DD(tt));
-    if(tt + k_DD <ny_DD) {
+    if(tt + k_DD < ny_DD) {
       Rec_dev_DD(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau_DD, 2));
       R_DD(tt + k_DD) *= Rec_dev_DD(tt);
     }
