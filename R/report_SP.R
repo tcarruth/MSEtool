@@ -67,7 +67,6 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_index.png", "Index time series."))
-
   }
 
   if(!is.na(Data@CV_Cat[1])) {

@@ -84,6 +84,28 @@ return_Assessment <- function() {
                       dependencies = output$dependencies,
                       Data = output$Data)
   }
+  if(Model == "SP_SS") {
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    Yearminusone <- Year[2]:max(Year)
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY, UMSY = report$UMSY, BMSY = report$BMSY,
+                      B0 = report$K,
+                      U = structure(report$U, names = Year),
+                      U_UMSY = structure(report$relU, names = Year),
+                      B = structure(report$Biomass, names = Yearplusone),
+                      B_BMSY = structure(report$relB, names = Yearplusone),
+                      B_B0 = structure(report$Biomass/report$K, names = Yearplusone),
+                      Index = structure(report$Ipred, names = Year),
+                      Random = structure(output$SD$par.random, names = Yearminusone),
+                      Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearminusone),
+                      NLL = report$nll, NLL_Index = report$nll_comp[1],
+                      NLL_Random = report$nll_comp[2],
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies,
+                      Data = output$Data)
+  }
 
   return(Assessment)
 }
