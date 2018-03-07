@@ -8,7 +8,7 @@ plot_life_history(Data, save_figure = FALSE, save_dir = getwd(),
   Model = NULL)
 }
 \arguments{
-\item{Data}{An object of class \code{\link[DLMtool]\linkS4class{Data}}.}
+\item{Data}{An object of class Data.}
 
 \item{save_figure}{Indicates whether figures will be saved to directory.}
 
