@@ -1,4 +1,4 @@
-# Call from inside MP
+# Call from inside Assessment model
 return_Assessment <- function() {
   Call.history <- sys.calls()
   lCall <- length(Call.history)
@@ -60,6 +60,25 @@ return_Assessment <- function() {
                       Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearrandom),
                       NLL = report$jnll, NLL_Catch = report$jnll_comp[1],
                       NLL_Random = report$jnll_comp[2],
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies,
+                      Data = output$Data)
+  }
+
+  if(Model == "SP") {
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY, UMSY = report$UMSY, BMSY = report$BMSY,
+                      B0 = report$K,
+                      U = structure(report$U, names = Year),
+                      U_UMSY = structure(report$relU, names = Year),
+                      B = structure(report$Biomass, names = Yearplusone),
+                      B_BMSY = structure(report$relB, names = Yearplusone),
+                      B_B0 = structure(report$Biomass/report$K, names = Yearplusone),
+                      Index = structure(report$Ipred, names = Year),
+                      NLL = report$nll,
                       info = output$info, obj = output$obj, opt = output$opt,
                       SD = output$SD, TMB_report = report,
                       dependencies = output$dependencies,
@@ -669,10 +688,6 @@ plot_life_history <- function(Data, save_figure = FALSE, save_dir = getwd(),
 
 #' @importFrom graphics arrows
 plot_surplus_production <- function(B, B0 = NULL, C, arrow_size = 0.07) {
-  old.warning <- options()$warn
-  on.exit(options(warn = old.warning))
-  options(warn = -1)
-
   if(!is.null(B0)) {
     B <- B/B0
     xlab_label <- expression(B/B[0])
