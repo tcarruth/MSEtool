@@ -61,7 +61,7 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat)) {
+  if(!is.na(Data@CV_Cat[1])) {
     plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
@@ -81,7 +81,7 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Cat)) {
+  if(!is.na(Data@CV_Ind[1])) {
     plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind, label = "Index")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
