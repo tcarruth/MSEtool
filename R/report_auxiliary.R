@@ -36,7 +36,34 @@ return_Assessment <- function() {
   }
 
   if(Model == "DD_SS") {
-
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    k <- output$info$data$k_DD
+    Yearplusk <- c(Year, (max(Year)+1):(max(Year)+k))
+    Yearrandom <- seq(Year[1] + k, max(Year))
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY_DD, UMSY = report$UMSY_DD, BMSY = report$BMSY_DD,
+                      B0 = report$Bo_DD, R0 = report$Ro_DD, N0 = report$No_DD,
+                      SSB0 = report$Bo_DD, h = report$h,
+                      U = structure(report$U_DD, names = Year),
+                      U_UMSY = structure(report$relU_DD, names = Year),
+                      B = structure(report$B_DD, names = Yearplusone),
+                      B_BMSY = structure(report$relB_DD, names = Yearplusone),
+                      B_B0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
+                      SSB = structure(report$B_DD, names = Yearplusone),
+                      SSB_SSBMSY = structure(report$relB_DD, names = Yearplusone),
+                      SSB_SSB0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
+                      N = structure(report$N_DD, names = Yearplusone),
+                      R = structure(report$R_DD, names = Yearplusk),
+                      Catch = structure(report$Cpred_DD, names = Year),
+                      Random = structure(output$SD$par.random, names = Yearrandom),
+                      Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearrandom),
+                      NLL = report$jnll, NLL_Catch = report$jnll_comp[1],
+                      NLL_Random = report$jnll_comp[2],
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies,
+                      Data = output$Data)
   }
 
   return(Assessment)
@@ -544,7 +571,7 @@ plot_composition <- function(Year, obs, fit = NULL,
 #'
 #' Produces plots of growth parameters.
 #'
-#' @param Data An object of class \code{\link[DLMtool]\linkS4class{Data}}.
+#' @param Data An object of class Data.
 #' @param save_figure Indicates whether figures will be saved to directory.
 #' @param save_dir The directory to which figures will be saved. By default: \code{getwd()}
 #' @param Model Name of assessment model to save into appropriate sub-directory (optional).

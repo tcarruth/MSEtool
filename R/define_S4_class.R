@@ -18,7 +18,7 @@ setOldClass("sdreport")
 #' @slot R0 Recruitment at virgin equilibrium.
 #' @slot N0 Abundance at virgin equilibrium.
 #' @slot SSB0 Spawning stock biomass at virgin equilibrium.
-#' @slot h Steepness at virgin equilibrium.
+#' @slot h Steepness.
 #' @slot U Time series of exploitation.
 #' @slot U_UMSY Time series of relative exploitation.
 #' @slot F Time series of fishing mortality.
@@ -42,7 +42,7 @@ setOldClass("sdreport")
 #' @slot NLL_Catch Negative log-likelihood of the catch component.
 #' @slot NLL_Index Negative log-likelihood of the index component.
 #' @slot NLL_C_at_age Negative log-likelihood of the catch-at-age component.
-#' @slot NLL_random Marginal negative log-likelihood of the random effects.
+#' @slot NLL_Random Marginal negative log-likelihood of the random effects.
 #' @slot info A list containing the data and starting values of estimated parameters
 #' for the assessment.
 #' @slot obj A list with components returned from \code{\link[TMB]{MakeADFun}}.
