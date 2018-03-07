@@ -127,11 +127,11 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
                                  c("assessment_index_residual.png", "Index residuals in log-space."))
   }
 
-  qqnorm(log(I_hist/Index), main = "Q-Q Plot of log(Index) Residual")
+  qqnorm(log(I_hist/Index), main = "")
   qqline(log(I_hist/Index))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index_qqplot.png"))
-    qqnorm(log(I_hist/Index), main = "Q-Q Plot of log(Index) Residual")
+    qqnorm(log(I_hist/Index), main = "")
     qqline(log(I_hist/Index))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,

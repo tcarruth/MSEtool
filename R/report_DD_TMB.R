@@ -151,11 +151,11 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                                  c("assessment_catch_residual.png", "Catch residuals in log-space."))
   }
 
-  qqnorm(log(C_hist/Catch), main = "Q-Q Plot of log(Catch) Residual")
+  qqnorm(log(C_hist/Catch), main = "")
   qqline(log(C_hist/Catch))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_catch_qqplot.png"))
-    qqnorm(log(C_hist/Catch), main = "Q-Q Plot of log(Catch) Residual")
+    qqnorm(log(C_hist/Catch), main = "")
     qqline(log(C_hist/Catch))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
