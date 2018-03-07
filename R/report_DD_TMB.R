@@ -308,8 +308,8 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = list(logit_UMSY_DD = factor(NA), log_MSY_DD = factor(NA)),
                      DLL = "MSEtool", silent = TRUE)
-    opt <- try(nlminb(obj$par, obj$fn, obj$gr, obj$he))
-    if(!inherits(opt, "try-error") || opt$convergence == 0) {
+    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr, obj$he), silent = TRUE))
+    if(!inherits(opt, "try-error") && opt$convergence == 0) {
       nll[i] <- opt$objective
     }
   }
@@ -374,11 +374,9 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
     data$E_hist <- E_hist_ret
 
     obj <- MakeADFun(data = data, parameters = params, DLL = "MSEtool", silent = TRUE)
-    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, obj$he),
-                    error = function(e) warning(paste("Non-convergence when", i,
-                                                      "years of data were removed.")))
+    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr, obj$he), silent = TRUE))
 
-    if(!is.character(opt) & opt$convergence == 0) {
+    if(!inherits(opt, "try-error") && opt$convergence == 0) {
       B <- c(obj$report()$B_DD, rep(NA, k_DD - 1 + i))
       relB <- c(obj$report()$relB_DD, rep(NA, k_DD - 1 + i))
       dep <- B/obj$report()$Bo_DD
