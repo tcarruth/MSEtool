@@ -21,7 +21,7 @@ See details for name of arguments to be passed on.}
 }
 \value{
 A data frame of negative log-likelihood values from profile and, optionally,
-a figure.
+a figure of the likelihood surface.
 }
 \description{
 Performs a profile likelihood.

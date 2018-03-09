@@ -13,7 +13,7 @@
 #' @details For \code{DD_TMB}, sequence of values for \code{UMSY} and \code{MSY} are needed.
 #' @author Q. Huynh
 #' @return A data frame of negative log-likelihood values from profile and, optionally,
-#' a figure.
+#' a figure of the likelihood surface.
 #' @export profile_likelihood
 profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
                                save_dir = getwd(), ...) {
@@ -35,8 +35,11 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
 #' @param save_dir The directory to which figures will be saved. By default: \code{getwd()}
 #' @export retrospective
 #' @author Q. Huynh
+#' @return Figures showing the time series of biomass and exploitation and parameter estimates
+#' with successive number of years removed. Returns invisibly an array of model output and of model estimates.
 #' @examples
-#' output <- DD_TMB(1, Red_snapper, Assessment = TRUE)
+#' data(Snapper_sim)
+#' output <- DD_TMB(Snapper_sim)
 #' RS_retro <- retrospective(output, nyr = 5)
 retrospective <- function(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
                           save_dir = getwd()) {

@@ -1,4 +1,4 @@
-html_report <- function(plot_dir, model, captions = NULL,
+html_report <- function(plot_dir, model, captions = NULL, name,
                         report_type = c("Index", "Data", "Assessment", "Life_History",
                                         "Profile_Likelihood", "Retrospective"), ...) {
   report_type <- match.arg(report_type)
@@ -8,7 +8,7 @@ html_report <- function(plot_dir, model, captions = NULL,
   message(paste0("Creating ", htmlname, " in folder:\n", plot_dir, "\n"))
 
   if(report_type == "Index") {
-    write_html_head("Home", filename, model)
+    write_html_head("Home", filename, model, name)
 
     header <- c("<h2>Home</h2>")
     write(header, file = filename, append = TRUE, sep = "\n")
@@ -19,7 +19,7 @@ html_report <- function(plot_dir, model, captions = NULL,
     write_html_foot(filename)
   }
   else {
-    write_html_head(report_type, filename, model)
+    write_html_head(report_type, filename, model, name)
 
     header <- c("<h2>", make_subtitle(report_type), "</h2>")
     body <- paste0("<p><a href='", captions[, 1], "'><img src='", captions[, 1], "' border=0 width=500></a><br/>",
@@ -34,7 +34,7 @@ html_report <- function(plot_dir, model, captions = NULL,
 }
 
 
-write_html_head <- function(title, file_name, model, append = FALSE) {
+write_html_head <- function(title, file_name, model, stock, append = FALSE) {
 
   if(model == "Surplus Production" || model == "Surplus Production (State-Space)") {
     include_life_history <- FALSE
@@ -115,7 +115,7 @@ write_html_head <- function(title, file_name, model, append = FALSE) {
     '</head>',
     '',
     '<body>',
-    '<h2>Results summary from ', model, ' assessment model</h2>',
+    '<h2>', model, ' assessment summary for ', stock, '</h2>',
     '<div id="navcontainer">',
     '<ul id="navlist">',
     '<li><a href="Index.html">Home</a></li>'

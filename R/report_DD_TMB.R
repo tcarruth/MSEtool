@@ -2,8 +2,8 @@
 summary_DD_TMB <- function(Assessment) {
   assign_Assessment_slots()
 
-  stock_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
-  rownames(stock_status) <- c("B/BMSY", "U/UMSY")
+  current_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
+  rownames(current_status) <- c("B/BMSY", "U/UMSY")
 
   input_parameters <- data.frame(Value = as.numeric(unlist(info$data[c(2,3,4,6,7)])),
                                  Description = c("Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
@@ -19,13 +19,15 @@ summary_DD_TMB <- function(Assessment) {
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("h", "B0", "R0", "N0", "BMSY", "BPR0", "BPR_UMSY")
 
+  model_estimates <- summary(SD)
+  model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+
   output <- list(model = "Delay Difference",
-                 stock_status = stock_status, input_parameters = input_parameters,
+                 current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
-                 model_estimates = summary(SD))
+                 model_estimates = model_estimates)
   return(output)
 }
-
 
 #' @import grDevices
 #' @importFrom stats qqnorm qqline
@@ -36,18 +38,18 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
     prepare_to_save_figure()
     index.report <- summary_DD_TMB(Assessment) # Method function does not work for some reason
     html_report(plot.dir, model = "Delay Difference",
-                stock_status = index.report$stock_status,
+                current_status = index.report$current_status,
                 input_parameters = index.report$input_parameters,
                 derived_quantities = index.report$derived_quantities,
                 model_estimates = index.report$model_estimates,
-                report_type = "Index")
+                name = Data@Name, report_type = "Index")
   }
 
   lh.file.caption <- plot_life_history(Data, save_figure = save_figure, save_dir = save_dir, Model = Model)
 
   if(save_figure) {
-    html_report(plot.dir, model = "Delay Difference",
-                captions = lh.file.caption, report_type = "Life_History")
+    html_report(plot.dir, model = "Delay Difference", captions = lh.file.caption,
+                name = Data@Name, report_type = "Life_History")
   }
 
   Year <- info$Year
@@ -93,8 +95,8 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
   }
 
   if(save_figure) {
-    html_report(plot.dir, model = "Delay Difference",
-                captions = data.file.caption, report_type = "Data")
+    html_report(plot.dir, model = "Delay Difference", captions = data.file.caption,
+                name = Data@Name, report_type = "Data")
   }
 
   logit.umsy <- as.numeric(obj$env$last.par.best[1])
@@ -281,8 +283,8 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
   }
 
   if(save_figure) {
-    html_report(plot.dir, model = "Delay Difference",
-                captions = assess.file.caption, report_type = "Assessment")
+    html_report(plot.dir, model = "Delay Difference", captions = assess.file.caption,
+                name = Data@Name, report_type = "Assessment")
     browseURL(file.path(plot.dir, "Assessment.html"))
   }
 
@@ -296,8 +298,8 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
   dots <- list(...)
   if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
   if(!"MSY" %in% names(dots)) stop("Sequence of MSY was not found. See help file.")
-  UMSY <- dots$UMSY
-  MSY <- dots$MSY
+  UMSY.MLE <- Assessment@UMSY
+  MSY.MLE <- Assessment@MSY
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
@@ -337,7 +339,7 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
                                 "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
       html_report(plot.dir, model = "Delay Difference",
                   captions = matrix(profile.file.caption, nrow = 1),
-                  report_type = "Profile_Likelihood")
+                  name = Assessment@Data@Name, report_type = "Profile_Likelihood")
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
@@ -475,8 +477,9 @@ plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
                                    x2 = paste0("Retrospective pattern in ",
                                                c("biomass", "B/BMSY", "biomass depletion", "recruitment",
                                                  "abundance", "exploitation", "U/UMSY", "UMSY estimate", "MSY estimate"), "."))
-    html_report(plot.dir, model = "Delay Difference",
-                captions = ret.file.caption, report_type = "Retrospective")
+    Assessment <- get("Assessment", envir = parent.frame())
+    html_report(plot.dir, model = "Delay Difference", captions = ret.file.caption,
+                name = Assessment@Data@Name, report_type = "Retrospective")
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }
 

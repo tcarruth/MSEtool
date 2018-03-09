@@ -1,8 +1,8 @@
 summary_SP_SS <- function(Assessment) {
   assign_Assessment_slots()
 
-  stock_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
-  rownames(stock_status) <- c("B/BMSY", "U/UMSY")
+  current_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
+  rownames(current_status) <- c("B/BMSY", "U/UMSY")
 
   input_parameters <- data.frame()
 
@@ -13,10 +13,13 @@ summary_SP_SS <- function(Assessment) {
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("r", "K", "BMSY", "sigma")
 
+  model_estimates <- summary(SD)
+  model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+
   output <- list(model = "Surplus Production (State-Space)",
-                 stock_status = stock_status, input_parameters = input_parameters,
+                 current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
-                 model_estimates = summary(SD))
+                 model_estimates = model_estimates)
   return(output)
 }
 
@@ -29,10 +32,10 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
     prepare_to_save_figure()
     index.report <- summary_SP_SS(Assessment)
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                stock_status = index.report$stock_status,
+                current_status = index.report$current_status,
                 derived_quantities = index.report$derived_quantities,
                 model_estimates = index.report$model_estimates,
-                report_type = "Index")
+                name = Data@Name, report_type = "Index")
   }
 
   Year <- info$Year
@@ -82,7 +85,7 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
 
   if(save_figure) {
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                captions = data.file.caption, report_type = "Data")
+                captions = data.file.caption, name = Data@Name, report_type = "Data")
   }
 
   logit.umsy <- as.numeric(obj$env$last.par.best[1])
@@ -245,7 +248,7 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
 
   if(save_figure) {
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                captions = assess.file.caption, report_type = "Assessment")
+                captions = assess.file.caption, name = Data@Name, report_type = "Assessment")
     browseURL(file.path(plot.dir, "Assessment.html"))
   }
   return(invisible())
@@ -264,8 +267,8 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   MLE <- as.numeric(Assessment@obj$env$last.par.best) # Max. likelihood est.
-  UMSY.MLE <- 1/(1 + exp(-MLE[1]))
-  MSY.MLE <- exp(MLE[2])
+  UMSY.MLE <- Assessment@UMSY
+  MSY.MLE <- Assessment@MSY
 
   nll <- rep(NA, nrow(profile.grid))
   params <- Assessment@info$params
@@ -307,7 +310,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
                                 "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
       html_report(plot.dir, model = "Surplus Production (State-Space)",
                   captions = matrix(profile.file.caption, nrow = 1),
-                  report_type = "Profile_Likelihood")
+                  name = Assessment@Data@Name, report_type = "Profile_Likelihood")
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
@@ -450,8 +453,10 @@ plot_retro_SP_SS <- function(retro_ts, retro_est, save_figure = FALSE,
                                                c("biomass", "B/BMSY", "biomass depletion",
                                                  "exploitation", "U/UMSY", "Biomass deviations",
                                                  "UMSY estimate", "MSY estimate"), "."))
+    Assessment <- get("Assessment", envir = parent.frame())
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                captions = ret.file.caption, report_type = "Retrospective")
+                captions = ret.file.caption, name = Assessment@Data@Name,
+                report_type = "Retrospective")
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }
 
