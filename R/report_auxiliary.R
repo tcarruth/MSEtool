@@ -1,10 +1,10 @@
-# Call from inside MP
+# Call from inside Assessment model
 return_Assessment <- function() {
   Call.history <- sys.calls()
   lCall <- length(Call.history)
   Model <- as.character(Call.history[[lCall-1]])[1]
 
-  output <- mget(c('info', 'obj', 'opt', 'SD', 'dependencies'),
+  output <- mget(c('Data', 'info', 'obj', 'opt', 'SD', 'dependencies'),
                  envir = parent.frame())
   report <- output$obj$report()
 
@@ -31,10 +31,80 @@ return_Assessment <- function() {
                       NLL = report$jnll,
                       info = output$info, obj = output$obj, opt = output$opt,
                       SD = output$SD, TMB_report = report,
-                      dependencies = output$dependencies)
+                      dependencies = output$dependencies,
+                      Data = output$Data)
   }
-  if(Model == "DD_SS") {
 
+  if(Model == "DD_SS") {
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    k <- output$info$data$k_DD
+    Yearplusk <- c(Year, (max(Year)+1):(max(Year)+k))
+    Yearrandom <- seq(Year[1] + k, max(Year))
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY_DD, UMSY = report$UMSY_DD, BMSY = report$BMSY_DD,
+                      B0 = report$Bo_DD, R0 = report$Ro_DD, N0 = report$No_DD,
+                      SSB0 = report$Bo_DD, h = report$h,
+                      U = structure(report$U_DD, names = Year),
+                      U_UMSY = structure(report$relU_DD, names = Year),
+                      B = structure(report$B_DD, names = Yearplusone),
+                      B_BMSY = structure(report$relB_DD, names = Yearplusone),
+                      B_B0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
+                      SSB = structure(report$B_DD, names = Yearplusone),
+                      SSB_SSBMSY = structure(report$relB_DD, names = Yearplusone),
+                      SSB_SSB0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
+                      N = structure(report$N_DD, names = Yearplusone),
+                      R = structure(report$R_DD, names = Yearplusk),
+                      Catch = structure(report$Cpred_DD, names = Year),
+                      Random = structure(output$SD$par.random, names = Yearrandom),
+                      Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearrandom),
+                      NLL = report$jnll, NLL_Catch = report$jnll_comp[1],
+                      NLL_Random = report$jnll_comp[2],
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies,
+                      Data = output$Data)
+  }
+
+  if(Model == "SP") {
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY, UMSY = report$UMSY, BMSY = report$BMSY,
+                      B0 = report$K,
+                      U = structure(report$U, names = Year),
+                      U_UMSY = structure(report$relU, names = Year),
+                      B = structure(report$Biomass, names = Yearplusone),
+                      B_BMSY = structure(report$relB, names = Yearplusone),
+                      B_B0 = structure(report$Biomass/report$K, names = Yearplusone),
+                      Index = structure(report$Ipred, names = Year),
+                      NLL = report$nll,
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies,
+                      Data = output$Data)
+  }
+  if(Model == "SP_SS") {
+    Year <- output$info$Year
+    Yearplusone <- c(Year, max(Year) + 1)
+    Yearminusone <- Year[2]:max(Year)
+    Assessment <- new("Assessment", Model = Model,
+                      MSY = report$MSY, UMSY = report$UMSY, BMSY = report$BMSY,
+                      B0 = report$K,
+                      U = structure(report$U, names = Year),
+                      U_UMSY = structure(report$relU, names = Year),
+                      B = structure(report$Biomass, names = Yearplusone),
+                      B_BMSY = structure(report$relB, names = Yearplusone),
+                      B_B0 = structure(report$Biomass/report$K, names = Yearplusone),
+                      Index = structure(report$Ipred, names = Year),
+                      Random = structure(output$SD$par.random, names = Yearminusone),
+                      Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearminusone),
+                      NLL = report$nll, NLL_Index = report$nll_comp[1],
+                      NLL_Random = report$nll_comp[2],
+                      info = output$info, obj = output$obj, opt = output$opt,
+                      SD = output$SD, TMB_report = report,
+                      dependencies = output$dependencies,
+                      Data = output$Data)
   }
 
   return(Assessment)
@@ -54,10 +124,10 @@ assign_Assessment_slots <- function() {
 
 # Call from inside generate_plots(), profile_likelihood(), retrospective(),
 prepare_to_save_figure <- function() {
-  MP <- get("MP", envir = parent.frame())
+  Model <- get("Model", envir = parent.frame())
   base.dir <- get("save_dir", envir = parent.frame()) # by default: getwd()
-  MP.dir <- paste0("plots_", MP)
-  plot.dir <- file.path(base.dir, MP.dir)
+  Model.dir <- paste0("plots_", Model)
+  plot.dir <- file.path(base.dir, Model.dir)
 
   if(!dir.exists(plot.dir)) {
     message(paste0("Creating directory: \n", plot.dir, "\n"))
@@ -318,8 +388,8 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
                             obs_upper = NULL, obs_lower = NULL, fit_linewidth = 3,
                             fit_color = "red", label = "Observed data") {
   old.warning <- options()$warn
-  on.exit(options(warn = old.warning), add = TRUE)
   options(warn = -1)
+  on.exit(options(warn = old.warning))
 
   # Without CV interval
   if(is.null(obs_CV)) {
@@ -542,10 +612,10 @@ plot_composition <- function(Year, obs, fit = NULL,
 #'
 #' Produces plots of growth parameters.
 #'
-#' @param Data An object of class \code{\link[DLMtool]\linkS4class{Data}}.
+#' @param Data An object of class Data.
 #' @param save_figure Indicates whether figures will be saved to directory.
 #' @param save_dir The directory to which figures will be saved. By default: \code{getwd()}
-#' @param MP Name of MP to save into appropriate sub-directory (optional).
+#' @param Model Name of assessment model to save into appropriate sub-directory (optional).
 #' @return Plots of length-at-age, weight-at-age, and weight-at-length
 #' (if appropriate parameters are available).
 #'
@@ -555,11 +625,8 @@ plot_composition <- function(Year, obs, fit = NULL,
 #' @export plot_life_history
 #' @examples plot_life_history(Red_snapper)
 plot_life_history <- function(Data, save_figure = FALSE, save_dir = getwd(),
-                              MP = NULL) {
-
-  if(save_figure) {
-    prepare_to_save_figure()
-  }
+                              Model = NULL) {
+  if(save_figure) prepare_to_save_figure()
 
   # Plot growth
   # Need: Linf, K, t0, Maxage
@@ -643,10 +710,6 @@ plot_life_history <- function(Data, save_figure = FALSE, save_dir = getwd(),
 
 #' @importFrom graphics arrows
 plot_surplus_production <- function(B, B0 = NULL, C, arrow_size = 0.07) {
-  old.warning <- options()$warn
-  on.exit(options(warn = old.warning))
-  options(warn = -1)
-
   if(!is.null(B0)) {
     B <- B/B0
     xlab_label <- expression(B/B[0])

@@ -25,13 +25,12 @@
 #' @seealso \code{\link{SP_SS}}
 #' @import TMB
 #' @importFrom stats nlminb
-#' @importFrom mvtnorm rmvnorm
 #' @useDynLib MSEtool
 SP <- function(Data, n = 2, B1frac = 1) {
   dependencies = "Data@Cat, Data@Ind"
   x <- 1
-  yind <- which(!is.na(Data@Cat[x, ]))[1]
-  yind <- yind:length(Data@Cat[x, ])
+  ystart <- which(!is.na(Data@Cat[x, ]))[1]
+  yind <- ystart:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
   Catch <- Data@Cat[x, yind]
   if(any(is.na(Catch))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
@@ -39,7 +38,7 @@ SP <- function(Data, n = 2, B1frac = 1) {
   Index[is.na(Index)] <- -1
   n_y <- length(Catch)
   AvC <- mean(Catch, na.rm = TRUE)
-  if(!is.na(Data@Mort[x])) UMSYstart <- 1 - exp(-0.5*Data@Mort[x])
+  if(!is.na(Data@Mort[x])) UMSYstart <- 1 - exp(-0.5 * Data@Mort[x])
   else UMSYstart <- 0.2
 
   data <- list(model = "SP", Catch = Catch, Index = Index, n_y = n_y)
@@ -51,6 +50,7 @@ SP <- function(Data, n = 2, B1frac = 1) {
                    map = list(log_B1frac = factor(NA), log_n = factor(NA)),
                    DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(obj$par, obj$fn, obj$gr, obj$he)
+  SD <- sdreport(obj)
 
   Assessment <- return_Assessment()
   return(Assessment)

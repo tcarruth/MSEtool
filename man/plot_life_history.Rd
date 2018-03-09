@@ -5,16 +5,16 @@
 \title{Plot life history parameters from Data object}
 \usage{
 plot_life_history(Data, save_figure = FALSE, save_dir = getwd(),
-  MP = NULL)
+  Model = NULL)
 }
 \arguments{
-\item{Data}{An object of class \code{\link[DLMtool]\linkS4class{Data}}.}
+\item{Data}{An object of class Data.}
 
 \item{save_figure}{Indicates whether figures will be saved to directory.}
 
 \item{save_dir}{The directory to which figures will be saved. By default: \code{getwd()}}
 
-\item{MP}{Name of MP to save into appropriate sub-directory (optional).}
+\item{Model}{Name of assessment model to save into appropriate sub-directory (optional).}
 }
 \value{
 Plots of length-at-age, weight-at-age, and weight-at-length

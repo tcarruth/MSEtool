@@ -8,7 +8,7 @@ profile_likelihood(Assessment, figure = TRUE, save_figure = TRUE,
   save_dir = getwd(), ...)
 }
 \arguments{
-\item{Assessment}{An S4 object of assessment output generated from an MP.}
+\item{Assessment}{An S4 object of class Assessment.}
 
 \item{figure}{Indicates whether a figure will be plotted.}
 
@@ -21,7 +21,7 @@ See details for name of arguments to be passed on.}
 }
 \value{
 A data frame of negative log-likelihood values from profile and, optionally,
-a figure.
+a figure of the likelihood surface.
 }
 \description{
 Performs a profile likelihood.

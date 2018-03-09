@@ -38,10 +38,13 @@ DD_SS <- function(Data) {
   wa <- Data@wla[x] * la^Data@wlb[x]
   a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x],  Data@L50[x])
   a50V <- max(a50V, 1)
-  yind <- (1:length(Data@Cat[x, ]))[!is.na(Data@Cat[x, ] + Data@Ind[x,   ])]
+  ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x,   ]))[1]
+  yind <- ystart:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
-  E_hist <- C_hist/Data@Ind[x, yind]
+  I_hist <- Data@Ind[x, yind]
+  E_hist <- C_hist/I_hist
+  if(any(is.na(E_hist))) stop("Missing values in catch and index in Data object.")
   E_hist <- E_hist/mean(E_hist)
   ny_DD <- length(C_hist)
   k_DD <- ceiling(a50V)  # get age nearest to 50% vulnerability (ascending limb)
@@ -60,7 +63,7 @@ DD_SS <- function(Data) {
                  log_MSY_DD = log(3 * AvC), log_q_DD = log(Data@Mort[x]),
                  log_sigma_DD = log(sigmaC),
                  log_tau_DD = log(0.3), log_rec_dev = rep(0, ny_DD - k_DD))
-  info <- list(Year = Year, data = data, params = params, sigma = sigmaC)
+  info <- list(Year = Year, data = data, params = params, sigma = sigmaC, I_hist = I_hist)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = "log_rec_dev",
                    map = list(log_sigma_DD = factor(NA)), DLL = "MSEtool", silent = TRUE)

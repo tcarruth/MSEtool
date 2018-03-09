@@ -48,13 +48,14 @@ SP_SS <- function(Data, n = 2, B1frac = 1) {
                  log_MSY = log(3 * AvC), log_B1frac = log(B1frac), log_n = log(n),
                  log_sigma = log(sigmaI), log_tau = log(0.2),
                  log_B_dev = rep(0, n_y - 1))
-  info <- list(Year = Year, data = data, params = params)
+  info <- list(Year = Year, data = data, params = params, sigma = sigmaI)
 
   obj <- MakeADFun(data = info$data, parameters = info$params,
                    map = list(log_B1frac = factor(NA), log_n = factor(NA),
                               log_sigma = factor(NA)),
                    random = "log_B_dev", DLL = "MSEtool", silent = TRUE)
   opt <- nlminb(obj$par, obj$fn, obj$gr)
+  SD <- sdreport(obj)
 
   Assessment <- return_Assessment()
   return(Assessment)

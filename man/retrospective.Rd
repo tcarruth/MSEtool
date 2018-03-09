@@ -8,7 +8,7 @@ retrospective(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
   save_dir = getwd())
 }
 \arguments{
-\item{Assessment}{An S4 object of assessment output generated from an MP.}
+\item{Assessment}{An S4 object of Assessment output..}
 
 \item{nyr}{The maximum number of years to remove for the retrospective analysis.}
 
@@ -21,12 +21,16 @@ retrospective(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
 \value{
 A list with an array of model output and of model estimates from
 the retrospective analysis.
+
+Figures showing the time series of biomass and exploitation and parameter estimates
+with successive number of years removed. Returns invisibly an array of model output and of model estimates.
 }
 \description{
 Perform a retrospective analysis.
 }
 \examples{
-output <- DD_TMB(1, Red_snapper, Assessment = TRUE)
+data(Snapper_sim)
+output <- DD_TMB(Snapper_sim)
 RS_retro <- retrospective(output, nyr = 5)
 }
 \author{

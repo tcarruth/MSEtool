@@ -10,7 +10,9 @@ License: GPL-2
 Depends: 
   R(>= 2.10.0),
   DLMtool
-Imports: DLMtool
+Imports: 
+  MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm,
+  r4ss, reshape2, stats, utils
 LinkingTo: TMB, RcppEigen
 LazyData: yes
 LazyLoad: yes

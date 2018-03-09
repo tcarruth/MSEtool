@@ -2,6 +2,7 @@
 setOldClass("sdreport")
 
 
+
 #' Assessment Class
 #'
 #' An S4 class that contains objects from a function of class Assess.
@@ -18,7 +19,7 @@ setOldClass("sdreport")
 #' @slot R0 Recruitment at virgin equilibrium.
 #' @slot N0 Abundance at virgin equilibrium.
 #' @slot SSB0 Spawning stock biomass at virgin equilibrium.
-#' @slot h Steepness at virgin equilibrium.
+#' @slot h Steepness.
 #' @slot U Time series of exploitation.
 #' @slot U_UMSY Time series of relative exploitation.
 #' @slot F Time series of fishing mortality.
@@ -42,7 +43,7 @@ setOldClass("sdreport")
 #' @slot NLL_Catch Negative log-likelihood of the catch component.
 #' @slot NLL_Index Negative log-likelihood of the index component.
 #' @slot NLL_C_at_age Negative log-likelihood of the catch-at-age component.
-#' @slot NLL_random Marginal negative log-likelihood of the random effects.
+#' @slot NLL_Random Marginal negative log-likelihood of the random effects.
 #' @slot info A list containing the data and starting values of estimated parameters
 #' for the assessment.
 #' @slot obj A list with components returned from \code{\link[TMB]{MakeADFun}}.
@@ -52,6 +53,12 @@ setOldClass("sdreport")
 #' @slot TMB_report A list of model output reported from the TMB executable, i.e. \code{obj$report()}.
 #' @slot dependencies A character string of data types used for the assessment.
 #' @author Q. Huynh
+#' @exportClass Assessment
+#' @import DLMtool
+#' @import methods
+#' @import graphics
+#' @import stats
+#' @import utils
 setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
                                  UMSY = "numeric", FMSY = "numeric", BMSY = "numeric",
                                  B0 = "numeric", R0 = "numeric", N0 = "numeric",
@@ -68,7 +75,7 @@ setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
                                  NLL_Random = "numeric",
                                  info = "list", obj = "list",
                                  opt = "list", SD = "sdreport", TMB_report = "list",
-                                 dependencies = "character"))
+                                 dependencies = "character", Data = "Data"))
 
 
 #' Summary of Assessment object
@@ -80,8 +87,8 @@ setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
 #' data(Red_snapper)
 #' output <- DD_TMB(Red_snapper)
 #' summary(output)
-#' @export
-setMethod("summary", "Assessment", function(object) {
+#' @exportMethod summary
+setMethod("summary", signature(object = "Assessment"), function(object) {
   f <- get(paste0("summary_", object@Model))
   f(object)
 })
@@ -99,8 +106,12 @@ setMethod("summary", "Assessment", function(object) {
 #' output <- DD_TMB(Red_snapper)
 #' plot(output, save_figure = FALSE)
 #'
-#' @export
+#' @exportMethod plot
 setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {
+  old.warning <- options()$warn
+  options(warn = -1)
+  on.exit(options(warn = old.warning))
+
   f <- get(paste0("generate_plots_", x@Model))
   f(x, save_figure = save_figure, save_dir = save_dir)
 })

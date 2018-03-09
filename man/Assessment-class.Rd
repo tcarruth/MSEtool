@@ -28,7 +28,7 @@ An S4 class that contains objects from a function of class Assess.
 
 \item{\code{SSB0}}{Spawning stock biomass at virgin equilibrium.}
 
-\item{\code{h}}{Steepness at virgin equilibrium.}
+\item{\code{h}}{Steepness.}
 
 \item{\code{U}}{Time series of exploitation.}
 
@@ -76,7 +76,7 @@ An S4 class that contains objects from a function of class Assess.
 
 \item{\code{NLL_C_at_age}}{Negative log-likelihood of the catch-at-age component.}
 
-\item{\code{NLL_random}}{Marginal negative log-likelihood of the random effects.}
+\item{\code{NLL_Random}}{Marginal negative log-likelihood of the random effects.}
 
 \item{\code{info}}{A list containing the data and starting values of estimated parameters
 for the assessment.}
