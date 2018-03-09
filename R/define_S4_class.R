@@ -2,6 +2,7 @@
 setOldClass("sdreport")
 
 
+
 #' Assessment Class
 #'
 #' An S4 class that contains objects from a function of class Assess.
@@ -53,6 +54,11 @@ setOldClass("sdreport")
 #' @slot dependencies A character string of data types used for the assessment.
 #' @author Q. Huynh
 #' @exportClass Assessment
+#' @import DLMtool
+#' @import methods
+#' @import graphics
+#' @import stats
+#' @import utils
 setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
                                  UMSY = "numeric", FMSY = "numeric", BMSY = "numeric",
                                  B0 = "numeric", R0 = "numeric", N0 = "numeric",
