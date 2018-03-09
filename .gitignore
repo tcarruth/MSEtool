@@ -51,4 +51,5 @@ src/*.dll
  
 DLMtool.Rproj
 *.Rproj
-src/MSEtool.o
+*.Rhistory
+
