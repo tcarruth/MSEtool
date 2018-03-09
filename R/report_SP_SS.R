@@ -266,10 +266,6 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
   MSY <- dots$MSY
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
-  MLE <- as.numeric(Assessment@obj$env$last.par.best) # Max. likelihood est.
-  UMSY.MLE <- Assessment@UMSY
-  MSY.MLE <- Assessment@MSY
-
   nll <- rep(NA, nrow(profile.grid))
   params <- Assessment@info$params
   for(i in 1:nrow(profile.grid)) {
@@ -295,6 +291,9 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
             nlevels = 20)
+
+    UMSY.MLE <- Assessment@UMSY
+    MSY.MLE <- Assessment@MSY
     points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
 
     if(save_figure) {

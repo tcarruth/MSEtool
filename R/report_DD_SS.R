@@ -345,8 +345,8 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
   dots <- list(...)
   if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
   if(!"MSY" %in% names(dots)) stop("Sequence of MSY was not found. See help file.")
-  UMSY.MLE <- Assessment@UMSY
-  MSY.MLE <- Assessment@MSY
+  UMSY <- dots$UMSY
+  MSY <- dots$MSY
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
@@ -372,9 +372,9 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
             nlevels = 20)
-    MLE <- as.numeric(Assessment@obj$env$last.par.best) # Max. likelihood est.
-    UMSY.MLE <- 1/(1 + exp(-MLE[1]))
-    MSY.MLE <- exp(MLE[2])
+
+    UMSY.MLE <- Assessment@UMSY
+    MSY.MLE <- Assessment@MSY
     points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
     if(save_figure) {
       Model <- Assessment@Model
@@ -383,8 +383,6 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
       create_png(file.path(plot.dir, "profile_likelihood.png"))
       contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
               nlevels = 20)
-      UMSY.MLE <- 1/(1 + exp(-MLE[1]))
-      MSY.MLE <- exp(MLE[2])
       points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
       dev.off()
 	    profile.file.caption <- c("profile_likelihood.png",
