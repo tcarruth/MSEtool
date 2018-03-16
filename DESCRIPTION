@@ -5,14 +5,14 @@ Version: 1.1.0
 Date: 2018-2-26
 Authors@R: c(person("Tom","Carruthers",,"t.carruthers@oceans.ubc.ca",role=c("aut","cre")),person("Adrian","Hordyk",,"a.hordyk@oceans.ubc.ca",role="aut"), person("Quang","Huynh",,"q.huynh@oceans.ubc.ca",role="aut"))
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
-Description: Simulation tools for informing data-rich fisheries
+Description: Simulation tools for informing data-rich fisheries. 
 License: GPL-2
 Depends: 
   R(>= 2.10.0),
   DLMtool
 Imports: 
-  MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm,
-  r4ss, reshape2, stats, utils
+  MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm, pryr,
+  r4ss, reshape2, snowfall, stats, utils
 LinkingTo: TMB, RcppEigen
 LazyData: yes
 LazyLoad: yes
