@@ -2,27 +2,45 @@
 % Please edit documentation in R/HCRs.R
 \name{HCR60_20}
 \alias{HCR60_20}
-\title{A 60-20 harvest control rule based on B/BMSY}
+\title{A 60-20 harvest control rule.}
 \usage{
-HCR60_20(Brel)
+HCR60_20(Assessment, reps = 1, ...)
 }
 \arguments{
-\item{Brel}{Improper fraction: an estimate of Biomass relative to BMSY}
+\item{Assessment}{An object of class \linkS4class{Assessment}.}
+
+\item{reps}{The number of stochastic samples of the TAC recommendation.}
+
+\item{...}{Miscellaneous arguments (not currently used).}
 }
 \value{
-a TAC or TAE adjustement factor.
+An object of class \linkS4class{Rec} with the TAC recommendation.
 }
 \description{
-A 60-20 harvest control rule based on B/BMSY
+A output control rule with a ramp that reduces the
+TAC recommendation (FMSY * Biomass) when biomass depletion (B/B0) is less than 60%.
+The TAC reduction is linearly reduced to 0 when depletion is less than 20%.
 }
 \examples{
-Brel<-seq(0,1.5,length.out=200)
-plot(Brel,HCR60_20(Brel),xlab="B/BMSY",ylab="HCR adjustement factor",main="A 60-20 harvest control rule",type='l',col='blue')
-abline(v=c(0.2,0.6),col='red',lty=2)
+# 60-20 linear ramp
+Brel <- seq(0, 1, length.out = 200)
+plot(Brel, HCRlin(Brel, 0.2, 0.6), xlab = "Estimated B/B0", ylab = "TAC adjustement factor",
+main = "A 40-10 harvest control rule", type = 'l', col = 'blue')
+abline(v = c(0.1,0.4), col = "red", lty = 2)
+
+# create an MP to run in closed-loop MSE
+DD_60_20 <- make_MP(DD_TMB, HCR60_20)
+\dontrun{
+myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_60_20"))
+}
 }
 \references{
-Pretty generic fishery control rule
+Punt, A. E, Dorn, M. W., and Haltuch, M. A. 2008. Evaluation of threshold management strategies
+for groundfish off the U.S. West Coast. Fisheries Research 94:251-266.
+}
+\seealso{
+\link{HCR40_10} \link{HCRlin} \link{make_MP}
 }
 \author{
-T. Carruthers
+Q. Huynh
 }

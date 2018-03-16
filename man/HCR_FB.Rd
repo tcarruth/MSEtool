@@ -18,8 +18,6 @@ HCR_FB(Brel, Frel, Bpow = 2, Bgrad = 1, Fpow = 1, Fgrad = 1)
 \item{Fpow}{non-negative real number: controls the adjustment speed relative to F/FMSY. When set to 1, next recommendation is FMSY. When less than 1 next recommendation is between current F and FMSY.}
 
 \item{Fgrad}{improper fraction: target Fishing rate relative to FMSY}
-
-\item{dset}{a list of simulated data for use by management procedures.}
 }
 \value{
 a TAC or TAE adjustement factor.
@@ -28,14 +26,16 @@ a TAC or TAE adjustement factor.
 A Harvest Control Rule using B/BMSY and F/FMSY to adjust TAC or TAE.
 }
 \examples{
-res<-100
-Frel<-seq(1/2,2,length.out=res)
-Brel<-seq(0.05,2,length.out=res)
-adj<-array(HCR_FB(Brel[rep(1:res,res)],Frel[rep(1:res,each=res)],Bpow=2,Bgrad=1,Fpow=1,Fgrad=0.75),c(res,res))
-contour(Brel,Frel,adj,nlevels=20,xlab="B/BMSY",ylab="F/FMSY",main="FBsurface HCR adjustment factor")
-abline(h=1,col='red',lty=2)
-abline(v=1,col='red',lty=2)
-legend('topright',c("Bpow = 2", "Bgrad=1","Fpow=1","Fgrad=0.75"),text.col='blue')
+res <- 100
+Frel <- seq(1/2, 2, length.out = res)
+Brel <- seq(0.05, 2, length.out=res)
+adj <- array(HCR_FB(Brel[rep(1:res, res)], Frel[rep(1:res, each = res)],
+                    Bpow = 2, Bgrad = 1, Fpow = 1, Fgrad = 0.75), c(res, res))
+contour(Brel, Frel, adj, nlevels = 20, xlab = "B/BMSY", ylab = "F/FMSY",
+        main = "FBsurface TAC adjustment factor")
+abline(h = 1, col = 'red', lty = 2)
+abline(v = 1, col = 'red', lty = 2)
+legend('topright', c("Bpow = 2", "Bgrad = 1", "Fpow = 1", "Fgrad = 0.75"), text.col = 'blue')
 }
 \references{
 Made up for this package

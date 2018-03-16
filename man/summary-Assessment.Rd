@@ -18,6 +18,6 @@ Summary of Assessment object
 }
 \examples{
 data(Red_snapper)
-output <- DD_TMB(Red_snapper)
+output <- DD_TMB(1, Red_snapper)
 summary(output)
 }

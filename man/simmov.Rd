@@ -8,7 +8,9 @@ simmov(OM, dist = c(0.1, 0.2, 0.3, 0.4), prob = 0.5, distE = 0.1,
   probE = 0.1, prob2 = NA)
 }
 \arguments{
-\item{dist}{A vector nareas long of fractions of unfished stock in each area}
+\item{OM}{Operating model, an object of class \linkS4class{OM}.}
+
+\item{dist}{A vector of length \code{nareas} of fractions of unfished stock in each area}
 
 \item{prob}{Mean probability of staying across all areas (single value) or a vector of the probability of individuals staying in each area (same length as dist)}
 

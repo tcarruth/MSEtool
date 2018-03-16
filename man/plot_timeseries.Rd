@@ -35,7 +35,8 @@ predicted data.
 }
 \examples{
 data(Red_snapper)
-plot_timeseries(Red_snapper@Year, Red_snapper@Cat[1, ], obs_CV = Red_snapper@CV_Cat, label = "Catch")
+plot_timeseries(Red_snapper@Year, Red_snapper@Cat[1, ],
+obs_CV = Red_snapper@CV_Cat, label = "Catch")
 }
 \seealso{
 \code{\link{plot_residuals}}

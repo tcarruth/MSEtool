@@ -3,20 +3,21 @@
 \docType{class}
 \name{Assessment-class}
 \alias{Assessment-class}
-\title{Assessment Class}
+\alias{Assessment}
+\title{Class-\code{Assessment}}
 \description{
-An S4 class that contains objects from a function of class Assess.
+An S4 class that contains assessment output. Created from a function of class \code{Assess}.
 }
 \section{Slots}{
 
 \describe{
 \item{\code{Model}}{Name of the assessment model.}
 
-\item{\code{MSY}}{Maximum sustainable yield.}
+\item{\code{UMSY}}{Estimate of exploitation at maximum sustainable yield.}
 
-\item{\code{UMSY}}{Exploitation at maximum sustainable yield.}
+\item{\code{FMSY}}{Estimate of instantaneous fishing mortality rate at maximum sustainable yield.}
 
-\item{\code{FMSY}}{Instantaneous fishing mortality rate at maximum sustainable yield.}
+\item{\code{MSY}}{Estimate of maximum sustainable yield.}
 
 \item{\code{BMSY}}{Biomass at maximum sustainable yield.}
 
@@ -40,7 +41,7 @@ An S4 class that contains objects from a function of class Assess.
 
 \item{\code{B}}{Time series of biomass.}
 
-\item{\code{B_BMSY}}{Time series of relative biomass relative to MSY.}
+\item{\code{B_BMSY}}{Time series of biomass relative to MSY.}
 
 \item{\code{B_B0}}{Time series of depletion.}
 
@@ -50,33 +51,47 @@ An S4 class that contains objects from a function of class Assess.
 
 \item{\code{SSB_SSB0}}{Time series of spawning stock depletion.}
 
-\item{\code{N}}{Time series of population abundance.}
-
 \item{\code{R}}{Time series of recruitment.}
 
-\item{\code{N_at_age}}{Time series of numbers-at-age.}
+\item{\code{N}}{Time series of population abundance.}
 
-\item{\code{C_at_age}}{Time series of catch-at-age.}
+\item{\code{N_at_age}}{Time series of numbers-at-age matrix.}
 
-\item{\code{selectivity}}{Selectivity-at-age.}
+\item{\code{Selectivity}}{Selectivity-at-age matrix.}
+
+\item{\code{Obs_Catch}}{Observed catch.}
+
+\item{\code{Obs_Index}}{Observed index.}
+
+\item{\code{Obs_C_at_age}}{Observed catch-at-age matrix.}
 
 \item{\code{Catch}}{Predicted catch.}
 
-\item{\code{Index}}{Predicted Index.}
+\item{\code{Index}}{Predicted index.}
+
+\item{\code{C_at_age}}{Predicted catch-at-age matrix.}
 
 \item{\code{Random}}{A vector of estimated random effects.}
 
-\item{\code{Random_SE}}{A vector of standard errors of the random effects.}
+\item{\code{Random_type}}{A description of the random effects, e.g. "log recruitment deviations".}
 
-\item{\code{NLL}}{Negative log-likelihood of the model (integrated across random effects).}
+\item{\code{NLL}}{Negative log-likelihood (total [integrated across random effects] and components).}
 
-\item{\code{NLL_Catch}}{Negative log-likelihood of the catch component.}
+\item{\code{SE_UMSY}}{Standard error of UMSY estimate.}
 
-\item{\code{NLL_Index}}{Negative log-likelihood of the index component.}
+\item{\code{SE_FMSY}}{Standard error of FMSY estimate.}
 
-\item{\code{NLL_C_at_age}}{Negative log-likelihood of the catch-at-age component.}
+\item{\code{SE_MSY}}{Standard error of MSY estimate.}
 
-\item{\code{NLL_Random}}{Marginal negative log-likelihood of the random effects.}
+\item{\code{SE_U_UMSY_final}}{Standard error of U/UMSY in the terminal year.}
+
+\item{\code{SE_F_FMSY_final}}{Standard error of F/FMSY in the terminal year.}
+
+\item{\code{SE_B_BMSY_final}}{Standard error of B/BMSY in the terminal year.}
+
+\item{\code{SE_B_B0_final}}{Standard error of B/B0 in the terminal year.}
+
+\item{\code{SE_Random}}{A vector of standard errors of the random effects.}
 
 \item{\code{info}}{A list containing the data and starting values of estimated parameters
 for the assessment.}
@@ -91,8 +106,16 @@ for the assessment.}
 \item{\code{TMB_report}}{A list of model output reported from the TMB executable, i.e. \code{obj$report()}.}
 
 \item{\code{dependencies}}{A character string of data types used for the assessment.}
+
+\item{\code{Data}}{An object of class \linkS4class{Data} that was used to perform the assessment.}
 }}
 
+\examples{
+data(sim_snapper)
+output <- DD_TMB(1, sim_snapper)
+class(output)
+str(output)
+}
 \author{
 Q. Huynh
 }

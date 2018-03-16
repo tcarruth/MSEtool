@@ -4,10 +4,15 @@
 \alias{DD_SS}
 \title{State-Space Delay-Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_SS(Data)
+DD_SS(x, Data, ...)
 }
 \arguments{
-\item{Data}{A data-limited methods data object}
+\item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
+Otherwise, equals to 1 When running an assessment interactively.}
+
+\item{Data}{A data-limited methods data object.}
+
+\item{...}{Additional arguments (not currently used).}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output

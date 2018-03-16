@@ -2,30 +2,39 @@
 % Please edit documentation in R/HCRs.R
 \name{HCRlin}
 \alias{HCRlin}
-\title{Generic linear harvest control rule based on B/BMSY}
+\title{Generic linear harvest control rule based on biomass}
 \usage{
 HCRlin(Brel, LRP, TRP)
 }
 \arguments{
-\item{Brel}{Improper fraction: an estimate of Biomass relative to BMSY}
+\item{Brel}{Improper fraction: An estimate of biomass (either absolute
+or relative, e.g. B/BMSY or B/B0).}
 
-\item{LRP}{Improper fraction: the Limit Reference Point, a biomass level below which the adjustment is zero (no fishing)}
+\item{LRP}{Improper fraction: the Limit Reference Point, the biomass
+below which the adjustment is zero (no fishing). Same units as \code{Brel}.}
 
-\item{TRP}{Improper fraction: the Target Reference Point, a biomass level above which the adjustment is 1 (no adjustment)}
+\item{TRP}{Improper fraction: the Target Reference Point, the biomass
+above which the adjustment is 1 (no adjustment). Same units as \code{Brel}.}
 }
 \value{
 a TAC or TAE adjustement factor.
 }
 \description{
-Generic linear harvest control rule based on B/BMSY
+A general function that adjusts the TAC by a linear ramp based on estimated biomass.
 }
 \examples{
-Brel<-seq(0,1.5,length.out=200)
-plot(Brel,HCRlin(Brel,0.1,0.4),xlab="B/BMSY",ylab="HCR adjustement factor",main="Basically a 40-10 harvest control rule",type='l',col='blue')
-abline(v=c(0.1,0.4),col='red',lty=2)
+#40-10 linear ramp
+Brel <- seq(0, 1, length.out = 200)
+plot(Brel, HCRlin(Brel, 0.1, 0.4), xlab = "Estimated B/B0", ylab = "TAC adjustement factor",
+main = "A 40-10 harvest control rule", type = 'l', col = 'blue')
+abline(v = c(0.1,0.4), col = 'red', lty = 2)
 }
 \references{
-Pretty generic fishery control rule
+Deroba, J.J. and Bence, J.R. 2008. A review of harvest policies: Understanding relative
+performance of control rules. Fisheries Research 94:210-223.
+
+Restrepo, V.R. and Power, J.E. 1999. Precautionary control rules in US fisheries
+management: specification and performance. ICES Journal of Marine Science 56:846-852.
 }
 \author{
 T. Carruthers

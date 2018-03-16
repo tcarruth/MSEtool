@@ -4,10 +4,15 @@
 \alias{DD_TMB}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(Data)
+DD_TMB(x, Data, ...)
 }
 \arguments{
-\item{Data}{A data-limited methods data object.}
+\item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
+Otherwise, equals to 1 When running an assessment interactively.}
+
+\item{Data}{An object of class \linkS4class{Data}.}
+
+\item{...}{Additional arguments (not currently used).}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output

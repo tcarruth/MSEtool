@@ -4,16 +4,21 @@
 \alias{SP}
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
-SP(Data, n = 2, B1frac = 1)
+SP(x = 1, Data, n = 2, Binit_frac = 1, ...)
 }
 \arguments{
+\item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
+Otherwise, equals to 1 When running an assessment interactively.}
+
 \item{Data}{A data-limited methods data object}
 
-\item{n}{The exponent of the production function, which is fixed in the model.
-Typically fixed at n = 2, where the biomass at MSY is half of carrying capacity.}
+\item{n}{The exponent of the production function (fixed in the model).
+Typically fixed at \code{n = 2}, where the biomass at MSY is half of carrying capacity.}
 
-\item{B1frac}{The biomass to carrying capacity ratio in the first year of the model.
-A value of 1 assumes virgin conditions.}
+\item{Binit_frac}{The ratio of biomass to carrying capacity in the first year
+(fixed in the model). A value of 1 assumes virgin conditions.}
+
+\item{...}{Additional arguments (not currently used).}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output
@@ -26,8 +31,8 @@ The model is conditioned on catch and estimates a predicted index.
 }
 \note{
 The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
-leading parameters. Virgin conditions are assumed in the first year of the time series and
-the production function is assumed to be symmetric.
+leading parameters. The default conditions assume virgin conditions in the first year of the time series
+and a symmetric production function.
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system.
