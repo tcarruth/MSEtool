@@ -195,7 +195,8 @@ PRBcalc=function(MSE_null,MSE_alt,
 
 }
 
-mahalanobis_robust<-function (x, center, covr, inverted = FALSE) {
+#' @importFrom corpcor pseudoinverse
+mahalanobis_robust<-function (x, center, cov, inverted = FALSE) {
 
   x <- if (is.vector(x))
     matrix(x, ncol = length(x))
@@ -203,7 +204,7 @@ mahalanobis_robust<-function (x, center, covr, inverted = FALSE) {
   if (!identical(center, FALSE))
     x <- sweep(x, 2L, center)
 
-  invcov <- pseudoinverse(covr)
+  invcov <- pseudoinverse(cov)
   setNames(rowSums(x %*% invcov * x), rownames(x))
 
 }

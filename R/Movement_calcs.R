@@ -3,7 +3,8 @@
 #' Calculates movement matrices from user inputs
 #'
 #' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
-#' @param dist A vector nareas long of fractions of unfished stock in each area
+#' @param OM Operating model, an object of class \linkS4class{OM}.
+#' @param dist A vector of length \code{nareas} of fractions of unfished stock in each area
 #' @param prob Mean probability of staying across all areas (single value) or a vector of the probability of individuals staying in each area (same length as dist)
 #' @param distE Logit (normal) St.Dev error for sampling stock fractions from the fracs vector
 #' @param probE Logit (normal) St.Dev error for sampling desired probability of staying either by area (prob is same length as dist) or the mean probability of staying (prob is a single number)

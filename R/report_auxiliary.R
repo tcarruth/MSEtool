@@ -1,115 +1,3 @@
-# Call from inside Assessment model
-return_Assessment <- function() {
-  Call.history <- sys.calls()
-  lCall <- length(Call.history)
-  Model <- as.character(Call.history[[lCall-1]])[1]
-
-  output <- mget(c('Data', 'info', 'obj', 'opt', 'SD', 'dependencies'),
-                 envir = parent.frame())
-  report <- output$obj$report()
-
-  if(Model == "DD_TMB") {
-    Year <- output$info$Year
-    Yearplusone <- c(Year, max(Year) + 1)
-    k <- output$info$data$k_DD
-    Yearplusk <- c(Year, (max(Year)+1):(max(Year)+k))
-    Assessment <- new("Assessment", Model = Model,
-                      MSY = report$MSY_DD, UMSY = report$UMSY_DD, BMSY = report$BMSY_DD,
-                      B0 = report$Bo_DD, R0 = report$Ro_DD, N0 = report$No_DD,
-                      SSB0 = report$Bo_DD, h = report$h,
-                      U = structure(report$U_DD, names = Year),
-                      U_UMSY = structure(report$relU_DD, names = Year),
-                      B = structure(report$B_DD, names = Yearplusone),
-                      B_BMSY = structure(report$relB_DD, names = Yearplusone),
-                      B_B0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
-                      SSB = structure(report$B_DD, names = Yearplusone),
-                      SSB_SSBMSY = structure(report$relB_DD, names = Yearplusone),
-                      SSB_SSB0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
-                      N = structure(report$N_DD, names = Yearplusone),
-                      R = structure(report$R_DD, names = Yearplusk),
-                      Catch = structure(report$Cpred_DD, names = Year),
-                      NLL = report$jnll,
-                      info = output$info, obj = output$obj, opt = output$opt,
-                      SD = output$SD, TMB_report = report,
-                      dependencies = output$dependencies,
-                      Data = output$Data)
-  }
-
-  if(Model == "DD_SS") {
-    Year <- output$info$Year
-    Yearplusone <- c(Year, max(Year) + 1)
-    k <- output$info$data$k_DD
-    Yearplusk <- c(Year, (max(Year)+1):(max(Year)+k))
-    Yearrandom <- seq(Year[1] + k, max(Year))
-    Assessment <- new("Assessment", Model = Model,
-                      MSY = report$MSY_DD, UMSY = report$UMSY_DD, BMSY = report$BMSY_DD,
-                      B0 = report$Bo_DD, R0 = report$Ro_DD, N0 = report$No_DD,
-                      SSB0 = report$Bo_DD, h = report$h,
-                      U = structure(report$U_DD, names = Year),
-                      U_UMSY = structure(report$relU_DD, names = Year),
-                      B = structure(report$B_DD, names = Yearplusone),
-                      B_BMSY = structure(report$relB_DD, names = Yearplusone),
-                      B_B0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
-                      SSB = structure(report$B_DD, names = Yearplusone),
-                      SSB_SSBMSY = structure(report$relB_DD, names = Yearplusone),
-                      SSB_SSB0 = structure(report$B_DD/report$Bo_DD, names = Yearplusone),
-                      N = structure(report$N_DD, names = Yearplusone),
-                      R = structure(report$R_DD, names = Yearplusk),
-                      Catch = structure(report$Cpred_DD, names = Year),
-                      Random = structure(output$SD$par.random, names = Yearrandom),
-                      Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearrandom),
-                      NLL = report$jnll, NLL_Catch = report$jnll_comp[1],
-                      NLL_Random = report$jnll_comp[2],
-                      info = output$info, obj = output$obj, opt = output$opt,
-                      SD = output$SD, TMB_report = report,
-                      dependencies = output$dependencies,
-                      Data = output$Data)
-  }
-
-  if(Model == "SP") {
-    Year <- output$info$Year
-    Yearplusone <- c(Year, max(Year) + 1)
-    Assessment <- new("Assessment", Model = Model,
-                      MSY = report$MSY, UMSY = report$UMSY, BMSY = report$BMSY,
-                      B0 = report$K,
-                      U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$relU, names = Year),
-                      B = structure(report$Biomass, names = Yearplusone),
-                      B_BMSY = structure(report$relB, names = Yearplusone),
-                      B_B0 = structure(report$Biomass/report$K, names = Yearplusone),
-                      Index = structure(report$Ipred, names = Year),
-                      NLL = report$nll,
-                      info = output$info, obj = output$obj, opt = output$opt,
-                      SD = output$SD, TMB_report = report,
-                      dependencies = output$dependencies,
-                      Data = output$Data)
-  }
-  if(Model == "SP_SS") {
-    Year <- output$info$Year
-    Yearplusone <- c(Year, max(Year) + 1)
-    Yearminusone <- Year[2]:max(Year)
-    Assessment <- new("Assessment", Model = Model,
-                      MSY = report$MSY, UMSY = report$UMSY, BMSY = report$BMSY,
-                      B0 = report$K,
-                      U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$relU, names = Year),
-                      B = structure(report$Biomass, names = Yearplusone),
-                      B_BMSY = structure(report$relB, names = Yearplusone),
-                      B_B0 = structure(report$Biomass/report$K, names = Yearplusone),
-                      Index = structure(report$Ipred, names = Year),
-                      Random = structure(output$SD$par.random, names = Yearminusone),
-                      Random_SE = structure(sqrt(output$SD$diag.cov.random), names = Yearminusone),
-                      NLL = report$nll, NLL_Index = report$nll_comp[1],
-                      NLL_Random = report$nll_comp[2],
-                      info = output$info, obj = output$obj, opt = output$opt,
-                      SD = output$SD, TMB_report = report,
-                      dependencies = output$dependencies,
-                      Data = output$Data)
-  }
-
-  return(Assessment)
-}
-
 
 # Call from inside generate_plots() and summary.Assessment
 assign_Assessment_slots <- function() {
@@ -177,11 +65,11 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
   if(!logtransform) {
     true.m <- m
     if(all(m) < 0) m <- -1 * m # special case needed when t0 < 0
-    mu <- DLMtool:::mconv(m, sd)
+    mu <- mconv(m, sd)
     sdlog <- sdconv(m, sd)
     support <- seq(0.001, max(m + 5*sdlog), length.out = 1e3)
 
-    dist <- matrix(NA, nrow = length(support), ncol = length)
+    dist <- matrix(NA, nrow = length(support), ncol = ncurve)
     for(i in 1:ncurve) dist[, i] <- dlnorm(support, mu[i], sdlog[i])
     dist[is.infinite(dist)] <- NA
 
@@ -213,7 +101,7 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
       }
     }
     abline(h = 0, col = 'grey')
-    abline(v = true.m, lty = 2, col = color.vec)
+    abline(v = true.m, lty = 2, col = color)
   }
 
   if(logtransform) {
@@ -224,7 +112,7 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
                         length.out = 1e3)
     support <- exp(support.norm)
 
-    dist <- matrix(NA, nrow = length(support), ncol = length(m))
+    dist <- matrix(NA, nrow = length(support), ncol = ncurve)
     for(i in 1:ncurve) dist[, i] <- dnorm(support.norm, m[i], sd[i])/abs(support)
     dist[is.infinite(dist)] <- NA
 
@@ -247,6 +135,34 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
     abline(h = 0, col = 'grey')
     abline(v = exp(m), lty = 2, col = color)
   }
+
+  invisible()
+}
+
+
+plot_normalvar <- function(m, sd, label = NULL, color = "black") {
+  ncurve <- length(m)
+  support <- seq(max(0, min(m - 5 * sd)), max(m + 5 * sd), length.out = 1e3)
+  dist <- matrix(NA, nrow = length(support), ncol = ncurve)
+  for(i in 1:ncurve) dist[, i] <- dnorm(support, m[i], sd[i])
+  dist[is.infinite(dist)] <- NA
+
+  dist.max <- max(dist, na.rm = TRUE)
+  tails <- apply(dist, 1, function(x) all(x < 0.001 * dist.max))
+  tails <- which(!tails)
+  ind.tails <- c(tails[1]:tails[length(tails)])
+
+  support <- support[ind.tails]
+  dist <- as.matrix(dist[ind.tails, ])
+
+  xlim_truncated <- range(pretty(support))
+  plot(support, dist[, 1], typ = 'l', xlab = label, ylab = 'Probability density function',
+       xlim = xlim_truncated, ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), color = color[1])
+  if(ncurve > 1) {
+    for(i in 2:ncurve) lines(support, dist[, i], color = color[i])
+  }
+  abline(h = 0, col = 'grey')
+  abline(v = m, lty = 2, col = color)
 
   invisible()
 }
@@ -278,7 +194,6 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
 #' stddev <- 0.1
 #' plot_betavar(mu, stddev, logit = TRUE) # mean of plot should be 0.5
 plot_betavar <- function(m, sd, label = NULL, logit = FALSE, color = "black") {
-  # currently plots life history: BMSY_B0, depletion
   support <- seq(0.01, 0.99, length.out = 1e3)
   ncurve <- length(m)
   dist <- matrix(NA, nrow = length(support), ncol = ncurve)
@@ -382,7 +297,8 @@ plot_steepness <- function(m, sd) {
 #' @seealso \code{\link{plot_residuals}}
 #' @examples
 #' data(Red_snapper)
-#' plot_timeseries(Red_snapper@Year, Red_snapper@Cat[1, ], obs_CV = Red_snapper@CV_Cat, label = "Catch")
+#' plot_timeseries(Red_snapper@Year, Red_snapper@Cat[1, ],
+#' obs_CV = Red_snapper@CV_Cat, label = "Catch")
 #' @export plot_timeseries
 plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.95,
                             obs_upper = NULL, obs_lower = NULL, fit_linewidth = 3,
@@ -498,8 +414,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' @return Plots depending on \code{plot_type}.
 #' @author Q. Huynh
 #' @export plot_composition
-plot_composition <- function(Year, obs, fit = NULL,
-                             plot_type = c('annual', 'bubble', 'mean'),
+plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bubble', 'mean'),
                              data_type = c(NULL, 'length', 'age'), CAL_bins = NULL) {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(list = old_par), add = TRUE)
@@ -522,7 +437,7 @@ plot_composition <- function(Year, obs, fit = NULL,
   }
 
   # Annual comps (obs vs. fitted if available)
-  if(plot_type %in% 'annual') {
+  if('annual' %in% plot_type) {
 
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
     ylim <- c(0, 1.1)
@@ -575,7 +490,7 @@ plot_composition <- function(Year, obs, fit = NULL,
 
   }
   # Bubble plot (obs)
-  if(plot_type %in% 'bubble') {
+  if('bubble' %in% plot_type) {
     par(mfcol = c(1, 1), oma = rep(0, 4), mar = c(5.1, 5.1, 2.1, 2.1))
 
     #x.pretty <- pretty(Year)
@@ -592,7 +507,7 @@ plot_composition <- function(Year, obs, fit = NULL,
   # Bubble plot (residuals if applicable)
 
   # Mean length or age over time
-  if(plot_type %in% 'mean') {
+  if('mean' %in% plot_type) {
     mu <- numeric(length = length(Year))
     for(i in 1:length(mu)) mu[i] <- weighted.mean(data_val, obs[i, ], na.rm = TRUE)
 
@@ -764,14 +679,6 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE) {
     abline(h = 1, lty = 2)
     abline(v = 1, lty = 2)
   }
-  invisible()
-}
-
-plot_TAC <- function(TAC, median_line = TRUE) {
-  TAC.dens <- density(TAC, na.rm = TRUE)
-  plot(TAC.dens, xlab = "TAC", main = "")
-  if(median_line) abline(v = median(TAC, na.rm = TRUE), lty = 2)
-  abline(h = 0, col = "grey")
   invisible()
 }
 

@@ -439,6 +439,7 @@ optBH<-function(x,SSB,rec,SSBpR,R0temp,pars,frac=0.5,plot=F){
 #' @param plot should plots of model fit be produced?
 #' @param type what type of stock recruitment curve is being fitted BH = Beverton-Holt
 #' @author T. Carruthers
+#' @import snowfall
 #' @export SRopt
 SRopt<-function(nsim,SSB,rec,SSBpR,plot=F,type="BH"){
 
