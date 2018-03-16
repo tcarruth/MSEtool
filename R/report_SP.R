@@ -1,8 +1,9 @@
 summary_SP <- function(Assessment) {
   assign_Assessment_slots()
 
-  current_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
-  rownames(current_status) <- c("B/BMSY", "U/UMSY")
+  current_status <- data.frame(Value = c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)],
+                                         B_B0[length(B_B0)]))
+  rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
   input_parameters <- data.frame()
 
@@ -39,7 +40,7 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
   }
 
   Year <- info$Year
-  C_hist <- info$data$Catch
+  C_hist <- info$data$C_hist
 
   plot_timeseries(Year, C_hist, label = "Catch")
   if(save_figure) {
@@ -60,8 +61,7 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
     }
   }
 
-  I_hist <- info$data$Index
-  I_hist[I_hist <= 0] <- NA
+  I_hist <- info$data$I_hist
 
   plot_timeseries(Year, I_hist, label = "Index")
   if(save_figure) {
@@ -109,6 +109,42 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
+  }
+
+  Uy <- names(U_UMSY)[length(U_UMSY)]
+  plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
+    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_U_UMSYestimate.png",
+                                   paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  By <- names(B_BMSY)[length(B_BMSY)]
+  plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(B[.(By)]/B[MSY]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_B_BMSYestimate.png"))
+    plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(widehat(B[.(By)]/B[MSY])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_B_BMSYestimate.png",
+                                   paste0("Estimate of B/BMSY in ", By, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  By <- names(B_B0)[length(B_B0)]
+  plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(B[.(By)]/B[0]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_B_B0estimate.png"))
+    plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(widehat(B[.(By)]/B[0])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_B_B0estimate.png",
+                                   paste0("Estimate of B/B0 in ", By, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
   }
 
   plot_timeseries(Year, I_hist, Index, label = "Index")
@@ -200,20 +236,20 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
 
   plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "U")
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_yield_curve.png"))
+    create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
     plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "U")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_yield_curve.png", "Yield plot relative to exploitation."))
+                                 c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
   }
 
   plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "Depletion")
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_yield_curve.png"))
+    create_png(filename = file.path(plot.dir, "assessment_yield_curve_B_B0.png"))
     plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "Depletion")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_yield_curve.png", "Yield plot relative to depletion."))
+                                 c("assessment_yield_curve_B_B0.png", "Yield plot relative to depletion."))
   }
 
   plot_surplus_production(B, B0, C_hist)
@@ -289,45 +325,43 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
   assign_Assessment_slots()
 
   data <- info$data
-  n_y <- data$n_y
+  ny <- data$ny
 
   Year <- info$Year
   Year <- c(Year, max(Year) + 1)
-  Catch <- data$Catch
-  Index <- data$Index
+  C_hist <- data$C_hist
+  I_hist <- data$I_hist
   params <- as.list(obj$env$last.par.best)
-  params$log_B1frac <- info$params$log_B1frac
+  params$log_Binit_frac <- info$params$log_Binit_frac
   params$log_n <- info$params$log_n
   map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, B, U, relU, relB, dep
-  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 6))
-  retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
+  retro_ts <- array(NA, dim = c(nyr + 1, ny + 1, 6))
+  retro_est <- array(NA, dim = c(nyr + 1, dim(summary(SD))))
 
   for(i in 0:nyr) {
-    n_y_ret <- n_y - i
-    Catch <- Catch[1:n_y_ret]
-    Index <- Index[1:n_y_ret]
-    data$n_y <- n_y_ret
-    data$Catch <- Catch
-    data$Index <- Index
+    ny_ret <- ny - i
+    data$ny <- ny_ret
+    data$C_hist <- C_hist[1:ny_ret]
+    data$I_hist <- I_hist[1:ny_ret]
 
     obj <- MakeADFun(data = data, parameters = params, map = map,
                      DLL = "MSEtool", silent = TRUE)
-    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr, obj$he), silent = TRUE))
+    opt <- optimize_TMB_model(obj)
+    SD <- get_sdreport(obj, opt)
 
-    if(!inherits(opt, "try-error") && opt$convergence == 0) {
-      B <- c(obj$report()$Biomass, rep(NA, i))
-      relB <- c(obj$report()$relB, rep(NA, i))
-      dep <- B/obj$report()$K
+    if(!is.character(opt) && opt$convergence == 0 && !is.character(SD)) {
+      report <- obj$report(obj$env$last.par.best)
+	  B <- c(report$B, rep(NA, i))
+      B_BMSY <- B/report$BMSY
+      B_B0 <- B/report$K
 
-      U <- c(obj$report()$U, rep(NA, 1 + i))
-      relU <- c(obj$report()$relU, rep(NA, 1 + i))
+      U <- c(report$U, rep(NA, 1 + i))
+      U_UMSY <- U/report$UMSY
 
-      SD <- sdreport(obj)
-
-      retro_ts[i+1, , ] <- cbind(Year, B, relB, dep, U, relU)
+      retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY)
       retro_est[i+1, , ] <- summary(SD)
 
     } else {

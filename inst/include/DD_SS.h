@@ -4,81 +4,76 @@
 //{
   using namespace density;
 
-  DATA_SCALAR( So_DD );
-  DATA_SCALAR( Alpha_DD );
-  DATA_SCALAR( Rho_DD );
-  DATA_INTEGER( ny_DD );
-  DATA_INTEGER( k_DD );
-  DATA_SCALAR( wa_DD );
+  DATA_SCALAR( S0 );
+  DATA_SCALAR( Alpha );
+  DATA_SCALAR( Rho );
+  DATA_INTEGER( ny );
+  DATA_INTEGER( k );
+  DATA_SCALAR( wk );
   DATA_VECTOR( E_hist );
   DATA_VECTOR( C_hist );
-  //DATA_VECTOR( UMSYprior );
+  DATA_VECTOR_INDICATOR(keep, C_hist);
 
-  PARAMETER( logit_UMSY_DD );
-  PARAMETER( log_MSY_DD );
-  PARAMETER( log_q_DD );
-  PARAMETER( log_sigma_DD );
-  PARAMETER( log_tau_DD );
+  PARAMETER( logit_UMSY );
+  PARAMETER( log_MSY );
+  PARAMETER( log_q );
+  PARAMETER( log_sigma );
+  PARAMETER( log_tau );
   PARAMETER_VECTOR( log_rec_dev );
 
-  Type UMSY_DD = 1/(1 + exp(-logit_UMSY_DD));
-  Type MSY_DD = exp(log_MSY_DD);
-  Type q_DD = exp(log_q_DD);
-  Type sigma_DD = exp(log_sigma_DD);
-  Type tau_DD = exp(log_tau_DD);
+  Type UMSY = 1/(1 + exp(-logit_UMSY));
+  Type MSY = exp(log_MSY);
+  Type q = exp(log_q);
+  Type sigma = exp(log_sigma);
+  Type tau = exp(log_tau);
 
   //--DECLARING DERIVED VALUES
-  Type BMSY_DD = MSY_DD/UMSY_DD;
-  Type SS_DD = So_DD * (1 - UMSY_DD);
-  Type Spr_DD = (SS_DD * Alpha_DD/(1 - SS_DD) + wa_DD)/(1 - Rho_DD * SS_DD);
-  Type DsprDu_DD = (Alpha_DD + Spr_DD * (1 + Rho_DD - 2 * Rho_DD * SS_DD))/((1 - Rho_DD * SS_DD) * (1 - SS_DD));
-  DsprDu_DD += Alpha_DD * SS_DD/((1 - Rho_DD * SS_DD) * pow(1 - SS_DD, 2));
-  DsprDu_DD -= Spr_DD/(1 - SS_DD);
-  DsprDu_DD *= -So_DD;
-  Type Arec_DD = 1/(pow(1 - UMSY_DD,2) * (Spr_DD + UMSY_DD * DsprDu_DD));
-  Type Brec_DD = UMSY_DD * (Arec_DD * Spr_DD - 1/(1 - UMSY_DD))/MSY_DD;
-  Type Spr0_DD = (So_DD * Alpha_DD/(1 - So_DD) + wa_DD)/(1 - Rho_DD * So_DD);
-  Type Ro_DD = (Arec_DD * Spr0_DD - 1)/(Brec_DD * Spr0_DD);
-  Type Bo_DD = Ro_DD * Spr0_DD;
-  Type No_DD = Ro_DD/(1 - So_DD);
+  Type BMSY = MSY/UMSY;
+  Type SS = S0 * (1 - UMSY);
+  Type Spr = (SS * Alpha/(1 - SS) + wk)/(1 - Rho * SS);
+  Type DsprDu = (Alpha + Spr * (1 + Rho - 2 * Rho * SS))/((1 - Rho * SS) * (1 - SS));
+  DsprDu += Alpha * SS/((1 - Rho * SS) * pow(1 - SS, 2));
+  DsprDu -= Spr/(1 - SS);
+  DsprDu *= -S0;
+  Type Arec = 1/(pow(1 - UMSY, 2) * (Spr + UMSY * DsprDu));
+  Type Brec = UMSY * (Arec * Spr - 1/(1 - UMSY))/MSY;
+  Type Spr0 = (S0 * Alpha/(1 - S0) + wk)/(1 - Rho * S0);
+  Type R0 = (Arec * Spr0 - 1)/(Brec * Spr0);
+  Type B0 = R0 * Spr0;
+  Type N0 = R0/(1 - S0);
 
   //--DECLARING STORAGE VECTORS
-  int ny_DDp = ny_DD + 1;
-  int ny_DDk = ny_DD + k_DD;
-  vector<Type> B_DD(ny_DDp);
-  vector<Type> relB_DD(ny_DDp);
-  vector<Type> N_DD(ny_DDp);
-  vector<Type> R_DD(ny_DDk);
-  vector<Type> Rec_dev_DD(ny_DD - k_DD);
+  int ny_p = ny + 1;
+  int ny_k = ny + k;
+  vector<Type> B(ny_p);
+  vector<Type> N(ny_p);
+  vector<Type> R(ny_k);
+  vector<Type> Rec_dev(ny - k);
 
-  vector<Type> Surv_DD(ny_DD);
-  vector<Type> Cpred_DD(ny_DD);
-  vector<Type> Sp_DD(ny_DD);
-  vector<Type> U_DD(ny_DD);
-  vector<Type> relU_DD(ny_DD);
+  vector<Type> Surv(ny);
+  vector<Type> Cpred(ny);
+  vector<Type> Sp(ny);
+  vector<Type> U(ny);
 
   //--INITIALIZE
-  B_DD(0) = Bo_DD;
-  relB_DD(0) = B_DD(0)/BMSY_DD;
-  N_DD(0) = No_DD;
-  for(int tt=0;tt<k_DD;tt++) R_DD(tt) = Ro_DD;
+  B(0) = B0;
+  N(0) = N0;
+  for(int tt=0;tt<k;tt++) R(tt) = R0;
 
-  for(int tt=0; tt<ny_DD; tt++){
-    U_DD(tt) = 1 - exp(-q_DD * E_hist(tt));
-    relU_DD(tt) = U_DD(tt)/UMSY_DD;
-    Surv_DD(tt) = So_DD * (1 - U_DD(tt));
-    Cpred_DD(tt) = CppAD::CondExpGt(U_DD(tt) * B_DD(tt), Type(1e-15), U_DD(tt) * B_DD(tt), Type(1e-15));
-    Sp_DD(tt) = B_DD(tt) - Cpred_DD(tt);
+  for(int tt=0; tt<ny; tt++){
+    U(tt) = 1 - exp(-q * E_hist(tt));
+    Surv(tt) = S0 * (1 - U(tt));
+    Cpred(tt) = CppAD::CondExpGt(U(tt) * B(tt), Type(1e-15), U(tt) * B(tt), Type(1e-15));
+    Sp(tt) = B(tt) - Cpred(tt);
 
-    R_DD(tt + k_DD) = Arec_DD * Sp_DD(tt)/(1 + Brec_DD * Sp_DD(tt));
-    if(tt + k_DD < ny_DD) {
-      Rec_dev_DD(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau_DD, 2));
-      R_DD(tt + k_DD) *= Rec_dev_DD(tt);
+    R(tt + k) = Arec * Sp(tt)/(1 + Brec * Sp(tt));
+    if(tt + k < ny) {
+      Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau, 2));
+      R(tt + k) *= Rec_dev(tt);
     }
 
-    B_DD(tt+1) = Surv_DD(tt) * (Alpha_DD * N_DD(tt) + Rho_DD * B_DD(tt)) + wa_DD * R_DD(tt+1);
-	relB_DD(tt + 1) = B_DD(tt + 1)/BMSY_DD;
-    N_DD(tt+1) = Surv_DD(tt) * N_DD(tt) + R_DD(tt+1);
+    B(tt+1) = Surv(tt) * (Alpha * N(tt) + Rho * B(tt)) + wk * R(tt+1);
+    N(tt+1) = Surv(tt) * N(tt) + R(tt+1);
   }
 
   //--ARGUMENTS FOR NLL
@@ -86,59 +81,61 @@
   // of Arec_DD and Brec_DD, respectively:
   // umsy * DsprDu + Spr_DD > 0 and Arec_DD * Spr_DD * (1 - UMSY_DD) - 1 > 0
   // Thus, create a likelihood penalty of 100 when either condition is not met
-  Type penalty = CppAD::CondExpGt(Spr_DD + UMSY_DD * DsprDu_DD, Type(0), Type(0), Type(UMSY_DD * 1e3));
-  penalty += CppAD::CondExpGt(Arec_DD * Spr_DD * (1 - UMSY_DD) - 1, Type(0), Type(0), Type(UMSY_DD * 1e3));
+  Type penalty = CppAD::CondExpGt(Spr + UMSY * DsprDu, Type(0), Type(0), Type(UMSY * 1e3));
+  penalty += CppAD::CondExpGt(Arec * Spr * (1 - UMSY) - 1, Type(0), Type(0), Type(UMSY * 1e3));
 
   // Objective function
   //creates storage for jnll and sets value to 0
-  vector<Type> jnll_comp(3);
+  vector<Type> jnll_comp(2);
   jnll_comp.setZero();
 
-  for(int tt=0; tt<ny_DD; tt++){
-    jnll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred_DD(tt)), sigma_DD, true);
-    if(tt+k_DD<ny_DD) jnll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau_DD, true);
+  for(int tt=0; tt<ny; tt++){
+    jnll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+    if(tt+k<ny) jnll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
   }
-  //jnll_comp(2) -= dbeta(UMSY_DD, UMSYprior(0), UMSYprior(1), true);
 
   //Summing individual jnll and penalties
   Type jnll = jnll_comp.sum() + penalty;
 
   //-------REPORTING-------//
-  Type TAC = UMSY_DD * B_DD(ny_DD);
-  Type h = Arec_DD * Spr0_DD / (4 + Arec_DD * Spr0_DD);
+  Type h = Arec * Spr0 / (4 + Arec * Spr0);
 
-  ADREPORT( UMSY_DD );
-  ADREPORT( MSY_DD );
-  ADREPORT( q_DD );
-  ADREPORT( sigma_DD );
-  ADREPORT( tau_DD );
-  REPORT( UMSY_DD );
-  REPORT( MSY_DD );
-  REPORT( q_DD );
-  REPORT( sigma_DD );
-  REPORT( tau_DD );
+  Type U_UMSY_final = U(U.size()-1)/UMSY;
+  Type B_BMSY_final = B(B.size()-1)/BMSY;
+  Type B_B0_final = B(B.size()-1)/B0;
+
+  ADREPORT( UMSY );
+  ADREPORT( MSY );
+  ADREPORT( q );
+  ADREPORT( sigma );
+  ADREPORT( tau );
+  ADREPORT( U_UMSY_final );
+  ADREPORT( B_BMSY_final );
+  ADREPORT( B_B0_final );
+  REPORT( UMSY );
+  REPORT( MSY );
+  REPORT( q );
+  REPORT( sigma );
+  REPORT( tau );
   REPORT( jnll_comp );
   REPORT( jnll );
-  REPORT( Arec_DD );
-  REPORT( Brec_DD );
-  REPORT( Spr_DD );
-  REPORT( Spr0_DD );
-  REPORT( DsprDu_DD );
-  REPORT( Cpred_DD );
-  REPORT( B_DD );
-  REPORT( N_DD );
-  REPORT( R_DD );
+  REPORT( Arec );
+  REPORT( Brec );
+  REPORT( Spr );
+  REPORT( Spr0 );
+  REPORT( DsprDu );
+  REPORT( Cpred );
+  REPORT( B );
+  REPORT( N );
+  REPORT( R );
   REPORT( log_rec_dev );
-  REPORT( Rec_dev_DD );
-  REPORT( U_DD );
-  REPORT( relU_DD );
-  REPORT( relB_DD );
-  REPORT( TAC );
+  REPORT( Rec_dev );
+  REPORT( U );
   REPORT( h );
-  REPORT( BMSY_DD );
-  REPORT( Ro_DD );
-  REPORT( No_DD );
-  REPORT( Bo_DD );
+  REPORT( BMSY );
+  REPORT( R0 );
+  REPORT( N0 );
+  REPORT( B0 );
   REPORT( penalty );
 
   return jnll;

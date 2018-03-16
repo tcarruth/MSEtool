@@ -2,8 +2,9 @@
 summary_DD_SS <- function(Assessment) {
   assign_Assessment_slots()
 
-  current_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
-  rownames(current_status) <- c("B/BMSY", "U/UMSY")
+  current_status <- data.frame(Value = c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)],
+                                         B_B0[length(B_B0)]))
+  rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
   input_parameters <- data.frame(Value = c(unlist(info$data[c(2,3,4,6,7)]), info$sigma),
                                  Description = c("Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
@@ -13,20 +14,22 @@ summary_DD_SS <- function(Assessment) {
                                  stringsAsFactors = FALSE)
   rownames(input_parameters) <- c("S0", "alpha", "rho", "k", "w_k", "sigma")
 
-  derived <- data.frame(Value = c(h, B0, R0, N0, BMSY, TMB_report$Spr0_DD, TMB_report$Spr_DD),
+  derived <- data.frame(Value = c(h, B0, R0, N0, BMSY, TMB_report$Spr0, TMB_report$Spr),
                         Description = c("Stock-recruit steepness", "Virgin biomass", "Virgin recruitment",
                                         "Virgin abundance", "Biomass at MSY", "Virgin biomass-per-recruit",
                                         "Biomass-per-recruit at MSY"),
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("h", "B0", "R0", "N0", "BMSY", "BPR0", "BPR_UMSY")
 
-  model_estimates <- summary(SD)
+  model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+  random_estimates <- summary(SD, "random")
+  rownames(random_estimates) <- paste0(rownames(random_estimates), "_", names(Assessment@Random))
 
   output <- list(model = "Delay Difference (State-Space)",
                  current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
-                 model_estimates = model_estimates)
+                 model_estimates = rbind(model_estimates, random_estimates))
   return(output)
 }
 
@@ -37,7 +40,7 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
 
   if(save_figure) {
     prepare_to_save_figure()
-    index.report <- summary_DD_SS(Assessment)
+    index.report <- summary(Assessment)
     html_report(plot.dir, model = "Delay Difference (State-Space)",
                 current_status = index.report$current_status,
                 input_parameters = index.report$input_parameters,
@@ -123,9 +126,45 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                  c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
   }
 
-  k_DD <- info$data$k_DD
+  Uy <- names(U_UMSY)[length(U_UMSY)]
+  plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
+    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_U_UMSYestimate.png",
+                                   paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  By <- names(B_BMSY)[length(B_BMSY)]
+  plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(B[.(By)]/B[MSY]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_B_BMSYestimate.png"))
+    plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(widehat(B[.(By)]/B[MSY])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_B_BMSYestimate.png",
+                                   paste0("Estimate of B/BMSY in ", By, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  By <- names(B_B0)[length(B_B0)]
+  plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(B[.(By)]/B[0]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_B_B0estimate.png"))
+    plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(widehat(B[.(By)]/B[0])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_B_B0estimate.png",
+                                   paste0("Estimate of B/B0 in ", By, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  k <- info$data$k
   age <- 1:Data@MaxAge
-  sel <- ifelse(age < k_DD, 0, 1)
+  sel <- ifelse(age < k, 0, 1)
 
   plot_ogive(age, sel)
   if(save_figure) {
@@ -165,14 +204,14 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                  c("assessment_catch_qqplot.png", "QQ-plot of catch residuals in log-space."))
   }
 
-  ny_DD <- info$data$ny_DD
-  SSB <- B[1:ny_DD] - Catch # B*(1-u)
-  Arec <- TMB_report$Arec_DD
-  Brec <- TMB_report$Brec_DD
+  ny <- info$data$ny
+  SSB <- B[1:ny] - Catch # B*(1-u)
+  Arec <- TMB_report$Arec
+  Brec <- TMB_report$Brec
   expectedR <- Arec * SSB / (1 + Brec * SSB)
 
-  first_recruit_year <- k_DD + 1
-  last_recruit_year <- length(info$Year) + k_DD
+  first_recruit_year <- k + 1
+  last_recruit_year <- length(info$Year) + k
   ind_recruit <- first_recruit_year:last_recruit_year
   rec_dev <- R[ind_recruit]
 
@@ -245,21 +284,19 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                  c("assessment_recruitment.png", "Time series of recruitment."))
   }
 
-  plot_residuals(as.numeric(names(Random)), Random, label = "Recruitment deviations")
+  plot_residuals(as.numeric(names(Random)), Random, label = Random_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs.png"))
-    plot_residuals(as.numeric(names(Random)), Random, label = "Recruitment deviations")
+    plot_residuals(as.numeric(names(Random)), Random, label = Random_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_rec_devs.png", "Time series of recruitment deviations."))
   }
 
-  plot_residuals(as.numeric(names(Random)), Random, Random_SE,
-                 label = "Recruitment deviations")
+  plot_residuals(as.numeric(names(Random)), Random, SE_Random, label = Random_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs_with_CI.png"))
-    plot_residuals(as.numeric(names(Random)), Random, Random_SE,
-                   label = "Recruitment deviations")
+    plot_residuals(as.numeric(names(Random)), Random, SE_Random, label = Random_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_rec_devs_with_CI.png", "Time series of recruitment deviations with 95% confidence intervals."))
@@ -350,21 +387,17 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
+  params <- Assessment@info$params
+  map <- Assessment@obj$env$map
+  map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
-    params <- list(logit_UMSY_DD = log(profile.grid[i, 1]/(1-profile.grid[i, 1])),
-                   log_MSY_DD = log(profile.grid[i, 2]),
-                   log_q_DD = Assessment@obj$env$last.par.best[3],
-                   log_sigma_DD = Assessment@info$params$log_sigma_DD,
-                   log_tau_DD = Assessment@obj$env$last.par.best[4],
-                   log_rec_dev = Assessment@info$params$log_rec_dev)
+    params$logit_UMSY = log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
+    params$log_MSY <- log(profile.grid[i, 2])
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = list(logit_UMSY_DD = factor(NA), log_MSY_DD = factor(NA),
-                                log_sigma_DD = factor(NA)),
-                     random = "log_rec_dev",
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr), silent = TRUE))
-    if(!inherits(opt, "try-error") && opt$convergence == 0) {
-      if(opt$convergence == 0) nll[i] <- opt$objective
+                     map = map, random = "log_rec_dev", DLL = "MSEtool", silent = TRUE)
+    opt <- optimize_TMB_model(obj)
+    if(!is.character(opt) && opt$convergence == 0) {
+      nll[i] <- opt$objective
     }
   }
   profile.grid$nll <- nll - min(nll, na.rm = TRUE)
@@ -402,50 +435,49 @@ retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE,
                                 save_figure = FALSE, save_dir = getwd()) {
   assign_Assessment_slots()
   data <- info$data
-  ny_DD <- data$ny_DD
-  k_DD <- data$k_DD
+  ny <- data$ny
+  k <- data$k
+  map <- obj$env$map
 
   Year <- info$Year
-  moreRecruitYears <- max(Year) + 1:k_DD
+  moreRecruitYears <- max(Year) + 1:k
   Year <- c(Year, moreRecruitYears)
   C_hist <- data$C_hist
   E_hist <- data$E_hist
   params <- info$params
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, B, N, R, U, relU, relB, dep, log_rec_dev
-  retro_ts <- array(NA, dim = c(nyr+1, ny_DD + k_DD, 9))
-  summSD <- summary(SD)
-  summSD <- summSD[rownames(summSD) != "log_rec_dev", ]
-  retro_est <- array(NA, dim = c(nyr+1, dim(summSD)))
+  # ts includes: Calendar Year, B, B_BMSY, B_B0, N, R, U, U_UMSY, log_rec_dev
+  retro_ts <- array(NA, dim = c(nyr+1, ny + k, 9))
+  retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
 
   for(i in 0:nyr) {
-    ny_DD_ret <- ny_DD - i
-    C_hist_ret <- C_hist[1:ny_DD_ret]
-    E_hist_ret <- E_hist[1:ny_DD_ret]
-    data$ny_DD <- ny_DD_ret
+    ny_ret <- ny - i
+    C_hist_ret <- C_hist[1:ny_ret]
+    E_hist_ret <- E_hist[1:ny_ret]
+    data$ny <- ny_ret
     data$C_hist <- C_hist_ret
     data$E_hist <- E_hist_ret
-    params$log_rec_dev <- rep(0, ny_DD_ret - k_DD)
+    params$log_rec_dev <- rep(0, ny_ret - k)
 
-    obj <- MakeADFun(data = data, parameters = params,
-                     map = list(log_sigma_DD = factor(NA)),
+    obj <- MakeADFun(data = data, parameters = params, map = map,
                      random = "log_rec_dev", DLL = "MSEtool", silent = TRUE)
-    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr), silent = TRUE))
+    opt <- optimize_TMB_model(obj)
+    SD <- get_sdreport(obj, opt)
 
-    if(!inherits(opt, "try-error") && opt$convergence == 0) {
-      B <- c(obj$report()$B_DD, rep(NA, k_DD - 1 + i))
-      relB <- c(obj$report()$relB_DD, rep(NA, k_DD - 1 + i))
-      dep <- B/obj$report()$Bo_DD
-      R <- c(obj$report()$R_DD, rep(NA, i))
-      N <- c(obj$report()$N_DD, rep(NA, k_DD - 1 + i))
-      U <- c(obj$report()$U_DD, rep(NA, k_DD + i))
-      relU <- c(obj$report()$relU_DD, rep(NA, k_DD + i))
-      log_rec_dev <- c(obj$report()$log_rec_dev, rep(NA, 2 * k_DD + i))
+    if(!is.character(opt) && opt$convergence == 0 && !is.character(SD)) {
+      report <- obj$report(obj$env$last.par.best)
+      B <- c(report$B, rep(NA, k - 1 + i))
+      B_BMSY <- B/report$BMSY
+      B_B0 <- B/report$B0
+      R <- c(report$R, rep(NA, i))
+      N <- c(report$N, rep(NA, k - 1 + i))
+      U <- c(report$U, rep(NA, k + i))
+      U_UMSY <- U/report$UMSY
+      log_rec_dev <- c(report$log_rec_dev, rep(NA, 2 * k + i))
 
-      retro_ts[i+1, , ] <- cbind(Year, B, relB, dep, R, N, U, relU, log_rec_dev)
-      summSD <- summary(sdreport(obj))
-      retro_est[i+1, , ] <- summSD[rownames(summSD) != "log_rec_dev", ]
+      retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, R, N, U, U_UMSY, log_rec_dev)
+      retro_est[i+1, , ] <- rbind(summary(SD, "fixed"), summary(SD, "report"))
 
     } else {
       warning(paste("Non-convergence when", i, "years of data were removed."))
@@ -477,8 +509,8 @@ plot_retro_DD_SS <- function(retro_ts, retro_est, save_figure = FALSE,
   for(i in 1:n_tsplots) {
     y.max <- max(retro_ts[, , i+1], na.rm = TRUE)
     if(i < n_tsplots) {
-      ylim = c(0, 1.1 * y.max)
-    } else ylim = c(-y.max, y.max)
+      ylim <- c(0, 1.1 * y.max)
+    } else ylim <- c(-y.max, y.max)
     plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i],
          ylim = ylim, col = color[1])
     for(j in 2:length(nyr_label)) {

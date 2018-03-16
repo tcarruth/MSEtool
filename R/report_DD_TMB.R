@@ -2,8 +2,9 @@
 summary_DD_TMB <- function(Assessment) {
   assign_Assessment_slots()
 
-  current_status <- data.frame(Value = c(B_BMSY[length(B_BMSY)], U_UMSY[length(U_UMSY)]))
-  rownames(current_status) <- c("B/BMSY", "U/UMSY")
+  current_status <- data.frame(Value = c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)],
+                                         B_B0[length(B_B0)]))
+  rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
   input_parameters <- data.frame(Value = as.numeric(unlist(info$data[c(2,3,4,6,7)])),
                                  Description = c("Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
@@ -12,7 +13,7 @@ summary_DD_TMB <- function(Assessment) {
                                  stringsAsFactors = FALSE)
   rownames(input_parameters) <- c("S0", "alpha", "rho", "k", "w_k")
 
-  derived <- data.frame(Value = c(h, B0, R0, N0, BMSY, TMB_report$Spr0_DD, TMB_report$Spr_DD),
+  derived <- data.frame(Value = c(h, B0, R0, N0, BMSY, TMB_report$Spr0, TMB_report$Spr),
                         Description = c("Stock-recruit steepness", "Virgin biomass", "Virgin recruitment",
                                         "Virgin abundance", "Biomass at MSY", "Virgin biomass-per-recruit",
                                         "Biomass-per-recruit at MSY"),
@@ -36,7 +37,7 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
 
   if(save_figure) {
     prepare_to_save_figure()
-    index.report <- summary_DD_TMB(Assessment) # Method function does not work for some reason
+    index.report <- summary(Assessment)
     html_report(plot.dir, model = "Delay Difference",
                 current_status = index.report$current_status,
                 input_parameters = index.report$input_parameters,
@@ -122,9 +123,45 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                                  c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
   }
 
-  k_DD <- info$data$k_DD
+  Uy <- names(U_UMSY)[length(U_UMSY)]
+  plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
+    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_U_UMSYestimate.png",
+                                   paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  By <- names(B_BMSY)[length(B_BMSY)]
+  plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(B[.(By)]/B[MSY]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_B_BMSYestimate.png"))
+    plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(widehat(B[.(By)]/B[MSY])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_B_BMSYestimate.png",
+                                   paste0("Estimate of B/BMSY in ", By, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  By <- names(B_B0)[length(B_B0)]
+  plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(B[.(By)]/B[0]))
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_B_B0estimate.png"))
+    plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(widehat(B[.(By)]/B[0])))
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_B_B0estimate.png",
+                                   paste0("Estimate of B/B0 in ", By, ", distribution based on
+                                          normal approximation of estimated covariance matrix.")))
+  }
+
+  k <- info$data$k
   age <- 1:Data@MaxAge
-  sel <- ifelse(age < k_DD, 0, 1)
+  sel <- ifelse(age < k, 0, 1)
 
   plot_ogive(age, sel)
   if(save_figure) {
@@ -164,10 +201,10 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                                  c("assessment_catch_qqplot.png", "QQ-plot of catch residuals in log-space."))
   }
 
-  ny_DD <- info$data$ny_DD
-  SSB <- B[1:ny_DD] - Catch # B*(1-u)
-  Arec <- TMB_report$Arec_DD
-  Brec <- TMB_report$Brec_DD
+  ny <- info$data$ny
+  SSB <- B[1:ny] - Catch # B*(1-u)
+  Arec <- TMB_report$Arec
+  Brec <- TMB_report$Brec
   expectedR <- Arec * SSB / (1 + Brec * SSB)
 
   plot_SR(SSB, expectedR, R0, B0)
@@ -304,15 +341,17 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
+  params <- Assessment@info$params
+  map <- Assessment@obj$env$map
+  map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
-    params <- list(logit_UMSY_DD = log(profile.grid[i, 1]/(1-profile.grid[i, 1])),
-                   log_MSY_DD = log(profile.grid[i, 2]),
-                   log_q_DD = Assessment@obj$env$last.par.best[3])
+    params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
+    params$log_MSY <- log(profile.grid[i, 2])
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = list(logit_UMSY_DD = factor(NA), log_MSY_DD = factor(NA)),
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr, obj$he), silent = TRUE))
-    if(!inherits(opt, "try-error") && opt$convergence == 0) {
+                     map = map, DLL = "MSEtool", silent = TRUE)
+    opt <- optimize_TMB_model(obj)
+
+    if(!is.character(opt) && opt$convergence == 0) {
       nll[i] <- opt$objective
     }
   }
@@ -351,45 +390,45 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
                                  save_figure = FALSE, save_dir = getwd()) {
   assign_Assessment_slots()
   data <- info$data
-  ny_DD <- data$ny_DD
-  k_DD <- data$k_DD
+  ny <- data$ny
+  k <- data$k
 
   Year <- info$Year
-  moreRecruitYears <- max(Year) + 1:k_DD
+  moreRecruitYears <- max(Year) + 1:k
   Year <- c(Year, moreRecruitYears)
   C_hist <- data$C_hist
   E_hist <- data$E_hist
   params <- as.list(obj$env$last.par.best)
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, B, N, R, U, relU, relB, dep
-  retro_ts <- array(NA, dim = c(nyr+1, ny_DD + k_DD, 8))
+  # ts includes: Calendar Year, B, B/BMSY, B/B0, N, R, U, U/UMSY
+  retro_ts <- array(NA, dim = c(nyr+1, ny + k, 8))
   retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
 
   for(i in 0:nyr) {
-    ny_DD_ret <- ny_DD - i
-    C_hist_ret <- C_hist[1:ny_DD_ret]
-    E_hist_ret <- E_hist[1:ny_DD_ret]
-    data$ny_DD <- ny_DD_ret
+    ny_ret <- ny - i
+    C_hist_ret <- C_hist[1:ny_ret]
+    E_hist_ret <- E_hist[1:ny_ret]
+    data$ny <- ny_ret
     data$C_hist <- C_hist_ret
     data$E_hist <- E_hist_ret
 
     obj <- MakeADFun(data = data, parameters = params, DLL = "MSEtool", silent = TRUE)
-    opt <- suppressWarnings(try(nlminb(obj$par, obj$fn, obj$gr, obj$he), silent = TRUE))
+    opt <- optimize_TMB_model(obj)
+    SD <- get_sdreport(obj, opt)
 
-    if(!inherits(opt, "try-error") && opt$convergence == 0) {
-      B <- c(obj$report()$B_DD, rep(NA, k_DD - 1 + i))
-      relB <- c(obj$report()$relB_DD, rep(NA, k_DD - 1 + i))
-      dep <- B/obj$report()$Bo_DD
-      R <- c(obj$report()$R_DD, rep(NA, i))
-      N <- c(obj$report()$N_DD, rep(NA, k_DD - 1 + i))
-      U <- c(obj$report()$U_DD, rep(NA, k_DD + i))
-      relU <- c(obj$report()$relU_DD, rep(NA, k_DD + i))
+    if(!is.character(opt) && opt$convergence == 0 && !is.character(SD)) {
+      report <- obj$report(obj$env$last.par.best)
+      B <- c(report$B, rep(NA, k - 1 + i))
+      B_BMSY <- B/report$BMSY
+      B_B0 <- B/B0
+      R <- c(report$R, rep(NA, i))
+      N <- c(report$N, rep(NA, k - 1 + i))
+      U <- c(report$U, rep(NA, k + i))
+      U_UMSY <- U/report$UMSY
 
-      SD <- sdreport(obj)
-
-      retro_ts[i+1, , ] <- cbind(Year, B, relB, dep, R, N, U, relU)
-      retro_est[i+1, , ] <- summary(SD)
+      retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, R, N, U, U_UMSY)
+      if(!is.character(SD)) retro_est[i+1, , ] <- summary(SD)
 
     } else {
       warning(paste("Non-convergence when", i, "years of data were removed."))
@@ -489,17 +528,17 @@ plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
 plot_yield_DD <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01),
                           xaxis = c("U", "Biomass", "Depletion")) {
   xaxis <- match.arg(xaxis)
-  So <- data$So_DD
-  Alpha_DD <- data$Alpha_DD
-  wa_DD <- data$wa_DD
-  Rho_DD <- data$Rho_DD
-  Arec <- report$Arec_DD
-  Brec <- report$Brec_DD
-  BMSY <- report$BMSY_DD
+  S0 <- data$S0
+  Alpha <- data$Alpha
+  wk <- data$wk
+  Rho <- data$Rho
+  Arec <- report$Arec
+  Brec <- report$Brec
+  BMSY <- report$BMSY
 
-  Surv <- So * (1 - u.vector)
+  Surv <- S0 * (1 - u.vector)
 
-  BPR <- (Surv * Alpha_DD/(1 - Surv) + wa_DD)/(1 - Rho_DD * Surv)
+  BPR <- (Surv * Alpha/(1 - Surv) + wk)/(1 - Rho * Surv)
   R <- (Arec * BPR * (1 - u.vector)- 1)/(Brec * BPR * (1 - u.vector))
 
   Biomass <- BPR * R
@@ -523,10 +562,10 @@ plot_yield_DD <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01),
   }
 
   if(xaxis == "Depletion") {
-    plot(Biomass[ind]/report$Bo_DD, Yield[ind], typ = 'l',
+    plot(Biomass[ind]/report$B0, Yield[ind], typ = 'l',
          xlab = expression(B/B[0]), ylab = "Equilibrium yield")
-    segments(x0 = BMSY/report$Bo_DD, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY/report$Bo_DD, lty = 2)
+    segments(x0 = BMSY/report$B0, y0 = 0, y1 = msy, lty = 2)
+    segments(x0 = 0, y0 = msy, x1 = BMSY/report$B0, lty = 2)
     abline(h = 0, col = 'grey')
   }
   invisible()
