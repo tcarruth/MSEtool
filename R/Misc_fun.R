@@ -1,27 +1,23 @@
 # Internal DLMtool functions that are also needed for MSEtool
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
+mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
 
-
-# Test convergence called in MP
-check_convergence <- function() {
-  obj <- get("obj", envir = parent.frame())
-  SD <- try(sdreport(obj))
-  if(inherits(SD, "try-error")) {
-    warning("Convergence issue: could not obtain covariance matrix.")
+optimize_TMB_model <- function(obj) {
+  # Use hessian for fixed-effects models
+  if(is.null(obj$env$random)) {
+    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, obj$he), error = function(e) as.character(e))
   } else {
-    if(any(eigen(SD$cov.fixed)$value < 0)) warning("Convergence issue: Hessian is not positive definite.")
+    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr), error = function(e) as.character(e))
   }
-  return(invisible())
+  return(opt)
 }
 
-# Called during profile_likelihood. Add for state-space models.
-profile_elapsed_time <- function() {
-  output <- mget(c("Assessment", "nll", "i"), envir = parent.frame())
-  MP <- output$Assessment@MP
-  N <- length(output$nll)
-  if(output$i %in% floor(seq(0, 1, 0.1) * N)) {
-    message(paste0("Likelihood profile for ", paste0(MP), ": ", i, "/", N, " (",
-                   i/N, "%) completed."))
+get_sdreport <- function(obj, opt) {
+  if(is.character(opt) || opt$convergence != 0) {
+    res <- "Model did not converge with nlminb(). Did not run TMB::sdreport()."
   }
-  invisible()
+  else {
+    res <- tryCatch(sdreport(obj, getReportCovariance = FALSE), error = function(e) as.character(e))
+  }
+  return(res)
 }

@@ -1,19 +1,27 @@
 # Create "sdreport" class for output from TMB function sdreport()
+
+#' @import DLMtool
+#' @import graphics
+#' @import stats
+#' @import utils
+#' @importFrom methods setOldClass setClassUnion setClass setMethod
 setOldClass("sdreport")
+setClassUnion("sdreportAssess", members = c("character", "sdreport"))
+setClassUnion("optAssess", members = c("list", "character"))
 
 
 
-#' Assessment Class
+#' Class-\code{Assessment}
 #'
-#' An S4 class that contains objects from a function of class Assess.
+#' An S4 class that contains assessment output. Created from a function of class \code{Assess}.
 #'
 #' @name Assessment-class
 #' @docType class
 #'
 #' @slot Model Name of the assessment model.
-#' @slot MSY Maximum sustainable yield.
-#' @slot UMSY Exploitation at maximum sustainable yield.
-#' @slot FMSY Instantaneous fishing mortality rate at maximum sustainable yield.
+#' @slot UMSY Estimate of exploitation at maximum sustainable yield.
+#' @slot FMSY Estimate of instantaneous fishing mortality rate at maximum sustainable yield.
+#' @slot MSY Estimate of maximum sustainable yield.
 #' @slot BMSY Biomass at maximum sustainable yield.
 #' @slot B0 Biomass at virgin equilibrium.
 #' @slot R0 Recruitment at virgin equilibrium.
@@ -25,25 +33,32 @@ setOldClass("sdreport")
 #' @slot F Time series of fishing mortality.
 #' @slot F_FMSY Time series of fishing mortality relative to MSY.
 #' @slot B Time series of biomass.
-#' @slot B_BMSY Time series of relative biomass relative to MSY.
+#' @slot B_BMSY Time series of biomass relative to MSY.
 #' @slot B_B0 Time series of depletion.
 #' @slot SSB Time series of spawning stock biomass.
 #' @slot SSB_SSBMSY Time series of spawning stock biomass relative to MSY.
 #' @slot SSB_SSB0 Time series of spawning stock depletion.
-#' @slot N Time series of population abundance.
 #' @slot R Time series of recruitment.
-#' @slot N_at_age Time series of numbers-at-age.
-#' @slot C_at_age Time series of catch-at-age.
-#' @slot selectivity Selectivity-at-age.
+#' @slot N Time series of population abundance.
+#' @slot N_at_age Time series of numbers-at-age matrix.
+#' @slot Selectivity Selectivity-at-age matrix.
+#' @slot Obs_Catch Observed catch.
+#' @slot Obs_Index Observed index.
+#' @slot Obs_C_at_age Observed catch-at-age matrix.
 #' @slot Catch Predicted catch.
-#' @slot Index Predicted Index.
+#' @slot Index Predicted index.
+#' @slot C_at_age Predicted catch-at-age matrix.
 #' @slot Random A vector of estimated random effects.
-#' @slot Random_SE A vector of standard errors of the random effects.
-#' @slot NLL Negative log-likelihood of the model (integrated across random effects).
-#' @slot NLL_Catch Negative log-likelihood of the catch component.
-#' @slot NLL_Index Negative log-likelihood of the index component.
-#' @slot NLL_C_at_age Negative log-likelihood of the catch-at-age component.
-#' @slot NLL_Random Marginal negative log-likelihood of the random effects.
+#' @slot Random_type A description of the random effects, e.g. "log recruitment deviations".
+#' @slot NLL Negative log-likelihood (total [integrated across random effects] and components).
+#' @slot SE_UMSY Standard error of UMSY estimate.
+#' @slot SE_FMSY Standard error of FMSY estimate.
+#' @slot SE_MSY Standard error of MSY estimate.
+#' @slot SE_U_UMSY_final Standard error of U/UMSY in the terminal year.
+#' @slot SE_F_FMSY_final Standard error of F/FMSY in the terminal year.
+#' @slot SE_B_BMSY_final Standard error of B/BMSY in the terminal year.
+#' @slot SE_B_B0_final Standard error of B/B0 in the terminal year.
+#' @slot SE_Random A vector of standard errors of the random effects.
 #' @slot info A list containing the data and starting values of estimated parameters
 #' for the assessment.
 #' @slot obj A list with components returned from \code{\link[TMB]{MakeADFun}}.
@@ -52,30 +67,31 @@ setOldClass("sdreport")
 #' \code{\link[TMB]{sdreport}}.
 #' @slot TMB_report A list of model output reported from the TMB executable, i.e. \code{obj$report()}.
 #' @slot dependencies A character string of data types used for the assessment.
+#' @slot Data An object of class \linkS4class{Data} that was used to perform the assessment.
+#' @examples
+#' data(sim_snapper)
+#' output <- DD_TMB(1, sim_snapper)
+#' class(output)
+#' str(output)
 #' @author Q. Huynh
+#' @export
 #' @exportClass Assessment
-#' @import DLMtool
-#' @import methods
-#' @import graphics
-#' @import stats
-#' @import utils
-setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
-                                 UMSY = "numeric", FMSY = "numeric", BMSY = "numeric",
-                                 B0 = "numeric", R0 = "numeric", N0 = "numeric",
-                                 SSB0 = "numeric", h = "numeric", U = "vector",
-                                 U_UMSY = "numeric", F = "numeric", F_FMSY  = "numeric",
-                                 B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
-                                 SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric",
-                                 N = "numeric", R = "numeric", N_at_age = "matrix",
-                                 C_at_age = "matrix", selectivity = "numeric",
-                                 Catch = "numeric", Index = "numeric",
-                                 Random = "numeric", Random_SE = "numeric",
-                                 NLL = "numeric", NLL_Catch = "numeric",
-                                 NLL_Index = "numeric", NLL_C_at_age = "numeric",
-                                 NLL_Random = "numeric",
-                                 info = "list", obj = "list",
-                                 opt = "list", SD = "sdreport", TMB_report = "list",
-                                 dependencies = "character", Data = "Data"))
+Assessment <- setClass("Assessment",
+                   slots = c(Model = "character", UMSY = "numeric", FMSY = "numeric",
+                   MSY = "numeric", BMSY = "numeric", B0 = "numeric", R0 = "numeric",
+                   N0 = "numeric", SSB0 = "numeric", h = "numeric", U = "numeric",
+                   U_UMSY = "numeric", F = "numeric", F_FMSY  = "numeric",
+                   B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
+                   SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric",
+                   R = "numeric", N = "numeric", N_at_age = "matrix",
+                   Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
+                   Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
+                   C_at_age = "matrix", Random = "numeric", Random_type = "character",
+                   NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
+                   SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
+                   SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric", SE_Random = "numeric",
+                   info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
+                   TMB_report = "list", dependencies = "character", Data = "Data"))
 
 
 #' Summary of Assessment object
@@ -85,7 +101,7 @@ setClass("Assessment", slots = c(Model = "character", MSY = "numeric",
 #' @return A list of parameters
 #' @examples
 #' data(Red_snapper)
-#' output <- DD_TMB(Red_snapper)
+#' output <- DD_TMB(1, Red_snapper)
 #' summary(output)
 #' @exportMethod summary
 setMethod("summary", signature(object = "Assessment"), function(object) {
@@ -103,7 +119,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' sub-directory will be created to save figures.
 #' @examples
 #' data(Red_snapper)
-#' output <- DD_TMB(Red_snapper)
+#' output <- DD_TMB(1, Red_snapper)
 #' plot(output, save_figure = FALSE)
 #'
 #' @exportMethod plot
@@ -115,3 +131,12 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
   f <- get(paste0("generate_plots_", x@Model))
   f(x, save_figure = save_figure, save_dir = save_dir)
 })
+
+
+Model <- UMSY <- FMSY <- MSY <- BMSY <- B0 <- R0 <- N0 <- SSB0 <- h <- U <- U_UMSY <- F <- F_FMSY <-
+  B <- B_BMSY <- B_B0 <- SSB <- SSB_SSBMSY <- SSB_SSB0 <- R <- N <- N_at_age <- Selectivity <-
+  Obs_Catch <- Obs_Index <- Obs_C_at_age <- Catch <- Index <- C_at_age <- Random <- Random_type <-
+  NLL <- SE_UMSY <- SE_FMSY <- SE_MSY <- SE_U_UMSY_final <- SE_F_FMSY_final <- SE_B_BMSY_final <-
+  SE_B_B0_final <- SE_Random <- info <- obj <- opt <- SD <- TMB_report <- dependencies <- Data <- NULL
+
+plot.dir <- NULL
