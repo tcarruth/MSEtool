@@ -2,15 +2,23 @@
 % Please edit documentation in R/DD_TMB.R
 \name{DD_TMB}
 \alias{DD_TMB}
+\alias{DD_SS}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, ...)
+DD_TMB(x, Data, start = NULL, silent = TRUE, ...)
+
+DD_SS(x, Data, start = NULL, silent = TRUE, ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
-Otherwise, equals to 1 When running an assessment interactively.}
+Otherwise, equals to 1 when running an assessment.}
 
 \item{Data}{An object of class \linkS4class{Data}.}
+
+\item{start}{Optional list of starting values. See details.}
+
+\item{silent}{(TRUE/FALSE) Whether tracing information is provided by TMB during
+optimization. Used to aid convergence, help with diagnostics.}
 
 \item{...}{Additional arguments (not currently used).}
 }
@@ -21,15 +29,44 @@ from TMB.
 \description{
 A simple delay-difference assessment that estimates the TAC using a
 time-series of catches and a relative abundance index and coded in TMB. The model
-is conditioned on effort and estimates predicted catch.
+is conditioned on effort and estimates predicted catch. In the state-space version,
+recruitment deviations from the stock-recruit relationship are estimated as a
+random effect variable.
 }
+\details{
+To provide starting values for the model, a named list can be provided for \code{UMSY},
+\code{MSY}, and \code{q} via the \code{start} argument (see example).
+
+For \code{DD_SS}, a start value can also be provided for \code{tau}, the standard
+deviation of the recruitment variability. The catch standard deviation is fixed based
+on the value of \code{Data@CV_Cat}.
+}
+\section{Functions}{
+\itemize{
+\item \code{DD_TMB}: Observation-error only model
+
+\item \code{DD_SS}: State-Space version of Delay-Difference model
+}}
+
 \note{
-This DD model is observation error only and has does not estimate
-process error (recruitment deviations). Similar to many other assessment
-models it depends on assumptions such as stationary productivity and
+Similar to many other assessment
+models, the model depends on assumptions such as stationary productivity and
 proportionality between the abundance index and real abundance.
 Unsurprisingly the extent to which these assumptions are
 violated tends to be the biggest driver of performance for this method.
+}
+\examples{
+#### Observation-error delay difference model
+res <- DD_TMB(1, sim_snapper)
+
+# State-space version
+res <- DD_SS(1, sim_snapper)
+
+## Provide starting values
+start <- list(UMSY = 0.05, MSY = 4, q = 0.3, tau = 0.5)
+res <- DD_TMB(1, sim_snapper, start = start)
+
+summary(res@SD) # Look at parameter estimates
 }
 \references{
 Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify
@@ -38,9 +75,6 @@ fisheries stock status using only fisheries catch data. Fisheries Research 119-1
 Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,
 Dynamics and Uncertainty. Chapman and Hall, New York.
 }
-\seealso{
-\code{\link{DD_SS}}
-}
 \author{
-T. Carruthers & Z. Siders. Zach Siders coded the TMB function
+T. Carruthers & Z. Siders. Zach Siders coded the TMB function.
 }
