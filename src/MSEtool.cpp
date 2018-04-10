@@ -24,9 +24,12 @@ Type objective_function<Type>::operator() ()
           } else
             if(model == "grav_Pbyarea") {
               #include "../inst/include/grav_Pbyarea.h"
-            } else {
+            } else 
+			  if(model == "SCA") {
+			    #include "../inst/include/SCA.h"
+			  } else {
               error("No model found.");
-          }
+			  }
 
   return 0;
 }

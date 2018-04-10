@@ -5,7 +5,7 @@ Type calc_sigma(vector<Type> I_y, vector<Type> Ipred_y) {
   Type n_y = 0.;
 
   for(int y=0;y<I_y.size();y++) {
-    if(I_y(y)>0) {
+    if(!R_IsNA(asDouble(I_y(y))) && I_y(y)>0) {
       sum_square += pow(log(I_y(y)/Ipred_y(y)), 2);
       n_y += 1.;
     }
@@ -22,7 +22,7 @@ Type calc_q(vector<Type> I_y, vector<Type> B_y) {
   Type n_y = 0.;
 
   for(int y=0;y<I_y.size();y++) {
-    if(I_y(y)>0) {
+    if(!R_IsNA(asDouble(I_y(y))) && I_y(y)>0) {
       num += log(I_y(y)/B_y(y));
       n_y += 1.;
     }
@@ -31,3 +31,56 @@ Type calc_q(vector<Type> I_y, vector<Type> B_y) {
   return q;
 }
 
+
+//////////// Functions for SCA.h
+template<class Type>
+Type BH_SR(Type SSB, Type h, Type R0, Type SSB0) {
+  Type Rpred = 4 * h * R0 * SSB/(SSB0*(1-h) + (5*h-1)*SSB);
+  return Rpred;
+}
+
+template<class Type>
+vector<Type> calc_NPR(Type U, vector<Type> vul, vector<Type> M, int max_age) {
+  vector<Type> NPR(max_age);
+  NPR(0) = 1.;
+  for(int a=1;a<max_age;a++) {
+    NPR(a) = NPR(a-1) * exp(-M(a-1)) * (1 - vul(a-1) * U);
+  }
+  NPR(max_age-1) /= 1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U); // Plus-group
+  return NPR;
+}
+
+template<class Type>
+vector<Type> calc_deriv_NPR(Type U, vector<Type> NPR, vector<Type> vul, vector<Type> M, int max_age) {
+  vector<Type> deriv_NPR(max_age);
+  deriv_NPR(0) = 0.;
+  for(int a=1;a<max_age;a++) {
+    deriv_NPR(a) = deriv_NPR(a-1) * exp(-M(a-1)) * (1 - vul(a-1) * U) - NPR(a-1) * exp(-M(a-1)) * vul(a-1);
+  }
+  // Additional calculation for plus-group
+  deriv_NPR(max_age-1) *= 1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U);
+  deriv_NPR(max_age-1) -= NPR(max_age-2) * exp(-M(max_age-2)) * (1 - vul(max_age-2) * U) * exp(-M(max_age-1)) * vul(max_age-1);
+  deriv_NPR(max_age-1) /= pow(1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U), 2);
+  return deriv_NPR;  
+}
+
+template<class Type>
+Type sum_EPR(vector<Type> NPR, vector<Type> weight, vector<Type> mat) {
+  Type answer = 0.;
+  for(int a=0;a<NPR.size();a++) answer += NPR(a) * weight(a) * mat(a);
+  return answer;
+}
+
+template<class Type>
+Type sum_BPR(vector<Type> NPR, vector<Type> weight) {
+  Type answer = 0.;
+  for(int a=0;a<NPR.size();a++) answer += NPR(a) * weight(a);
+  return answer;
+}
+
+template<class Type>
+Type sum_VBPR(vector<Type> NPR, vector<Type> weight, vector<Type> vul) {
+  Type answer = 0.;
+  for(int a=0;a<NPR.size();a++) answer += NPR(a) * weight(a) * vul(a);
+  return answer;
+}
