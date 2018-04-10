@@ -60,7 +60,7 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, ...) {
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
 
-  if(is.character(opt) || opt$convergence != 0 || is.character(SD)) {
+  if(is.character(opt) || is.character(SD)) {
     Assessment <- new("Assessment", Model = "SP_SS",
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
@@ -70,12 +70,14 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, ...) {
     Yearrandom <- Year[2]:max(Year)
 
     Assessment <- new("Assessment", Model = "SP_SS",
-                      UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY,
-                      B0 = report$K, U = structure(report$U, names = Year),
+                      UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
+                      B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
                       U_UMSY = structure(report$U/report$UMSY, names = Year),
                       B = structure(report$B, names = Yearplusone),
                       B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
                       B_B0 = structure(report$B/report$K, names = Yearplusone),
+                      VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                      VB_VB0 = structure(report$B/report$K, names = Yearplusone),
                       Obs_Catch = structure(C_hist, names = Year),
                       Obs_Index = structure(I_hist, names = Year),
                       Index = structure(report$Ipred, names = Year),
@@ -84,11 +86,11 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, ...) {
                       NLL = structure(c(opt$objective, report$nll_comp), names = c("Total", "Index", "Random")),
                       SE_UMSY = SD$sd[1], SE_MSY = SD$sd[2], SE_U_UMSY_final = SD$sd[7],
                       SE_B_BMSY_final = SD$sd[8], SE_B_B0_final = SD$sd[9],
+                      SE_VB_VBMSY_final = SD$sd[8], SE_VB_VB0_final = SD$sd[9],
                       SE_Random = structure(sqrt(SD$diag.cov.random), names = Yearrandom),
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   }
-
   return(Assessment)
 }
 class(SP_SS) <- "Assess"
