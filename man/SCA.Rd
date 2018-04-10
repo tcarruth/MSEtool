@@ -4,7 +4,7 @@
 \alias{SCA}
 \title{Statistical catch-at-age (SCA) model with UMSY and MSY as leading parameters}
 \usage{
-SCA(x = 1, Data, U_begin = c("virgin", "est"), CAA_multiplier = 100,
+SCA(x = 1, Data, U_begin = c("virgin", "est"), CAA_multiplier = 50,
   start = NULL, silent = TRUE, ...)
 }
 \arguments{

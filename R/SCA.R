@@ -35,7 +35,7 @@
 #' Science 65:286-296.
 #' @export
 SCA <- function(x = 1, Data, U_begin = c("virgin", "est"),
-                CAA_multiplier = 100, start = NULL, silent = TRUE, ...) {
+                CAA_multiplier = 50, start = NULL, silent = TRUE, ...) {
   dependencies = ""
   U_begin <- match.arg(U_begin)
   yind <- which(!is.na(Data@Cat[x, ]))[1]
