@@ -7,7 +7,8 @@
 HCR_MSY(Assessment, reps = 1, ...)
 }
 \arguments{
-\item{Assessment}{An object of class \linkS4class{Assessment}.}
+\item{Assessment}{An object of class \linkS4class{Assessment} with estimates of
+FMSY or UMSY and vulnerable biomass in terminal year.}
 
 \item{reps}{The number of stochastic samples of the TAC recommendation.}
 
@@ -18,7 +19,7 @@ An object of class \linkS4class{Rec} with the TAC recommendation.
 }
 \description{
 A simple control rule that specifies the total allowable catch (TAC) to be the
-product of current biomass and FMSY (or UMSY).
+product of current vulnerable biomass (VB_final) and FMSY (or UMSY).
 }
 \examples{
 # create an MP to run in closed-loop MSE

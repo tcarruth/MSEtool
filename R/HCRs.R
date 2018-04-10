@@ -5,9 +5,10 @@
 #' A harvest control rule to fish at maximum sustainable yield.
 #'
 #' A simple control rule that specifies the total allowable catch (TAC) to be the
-#' product of current biomass and FMSY (or UMSY).
+#' product of current vulnerable biomass (VB_final) and FMSY (or UMSY).
 #'
-#' @param Assessment An object of class \linkS4class{Assessment}.
+#' @param Assessment An object of class \linkS4class{Assessment} with estimates of
+#' FMSY or UMSY and vulnerable biomass in terminal year.
 #' @param reps The number of stochastic samples of the TAC recommendation.
 #' @param ... Miscellaneous arguments (not currently used).
 #' @return An object of class \linkS4class{Rec} with the TAC recommendation.
@@ -25,27 +26,7 @@
 #' }
 #' @export
 HCR_MSY <- function(Assessment, reps = 1, ...) {
-  has_UMSY <- has_FMSY <- has_B <- FALSE
-  if(!is.na(Assessment@UMSY[1])) has_UMSY <- TRUE
-  if(!is.na(Assessment@FMSY[1])) has_FMSY <- TRUE
-  if(length(Assessment@B) > 0) has_B <- TRUE
-
-  if(has_B && (has_UMSY || has_FMSY)) {
-    B_current <- Assessment@B[length(Assessment@B)]
-    if(has_UMSY) {
-      SE_UMSY <- ifelse(is.na(Assessment@SE_UMSY[1]), 1e-8, Assessment@SE_UMSY)
-      UMSY_vector <- trlnorm(reps, Assessment@UMSY, SE_UMSY)
-      TAC <- UMSY_vector * B_current
-    }
-    if(has_FMSY) {
-      SE_FMSY <- ifelse(is.na(Assessment@SE_FMSY[1]), 1e-8, Assessment@SE_FMSY)
-      FMSY_vector <- trlnorm(reps, Assessment@FMSY, SE_FMSY)
-      TAC <- FMSY_vector * B_current
-    }
-  } else {
-    TAC <- rep(NA, reps) # Missing estimates for HCR. Previous TAC recommendation will be used.
-  }
-
+  TAC <- calculate_TAC(Assessment, reps)
   Rec <- new("Rec")
   Rec@TAC <- TACfilter(TAC)
   return(Rec)
@@ -54,15 +35,20 @@ class(HCR_MSY) <- "HCR"
 
 
 
-#' A 40-10 harvest control rule.
+#' Ramped harvest control rules (40-10 and 60-20)
 #'
-#' A output control rule with a ramp that reduces the
-#' TAC recommendation (FMSY * Biomass) when biomass depletion (B/B0) is less than 40%.
-#' The TAC reduction is linearly reduced to 0 when depletion is less than 10%.
+#' A output control rule with a ramp that reduces the TAC recommendation
+#' (FMSY * Vulnerable biomass) when spawning biomass depletion (SSB/SSB0) is less than
+#' the target reference point (TRP). The TAC reduction is linearly reduced to 0
+#' when depletion is less than the limit reference point (LRP). For example,
+#' TRP is 0.4 and LRP is 0.1 in the 40-10 control rule.
 #'
-#' @param Assessment An object of class \linkS4class{Assessment}.
+#' @param Assessment An object of class \linkS4class{Assessment} with estimates of
+#' FMSY or UMSY, vulnerable biomass, and spawning biomass depletion in terminal year.
 #' @param reps The number of stochastic samples of the TAC recommendation.
 #' @param ... Miscellaneous arguments (not currently used).
+#' @note Function will use slot B_B0 of the Asssessment object (e.g. for surplus
+#' production models \link{SP} and \link{SP_SS}) if SSB_SSB0 is unavailable.
 #' @return An object of class \linkS4class{Rec} with the TAC recommendation.
 #' @author Q. Huynh
 #' @references
@@ -72,42 +58,42 @@ class(HCR_MSY) <- "HCR"
 #' @examples
 #' # 40-10 linear ramp
 #' Brel <- seq(0, 1, length.out = 200)
-#' plot(Brel, HCRlin(Brel, 0.1, 0.4), xlab = "Estimated B/B0", ylab = "TAC adjustement factor",
-#' main = "A 40-10 harvest control rule", type = "l", col = "blue")
-#' abline(v = c(0.1,0.4), col = "red", lty = 2)
+#' plot(Brel, HCRlin(Brel, 0.1, 0.4), xlab = "Estimated SSB/SSB0",
+#' ylab = "TAC adjustment factor", main = "40-10 harvest control rule",
+#' type = "l", col = "blue")
+#' abline(v = c(0.1, 0.4), col = "red", lty = 2)
 #'
 #' # create an MP to run in closed-loop MSE
 #' DD_40_10 <- make_MP(DD_TMB, HCR40_10)
+#'
 #' \dontrun{
 #' myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
 #' }
+#'
+#' # 60-20 linear ramp
+#' Brel <- seq(0, 1, length.out = 200)
+#' plot(Brel, HCRlin(Brel, 0.2, 0.6), xlab = "Estimated SSB/SSB0",
+#' ylab = "TAC adjustment", main = "60-20 harvest control rule", type = 'l',
+#' col = 'blue')
+#' abline(v = c(0.2, 0.6), col = "red", lty = 2)
+#'
+#' # create an MP to run in closed-loop MSE
+#' DD_60_20 <- make_MP(DD_TMB, HCR60_20)
+#'
+#' @describeIn HCR40_10 Common U.S. west coast control rule.
 #' @export
-HCR40_10 <- function(x = 1, Assessment, reps = 1, ...) {
-  has_UMSY <- has_FMSY <- has_B <- has_B_B0 <- FALSE
-  if(!is.na(Assessment@UMSY[1])) has_UMSY <- TRUE
-  if(!is.na(Assessment@FMSY[1])) has_FMSY <- TRUE
-  if(length(Assessment@B) > 0) has_B <- TRUE
-  if(length(Assessment@B_B0) > 0) has_B_B0 <- TRUE
-
-  if((has_UMSY || has_FMSY) && has_B && has_B_B0) {
-    B_B0 <- Assessment@B_B0[length(Assessment@B_B0)]
-    B_current <- Assessment@B[length(Assessment@B)]
-    if(has_UMSY) {
-      SE_UMSY <- ifelse(is.na(Assessment@SE_UMSY[1]), 1e-8, Assessment@SE_UMSY)
-      UMSY_vector <- trlnorm(reps, Assessment@UMSY, SE_UMSY)
-      TAC <- UMSY_vector * B_current
-    }
-    if(has_FMSY) {
-      SE_FMSY <- ifelse(is.na(Assessment@SE_FMSY[1]), 1e-8, Assessment@SE_FMSY)
-      FMSY_vector <- trlnorm(reps, Assessment@FMSY, SE_FMSY)
-      TAC <- FMSY_vector * B_current
-    }
-    ramp <- HCRlin(B_B0, 0.1, 0.4)
+HCR40_10 <- function(Assessment, reps = 1, ...) {
+  TAC <- calculate_TAC(Assessment, reps)
+  if(!all(is.na(TAC))) {
+    if(length(Assessment@SSB_SSB0) > 0) {
+      depletion <- Assessment@SSB_SSB0[length(Assessment@SSB_SSB0)]
+    } else
+      if(length(Assessment@B_B0) > 0) {
+        depletion <- Assessment@B_B0[length(Assessment@B_B0)]
+      } else depletion <- NA
+    ramp <- HCRlin(depletion, 0.1, 0.4)
     TAC <- ramp * TAC
-  } else {
-    TAC <- rep(NA, reps) # Missing estimates for HCR. Previous TAC recommendation will be used.
   }
-
   Rec <- new("Rec")
   Rec@TAC <- TACfilter(TAC)
   return(Rec)
@@ -116,60 +102,20 @@ class(HCR40_10) <- "HCR"
 
 
 
-#' A 60-20 harvest control rule.
-#'
-#' A output control rule with a ramp that reduces the
-#' TAC recommendation (FMSY * Biomass) when biomass depletion (B/B0) is less than 60%.
-#' The TAC reduction is linearly reduced to 0 when depletion is less than 20%.
-#'
-#' @param Assessment An object of class \linkS4class{Assessment}.
-#' @param reps The number of stochastic samples of the TAC recommendation.
-#' @param ... Miscellaneous arguments (not currently used).
-#' @return An object of class \linkS4class{Rec} with the TAC recommendation.
-#' @author Q. Huynh
-#' @references
-#' Punt, A. E, Dorn, M. W., and Haltuch, M. A. 2008. Evaluation of threshold management strategies
-#' for groundfish off the U.S. West Coast. Fisheries Research 94:251-266.
-#' @seealso \link{HCR40_10} \link{HCRlin} \link{make_MP}
-#' @examples
-#' # 60-20 linear ramp
-#' Brel <- seq(0, 1, length.out = 200)
-#' plot(Brel, HCRlin(Brel, 0.2, 0.6), xlab = "Estimated B/B0", ylab = "TAC adjustement factor",
-#' main = "A 40-10 harvest control rule", type = 'l', col = 'blue')
-#' abline(v = c(0.1,0.4), col = "red", lty = 2)
-#'
-#' # create an MP to run in closed-loop MSE
-#' DD_60_20 <- make_MP(DD_TMB, HCR60_20)
-#' \dontrun{
-#' myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_60_20"))
-#' }
+#' @describeIn HCR40_10 More conservative than 40-10
 #' @export
 HCR60_20 <- function(Assessment, reps = 1, ...) {
-  has_UMSY <- has_FMSY <- has_B <- has_B_B0 <- FALSE
-  if(!is.na(Assessment@UMSY[1])) has_UMSY <- TRUE
-  if(!is.na(Assessment@FMSY[1])) has_FMSY <- TRUE
-  if(length(Assessment@B) > 0) has_B <- TRUE
-  if(length(Assessment@B_B0) > 0) has_B_B0 <- TRUE
-
-  if((has_UMSY || has_FMSY) && has_B && has_B_B0) {
-    B_B0 <- Assessment@B_B0[length(Assessment@B_B0)]
-    B_current <- Assessment@B[length(Assessment@B)]
-    if(has_UMSY) {
-      SE_UMSY <- ifelse(is.na(Assessment@SE_UMSY[1]), 1e-8, Assessment@SE_UMSY)
-      UMSY_vector <- trlnorm(reps, Assessment@UMSY, SE_UMSY)
-      TAC <- UMSY_vector * B_current
-    }
-    if(has_FMSY) {
-      SE_FMSY <- ifelse(is.na(Assessment@SE_FMSY[1]), 1e-8, Assessment@SE_FMSY)
-      FMSY_vector <- trlnorm(reps, Assessment@FMSY, SE_FMSY)
-      TAC <- FMSY_vector * B_current
-    }
-    ramp <- HCRlin(B_B0, 0.2, 0.6)
+  TAC <- calculate_TAC(Assessment, reps)
+  if(!all(is.na(TAC))) {
+    if(length(Assessment@SSB_SSB0) > 0) {
+      depletion <- Assessment@SSB_SSB0[length(Assessment@SSB_SSB0)]
+    } else
+      if(length(Assessment@B_B0) > 0) {
+        depletion <- Assessment@B_B0[length(Assessment@B_B0)]
+      } else depletion <- NA
+    ramp <- HCRlin(depletion, 0.2, 0.6)
     TAC <- ramp * TAC
-  } else {
-    TAC <- rep(NA, reps) # Missing estimates for HCR. Previous TAC recommendation will be used.
   }
-
   Rec <- new("Rec")
   Rec@TAC <- TACfilter(TAC)
   return(Rec)
@@ -257,4 +203,42 @@ powdif<-function(x,z,g){
   x2
 }
 
+#' Calculate TAC from Assessment object
+#'
+#' A function to calculate the total allowable catch TAC as the product of
+#' either UMSY or FMSY and the vulnerable biomass in terminal year.
+#'
+#' @param Assessment An Assessment object with estimates of UMSY or FMSY and
+#' terminal year vulnerable biomass.
+#' @param reps The number of stochastic draws of UMSY or FMSY (Set equal to one
+#' for deterministic calculations).
+#' @return A vector of length \code{reps} of stochastic samples of TAC recommendation.
+#' @seealso \link{HCR_MSY} \link{HCR40_10} \link{HCR60_20}
+#' @export
+calculate_TAC <- function(Assessment, reps) {
+  has_UMSY <- has_FMSY <- has_VB <- FALSE
+  if(length(Assessment@UMSY) > 0) has_UMSY <- TRUE
+  if(length(Assessment@FMSY) > 0) has_FMSY <- TRUE
+  if(length(Assessment@VB) > 0) has_VB <- TRUE
 
+  if(has_VB && (has_UMSY || has_FMSY)) {
+    VB_current <- Assessment@VB[length(Assessment@VB)]
+    if(has_UMSY) {
+      if(length(Assessment@SE_UMSY) > 0) {
+        SE_UMSY <- Assessment@SE_UMSY
+      } else SE_UMSY <- 1e-8
+      UMSY_vector <- trlnorm(reps, Assessment@UMSY, SE_UMSY)
+      TAC <- UMSY_vector * VB_current
+    }
+    if(has_FMSY) {
+      if(length(Assessment@SE_FMSY) > 0) {
+        SE_FMSY <- Assessment@SE_FMSY
+      } else SE_FMSY <- 1e-8
+      FMSY_vector <- trlnorm(reps, Assessment@FMSY, SE_FMSY)
+      TAC <- FMSY_vector * VB_current
+    }
+  } else {
+    TAC <- rep(NA, reps) # Missing estimates for HCR.
+  }
+  return(TAC)
+}
