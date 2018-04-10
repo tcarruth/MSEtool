@@ -56,13 +56,15 @@ Unsurprisingly the extent to which these assumptions are
 violated tends to be the biggest driver of performance for this method.
 }
 \examples{
+data(sim_snapper)
+
 #### Observation-error delay difference model
 res <- DD_TMB(1, sim_snapper)
 
-# State-space version
+### State-space version
 res <- DD_SS(1, sim_snapper)
 
-## Provide starting values
+# Provide starting values
 start <- list(UMSY = 0.05, MSY = 4, q = 0.3, tau = 0.5)
 res <- DD_TMB(1, sim_snapper, start = start)
 
