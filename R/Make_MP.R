@@ -18,7 +18,7 @@
 #' myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
 #' }
 #'
-#' # MP that uses a surplus production model which assumes \code{Binit_frac = 0.5}.
+#' # MP that uses a surplus production model which assumes Binit_frac = 0.5.
 #' SP_MSY <- make_MP(SP, HCR_MSY, Binit_frac = 0.5)
 #' @export make_MP
 #' @importFrom pryr make_function
