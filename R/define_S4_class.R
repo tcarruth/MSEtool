@@ -4,7 +4,7 @@
 #' @import graphics
 #' @import stats
 #' @import utils
-#' @importFrom methods setOldClass setClassUnion setClass setMethod
+#' @import methods
 setOldClass("sdreport")
 setClassUnion("sdreportAssess", members = c("character", "sdreport"))
 setClassUnion("optAssess", members = c("list", "character"))
@@ -23,10 +23,13 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot FMSY Estimate of instantaneous fishing mortality rate at maximum sustainable yield.
 #' @slot MSY Estimate of maximum sustainable yield.
 #' @slot BMSY Biomass at maximum sustainable yield.
+#' @slot SSBMSY Spawning stock biomass at maximum sustainable yield.
+#' @slot VBMSY Vulnerable biomass at maximum sustainable yield.
 #' @slot B0 Biomass at virgin equilibrium.
 #' @slot R0 Recruitment at virgin equilibrium.
 #' @slot N0 Abundance at virgin equilibrium.
 #' @slot SSB0 Spawning stock biomass at virgin equilibrium.
+#' @slot VB0 Vulnerable biomass at virgin equilibrium.
 #' @slot h Steepness.
 #' @slot U Time series of exploitation.
 #' @slot U_UMSY Time series of relative exploitation.
@@ -38,6 +41,9 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot SSB Time series of spawning stock biomass.
 #' @slot SSB_SSBMSY Time series of spawning stock biomass relative to MSY.
 #' @slot SSB_SSB0 Time series of spawning stock depletion.
+#' @slot VB Time series of vulnerable biomass.
+#' @slot VB_VBMSY Time series of vulnerable biomass relative to MSY.
+#' @slot VB_VB0 Time series of vulnerable biomass depletion.
 #' @slot R Time series of recruitment.
 #' @slot N Time series of population abundance.
 #' @slot N_at_age Time series of numbers-at-age matrix.
@@ -58,6 +64,10 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot SE_F_FMSY_final Standard error of F/FMSY in the terminal year.
 #' @slot SE_B_BMSY_final Standard error of B/BMSY in the terminal year.
 #' @slot SE_B_B0_final Standard error of B/B0 in the terminal year.
+#' @slot SE_SSB_SSBMSY_final Standard error of SSB/SSBMSY in the terminal year.
+#' @slot SE_SSB_SSB0_final Standard error of SSB/SSB0 in the terminal year.
+#' @slot SE_VB_VBMSY_final Standard error of VB/VBMSY in the terminal year.
+#' @slot SE_VB_VB0_final Standard error of VB/VB0 in the terminal year.
 #' @slot SE_Random A vector of standard errors of the random effects.
 #' @slot info A list containing the data and starting values of estimated parameters
 #' for the assessment.
@@ -77,21 +87,25 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @export
 #' @exportClass Assessment
 Assessment <- setClass("Assessment",
-                   slots = c(Model = "character", UMSY = "numeric", FMSY = "numeric",
-                   MSY = "numeric", BMSY = "numeric", B0 = "numeric", R0 = "numeric",
-                   N0 = "numeric", SSB0 = "numeric", h = "numeric", U = "numeric",
-                   U_UMSY = "numeric", F = "numeric", F_FMSY  = "numeric",
-                   B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
-                   SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric",
-                   R = "numeric", N = "numeric", N_at_age = "matrix",
-                   Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
-                   Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
-                   C_at_age = "matrix", Random = "numeric", Random_type = "character",
-                   NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
-                   SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
-                   SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric", SE_Random = "numeric",
-                   info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
-                   TMB_report = "list", dependencies = "character", Data = "Data"))
+ slots = c(Model = "character", UMSY = "numeric", FMSY = "numeric",
+ MSY = "numeric", BMSY = "numeric", SSBMSY = "numeric", VBMSY = "numeric",
+ B0 = "numeric", R0 = "numeric", N0 = "numeric", SSB0 = "numeric", VB0 = "numeric",
+ h = "numeric", U = "numeric", U_UMSY = "numeric", F = "numeric", F_FMSY  = "numeric",
+ B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
+ SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric", VB = "numeric",
+ VB_VBMSY = "numeric", VB_VB0 = "numeric",
+ R = "numeric", N = "numeric", N_at_age = "matrix",
+ Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
+ Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
+ C_at_age = "matrix", Random = "numeric", Random_type = "character",
+ NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
+ SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
+ SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric",
+ SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
+ SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
+ SE_Random = "numeric",
+ info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
+ TMB_report = "list", dependencies = "character", Data = "Data"))
 
 
 #' Summary of Assessment object
@@ -133,10 +147,12 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
 })
 
 
-Model <- UMSY <- FMSY <- MSY <- BMSY <- B0 <- R0 <- N0 <- SSB0 <- h <- U <- U_UMSY <- F <- F_FMSY <-
-  B <- B_BMSY <- B_B0 <- SSB <- SSB_SSBMSY <- SSB_SSB0 <- R <- N <- N_at_age <- Selectivity <-
-  Obs_Catch <- Obs_Index <- Obs_C_at_age <- Catch <- Index <- C_at_age <- Random <- Random_type <-
-  NLL <- SE_UMSY <- SE_FMSY <- SE_MSY <- SE_U_UMSY_final <- SE_F_FMSY_final <- SE_B_BMSY_final <-
-  SE_B_B0_final <- SE_Random <- info <- obj <- opt <- SD <- TMB_report <- dependencies <- Data <- NULL
+Model <- UMSY <- FMSY <- MSY <- BMSY <- SSBMSY <- VBMSY <- B0 <- R0 <- N0 <- SSB0 <- VB0 <- h <- U <-
+  U_UMSY <- F <- F_FMSY <- B <- B_BMSY <- B_B0 <- SSB <- SSB_SSBMSY <- SSB_SSB0 <- VB_VBMSY <- VB_VB0 <-
+  R <- N <- N_at_age <- Selectivity <- Obs_Catch <- Obs_Index <- Obs_C_at_age <- Catch <- Index <-
+  C_at_age <- Random <- Random_type <- NLL <- SE_UMSY <- SE_FMSY <- SE_MSY <- SE_U_UMSY_final <-
+  SE_F_FMSY_final <- SE_B_BMSY_final <- SE_B_B0_final <- SE_SSB_SSBMSY_final <- SE_SSB_SSB0_final <-
+  SE_VB_VBMSY_final <- SE_VB_VB0_final <- SE_Random <- info <- obj <- opt <-
+  SD <- TMB_report <- dependencies <- Data <- NULL
 
 plot.dir <- NULL

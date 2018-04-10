@@ -21,6 +21,10 @@ An S4 class that contains assessment output. Created from a function of class \c
 
 \item{\code{BMSY}}{Biomass at maximum sustainable yield.}
 
+\item{\code{SSBMSY}}{Spawning stock biomass at maximum sustainable yield.}
+
+\item{\code{VBMSY}}{Vulnerable biomass at maximum sustainable yield.}
+
 \item{\code{B0}}{Biomass at virgin equilibrium.}
 
 \item{\code{R0}}{Recruitment at virgin equilibrium.}
@@ -28,6 +32,8 @@ An S4 class that contains assessment output. Created from a function of class \c
 \item{\code{N0}}{Abundance at virgin equilibrium.}
 
 \item{\code{SSB0}}{Spawning stock biomass at virgin equilibrium.}
+
+\item{\code{VB0}}{Vulnerable biomass at virgin equilibrium.}
 
 \item{\code{h}}{Steepness.}
 
@@ -50,6 +56,12 @@ An S4 class that contains assessment output. Created from a function of class \c
 \item{\code{SSB_SSBMSY}}{Time series of spawning stock biomass relative to MSY.}
 
 \item{\code{SSB_SSB0}}{Time series of spawning stock depletion.}
+
+\item{\code{VB}}{Time series of vulnerable biomass.}
+
+\item{\code{VB_VBMSY}}{Time series of vulnerable biomass relative to MSY.}
+
+\item{\code{VB_VB0}}{Time series of vulnerable biomass depletion.}
 
 \item{\code{R}}{Time series of recruitment.}
 
@@ -90,6 +102,14 @@ An S4 class that contains assessment output. Created from a function of class \c
 \item{\code{SE_B_BMSY_final}}{Standard error of B/BMSY in the terminal year.}
 
 \item{\code{SE_B_B0_final}}{Standard error of B/B0 in the terminal year.}
+
+\item{\code{SE_SSB_SSBMSY_final}}{Standard error of SSB/SSBMSY in the terminal year.}
+
+\item{\code{SE_SSB_SSB0_final}}{Standard error of SSB/SSB0 in the terminal year.}
+
+\item{\code{SE_VB_VBMSY_final}}{Standard error of VB/VBMSY in the terminal year.}
+
+\item{\code{SE_VB_VB0_final}}{Standard error of VB/VB0 in the terminal year.}
 
 \item{\code{SE_Random}}{A vector of standard errors of the random effects.}
 
