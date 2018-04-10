@@ -35,8 +35,8 @@ TRP is 0.4 and LRP is 0.1 in the 40-10 control rule.
 }}
 
 \note{
-Function will use slot B_B0 of the Asssessment object (e.g. for surplus
-production models \link{SP} and \link{SP_SS}) if SSB_SSB0 is unavailable.
+Function will use slot \code{B_B0} of the Asssessment object (e.g. for surplus
+production models \link{SP} and \link{SP_SS}) if \code{SSB_SSB0} is unavailable.
 }
 \examples{
 # 40-10 linear ramp
@@ -72,5 +72,5 @@ for groundfish off the U.S. West Coast. Fisheries Research 94:251-266.
 \link{HCR60_20} \link{HCRlin} \link{make_MP}
 }
 \author{
-Q. Huynh
+Q. Huynh & T. Carruthers
 }

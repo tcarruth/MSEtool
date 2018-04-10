@@ -2,9 +2,14 @@
 % Please edit documentation in R/SP.R
 \name{SP}
 \alias{SP}
+\alias{SP_SS}
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
-SP(x = 1, Data, n = 2, Binit_frac = 1, ...)
+SP(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
+  ...)
+
+SP_SS(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
+  ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -18,6 +23,11 @@ Typically fixed at \code{n = 2}, where the biomass at MSY is half of carrying ca
 \item{Binit_frac}{The ratio of biomass to carrying capacity in the first year
 (fixed in the model). A value of 1 assumes virgin conditions.}
 
+\item{start}{Optional list of starting values. See details.}
+
+\item{silent}{(TRUE/FALSE) Whether tracing information is provided by TMB during optimization.
+Used to aid convergence, help with diagnostics.}
+
 \item{...}{Additional arguments (not currently used).}
 }
 \value{
@@ -27,12 +37,44 @@ from TMB.
 \description{
 A surplus production model that estimates the TAC using a
 time-series of catches and a relative abundance index and coded in TMB.
-The model is conditioned on catch and estimates a predicted index.
+The model is conditioned on catch and estimates a predicted index. The state-space version
+estimates annual deviates in biomass.
 }
+\details{
+To provide starting values for the model, a named list can be provided for \code{UMSY} and
+\code{MSY} via the start argument (see example).
+
+For \code{SP_SS}, a start value can also be provided for \code{tau}, the standard deviation
+of the biomass deviates. The index standard deviation is fixed based on the value of \code{Data@CV_Ind}.
+}
+\section{Functions}{
+\itemize{
+\item \code{SP}: Fixed effects model
+
+\item \code{SP_SS}: State-space version
+}}
+
 \note{
 The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
 leading parameters. The default conditions assume virgin conditions in the first year of the time series
 and a symmetric production function.
+}
+\examples{
+data(swordfish)
+
+#### Observation-error surplus production model
+res <- SP(1, swordfish)
+
+# Provide starting values
+start <- list(UMSY = 0.1, MSY = 1e5)
+res <- SP(1, swordfish, start = start)
+
+# Assume B/K = 0.95 in first year of model
+res <- SP(1, swordfish, Binit_frac = 0.95)
+
+#### State-space version
+res <- SP_SS(1, swordfish)
+
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system.
@@ -40,9 +82,6 @@ Fishery Bulletin 76:515:521.
 
 Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
 Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
-}
-\seealso{
-\code{\link{SP_SS}}
 }
 \author{
 Q. Huynh

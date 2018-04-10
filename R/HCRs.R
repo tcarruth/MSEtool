@@ -47,10 +47,10 @@ class(HCR_MSY) <- "HCR"
 #' FMSY or UMSY, vulnerable biomass, and spawning biomass depletion in terminal year.
 #' @param reps The number of stochastic samples of the TAC recommendation.
 #' @param ... Miscellaneous arguments (not currently used).
-#' @note Function will use slot B_B0 of the Asssessment object (e.g. for surplus
-#' production models \link{SP} and \link{SP_SS}) if SSB_SSB0 is unavailable.
+#' @note Function will use slot \code{B_B0} of the Asssessment object (e.g. for surplus
+#' production models \link{SP} and \link{SP_SS}) if \code{SSB_SSB0} is unavailable.
 #' @return An object of class \linkS4class{Rec} with the TAC recommendation.
-#' @author Q. Huynh
+#' @author Q. Huynh & T. Carruthers
 #' @references
 #' Punt, A. E, Dorn, M. W., and Haltuch, M. A. 2008. Evaluation of threshold management strategies
 #' for groundfish off the U.S. West Coast. Fisheries Research 94:251-266.

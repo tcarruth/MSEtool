@@ -20,8 +20,6 @@ avail <- function(classy) {
 
   temp <- c(ls("package:MSEtool")[vapply(ls("package:MSEtool"), getclass, logical(1), classy = classy)],
             ls(envir = .GlobalEnv)[vapply(ls(envir = .GlobalEnv), getclass, logical(1), classy = classy)])
-
-  return_symbol <- function(e) as.character(e)
   temp_DLMtool <- try(DLMtool::avail(classy), silent = TRUE)
 
   if(!inherits(temp_DLMtool, "try-error")) temp <- unique(c(temp, temp_DLMtool))
