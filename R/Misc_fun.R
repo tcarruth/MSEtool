@@ -13,11 +13,14 @@ optimize_TMB_model <- function(obj) {
 }
 
 get_sdreport <- function(obj, opt) {
-  if(is.character(opt) || opt$convergence != 0) {
+  if(is.character(opt)) {
     res <- "Model did not converge with nlminb(). Did not run TMB::sdreport()."
   }
   else {
     res <- tryCatch(sdreport(obj, getReportCovariance = FALSE), error = function(e) as.character(e))
+  }
+  if(inherits(res, "sdreport") && any(eigen(res$cov.fixed)$value < 0)) {
+    res <- "Estimated covariance matrix was not positive definite."
   }
   return(res)
 }
