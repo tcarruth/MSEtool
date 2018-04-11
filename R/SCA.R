@@ -84,7 +84,7 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"),
   info <- list(Year = Data@Year, data = data, params = params)
 
   map <- list()
-  browser()
+
   if(U_begin == "virgin") map$U_equilibrium <- factor(NA)
   if(any(is.na(CAA_n_nominal))) {
     map$log_rec_dev <- log_rec_dev_map(CAA_n_nominal)
