@@ -6,7 +6,7 @@
 \usage{
 SS2OM(SSdir, nsim = 48, proyears = 50, length_timestep = NA,
   Name = NULL, Source = "No source provided",
-  Author = "No author provided", printstats = F, verbose = T)
+  Author = "No author provided", printstats = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{SSdir}{A folder with Stock Synthesis input and output files in it}

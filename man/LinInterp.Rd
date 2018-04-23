@@ -4,7 +4,7 @@
 \alias{LinInterp}
 \title{Linear interpolation of a y value at level xlev based on a vector x and y}
 \usage{
-LinInterp(x, y, xlev, ascending = F, zeroint = F)
+LinInterp(x, y, xlev, ascending = FALSE, zeroint = FALSE)
 }
 \arguments{
 \item{x}{A vector of x values}

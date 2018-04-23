@@ -4,7 +4,7 @@
 \alias{negcorlogspace}
 \title{A function that samples multivariate normal (logspace) variables}
 \usage{
-negcorlogspace(xmu, ymu, xcv = 0.1, nsim, cor = -0.9, ploty = F)
+negcorlogspace(xmu, ymu, xcv = 0.1, nsim, cor = -0.9, ploty = FALSE)
 }
 \arguments{
 \item{xmu}{The mean (normal space) of the first (x) variable}

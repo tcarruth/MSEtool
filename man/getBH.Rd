@@ -4,7 +4,7 @@
 \alias{getBH}
 \title{Predict Beverton-Holt recruitment and return fit to S-R observations}
 \usage{
-getBH(pars, SSB, rec, SSBpR, mode = 1, plot = F)
+getBH(pars, SSB, rec, SSBpR, mode = 1, plot = FALSE)
 }
 \arguments{
 \item{pars}{an initial guess at model parameters steepness and R0}

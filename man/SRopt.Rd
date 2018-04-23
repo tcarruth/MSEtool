@@ -4,7 +4,7 @@
 \alias{SRopt}
 \title{Function that returns a stochastic estimate of steepness given observed stock recruitment data}
 \usage{
-SRopt(nsim, SSB, rec, SSBpR, plot = F, type = "BH")
+SRopt(nsim, SSB, rec, SSBpR, plot = FALSE, type = "BH")
 }
 \arguments{
 \item{nsim}{number of samples of steepness to generate}

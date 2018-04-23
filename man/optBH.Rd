@@ -4,7 +4,7 @@
 \alias{optBH}
 \title{Wrapper for estimating stock recruitment parameters from resampled stock-recruitment data}
 \usage{
-optBH(x, SSB, rec, SSBpR, R0temp, pars, frac = 0.5, plot = F)
+optBH(x, SSB, rec, SSBpR, R0temp, pars, frac = 0.5, plot = FALSE)
 }
 \arguments{
 \item{x}{position (currently redundant)}
