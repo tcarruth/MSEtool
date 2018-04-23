@@ -44,7 +44,15 @@
 #' respectively. The age of 95% vulnerability is an offset, i.e.,
 #' \code{vul_95 = vul_par[1] + exp(vul_par[2])}.
 #'
-#' With dome vulnerability,
+#' With dome vulnerability, a double normal parameterization is used, where \code{vul_par}
+#' is an estimated vector of length 4:
+#' \itemize{
+#' \item \code{vulpar[1]} \code{log(sd_asc)}, where sd_asc of the normal distribution function for the ascending limb
+#' \item \code{vulpar[2]} \code{mu_asc}, mean of the normal distribution function for the ascending limb
+#' \item \code{vulpar[3]} \code{mu_des}, mean of the normal distribution function for the descending limb. To ensure
+#' \code{mu_desc > mu_asc}, this is parameterized as an offset, i.e., \code{mu_desc = mu_asc + exp(vulpar[3])}.
+#' \item \code{vulpar[4]} \code{log(sd_des)}, where sd_des of the normal distribution function for the descending limb.
+#' }
 #'
 #' For \code{start}, a named list of starting values of estimates for:
 #' \itemize{
