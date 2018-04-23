@@ -304,6 +304,11 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv) {
                    ifnotfound = vector("list", nsim))
 
   # Update reporting objects
+  if(inherits(Assessment, "Assessment")) { # Remove some objects to save memory/disk space
+    Assessment@obj <- Assessment@info <- Assessment@TMB_report <- list()
+    Assessment@SD <- ""
+    Assessment@Data <- new("Data", stock = "MSE")
+  }
   Assessment_report[[x]] <- c(Assessment_report[[x]], Assessment)
   opt_time[[x]] <- c(opt_time[[x]], opt_timing)
 
