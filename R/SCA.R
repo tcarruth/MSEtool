@@ -131,7 +131,7 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
                  log_rec_dev = rep(0, n_y - 1))
   info <- list(Year = Data@Year, data = data, params = params, control = control)
 
-  map <- list(log_sigma = factor(NA))
+  map <- list()
   if(U_begin == "virgin") map$U_equilibrium <- factor(NA)
   if(any(is.na(CAA_n_nominal))) {
     map$log_rec_dev <- random_map(CAA_n_nominal)
