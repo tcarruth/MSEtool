@@ -4,12 +4,15 @@
 \alias{make_MP}
 \title{Make a custom management procedure (MP)}
 \usage{
-make_MP(.Assess, .HCR, ...)
+make_MP(.Assess, .HCR, diagnostic = TRUE, ...)
 }
 \arguments{
 \item{.Assess}{A function of class \code{Assess}.}
 
 \item{.HCR}{A function of class \code{HCR}.}
+
+\item{diagnostic}{(TRUE/FALSE) Whether assessment output will be written to
+\code{\link[DLMtool]{DLMenv}}. Intended for use with \code{\link[DLMtool]{runMSE}}.}
 
 \item{...}{Additional arguments to be passed to \code{.Assess} and \code{.HCR}.}
 }
@@ -27,8 +30,14 @@ DD_40_10 <- make_MP(DD_TMB, HCR40_10)
 
 \dontrun{
 myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
+
+ls(DLMenv) # Model output during MSE is assigned to this environment.
+plot_diagnostic()
 }
 
 # MP that uses a surplus production model which assumes Binit_frac = 0.5.
 SP_MSY <- make_MP(SP, HCR_MSY, Binit_frac = 0.5)
+}
+\seealso{
+\link{plot_diagnostic}
 }
