@@ -6,10 +6,10 @@
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
-  ...)
+  control = list(), ...)
 
 SP_SS(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
-  ...)
+  control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -25,8 +25,11 @@ Typically fixed at \code{n = 2}, where the biomass at MSY is half of carrying ca
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{silent}{(TRUE/FALSE) Whether tracing information is provided by TMB during optimization.
-Used to aid convergence, help with diagnostics.}
+\item{silent}{(TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+will print trace information during optimization. Used for dignostics for model convergence.}
+
+\item{control}{A named list of parameters regarding optimization to be passed to
+\code{\link[stats]{nlminb}}.}
 
 \item{...}{Additional arguments (not currently used).}
 }
@@ -45,7 +48,9 @@ To provide starting values for the model, a named list can be provided for \code
 \code{MSY} via the start argument (see example).
 
 For \code{SP_SS}, a start value can also be provided for \code{tau}, the standard deviation
-of the biomass deviates. The index standard deviation is fixed based on the value of \code{Data@CV_Ind}.
+of the log-biomass deviates. Deviations are estimated beginning in the year when index
+data are available. The index standard deviation is fixed based on the value of
+\code{Data@CV_Ind}.
 }
 \section{Functions}{
 \itemize{
@@ -82,6 +87,9 @@ Fishery Bulletin 76:515:521.
 
 Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
 Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
+}
+\seealso{
+\link{SP_production}
 }
 \author{
 Q. Huynh

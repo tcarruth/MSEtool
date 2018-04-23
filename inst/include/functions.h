@@ -61,7 +61,7 @@ vector<Type> calc_deriv_NPR(Type U, vector<Type> NPR, vector<Type> vul, vector<T
   deriv_NPR(max_age-1) *= 1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U);
   deriv_NPR(max_age-1) -= NPR(max_age-2) * exp(-M(max_age-2)) * (1 - vul(max_age-2) * U) * exp(-M(max_age-1)) * vul(max_age-1);
   deriv_NPR(max_age-1) /= pow(1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U), 2);
-  return deriv_NPR;  
+  return deriv_NPR;
 }
 
 template<class Type>
@@ -83,4 +83,40 @@ Type sum_VBPR(vector<Type> NPR, vector<Type> weight, vector<Type> vul) {
   Type answer = 0.;
   for(int a=0;a<NPR.size();a++) answer += NPR(a) * weight(a) * vul(a);
   return answer;
+}
+
+template<class Type>
+vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age) {
+  vector<Type> vul(max_age);
+  Type vul_50 = vul_par(0);
+  Type vul_95 = vul_50 + exp(vul_par(1));
+
+	for(int a=0;a<max_age;a++) {
+	  Type aa = a;
+	  vul(a) = 1/(1 + exp(-log(19) * (aa - vul_50)/(vul_95 - vul_50)));
+  }
+	return vul;
+}
+
+template<class Type>
+vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age) {
+  vector<Type> vul(max_age);
+  Type vul_sd_asc = exp(vul_par(0));
+  Type vul_mu_asc = vul_par(1);
+  Type vul_mu_des = vul_mu_asc + exp(vul_par(2));
+  Type vul_sd_des = exp(vul_par(3));
+
+  Type denom_asc = dnorm(vul_mu_asc, vul_mu_asc, vul_sd_asc, false);
+  Type denom_des = dnorm(vul_mu_des, vul_mu_des, vul_sd_des, false);
+
+  for(int a=0;a<max_age;a++) {
+    Type aa = a;
+    Type vul_asc = dnorm(aa, vul_mu_asc, vul_sd_asc, false);
+    vul_asc /= denom_asc;
+    Type vul_des = dnorm(aa, vul_mu_des, vul_sd_des, false);
+    vul_des /= denom_des;
+
+    vul(a) = CppAD::CondExpLe(aa, vul_mu_asc, vul_asc, CppAD::CondExpLe(aa, vul_mu_des, Type(1), vul_des));
+  }
+  return vul;
 }

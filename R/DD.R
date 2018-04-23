@@ -8,10 +8,12 @@
 #'
 #' @param x An index for the objects in \code{Data} when running in closed loop simulation.
 #' Otherwise, equals to 1 when running an assessment.
-#' @param Data An object of class \linkS4class{Data}.
+#' @param Data An object of class \linkS4class{Data}.#'
 #' @param start Optional list of starting values. See details.
-#' @param silent (TRUE/FALSE) Whether tracing information is provided by TMB during
-#' optimization. Used to aid convergence, help with diagnostics.
+#' @param silent (TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+#' will print trace information during optimization. Used for dignostics for model convergence.
+#' @param control A named list of parameters regarding optimization to be passed to
+#' \code{\link[stats]{nlminb}}.
 #' @param ... Additional arguments (not currently used).
 #' @return An object of \code{\linkS4class{Assessment}} containing objects and output
 #' from TMB.
@@ -53,7 +55,7 @@
 #' summary(res@@SD) # Look at parameter estimates
 #' @useDynLib MSEtool
 #' @export
-DD_TMB <- function(x, Data, start = NULL, silent = TRUE, ...) {
+DD_TMB <- function(x, Data, start = NULL, silent = TRUE, control = list(), ...) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
@@ -99,7 +101,7 @@ DD_TMB <- function(x, Data, start = NULL, silent = TRUE, ...) {
   info <- list(Year = Year, data = data, params = params, I_hist = I_hist)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj)
+  opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
 
@@ -107,7 +109,6 @@ DD_TMB <- function(x, Data, start = NULL, silent = TRUE, ...) {
     Assessment <- new("Assessment", Model = "DD_TMB",
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
-    warning("Model did not converge. Check TMB objects (slots names: obj, opt, and SD).")
   } else {
     Yearplusone <- c(Year, max(Year) + 1)
     Yearplusk <- c(Year, max(Year) + 1:k)
@@ -140,7 +141,6 @@ DD_TMB <- function(x, Data, start = NULL, silent = TRUE, ...) {
                       SE_VB_VB0_final = SD$sd[7], info = info, obj = obj, opt = opt,
                       SD = SD, TMB_report = report, dependencies = dependencies, Data = Data)
   }
-
   return(Assessment)
 }
 class(DD_TMB) <- "Assess"
@@ -148,7 +148,7 @@ class(DD_TMB) <- "Assess"
 
 #' @describeIn DD_TMB State-Space version of Delay-Difference model
 #' @export
-DD_SS <- function(x, Data, start = NULL, silent = TRUE, ...) {
+DD_SS <- function(x, Data, start = NULL, silent = TRUE, control = list(), ...) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
@@ -197,12 +197,12 @@ DD_SS <- function(x, Data, start = NULL, silent = TRUE, ...) {
   params$log_sigma = log(sigmaC)
   params$log_rec_dev = rep(0, ny - k)
   info <- list(Year = Year, data = data, params = params, sigma = sigmaC,
-               I_hist = I_hist)
+               I_hist = I_hist, control = control)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = "log_rec_dev",
                    map = list(log_sigma = factor(NA)), checkParameterOrder = FALSE,
                    DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj)
+  opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
 
@@ -210,7 +210,6 @@ DD_SS <- function(x, Data, start = NULL, silent = TRUE, ...) {
     Assessment <- new("Assessment", Model = "DD_SS",
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
-    warning("Model did not properly converge. Check TMB objects (slots names: opt and SD).")
   } else {
     Yearplusone <- c(Year, max(Year) + 1)
     Yearplusk <- c(Year, max(Year) + 1:k)

@@ -13,15 +13,19 @@
 #' @param Binit_frac The ratio of biomass to carrying capacity in the first year
 #' (fixed in the model). A value of 1 assumes virgin conditions.
 #' @param start Optional list of starting values. See details.
-#' @param silent (TRUE/FALSE) Whether tracing information is provided by TMB during optimization.
-#' Used to aid convergence, help with diagnostics.
+#' @param silent (TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+#' will print trace information during optimization. Used for dignostics for model convergence.
+#' @param control A named list of parameters regarding optimization to be passed to
+#' \code{\link[stats]{nlminb}}.
 #' @param ... Additional arguments (not currently used).
 #' @details
 #' To provide starting values for the model, a named list can be provided for \code{UMSY} and
 #' \code{MSY} via the start argument (see example).
 #'
 #' For \code{SP_SS}, a start value can also be provided for \code{tau}, the standard deviation
-#' of the biomass deviates. The index standard deviation is fixed based on the value of \code{Data@@CV_Ind}.
+#' of the log-biomass deviates. Deviations are estimated beginning in the year when index
+#' data are available. The index standard deviation is fixed based on the value of
+#' \code{Data@@CV_Ind}.
 #' @return An object of \code{\linkS4class{Assessment}} containing objects and output
 #' from TMB.
 #' @note The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
@@ -56,7 +60,8 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-SP <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE, ...) {
+SP <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
+               control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind"
   ystart <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- ystart:length(Data@Cat[x, ])
@@ -84,12 +89,12 @@ SP <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE, 
   data <- list(model = "SP", C_hist = C_hist, I_hist = I_hist, ny = ny)
   params$log_Binit_frac <- log(Binit_frac)
   params$log_n <- log(n)
-  info <- list(Year = Year, data = data, params = params)
+  info <- list(Year = Year, data = data, params = params, control = control)
 
   map <- list(log_Binit_frac = factor(NA), log_n = factor(NA))
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj)
+  opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
 
@@ -97,7 +102,6 @@ SP <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE, 
     Assessment <- new("Assessment", Model = "SP",
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
-    warning("Model did not properly converge. Check TMB objects (slots names: opt and SD).")
   } else {
     Yearplusone <- c(Year, max(Year) + 1)
 
@@ -108,6 +112,7 @@ SP <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE, 
                       B = structure(report$B, names = Yearplusone),
                       B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
                       B_B0 = structure(report$B/report$K, names = Yearplusone),
+                      VB = structure(report$B, names = Yearplusone),
                       VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
                       VB_VB0 = structure(report$B/report$K, names = Yearplusone),
                       Obs_Catch = structure(C_hist, names = Year),
@@ -120,7 +125,6 @@ SP <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE, 
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   }
-
   return(Assessment)
 }
 class(SP) <- "Assess"
@@ -131,7 +135,8 @@ class(SP) <- "Assess"
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE, ...) {
+SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
+                  control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
   yind <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- yind:length(Data@Cat[x, ])
@@ -141,7 +146,7 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRU
   I_hist <- Data@Ind[x, yind]
   I_hist[I_hist < 0] <- NA
   ny <- length(C_hist)
-  sigmaI <- sdconv(1, Data@CV_Ind[x])
+  sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
 
   params <- list()
   if(!is.null(start)) {
@@ -159,7 +164,8 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRU
   }
   if(is.null(params$log_tau)) params$log_tau <- log(0.3)
 
-  data <- list(model = "SP_SS", C_hist = C_hist, I_hist = I_hist, ny = ny)
+  data <- list(model = "SP_SS", C_hist = C_hist, I_hist = I_hist, ny = ny,
+               est_B_dev = as.integer(random_map(I_hist)))
   params$log_Binit_frac <- log(Binit_frac)
   params$log_n <- log(n)
   params$log_sigma <- log(sigmaI)
@@ -167,9 +173,10 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRU
 
   info <- list(Year = Year, data = data, params = params, sigma = sigmaI)
   map <- list(log_Binit_frac = factor(NA), log_n = factor(NA), log_sigma = factor(NA))
+  if(any(is.na(I_hist))) map$log_B_dev <- random_map(I_hist)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = "log_B_dev", DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj)
+  opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
 
@@ -177,7 +184,6 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRU
     Assessment <- new("Assessment", Model = "SP_SS",
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
-    warning("Model did not properly converge. Check TMB objects (slots names: opt and SD).")
   } else {
     Yearplusone <- c(Year, max(Year) + 1)
     Yearrandom <- Year[2]:max(Year)
@@ -189,6 +195,7 @@ SP_SS <- function(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRU
                       B = structure(report$B, names = Yearplusone),
                       B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
                       B_B0 = structure(report$B/report$K, names = Yearplusone),
+                      VB = structure(report$B, names = Yearplusone),
                       VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
                       VB_VB0 = structure(report$B/report$K, names = Yearplusone),
                       Obs_Catch = structure(C_hist, names = Year),

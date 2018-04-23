@@ -4,8 +4,10 @@
 \alias{SCA}
 \title{Statistical catch-at-age (SCA) model with UMSY and MSY as leading parameters}
 \usage{
-SCA(x = 1, Data, U_begin = c("virgin", "est"), CAA_multiplier = 50,
-  start = NULL, silent = TRUE, ...)
+SCA(x = 1, Data, U_begin = c("virgin", "est"),
+  vulnerability = c("logistic", "dome"), SR = c("BH", "Ricker"),
+  CAA_multiplier = 50, start = NULL, silent = TRUE, control = list(),
+  ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for
@@ -17,11 +19,20 @@ assessments).}
 year of model. \code{"virgin"} fixes \code{U = 0} prior to year 1 while \code{"est"} will
 estimate it.}
 
+\item{vulnerability}{Whether estimated vulnerability is logistic or dome (double-normal).
+See details for parameterization.}
+
+\item{SR}{Stock-recruit function (currently only supports Beverton-Holt).}
+
 \item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix. See details.}
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{silent}{(TRUE/FALSE) Whether TMB should print output. Used for dignostics.}
+\item{silent}{(TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+will print trace information during optimization. Used for dignostics for model convergence.}
+
+\item{control}{A named list of parameters regarding optimization to be passed to
+\code{\link[stats]{nlminb}}.}
 
 \item{...}{Other arguments to be passed.}
 }
@@ -29,7 +40,8 @@ estimate it.}
 An object of class \linkS4class{Assessment}.
 }
 \description{
-Statistical catch-at-age (SCA) model with UMSY and MSY as leading parameters
+A generic statistical catch-at-age model. The parameterization by Forrest et al. (2008)
+is used which generally results in faster convergence.
 }
 \details{
 For the SCA model, the basic data inputs are catch (by weight), index
@@ -44,9 +56,31 @@ and is manipulated via argument \code{CAA_multiplier}. This argument is
 interpreted in two different ways depending on the value provided.
 If \code{CAA_multiplier > 1}, then this value will cap the annual sample sizes
 to that number. If \code{CAA_multiplier <= 1}, then all the annual samples sizes
-will be re-scaled by that number. By default, sample sizes are capped at 100.
+will be re-scaled by that number. By default, sample sizes are capped at 50.
 
-For \code{start}, a list of starting values
+Recruitment deviations are estimated beginning in the year when age composition are available.
+
+Vulnerability can be specified to be either logistic or dome. If logistic, then the model
+vector \code{vul_par} is of length 2, containing the ages of 50% and 95% vulnerability,
+respectively. The age of 95% vulnerability is an offset, i.e.,
+\code{vul_95 = vul_par[1] + exp(vul_par[2])}.
+
+With dome vulnerability,
+
+For \code{start}, a named list of starting values of estimates for:
+\itemize{
+\item \code{UMSY}
+\item \code{MSY}
+\item \code{U_equilibrium} (typically 0). See \code{U_begin} argument.
+\item \code{vul_par} (length 2 vector for logistic or length 4 for dome).
+\item \code{tau} the standard deviation of the log-recruitment deviations. The observation
+error of the index is fixed based on the value of \code{CV_Ind} in the Data object, and
+weighting of the catch-at-age is handled by argument \code{CAA_multiplier}.
+}
+}
+\note{
+Convergence problems may occur if perfect data are used (i.e., \code{Data@CV_Ind}
+is very low).
 }
 \references{
 Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008.

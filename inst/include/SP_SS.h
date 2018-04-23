@@ -6,6 +6,7 @@
   DATA_VECTOR(C_hist);
   DATA_VECTOR(I_hist);
   DATA_INTEGER(ny);
+  DATA_VECTOR(est_B_dev);
   DATA_VECTOR_INDICATOR(keep, I_hist);
 
   PARAMETER(logit_UMSY);
@@ -37,7 +38,9 @@
     U(y) = C_hist(y)/B(y);
     Type B_test = B(y) + gamma * MSY * (B(y)/K - pow(B(y)/K, n)) - C_hist(y);
     B(y+1) = CppAD::CondExpGt(B_test, Type(1e-15), B_test, Type(1e-15));
-	  if(y<ny-1) B(y+1) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
+	  if(y<ny-1) {
+	    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y+1) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
+	  }
   }
 
   Type q = calc_q(I_hist, B);
@@ -48,7 +51,9 @@
 
   for(int y=0;y<ny;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= keep(y) * dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
-    if(y<ny-1) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
+    if(y<ny-1) {
+      if(!R_IsNA(asDouble(est_B_dev(y)))) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
+    }
   }
 
   Type nll = nll_comp.sum();
