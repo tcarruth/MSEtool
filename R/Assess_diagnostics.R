@@ -39,45 +39,45 @@ plot_diagnostics <- function(MSE, DLMenv = DLMtool::DLMenv, gradient_threshold =
   MPs_in_env <- vapply(MPs, function(x) any(grepl(x, env_objects)), logical(1))
   MPs <- MPs[MPs_in_env]
 
-  get_convergence_code <- function(x) {
-    vapply(x, function(y) ifelse(is.character(y@opt), 1L, y@opt$convergence), numeric(1))
-  }
-  get_hessian_code <- function(x) {
-    vapply(x, function(y) ifelse(is.character(y@SD), FALSE, y@SD$pdHess), logical(1))
-  }
-
-  get_max_gr <- function(x) {
-    vapply(x, function(y) ifelse(is.character(y@SD), 1e10, max(abs(y@SD$gradient.fixed))), numeric(1))
+  get_code <- function(x, y) {
+    res <- x[names(x) == y]
+    do.call(c, res)
   }
 
   message(paste("Creating plots for MP:", paste(MPs, collapse = " ")))
   for(i in 1:length(MPs)) {
-    objects_vec <- paste0(c("Assessment_report_", "opt_time_"), MPs[i])
+    objects_vec <- paste0(c("Assessment_report_", "diagnostic_"), MPs[i])
     objects <- mget(objects_vec, envir = DLMenv, ifnotfound = list(NULL))
 
     Assessment_report <- objects[[1]]
-    opt_time <- objects[[2]]
+    diagnostic <- objects[[2]]
 
-    if(!is.null(Assessment_report)) {
-      if(!is.null(opt_time)) {
-        layout(matrix(c(1, 2, 3, 4, 4, 5), ncol = 3, byrow = TRUE))
-      } else par(mfrow = c(1, 3))
-      par(oma = c(0, 0, 2, 0))
+    if(!is.null(diagnostic)) {
+      #if(!is.null(opt_time)) {
+      #  layout(matrix(c(1, 2, 3, 4, 4, 5), ncol = 3, byrow = TRUE))
+      #} else par(mfrow = c(1, 3))
+      #par(oma = c(0, 0, 2, 0))
+      par(mar = c(5, 4, 1, 1), oma = c(0, 0, 2, 0))
+      layout(matrix(c(1, 2, 3, 4, 4, 5), ncol = 3, byrow = TRUE))
 
-      convergence_code <- lapply(Assessment_report, get_convergence_code)
+      convergence_code <- lapply(diagnostic, get_code, y = "conv")
       plot_convergence(convergence_code, "converge")
 
-      hessian_code <- lapply(Assessment_report, get_hessian_code)
+      hessian_code <- lapply(diagnostic, get_code, y = "hess")
       plot_convergence(hessian_code, "hessian")
 
-      max_gr <- lapply(Assessment_report, get_max_gr)
+      max_gr <- lapply(diagnostic, get_code, y = "maxgrad")
       plot_max_gr(max_gr, gradient_threshold)
-    }
 
-    if(!is.null(opt_time)) {
+      opt_time <- lapply(diagnostic, get_code, y = "timing")
       plot_time(opt_time, "line")
       plot_time(opt_time, "hist")
     }
+
+    #if(!is.null(opt_time)) {
+    #  plot_time(opt_time, "line")
+    #  plot_time(opt_time, "hist")
+    #}
     title(paste(MPs[i], "management procedure"), outer = TRUE)
   }
 
@@ -300,21 +300,32 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv) {
 
   Assessment_report <- get0(paste0("Assessment_report_", MP), envir = DLMenv,
                             ifnotfound = vector("list", nsim))
-  opt_time <- get0(paste0("opt_time_", MP), envir = DLMenv,
-                   ifnotfound = vector("list", nsim))
+  diagnostic <- get0(paste0("diagnostic_", MP), envir = DLMenv,
+                     ifnotfound = vector("list", nsim))
 
   # Update reporting objects
-  if(inherits(Assessment, "Assessment")) { # Remove some objects to save memory/disk space
+  if(inherits(Assessment, "Assessment")) {
+    conv <- ifelse(is.character(Assessment@opt), 1L, Assessment@opt$convergence)
+    hess <- ifelse(is.character(Assessment@SD), FALSE, Assessment@SD$pdHess)
+    maxgrad <- ifelse(is.character(Assessment@SD), 1e10, max(abs(Assessment@SD$gradient.fixed)))
+    dg <- list(conv = conv, hess = hess, maxgrad = maxgrad)
+
+    # Remove some objects to save memory/disk space
     Assessment@obj <- Assessment@info <- Assessment@TMB_report <- list()
     Assessment@SD <- ""
     Assessment@Data <- new("Data", stock = "MSE")
+  } else {
+    dg <- list(conv = 1L, hess = FALSE, maxgrad = 1e10)
   }
+
+  dg$timing <- ifelse(is.null(opt_timing), NA, as.numeric(opt_timing))
+
   Assessment_report[[x]] <- c(Assessment_report[[x]], Assessment)
-  opt_time[[x]] <- c(opt_time[[x]], opt_timing)
+  diagnostic[[x]] <- c(diagnostic[[x]], dg)
 
   # Assign report objects to DLMenv
   assign(paste0("Assessment_report_", MP), Assessment_report, envir = DLMenv)
-  assign(paste0("opt_time_", MP), opt_time, envir = DLMenv)
+  assign(paste0("diagnostic_", MP), diagnostic, envir = DLMenv)
 
   return(invisible())
 }
