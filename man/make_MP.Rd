@@ -39,5 +39,5 @@ plot_diagnostic()
 SP_MSY <- make_MP(SP, HCR_MSY, Binit_frac = 0.5)
 }
 \seealso{
-\link{plot_diagnostic}
+\link{plot_diagnostics}
 }
