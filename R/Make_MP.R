@@ -26,7 +26,7 @@
 #' # MP that uses a surplus production model which assumes Binit_frac = 0.5.
 #' SP_MSY <- make_MP(SP, HCR_MSY, Binit_frac = 0.5)
 #' @importFrom pryr make_function
-#' @seealso \link{plot_diagnostic}
+#' @seealso \link{plot_diagnostics}
 #' @export
 make_MP <- function(.Assess, .HCR, diagnostic = TRUE, ...) {
   if(is.character(.Assess)) {
