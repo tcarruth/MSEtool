@@ -198,6 +198,9 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   #recs<-aggregate(replist$recruit$dev,list(rind),mean,na.rm=T)$x
   recs <- replist$recruit$dev
   recs<-recs[!is.na(recs)&recs!=0]
+  if(length(recs)==0){
+    recs<-rep(0,maxage+nyears-2)# if rec devs aren't estimated
+  }
   nrecs<-length(recs)
   recdevs<-rep(0,nyears+maxage-1)
   recdevs[(nyears+maxage)-(nrecs:1)]<-recs# last year is mean recruitment
@@ -205,11 +208,13 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   recdevs<-replist[length(replist$recruit$dev)-nyears]
   recdevs[is.na(recdevs)]<-0
   #OM@AC<-rep(acf(recdevs[!is.na(recdevs)],plot=F)$acf[2,1,1],2)
-  OM@AC <- rep(acf(recs, plot = FALSE)$acf[2,1,1], 2)
+  AC<-acf(recs, plot = FALSE)$acf[2,1,1]
+  if(is.na(AC))AC=0 # if no recruitment devs are estimated
+  OM@AC <- rep(AC, 2)
 
   Perr<-array(NA,c(nsim,nyears+proyears+maxage-1))
-  Perr[,1:(maxage+nyears-2)]<-matrix(rnorm(nsim*(maxage+nyears-2),rep(rec,each=nsim),0.2),nrow=nsim) # generate a bunch of simulations with uncertainty
-  procsd<-apply(Perr,1,sd,na.rm=T)
+  Perr[,1:(maxage+nyears-2)]<-matrix(rep(recs,each=nsim),nrow=nsim) # generate a bunch of simulations with uncertainty
+  #procsd<-apply(Perr,1,sd,na.rm=T)
   #OM@Perr<-quantile(procsd,c(0.025,0.975)) # uniform range is a point estimate from assessment MLE
   procsd <- replist$sigma_R_in
   OM@Perr <- rep(procsd, 2)
