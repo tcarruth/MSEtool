@@ -103,7 +103,8 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   surv<-c(1,exp(cumsum(-c(M[2:maxage]))))# currently M and survival ignore age 0 fish
   #OM@M<-rep(sum(M[2:maxage]*surv[2:maxage])/sum(surv[2:maxage]),2)
-  OM@M2 <- OM@M <- M
+  OM@M <- M
+  OM@M2 <-OM@M+0.001
   SSB<-replist$recruit$spawn_bio[1:nyears]
 
   res<-try(SSB0<-as.numeric(replist$Dynamic_Bzero$SPB[replist$Dynamic_Bzero$Era=="VIRG"]),silent=T)
@@ -226,7 +227,7 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   procsd <- replist$sigma_R_in
   OM@Perr <- rep(procsd, 2)
   procmu <- -0.5 * (procsd)^2  # adjusted log normal mean
-  Perr <- array(NA, c(nsim, nyears+proyears+maxage-1))
+  #Perr <- array(NA, c(nsim, nyears+proyears+maxage-1))
   Perr[,(maxage+nyears-2)+(1:(proyears+1))]<-matrix(rnorm(nsim*(proyears+1),rep(procmu,proyears+1),rep(procsd,proyears+1)),nrow=nsim)
   AC<-mean(OM@AC)
   for (y in (nyears-1):(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
