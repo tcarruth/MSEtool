@@ -158,7 +158,8 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   ages<-growdat$Age
   cols<-match(ages,names(replist$Z_at_age))
-  F_at_age=t(replist$Z_at_age[,cols]-replist$M_at_age[,cols])
+  rows<-replist$Z_at_age$Gender == 1
+  F_at_age=t(replist$Z_at_age[rows,cols]-replist$M_at_age[rows,cols])
   F_at_age[nrow(F_at_age),]<-F_at_age[nrow(F_at_age)-1,]# ad-hoc mirroring to deal with SS missing predicitons of F in terminal age
   Ftab<-cbind(expand.grid(1:dim(F_at_age)[1],1:dim(F_at_age)[2]),as.vector(F_at_age))
 
@@ -171,7 +172,7 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   sumF<-Ftab[Ftab[, 2]<=nyears,] # generic solution: delete partial observation of final F predictions in seasonal model (last season of last year is NA)
   V <- array(NA, dim = c(nsim, maxage, nyears + proyears))
-  V[,,1:nyears] <- array(sumF[,3], dim = c(nsim, maxage, nyears))
+  V[,,1:nyears] <- array(rep(sumF[,3],each=nsim), dim = c(nsim, maxage, nyears))
   #V[,,1:(nyears-1)]<-rep(sumF[,3],each=nsim) # for some reason SS doesn't predict F in final year
   V[,,nyears:(nyears+proyears)]<-V[,,nyears]
 
