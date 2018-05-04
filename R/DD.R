@@ -9,11 +9,15 @@
 #' @param x An index for the objects in \code{Data} when running in closed loop simulation.
 #' Otherwise, equals to 1 when running an assessment.
 #' @param Data An object of class \linkS4class{Data}.#'
-#' @param start Optional list of starting values. See details.
-#' @param silent (TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+#' @param start Optional list of starting values. See details.#'
+#' @param tau The standard deviation of the recruitment deviations in \code{DD_SS}
+#' from the estimated stock-recruit relationship (by default, euqal to one).
+#' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param control A named list of parameters regarding optimization to be passed to
 #' \code{\link[stats]{nlminb}}.
+#' @param inner.control A named list of arguments for optimization of the random effects, which
+#' is passed on to \code{\link[TMB]{newton}}.
 #' @param ... Additional arguments (not currently used).
 #' @return An object of \code{\linkS4class{Assessment}} containing objects and output
 #' from TMB.
@@ -55,7 +59,7 @@
 #' summary(res@@SD) # Look at parameter estimates
 #' @useDynLib MSEtool
 #' @export
-DD_TMB <- function(x, Data, start = NULL, silent = TRUE, control = list(), ...) {
+DD_TMB <- function(x, Data, start = NULL, silent = TRUE, control = list(eval.max = 1e3), ...) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
@@ -148,7 +152,8 @@ class(DD_TMB) <- "Assess"
 
 #' @describeIn DD_TMB State-Space version of Delay-Difference model
 #' @export
-DD_SS <- function(x, Data, start = NULL, silent = TRUE, control = list(), ...) {
+DD_SS <- function(x, Data, start = NULL, silent = TRUE, tau = 1, control = list(eval.max = 1e3),
+                  inner.control = list(), ...) {
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
@@ -190,18 +195,17 @@ DD_SS <- function(x, Data, start = NULL, silent = TRUE, control = list(), ...) {
     params$log_MSY <- log(3 * AvC)
   }
   if(is.null(params$log_q)) params$log_q <- log(Data@Mort[x])
-  if(is.null(params$log_tau)) params$log_tau <- log(0.3)
 
   sigmaC <- max(0.05, sdconv(1, Data@CV_Cat[x]))
-
-  params$log_sigma = log(sigmaC)
+  params$log_sigma <- log(sigmaC)
+  params$log_tau <- log(tau)
   params$log_rec_dev = rep(0, ny - k)
   info <- list(Year = Year, data = data, params = params, sigma = sigmaC,
                I_hist = I_hist, control = control)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = "log_rec_dev",
-                   map = list(log_sigma = factor(NA)), checkParameterOrder = FALSE,
-                   DLL = "MSEtool", silent = silent)
+                   map = list(log_tau = factor(NA)), checkParameterOrder = FALSE,
+                   DLL = "MSEtool", inner.control = inner.control, silent = silent)
   opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)

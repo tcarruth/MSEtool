@@ -149,6 +149,7 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
 })
 
 
+# Define global variables
 Model <- UMSY <- FMSY <- MSY <- BMSY <- SSBMSY <- VBMSY <- B0 <- R0 <- N0 <- SSB0 <- VB0 <- h <- U <-
   U_UMSY <- F <- F_FMSY <- B <- B_BMSY <- B_B0 <- SSB <- SSB_SSBMSY <- SSB_SSB0 <- VB_VBMSY <- VB_VB0 <-
   R <- N <- N_at_age <- Selectivity <- Obs_Catch <- Obs_Index <- Obs_C_at_age <- Catch <- Index <-
