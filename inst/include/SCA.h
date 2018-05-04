@@ -66,9 +66,9 @@
   }
   for(int a=0;a<max_age;a++) {
     N(0,a) = R(0) * NPR_equilibrium(a);
-	  B(0) += N(0,a) * weight(a);
-	  VB(0) += N(0,a) * weight(a) * vul(a);
-	  E(0) += N(0,a) * weight(a) * mat(a);
+    B(0) += N(0,a) * weight(a);
+    VB(0) += N(0,a) * weight(a) * vul(a);
+    E(0) += N(0,a) * weight(a) * mat(a);
   }
 
   // Loop over all other years

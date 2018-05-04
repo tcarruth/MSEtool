@@ -2,8 +2,7 @@
 #'
 #' A generic statistical catch-at-age model that uses catch, index, and catch-at-age composition
 #' data. An annual harvest rate is calculated (assuming a pulse fishery) in lieu of an instantaneous
-#' fishing mortality rate from continuous fishing as described in Forrest et al. (2008). Recruitment
-#' deviations are estimated beginning in the year when age composition data are available. There are
+#' fishing mortality rate from continuous fishing as described in Forrest et al. (2008). There are
 #' several parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
 #' and reference points (see functions section below).
 #'
@@ -45,8 +44,6 @@
 #' If \code{CAA_multiplier > 1}, then this value will cap the annual sample sizes
 #' to that number. If \code{CAA_multiplier <= 1}, then all the annual samples sizes
 #' will be re-scaled by that number. By default, sample sizes are capped at 50.
-#'
-#' Recruitment deviations are estimated beginning in the year when age composition are available.
 #'
 #' Vulnerability can be specified to be either logistic or dome. If logistic, then the model
 #' vector \code{vul_par} is of length 2, containing the ages of 50\% and 95\% vulnerability,
@@ -127,7 +124,7 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
 	  if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
 	  if(!is.null(start$vulnerability) && is.numeric(start$vulnerability)) params$vul_par <- start$vul_par
   }
-  if(is.null(params$log_meanR)) params$log_meanR <- 2e3
+  if(is.null(params$log_meanR)) params$log_meanR <- log(2e3)
 	if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
   if(is.null(params$vul_par)) {
     CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
@@ -151,13 +148,8 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
 
   map <- list(log_tau = factor(NA), log_sigma = factor(NA))
   if(U_begin == "virgin") map$U_equilibrium <- factor(NA)
-  if(any(is.na(CAA_n_nominal))) {
-    map$log_rec_dev <- random_map(CAA_n_nominal)
-  }
   random <- NULL
   if(integrate) random <- "log_rec_dev"
-
-  browser()
 
   obj <- MakeADFun(data = info$data, parameters = info$params,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
@@ -168,8 +160,7 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
     Assessment <- new("Assessment", Model = "SCA", info = info,
                       obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
-  }
-  else {
+  } else {
     refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
                        SSB0 = report$E[1], R0 = report$R[1], M = M, weight = Wa, mat = mat_age, vul = report$vul,
                        SR = SR)

@@ -58,8 +58,7 @@ An object of class \linkS4class{Assessment}.
 \description{
 A generic statistical catch-at-age model that uses catch, index, and catch-at-age composition
 data. An annual harvest rate is calculated (assuming a pulse fishery) in lieu of an instantaneous
-fishing mortality rate from continuous fishing as described in Forrest et al. (2008). Recruitment
-deviations are estimated beginning in the year when age composition data are available. There are
+fishing mortality rate from continuous fishing as described in Forrest et al. (2008). There are
 several parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
 and reference points (see functions section below).
 }
@@ -77,8 +76,6 @@ interpreted in two different ways depending on the value provided.
 If \code{CAA_multiplier > 1}, then this value will cap the annual sample sizes
 to that number. If \code{CAA_multiplier <= 1}, then all the annual samples sizes
 will be re-scaled by that number. By default, sample sizes are capped at 50.
-
-Recruitment deviations are estimated beginning in the year when age composition are available.
 
 Vulnerability can be specified to be either logistic or dome. If logistic, then the model
 vector \code{vul_par} is of length 2, containing the ages of 50\% and 95\% vulnerability,
@@ -112,6 +109,7 @@ For \code{start}, a named list of starting values of estimates for:
 assessment run, assuming that the recruitment in the first year of the model is the virgin recruitment.
 
 \item \code{SCA2}: The parameterization by Forrest et al. (2008) is used where UMSY and MSY are leading parameters.
+Recruitment deviations are only estimated beginning in the year when age composition are available.
 }}
 
 \note{

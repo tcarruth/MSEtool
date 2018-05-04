@@ -1,4 +1,5 @@
 #' @describeIn SCA The parameterization by Forrest et al. (2008) is used where UMSY and MSY are leading parameters.
+#' Recruitment deviations are only estimated beginning in the year when age composition are available.
 #' @export
 SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("logistic", "dome"),
                  SR = c("BH", "Ricker"), CAA_multiplier = 50, start = NULL, tau = 1, integrate = TRUE,
