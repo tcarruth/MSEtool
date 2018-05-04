@@ -27,9 +27,19 @@ Type objective_function<Type>::operator() ()
             } else 
 			  if(model == "SCA") {
 			    #include "../inst/include/SCA.h"
-			  } else {
-              error("No model found.");
-			  }
+			  } else 
+				if(model == "SCA2") {
+			      #include "../inst/include/SCA2.h"
+			    } else {
+                  error("No model found.");
+			    }
 
   return 0;
 }
+
+
+
+
+
+
+

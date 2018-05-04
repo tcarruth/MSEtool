@@ -1,7 +1,7 @@
+
 //template<class Type>
 //Type objective_function<Type>::operator() ()
 //{
-
   DATA_VECTOR(C_hist);    // Total catch
   DATA_VECTOR(I_hist);    // Index
   DATA_MATRIX(CAA_hist);  // Catch-at-age proportions
@@ -14,15 +14,18 @@
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
-  PARAMETER(log_meanR);
+  PARAMETER(logit_UMSY);
+  PARAMETER(log_MSY);
   PARAMETER(U_equilibrium);
+
   PARAMETER_VECTOR(vul_par);
 
   PARAMETER(log_sigma);
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_rec_dev);
 
-  Type meanR = exp(log_meanR);
+  Type UMSY = 1/(1 + exp(-logit_UMSY));
+  Type MSY = exp(log_MSY);
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
 
@@ -36,9 +39,39 @@
 
   ////// Equilibrium reference points and per-recruit quantities
   vector<Type> NPR_virgin(max_age);
+  vector<Type> NPR_UMSY(max_age);
+  vector<Type> deriv_NPR_UMSY(max_age);
+
   NPR_virgin = calc_NPR(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
+  NPR_UMSY = calc_NPR(UMSY, vul, M, max_age);                          // Numbers-per-recruit at U = UMSY
+  deriv_NPR_UMSY = calc_deriv_NPR(UMSY, NPR_UMSY, vul, M, max_age);    // Derivative of NPR wrt to U at UMSY
+  Type EPR_UMSY = sum_EPR(NPR_UMSY, weight, mat);                      // Egg-per-recruit at UMSY
+  Type VBPR_UMSY = sum_VBPR(NPR_UMSY, weight, vul);                    // Vulnerable biomass-per-recruit at UMSY
+  Type deriv_EPR_UMSY = sum_EPR(deriv_NPR_UMSY, weight, mat);          // Derivative of egg-per-recruit at UMSY
+  Type deriv_VBPR_UMSY = sum_VBPR(deriv_NPR_UMSY, weight, vul);        // Derivative of vulnerable biomass-per-recruit at UMSY
+
+  // MSY reference points
+  Type VBMSY = MSY/UMSY;
+  Type RMSY = VBMSY/VBPR_UMSY;
+  Type BMSY = RMSY * sum_BPR(NPR_UMSY, weight);
+  Type EMSY = RMSY * EPR_UMSY;
+
   // Virgin reference points and stock-recruit parameters
-  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);                        // Egg-per-recruit at U = 0
+  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
+
+  Type k1 = deriv_EPR_UMSY/EPR_UMSY;
+  Type k2 = deriv_VBPR_UMSY/VBPR_UMSY;
+  Type Arec = (1 - k1 * UMSY + k2 * UMSY)/(EPR_UMSY * (1 + k2 * UMSY));
+  Type Brec = (Arec * EPR_UMSY - 1)/(RMSY * EPR_UMSY);
+
+  Type CR = Arec * EPR0;
+  Type h = CR/(4 + CR);
+
+  Type R0 = (Arec * EPR0 - 1)/(Brec * EPR0);
+  Type B0 = R0 * sum_BPR(NPR_virgin, weight);
+  Type N0 = R0 * NPR_virgin.sum();
+  Type E0 = R0 * EPR0;
+  Type VB0 = R0 * sum_VBPR(NPR_virgin, weight, vul);
 
   ////// During time series year = 1, 2, ..., n_y
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
@@ -59,23 +92,23 @@
   // Equilibrium quantities (leading into first year of model)
   vector<Type> NPR_equilibrium(max_age);
   NPR_equilibrium = calc_NPR(U_equilibrium, vul, M, max_age);
+  Type EPR_equilibrium = sum_EPR(NPR_equilibrium, weight, mat);
+  Type R_equilibrium = CppAD::CondExpGt((Arec * EPR_equilibrium - 1)/(Brec * EPR_equilibrium), Type(1e-8),
+                                        (Arec * EPR_equilibrium - 1)/(Brec * EPR_equilibrium), Type(1e-8));
 
-  R(0) = meanR;
-  if(!R_IsNA(asDouble(est_rec_dev(0)))) {
-    R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
-  }
+  R(0) = R_equilibrium;
   for(int a=0;a<max_age;a++) {
-    N(0,a) = R(0) * NPR_equilibrium(a);
-	  B(0) += N(0,a) * weight(a);
-	  VB(0) += N(0,a) * weight(a) * vul(a);
-	  E(0) += N(0,a) * weight(a) * mat(a);
+    N(0,a) = R_equilibrium * NPR_equilibrium(a);
+	B(0) += N(0,a) * weight(a);
+	VB(0) += N(0,a) * weight(a) * vul(a);
+	E(0) += N(0,a) * weight(a)* mat(a);
   }
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
-    R(y+1) = meanR;
+    R(y+1) = CppAD::CondExpGt(BH_SR(E(y), h, R0, E0), Type(1e-8), BH_SR(E(y), h, R0, E0), Type(1e-8));
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y) - 0.5 * pow(tau, 2));
     }
     N(y+1,0) = R(y+1);
 
@@ -111,19 +144,61 @@
 	    loglike_CAApred(a) = CAApred(y,a)/CN(y);
 	  }
 	  if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
-	  if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
+	  if(y>0) {
+	    if(!R_IsNA(asDouble(est_rec_dev(y-1)))) nll_comp(2) -= dnorm(log_rec_dev(y-1), Type(0), tau, true);
+	  }
   }
 
-  Type nll = nll_comp.sum();
+  // Very large penalties to likelihood if stock-recruitment parameters (a and b) are negative.
+  Type penalty = CppAD::CondExpLe(Arec, Type(0), Type(1e5), Type(0));
+  penalty += CppAD::CondExpLe(Brec, Type(0), Type(1e5), Type(0));
 
-  ADREPORT(meanR);
+  Type nll = nll_comp.sum() + penalty;
+
+  Type U_UMSY_final = U(U.size()-1)/UMSY;
+  Type B_BMSY_final = B(B.size()-1)/BMSY;
+  Type B_B0_final = B(B.size()-1)/B0;
+  Type E_EMSY_final = E(E.size()-1)/EMSY;
+  Type E_E0_final = E(E.size()-1)/E0;
+  Type VB_VBMSY_final = VB(VB.size()-1)/VBMSY;
+  Type VB_VB0_final = VB(VB.size()-1)/VB0;
+
+  ADREPORT(UMSY);
+  ADREPORT(MSY);
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
+  ADREPORT(U_UMSY_final);
+  ADREPORT(B_BMSY_final);
+  ADREPORT(B_B0_final);
+  ADREPORT(E_EMSY_final);
+  ADREPORT(E_E0_final);
+  ADREPORT(VB_VBMSY_final);
+  ADREPORT(VB_VB0_final);
 
   REPORT(NPR_virgin);
+  REPORT(NPR_UMSY);
+  REPORT(deriv_NPR_UMSY);
+  REPORT(EPR_UMSY);
+  REPORT(VBPR_UMSY);
+  REPORT(deriv_EPR_UMSY);
+  REPORT(deriv_VBPR_UMSY);
+  REPORT(UMSY);
+  REPORT(MSY);
+  REPORT(VBMSY);
+  REPORT(RMSY);
+  REPORT(BMSY);
+  REPORT(EMSY);
+  REPORT(Arec);
+  REPORT(Brec);
   REPORT(EPR0);
-  REPORT(meanR);
+  REPORT(CR);
+  REPORT(h);
+  REPORT(R0);
+  REPORT(B0);
+  REPORT(N0);
+  REPORT(E0);
+  REPORT(VB0);
 
   REPORT(vul_par);
   REPORT(vul);
@@ -141,8 +216,7 @@
   REPORT(log_rec_dev);
   REPORT(nll_comp);
   REPORT(nll);
+  REPORT(penalty);
 
   return nll;
 //}
-
-
