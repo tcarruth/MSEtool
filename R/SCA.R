@@ -127,7 +127,7 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
 	  if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
 	  if(!is.null(start$vulnerability) && is.numeric(start$vulnerability)) params$vul_par <- start$vul_par
   }
-  if(is.null(params$log_meanR)) params$log_meanR <- 2e3
+  if(is.null(params$log_meanR)) params$log_meanR <- log(2e3)
 	if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
   if(is.null(params$vul_par)) {
     CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
@@ -157,8 +157,6 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
   random <- NULL
   if(integrate) random <- "log_rec_dev"
 
-  browser()
-
   obj <- MakeADFun(data = info$data, parameters = info$params,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
   opt <- optimize_TMB_model(obj, control)
@@ -168,8 +166,7 @@ SCA <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("lo
     Assessment <- new("Assessment", Model = "SCA", info = info,
                       obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
-  }
-  else {
+  } else {
     refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
                        SSB0 = report$E[1], R0 = report$R[1], M = M, weight = Wa, mat = mat_age, vul = report$vul,
                        SR = SR)
