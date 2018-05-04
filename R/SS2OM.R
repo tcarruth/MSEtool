@@ -20,7 +20,7 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   message("-- Using function SS_output of package r4ss to extract data from SS file structure --")
 
-  replist <- r4ss::SS_output(dir=SSdir,covar=FALSE,ncols=1000,printstats=printstats,verbose=verbose)
+  replist <- r4ss::SS_output(dir=SSdir,covar=FALSE,ncols=1000,printstats=printstats,verbose=verbose,forecast=FALSE)
   #replistB <- SS_output(dir="F:/Base",covar=F,ncols=1000,printstats=printstats,verbose=verbose)
   #replistY <- SS_output(dir="F:/Base3",covar=F,ncols=1000,printstats=printstats,verbose=verbose)
 
@@ -103,13 +103,18 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   surv<-c(1,exp(cumsum(-c(M[2:maxage]))))# currently M and survival ignore age 0 fish
   #OM@M<-rep(sum(M[2:maxage]*surv[2:maxage])/sum(surv[2:maxage]),2)
-  OM@M2 <- OM@M <- M
-  SSB0<-as.numeric(replist$Dynamic_Bzero$SPB[replist$Dynamic_Bzero$Era=="VIRG"])
+  OM@M <- M
+  OM@M2 <-OM@M+0.001
+  SSB<-replist$recruit$spawn_bio[1:nyears]
+
+  res<-try(SSB0<-as.numeric(replist$Dynamic_Bzero$SPB[replist$Dynamic_Bzero$Era=="VIRG"]),silent=T)
+  if(inherits(res, "try-error"))SSB0<-SSB[1]
+
   SpR<-sum(Wt*Mat*surv)
   OM@R0<-SSB0/SpR
 
-  SSB<-replist$recruit$spawn_bio
-  rec<-replist$recruit$pred_recr
+
+  rec<-replist$recruit$pred_recr[1:nyears]
   SSBpR<-SSB[1]/rec[1]
   hs<-SRopt(nsim,SSB,rec,SSBpR,plot=FALSE,type="BH")
   OM@h<-quantile(hs,c(0.025,0.975))
@@ -158,7 +163,9 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   ages<-growdat$Age
   cols<-match(ages,names(replist$Z_at_age))
-  F_at_age=t(replist$Z_at_age[,cols]-replist$M_at_age[,cols])
+  rows<-replist$Z_at_age$Gender == 1 & replist$Z_at_age$Bio_Pattern==1
+  F_at_age=t(replist$Z_at_age[rows,cols]-replist$M_at_age[rows,cols])
+  F_at_age[F_at_age<1E-5]<-1E-5
   F_at_age[nrow(F_at_age),]<-F_at_age[nrow(F_at_age)-1,]# ad-hoc mirroring to deal with SS missing predicitons of F in terminal age
   Ftab<-cbind(expand.grid(1:dim(F_at_age)[1],1:dim(F_at_age)[2]),as.vector(F_at_age))
 
@@ -169,9 +176,11 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   #  sumF<-Ftab
   #}
 
-  sumF<-Ftab[Ftab[, 2]<=nyears,] # generic solution: delete partial observation of final F predictions in seasonal model (last season of last year is NA)
+  Ftab<-Ftab[Ftab[, 2]<=nyears,]
+  Ftab[Ftab[,3]<0,3]<-0
+  sumF<- Ftab# generic solution: delete partial observation of final F predictions in seasonal model (last season of last year is NA)
   V <- array(NA, dim = c(nsim, maxage, nyears + proyears))
-  V[,,1:nyears] <- array(sumF[,3], dim = c(nsim, maxage, nyears))
+  V[,,1:nyears] <- array(rep(sumF[,3],each=nsim), dim = c(nsim, maxage, nyears))
   #V[,,1:(nyears-1)]<-rep(sumF[,3],each=nsim) # for some reason SS doesn't predict F in final year
   V[,,nyears:(nyears+proyears)]<-V[,,nyears]
 
@@ -195,25 +204,30 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   #rind<-rep(1:1000,each=nseas)[1:length(replist$recruit$dev)]
   #recs<-aggregate(replist$recruit$dev,list(rind),mean,na.rm=T)$x
-  recs <- replist$recruit$dev
-  recs<-recs[!is.na(recs)&recs!=0]
+  recs<-rep(0,maxage+nyears-2)
+  age_rec_to_fishery<-max(replist$recruit$year+maxage)-(maxage+nyears-2)
+  if(min(replist$recruit$year)<0){ #year are relative to year 1
+    recs[replist$recruit$year+maxage-age_rec_to_fishery]<-replist$recruit$dev
+  }else{
+    recs[maxage+(0:(nyears-2))]<-replist$recruit$dev[1:(nyears-1)]
+  }
+  if(length(recs[!(recs==0|is.na(recs))])==0){
+    recs<-rep(0,maxage+nyears-2)# if rec devs aren't estimated
+    OM@AC <- rep(0, 2)
+  }else{
+    recs[is.na(recs)]<-0
+    OM@AC <- rep(acf(recs[recs!=0], plot = FALSE)$acf[2,1,1],2)
+  }
   nrecs<-length(recs)
-  recdevs<-rep(0,nyears+maxage-1)
-  recdevs[(nyears+maxage)-(nrecs:1)]<-recs# last year is mean recruitment
-  recdevs<-recdevs[1:(nyears+maxage-2)]
-  recdevs<-replist[length(replist$recruit$dev)-nyears]
-  recdevs[is.na(recdevs)]<-0
-  #OM@AC<-rep(acf(recdevs[!is.na(recdevs)],plot=F)$acf[2,1,1],2)
-  OM@AC <- rep(acf(recs, plot = FALSE)$acf[2,1,1], 2)
 
   Perr<-array(NA,c(nsim,nyears+proyears+maxage-1))
-  Perr[,1:(maxage+nyears-2)]<-matrix(rnorm(nsim*(maxage+nyears-2),rep(rec,each=nsim),0.2),nrow=nsim) # generate a bunch of simulations with uncertainty
-  procsd<-apply(Perr,1,sd,na.rm=T)
+  Perr[,1:(maxage+nyears-2)]<-matrix(rep(recs,each=nsim),nrow=nsim) # generate a bunch of simulations with uncertainty
+  #procsd<-apply(Perr,1,sd,na.rm=T)
   #OM@Perr<-quantile(procsd,c(0.025,0.975)) # uniform range is a point estimate from assessment MLE
   procsd <- replist$sigma_R_in
   OM@Perr <- rep(procsd, 2)
   procmu <- -0.5 * (procsd)^2  # adjusted log normal mean
-  Perr <- array(NA, c(nsim, nyears+proyears+maxage-1))
+  #Perr <- array(NA, c(nsim, nyears+proyears+maxage-1))
   Perr[,(maxage+nyears-2)+(1:(proyears+1))]<-matrix(rnorm(nsim*(proyears+1),rep(procmu,proyears+1),rep(procsd,proyears+1)),nrow=nsim)
   AC<-mean(OM@AC)
   for (y in (nyears-1):(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
@@ -234,7 +248,12 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   #plot(replist$cpue$Obs,replist$cpue$Exp)
 
   OM@Spat_targ<-rep(1,2)
-  OM@Esd<-quantile(apply((Find[,1:(nyears-1)]-Find[,2:nyears])/Find[,2:nyears],1,sd),c(0.05,0.95))
+  Fpos<-Find[,1:(nyears-1)]
+  Fpos<-Fpos[,apply(Fpos,2,sum)>0]
+  Fpos[Fpos==0]<-1E-5
+  ind1<-1:(ncol(Fpos)-1)
+  ind2<-2:ncol(Fpos)
+  OM@Esd<-quantile(apply((Fpos[,ind1]-Fpos[,ind2])/Fpos[,ind2],1,sd),c(0.05,0.95))
 
   OM@Period<-rep(NaN,2)
   OM@Amplitude<-rep(NaN,2)

@@ -29,6 +29,7 @@ mu<-function(x,mat,ind){
   log(mean(mat[x,ind]))
 }
 
+#' @export
 getinds<-function(PPD,styr,res, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("slp","AAV","mu","slp", "slp")){
 
   nsim<-dim(PPD@Cat)[1]
@@ -51,6 +52,7 @@ getinds<-function(PPD,styr,res, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("slp
 
 }
 
+#' @export
 CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),res){
 
   if(pp>1)namst<-paste(rep(dnam,pp),rep((1:pp)*res,each=length(dnam)))
@@ -95,6 +97,8 @@ CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),re
 
 }
 
+
+#' @importFrom diptest dip
 Probs<-function(indPPD,indData,alpha=0.05){
 
   ntsd<-dim(indPPD)[1]

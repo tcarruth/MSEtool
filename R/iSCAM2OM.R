@@ -120,7 +120,7 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   rec<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
   SSB<-(replist$mpd$sbt*1000)[1:length(rec)]
 
-  hs<-SRopt(nsim,SSB,rec,SSBpR,plot=F,type="BH")
+  hs<-SRopt(nsim,SSB,rec,SSBpR,plot=FALSE,type="BH")
   OM@h<-quantile(hs,c(0.025,0.975))
   OM@SRrel<-replist$mpd$rectype # This is the default
 
