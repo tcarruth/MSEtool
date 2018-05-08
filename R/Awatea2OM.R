@@ -98,7 +98,7 @@ Awatea2OM<-function(AwateaDir,nsim=48,proyears=50,Name=NULL,Source="No source pr
   projInd<-maxage+nyears+(0:(proyears-1))
 
   recdevs<-log(Recs/predR)
-  ACfunc<-function(x)acf(x,plot=F)$acf[2,1,1]
+  ACfunc<-function(x)acf(x,plot=FALSE)$acf[2,1,1]
   AC<-apply(recdevs,1,ACfunc)
   OM@AC<-range(AC)
   procsd<-apply(recdevs,1,sd,na.rm=T)

@@ -5,9 +5,11 @@
 \alias{DD_SS}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, start = NULL, silent = TRUE, control = list(), ...)
+DD_TMB(x, Data, start = NULL, silent = TRUE, control = list(eval.max =
+  1000), ...)
 
-DD_SS(x, Data, start = NULL, silent = TRUE, control = list(), ...)
+DD_SS(x, Data, start = NULL, silent = TRUE, tau = 1,
+  control = list(eval.max = 1000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -15,15 +17,21 @@ Otherwise, equals to 1 when running an assessment.}
 
 \item{Data}{An object of class \linkS4class{Data}.#'}
 
-\item{start}{Optional list of starting values. See details.}
+\item{start}{Optional list of starting values. See details.#'}
 
-\item{silent}{(TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+\item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
 
 \item{control}{A named list of parameters regarding optimization to be passed to
 \code{\link[stats]{nlminb}}.}
 
 \item{...}{Additional arguments (not currently used).}
+
+\item{tau}{The standard deviation of the recruitment deviations in \code{DD_SS}
+from the estimated stock-recruit relationship (by default, euqal to one).}
+
+\item{inner.control}{A named list of arguments for optimization of the random effects, which
+is passed on to \code{\link[TMB]{newton}}.}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output

@@ -30,14 +30,15 @@
   Type r = MSY * pow(n, n/(n-1)) / K;
 
   vector<Type> B(ny+1);
+  vector<Type> SP(ny);
   vector<Type> Ipred(ny);
   vector<Type> U(ny);
 
   B(0) = Binit_frac * K;
   for(int y=0;y<ny;y++) {
     U(y) = C_hist(y)/B(y);
-    Type B_test = B(y) + gamma * MSY * (B(y)/K - pow(B(y)/K, n)) - C_hist(y);
-    B(y+1) = CppAD::CondExpGt(B_test, Type(1e-15), B_test, Type(1e-15));
+    SP(y) = gamma * MSY * (B(y)/K - pow(B(y)/K, n));
+    B(y+1) = CppAD::CondExpGt(B(y) + SP(y) - C_hist(y), Type(1e-15), B(y) + SP(y) - C_hist(y), Type(1e-15));
 	  if(y<ny-1) {
 	    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y+1) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
 	  }
@@ -84,6 +85,7 @@
   REPORT(BMSY);
   REPORT(Ipred);
   REPORT(B);
+  REPORT(SP);
   REPORT(U);
   REPORT(log_B_dev);
   REPORT(nll_comp);
