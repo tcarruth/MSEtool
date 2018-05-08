@@ -51,7 +51,9 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
     OM@Name=Name
   }
 
-  OM@nyears<-nyears<-(replist$endyr-replist$startyr+1)#/nseas
+  mainyrs<-replist$startyr:replist$endyr
+
+  OM@nyears<-nyears<-length(mainyrs)#/nseas
   if(nseas==1){
     OM@CurrentYr<-replist$endyr
   }else{
@@ -66,6 +68,10 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   growdat<-getGpars(replist)
   OM@maxage<-maxage<-ceiling(length(growdat$Age))
   aind<-rep(1:OM@maxage,each=nseas)[1:length(growdat$Age)]
+
+  recyrs<-replist$recruit$year
+  totyrs<-(replist$startyr-maxage+1):replist$endyr
+  recind<-match(recyrs,totyrs)
 
   GP <- replist$Growth_Parameters
 
@@ -105,7 +111,8 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   #OM@M<-rep(sum(M[2:maxage]*surv[2:maxage])/sum(surv[2:maxage]),2)
   OM@M <- M
   OM@M2 <-OM@M+0.001
-  SSB<-replist$recruit$spawn_bio[1:nyears]
+  yind<-match(mainyrs,replist$recruit$year)
+  SSB<-replist$recruit$spawn_bio[yind]
 
   res<-try(SSB0<-as.numeric(replist$Dynamic_Bzero$SPB[replist$Dynamic_Bzero$Era=="VIRG"]),silent=T)
   if(inherits(res, "try-error"))SSB0<-SSB[1]
@@ -114,7 +121,7 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   OM@R0<-SSB0/SpR
 
 
-  rec<-replist$recruit$pred_recr[1:nyears]
+  rec<-replist$recruit$pred_recr[yind]
   SSBpR<-SSB[1]/rec[1]
   hs<-SRopt(nsim,SSB,rec,SSBpR,plot=FALSE,type="BH")
   OM@h<-quantile(hs,c(0.025,0.975))
@@ -204,15 +211,16 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
 
   #rind<-rep(1:1000,each=nseas)[1:length(replist$recruit$dev)]
   #recs<-aggregate(replist$recruit$dev,list(rind),mean,na.rm=T)$x
-  recs<-rep(0,maxage+nyears-2)
+  recs<-rep(0,maxage+nyears-1)
   age_rec_to_fishery<-max(replist$recruit$year+maxage)-(maxage+nyears-2)
   if(min(replist$recruit$year)<0){ #year are relative to year 1
     recs[replist$recruit$year+maxage-age_rec_to_fishery]<-replist$recruit$dev
   }else{
-    recs[maxage+(0:(nyears-2))]<-replist$recruit$dev[1:(nyears-1)]
+    recs[recind[!is.na(recind)]]<-replist$recruit$dev[!is.na(recind)]
   }
+
   if(length(recs[!(recs==0|is.na(recs))])==0){
-    recs<-rep(0,maxage+nyears-2)# if rec devs aren't estimated
+    recs<-rep(0,maxage+nyears-1)# if rec devs aren't estimated
     OM@AC <- rep(0, 2)
   }else{
     recs[is.na(recs)]<-0
@@ -221,7 +229,7 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   nrecs<-length(recs)
 
   Perr<-array(NA,c(nsim,nyears+proyears+maxage-1))
-  Perr[,1:(maxage+nyears-2)]<-matrix(rep(recs,each=nsim),nrow=nsim) # generate a bunch of simulations with uncertainty
+  Perr[,1:(maxage+nyears-1)]<-matrix(rep(recs,each=nsim),nrow=nsim) # generate a bunch of simulations with uncertainty
   #procsd<-apply(Perr,1,sd,na.rm=T)
   #OM@Perr<-quantile(procsd,c(0.025,0.975)) # uniform range is a point estimate from assessment MLE
   procsd <- replist$sigma_R_in
@@ -230,7 +238,7 @@ SS2OM<-function(SSdir,nsim=48,proyears=50,length_timestep=NA,Name=NULL,Source="N
   #Perr <- array(NA, c(nsim, nyears+proyears+maxage-1))
   Perr[,(maxage+nyears-2)+(1:(proyears+1))]<-matrix(rnorm(nsim*(proyears+1),rep(procmu,proyears+1),rep(procsd,proyears+1)),nrow=nsim)
   AC<-mean(OM@AC)
-  for (y in (nyears-1):(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
+  for (y in maxage+(nyears:(nyears + proyears-1))) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
   Perr<-exp(Perr)
 
 
