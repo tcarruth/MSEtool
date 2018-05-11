@@ -100,7 +100,7 @@ CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),re
 
 #' @importFrom diptest dip
 #' @export
-Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.025){
+Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
 
   ntsd<-dim(indPPD)[1]
   np<-dim(indPPD)[2]
@@ -112,11 +112,11 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.025){
   for(pp in 1:np){
 
     keep<-array(TRUE,c(ntsd,pp))
-    for(i in 1:ntsd){
-     for(j in 1:pp){
-       if(dip(indPPD[i,j,])>0.065)keep[i,j]=FALSE
-      }
-    }
+    #for(i in 1:ntsd){
+    # for(j in 1:pp){
+     #  if(dip(indPPD[i,j,])>0.065)keep[i,j]=FALSE
+      #}
+    #}
     ni<-sum(keep)
     keepind<-as.matrix(expand.grid(1:ntsd,1:pp,1:nsim))[rep(as.vector(keep),nsim),]
     ind3PPD<-t(matrix(indPPD[keepind],nrow=ni))
@@ -134,7 +134,7 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.025){
     if(removedat){
       keep2<-rep(TRUE,ncol(ind3PPD))
       cont<-mahalanobis_contribution(ind3Data,mu,covr)
-      mag<-apply(cont,2,median)
+      mag<-apply(cont,2,mean)
       ind<-order(mag)
       cum<-cumsum(mag[ind])
       keep2[ind[cum<(removethresh*100)]]<-FALSE
@@ -266,14 +266,14 @@ mahalanobis_contribution<-function(ind3Data,mu,covr){
 
 
 #' @export
-mahplot<-function(outlist,res=6,maxups=5){
+mahplot<-function(outlist,res=6,maxups=5,MPs){
 
   nMP<-length(outlist)
   ncol<-floor(nMP^(1/2))
   nrow<-ceiling(nMP/ncol)
-  par(mai=c(0.1,0.2,0.2,0.01),omi=c(0.2,0.6,0.01,0.01))
+  par(mai=c(0.1,0.2,0.2,0.01),omi=c(0.6,0.6,0.01,0.01))
   layout(matrix(1:(nrow*ncol*2),nrow=nrow*2),heights=rep(c(2,1),nrow))
-  pmin<-min(c(0.95,sapply(outlist,function(x)min(x$PRB[2,]))))
+  pmin<-max(0,min(c(0.95,sapply(outlist,function(x)min(x$PRB[2,]))-0.05)))
   plabs<-matrix(paste0("(",letters[1:(nMP*2)],")"),nrow=2)
 
   for(mm in 1:nMP){
@@ -292,13 +292,14 @@ mahplot<-function(outlist,res=6,maxups=5){
     mtext(plabs[2,mm],3,line=0.07,adj=0.01,cex=0.88)
 
   }
+  mtext("Future time period",1,outer=T,line=3)
 
 }
 
 
 
 #' @export
-mahdensplot<-function(out,adj=0.9,alpha=0.05,xaxis=F,yaxis=F,res=6,maxups=5){
+mahdensplot<-function(out,adj=0.9,alpha=0.1,xaxis=FALSE,yaxis=FALSE,res=6,maxups=5){
 
   heightadj<-0.7
   np<-min(dim(out$PRB)[2],maxups)
@@ -361,7 +362,7 @@ mahdensplot<-function(out,adj=0.9,alpha=0.05,xaxis=F,yaxis=F,res=6,maxups=5){
 }
 
 #' @export
-PRBplot<-function(out,res,xaxis=F,yaxis=F,ylim=c(0,1),maxups=5){
+PRBplot<-function(out,res,xaxis=FALSE,yaxis=FALSE,ylim=c(0,1),maxups=5){
   np<-min(dim(out$PRB)[2],maxups)
   plot(c(0.5,np+0.5),range(out$PRB),col='white',axes=F,xlab="",ylab="",ylim=ylim)
   #lines((1:np)-0.2,1-out$PRB[1,],col="#0000ff50",lwd=2)
