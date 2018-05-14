@@ -99,7 +99,8 @@ CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),re
 
 
 #' @importFrom diptest dip
-Probs<-function(indPPD,indData,alpha=0.05){
+#' @export
+Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
 
   ntsd<-dim(indPPD)[1]
   np<-dim(indPPD)[2]
@@ -111,30 +112,46 @@ Probs<-function(indPPD,indData,alpha=0.05){
   for(pp in 1:np){
 
     keep<-array(TRUE,c(ntsd,pp))
-    for(i in 1:ntsd){
-     for(j in 1:pp){
-       if(dip(indPPD[i,j,])>0.065)keep[i,j]=FALSE
-      }
-    }
-
+    #for(i in 1:ntsd){
+    # for(j in 1:pp){
+     #  if(dip(indPPD[i,j,])>0.065)keep[i,j]=FALSE
+      #}
+    #}
     ni<-sum(keep)
     keepind<-as.matrix(expand.grid(1:ntsd,1:pp,1:nsim))[rep(as.vector(keep),nsim),]
-
     ind3PPD<-t(matrix(indPPD[keepind],nrow=ni))
     ind3Data<-t(matrix(indData[keepind],nrow=ni))
 
-    # NULL = TRUE  (true negatives, false negatives)
-    #covr <- cov.mcd(ind3PPD)
     covr <- cov(ind3PPD)
-    #test<-svd(covr)
     mu<-apply(ind3PPD,2,median)
+
     #mahN <- mahalanobis(ind3PPD, center = covr$center, cov = covr$cov, tol = 1e-25)
     #mahA <- mahalanobis(ind3Data, center = covr$center, cov = covr$cov, tol = 1e-25)
     #mahN1 <- mahalanobis(ind3PPD, center = mu, cov = covr, tol = 1e-25)
     #mahA1 <- mahalanobis(ind3Data, center = mu, cov = covr, tol = 1e-25)
 
+    if(!removedat)keep3<-NA
+    if(removedat){
+      keep2<-rep(TRUE,ncol(ind3PPD))
+      cont<-mahalanobis_contribution(ind3Data,mu,covr)
+      mag<-apply(cont,2,mean)
+      ind<-order(mag)
+      cum<-cumsum(mag[ind])
+      keep2[ind[cum<(removethresh*100)]]<-FALSE
+      ind3PPD<-ind3PPD[,keep2]
+      ind3Data<-ind3Data[,keep2]
+      if(pp==2)keep3<-rbind(mag,keep2)
+    }
+
+    # NULL = TRUE  (true negatives, false negatives)
+    #covr <- cov.mcd(ind3PPD)
+    covr <- cov(ind3PPD)
+     #test<-svd(covr)
+    mu<-apply(ind3PPD,2,median)
+
     mahN <- mahalanobis_robust(ind3PPD, center = mu, cov = covr)
     mahA <- mahalanobis_robust(ind3Data, center = mu, cov = covr)
+
     mahN<-extreme.outlier(mahN)
     mahA<-extreme.outlier(mahA)
 
@@ -152,15 +169,21 @@ Probs<-function(indPPD,indData,alpha=0.05){
 
   }
 
-  return(list(mah=mah,PRB=PRB,keep=keep))
+  return(list(mah=mah,PRB=PRB,keep=keep,remove=keep3))
 
 }
 
 #' Exceptional Circumstances
 #'
-#' @param MSE An object of class MSE
-#' @param hzn Time horizon for posterior data
+#' @param MSE_null An object of class MSE representing the null hypothesis
+#' @param MSE_alt An object of class MSE representing the alternative hypothesis
+#' @param tsd Character string of data types
+#' @param stat Character string defining the statistic to be calculated for each data type
+#' @param dnam Character string of names for the data calculated
+#' @param res Integer, the resolution for the calculation of PPD
 #' @param alpha Probability of incorrectly rejecting the null hypothesis of normal data when it is true
+#' @param plotCC Logical, should the PPD cross correlations be plotted?
+#' @param removedat Logical, should data types be removed if they have no explanatory power?
 #' @importFrom MASS cov.mcd
 #' @importFrom corpcor pseudoinverse
 #' @return Indicators of MSE misspecification
@@ -170,10 +193,10 @@ Probs<-function(indPPD,indData,alpha=0.05){
 PRBcalc=function(MSE_null,MSE_alt,
                  tsd= c("Cat","Cat","Cat","Ind","ML"),
                  stat=c("slp","AAV","mu","slp", "slp"),
-                 dnam=c("CS","CV","CM","IS","MLS"),
-                 res=6,alpha=0.05,plotCC=F){
+                 dnam=c("C_S","C_V","C_M","I_S","ML_S"),
+                 res=6,alpha=0.05,plotCC=FALSE,removedat=FALSE,removethresh=0.025){
 
-  styr<-MSE_null@nyears+1
+  styr<-MSE_null@nyears
 
   outlist<-new('list')
 
@@ -185,9 +208,10 @@ PRBcalc=function(MSE_null,MSE_alt,
     indPPD<-getinds(PPD,styr=styr,res=res,tsd=tsd,stat=stat)
     indData<-getinds(Data,styr=styr,res=res,tsd=tsd,stat=stat)
 
+
     if(plotCC)CC(indPPD,indData,pp=2,res=res)
 
-    out<-Probs(indPPD,indData,alpha=alpha)
+    out<-Probs(indPPD,indData,alpha=alpha,removedat=removedat,removethresh=removethresh)
 
     outlist[[mm]]<-out
 
@@ -200,6 +224,7 @@ PRBcalc=function(MSE_null,MSE_alt,
 }
 
 #' @importFrom corpcor pseudoinverse
+#' @export
 mahalanobis_robust<-function (x, center, cov, inverted = FALSE) {
 
   x <- if (is.vector(x))
@@ -213,16 +238,42 @@ mahalanobis_robust<-function (x, center, cov, inverted = FALSE) {
 
 }
 
+#' @export
+mahalanobis_contribution<-function(ind3Data,mu,covr){
+
+  InvSD <- 1/sqrt(covr[cbind(1:nrow(covr),1:nrow(covr))])
+  Dmat<-diag(InvSD)
+  DSD <- Dmat %*% covr %*% Dmat
+  eig <- eigen(DSD)
+  InvRootEig<-1/sqrt(eig$val)
+  InvDSDhalf <-  eig$vec %*% diag(InvRootEig) %*% t(eig$vec)
+  invcov <- pseudoinverse(covr)
+  strcont<-array(NA,c(nrow(ind3Data),ncol(ind3Data)))
+
+  for(i in 1:nrow(ind3Data)){
+    diff<-mu-ind3Data[i,]
+    Qform<-t(diff)%*% invcov %*% diff
+    Tsquare <- Qform[1,1]
+    W <- InvDSDhalf %*% Dmat %*% diff
+    cont <- diag(W %*% t(W))
+    strcont[i,]<-cont/sum(cont)*100
+  }
+
+  strcont
+
+}
 
 
-mahplot<-function(outlist,MPs,res=6){
+
+#' @export
+mahplot<-function(outlist,res=6,maxups=5,MPs){
 
   nMP<-length(outlist)
-  ncol<-floor(nMP^(1/3))
+  ncol<-floor(nMP^(1/2))
   nrow<-ceiling(nMP/ncol)
-  par(mai=c(0.2,0.2,0.2,0.01),omi=c(0.2,0.6,0.01,0.01))
+  par(mai=c(0.1,0.2,0.2,0.01),omi=c(0.6,0.6,0.01,0.01))
   layout(matrix(1:(nrow*ncol*2),nrow=nrow*2),heights=rep(c(2,1),nrow))
-  pmin<-min(c(0.95,sapply(outlist,function(x)min(x$PRB[2,]))))
+  pmin<-max(0,min(c(0.95,sapply(outlist,function(x)min(x$PRB[2,]))-0.05)))
   plabs<-matrix(paste0("(",letters[1:(nMP*2)],")"),nrow=2)
 
   for(mm in 1:nMP){
@@ -231,23 +282,27 @@ mahplot<-function(outlist,MPs,res=6){
     if(mm<(nMP/ncol)|mm==(nMP/ncol))yaxis=T
     if(mm%in%((1:ncol)*(nMP/ncol)))xaxis=T
 
-    mahdensplot(outlist[[mm]],xaxis=F,yaxis=yaxis,res=res)
+    mahdensplot(outlist[[mm]],xaxis=F,yaxis=yaxis,res=res,maxups=maxups)
     if(yaxis)mtext("Distance D",2,cex=0.9,line=3.5)
     mtext(MPs[mm],3,font=2,line=0.3,cex=0.95)
     mtext(plabs[1,mm],3,line=0.07,adj=0.01,cex=0.88)
 
-    PRBplot(outlist[[mm]],xaxis=xaxis,yaxis=yaxis,res=res,ylim=c(pmin,1))
+    PRBplot(outlist[[mm]],xaxis=xaxis,yaxis=yaxis,res=res,ylim=c(pmin,1),maxups=maxups)
     if(yaxis)mtext("Power",2,cex=0.9,line=3.5)
     mtext(plabs[2,mm],3,line=0.07,adj=0.01,cex=0.88)
 
   }
+  mtext("Future time period",1,outer=T,line=3)
 
 }
 
-mahdensplot<-function(out,adj=0.9,alpha=0.05,xaxis=F,yaxis=F,res=6){
+
+
+#' @export
+mahdensplot<-function(out,adj=0.9,alpha=0.1,xaxis=FALSE,yaxis=FALSE,res=6,maxups=5){
 
   heightadj<-0.7
-  np<-dim(out$PRB)[2]
+  np<-min(dim(out$PRB)[2],maxups)
 
   densN<-new('list')
   densA<-new('list')
@@ -306,13 +361,13 @@ mahdensplot<-function(out,adj=0.9,alpha=0.05,xaxis=F,yaxis=F,res=6){
   }
 }
 
-
-PRBplot<-function(out,res,xaxis=F,yaxis=F,ylim=c(0,1)){
-  np<-dim(out$PRB)[2]
+#' @export
+PRBplot<-function(out,res,xaxis=FALSE,yaxis=FALSE,ylim=c(0,1),maxups=5){
+  np<-min(dim(out$PRB)[2],maxups)
   plot(c(0.5,np+0.5),range(out$PRB),col='white',axes=F,xlab="",ylab="",ylim=ylim)
   #lines((1:np)-0.2,1-out$PRB[1,],col="#0000ff50",lwd=2)
   abline(h=0.8,lty=2)
-  lines((1:np)-0.2,out$PRB[2,],col="#ff000050",lwd=2)
+  lines((1:np)-0.2,out$PRB[2,1:np],col="#ff000050",lwd=2)
   axis(1,at=c(-1000,10000))
   if(xaxis){
     labs<-paste0("Yrs ",(1:np)*res-(res-1),"-",(1:np)*res)
@@ -326,8 +381,8 @@ PRBplot<-function(out,res,xaxis=F,yaxis=F,ylim=c(0,1)){
 
 }
 
-
-getsegment<-function(densobj,thresh,lower=T){
+#' @export
+getsegment<-function(densobj,thresh,lower=T,inv=T){
 
   if(lower){
     cond<-densobj$x<thresh
@@ -339,10 +394,12 @@ getsegment<-function(densobj,thresh,lower=T){
   ys<-densobj$x[cond]
   ys<-c(ys[1],ys,ys[length(ys)])
 
-  list(x=xs,y=ys)
+  if(inv)return(list(x=xs,y=ys))
+  if(!inv)return(list(x=ys,y=xs))
 
 }
 
+#' @export
 extreme.outlier<-function(x){
   sd<-mean(abs(x-median(x)))
   cond<-(x<(median(x)-3*sd(x)))|(x>(median(x)+3*sd(x)))

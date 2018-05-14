@@ -28,7 +28,7 @@
 #' @importFrom pryr make_function
 #' @seealso \link{plot_diagnostics}
 #' @export
-make_MP <- function(.Assess, .HCR, diagnostic = TRUE, ...) {
+make_MP <- function(.Assess, .HCR, diagnostic = FALSE, ...) {
   if(is.character(.Assess)) {
     .Assess <- as.symbol(.Assess)
   } else {

@@ -5,15 +5,28 @@
 \title{Exceptional Circumstances}
 \usage{
 PRBcalc(MSE_null, MSE_alt, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
-  stat = c("slp", "AAV", "mu", "slp", "slp"), dnam = c("CS", "CV", "CM",
-  "IS", "MLS"), res = 6, alpha = 0.05, plotCC = F)
+  stat = c("slp", "AAV", "mu", "slp", "slp"), dnam = c("C_S", "C_V", "C_M",
+  "I_S", "ML_S"), res = 6, alpha = 0.05, plotCC = FALSE,
+  removedat = FALSE)
 }
 \arguments{
+\item{MSE_null}{An object of class MSE representing the null hypothesis}
+
+\item{MSE_alt}{An object of class MSE representing the alternative hypothesis}
+
+\item{tsd}{Character string of data types}
+
+\item{stat}{Character string defining the statistic to be calculated for each data type}
+
+\item{dnam}{Character string of names for the data calculated}
+
+\item{res}{Integer, the resolution for the calculation of PPD}
+
 \item{alpha}{Probability of incorrectly rejecting the null hypothesis of normal data when it is true}
 
-\item{MSE}{An object of class MSE}
+\item{plotCC}{Logical, should the PPD cross correlations be plotted?}
 
-\item{hzn}{Time horizon for posterior data}
+\item{removedat}{Logical, should data types be removed if they have no explanatory power?}
 }
 \value{
 Indicators of MSE misspecification
