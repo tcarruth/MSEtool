@@ -12,6 +12,7 @@
   DATA_VECTOR(weight);    // Weight-at-age at the beginning of the year
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
+  DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
   PARAMETER(logit_UMSY);
@@ -59,15 +60,37 @@
   // Virgin reference points and stock-recruit parameters
   Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
 
-  Type k1 = deriv_EPR_UMSY/EPR_UMSY;
-  Type k2 = deriv_VBPR_UMSY/VBPR_UMSY;
-  Type Arec = (1 - k1 * UMSY + k2 * UMSY)/(EPR_UMSY * (1 + k2 * UMSY));
-  Type Brec = (Arec * EPR_UMSY - 1)/(RMSY * EPR_UMSY);
+  Type Arec;
+  Type Brec;
+  Type CR;
+  Type h;
+  Type R0;
 
-  Type CR = Arec * EPR0;
-  Type h = CR/(4 + CR);
+  if(SR_type == "BH") {
+    Type k1 = deriv_EPR_UMSY/EPR_UMSY;
+    Type k2 = deriv_VBPR_UMSY/VBPR_UMSY;
 
-  Type R0 = (Arec * EPR0 - 1)/(Brec * EPR0);
+    Arec = (1 - k1 * UMSY + k2 * UMSY)/(EPR_UMSY * (1 + k2 * UMSY));
+    Brec = (Arec * EPR_UMSY - 1)/(RMSY * EPR_UMSY);
+    CR = Arec * EPR0;
+    h = CR/(4 + CR);
+    R0 = (Arec * EPR0 - 1)/(Brec * EPR0);
+  } else {
+    Type num = -1 * UMSY * VBPR_UMSY * deriv_EPR_UMSY;
+    Type denom = EPR_UMSY;
+    denom *= UMSY * deriv_VBPR_UMSY + VBPR_UMSY;
+    denom += num;
+    Type log_aphi = num/denom;
+
+    Arec = exp(log_aphi)/EPR_UMSY;
+    Brec = log_aphi/RMSY/EPR_UMSY;
+    CR = Arec * EPR0;
+    h = exp(0.8 * Brec * EPR0);
+    h *= 0.2;
+    R0 = log(Arec * EPR0);
+    R0 /= Brec;
+    R0 /= EPR0;
+  }
   Type B0 = R0 * sum_BPR(NPR_virgin, weight);
   Type N0 = R0 * NPR_virgin.sum();
   Type E0 = R0 * EPR0;
@@ -93,20 +116,31 @@
   vector<Type> NPR_equilibrium(max_age);
   NPR_equilibrium = calc_NPR(U_equilibrium, vul, M, max_age);
   Type EPR_equilibrium = sum_EPR(NPR_equilibrium, weight, mat);
-  Type R_equilibrium = CppAD::CondExpGt((Arec * EPR_equilibrium - 1)/(Brec * EPR_equilibrium), Type(1e-8),
-                                        (Arec * EPR_equilibrium - 1)/(Brec * EPR_equilibrium), Type(1e-8));
+  Type R_equilibrium;
+  if(SR_type == "BH") {
+    R_equilibrium = CppAD::CondExpGt((Arec * EPR_equilibrium - 1)/(Brec * EPR_equilibrium), Type(1e-8),
+                                     (Arec * EPR_equilibrium - 1)/(Brec * EPR_equilibrium), Type(1e-8));
+  } else {
+    R_equilibrium = CppAD::CondExpGt(log(Arec * EPR_equilibrium)/(Brec * EPR_equilibrium), Type(1e-8),
+                                     log(Arec * EPR_equilibrium)/(Brec * EPR_equilibrium), Type(1e-8));
+  }
 
   R(0) = R_equilibrium;
   for(int a=0;a<max_age;a++) {
     N(0,a) = R_equilibrium * NPR_equilibrium(a);
-	B(0) += N(0,a) * weight(a);
-	VB(0) += N(0,a) * weight(a) * vul(a);
-	E(0) += N(0,a) * weight(a)* mat(a);
+    B(0) += N(0,a) * weight(a);
+    VB(0) += N(0,a) * weight(a) * vul(a);
+    E(0) += N(0,a) * weight(a)* mat(a);
   }
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
-    R(y+1) = CppAD::CondExpGt(BH_SR(E(y), h, R0, E0), Type(1e-8), BH_SR(E(y), h, R0, E0), Type(1e-8));
+    if(SR_type == "BH") {
+      R(y+1) = CppAD::CondExpGt(BH_SR(E(y), h, R0, E0), Type(1e-8), BH_SR(E(y), h, R0, E0), Type(1e-8));
+    } else {
+      R(y+1) = CppAD::CondExpGt(Ricker_SR(E(y), h, R0, E0), Type(1e-8), Ricker_SR(E(y), h, R0, E0), Type(1e-8));
+    }
+
     if(y<n_y-1) {
       if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y) - 0.5 * pow(tau, 2));
     }
@@ -121,7 +155,7 @@
                                       N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
 	    }
       if(a==max_age-1) N(y+1,a) += CppAD::CondExpGt(N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8),
-	                                                  N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
+                                                    N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
 	    B(y+1) += N(y+1,a) * weight(a);
 	    VB(y+1) += N(y+1,a) * weight(a) * vul(a);
 	    E(y+1) += N(y+1,a) * weight(a) * mat(a);
@@ -154,6 +188,7 @@
   penalty += CppAD::CondExpLe(Brec, Type(0), Type(1e5), Type(0));
 
   Type nll = nll_comp.sum() + penalty;
+  nll -= dnorm(log_tau, Type(log(0.6)), Type(0.4), true);
 
   Type U_UMSY_final = U(U.size()-1)/UMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;

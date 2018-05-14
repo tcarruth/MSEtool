@@ -13,7 +13,7 @@
 #' estimate it.
 #' @param vulnerability Whether estimated vulnerability is logistic or dome (double-normal).
 #' See details for parameterization.
-#' @param SR Stock-recruit function (currently only supports Beverton-Holt).
+#' @param SR Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}.
 #' @param CAA_multiplier Numeric for data weighting of catch-at-age matrix. See details.
 #' @param start Optional list of starting values. See details.
 #' @param tau The standard deviation of the recruitment deviations from the estimated mean recruitment

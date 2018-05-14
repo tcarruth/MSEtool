@@ -29,7 +29,7 @@ estimate it.}
 \item{vulnerability}{Whether estimated vulnerability is logistic or dome (double-normal).
 See details for parameterization.}
 
-\item{SR}{Stock-recruit function (currently only supports Beverton-Holt).}
+\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}.}
 
 \item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix. See details.}
 
