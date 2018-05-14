@@ -119,8 +119,8 @@ Assuming a Ricker stock-recruit relationship, then recruitment is:
 $$ R_{t+k} = \alpha B_t(1 - u_t)\exp[-\beta B_t(1 - u_t)]$$
 From $MSY$ and $u_{MSY}$ estimates, then the stock-recruit parameters $\alpha$ and $\beta$ are:
 $$ \begin{align}
-\alpha &= \dfrac{1}{\phi_{MSY}(1-u_{MSY})}\exp\left(\dfrac{\phi_{MSY} - u\phi'_{MSY}(1-u_{MSY})}{(u\phi'_{MSY} + \phi_{MSY})(1-u_{MSY}) + u\phi_{MSY}}\right)\\
-\beta &= \dfrac{u_{MSY}\phi_{MSY}\log[\alpha\phi_{MSY}(1-u_{MSY})]}{MSY(1-u_{MSY})}
+\alpha &= \dfrac{1}{\phi_{MSY}(1-u_{MSY})}\exp\left(u_{MSY} - \dfrac{u_{MSY}(1-u_{MSY})\phi'_{MSY}}{\phi_{MSY}}\right)\\
+\beta &= \dfrac{u_{MSY}\log[\alpha\phi_{MSY}(1-u_{MSY})]}{MSY(1-u_{MSY})}
 \end{align}$$
 Similar to the Beverton-Holt version, $\alpha$ and $\beta$ are derived by solving the equilibrium yield equation $Y = u B = u \phi_u R$ and taking its derivative for $MSY$ based reference points, where
 $$ R= \dfrac{\log(\alpha\phi_u[1-u])}{\beta \phi_u(1-u)}.$$
