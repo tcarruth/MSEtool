@@ -5,19 +5,21 @@
 \alias{DD_SS}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, start = NULL, silent = TRUE, control = list(eval.max =
-  1000), ...)
+DD_TMB(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
+  control = list(eval.max = 1000), ...)
 
-DD_SS(x, Data, start = NULL, silent = TRUE, tau = 1,
-  control = list(eval.max = 1000), inner.control = list(), ...)
+DD_SS(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
+  tau = 1, control = list(eval.max = 1000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
 Otherwise, equals to 1 when running an assessment.}
 
-\item{Data}{An object of class \linkS4class{Data}.#'}
+\item{Data}{An object of class \linkS4class{Data}.}
 
-\item{start}{Optional list of starting values. See details.#'}
+\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}.}
+
+\item{start}{Optional list of starting values. See details.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}

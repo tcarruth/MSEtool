@@ -77,15 +77,15 @@ SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("l
     vul_par <- c(log(1), CAA_mode, log(0.5), log(5))
   }
 
-  data <- list(model = "SCA", C_hist = C_hist, I_hist = I_hist,
+  data <- list(model = "SCA2", C_hist = C_hist, I_hist = I_hist,
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
-               weight = Wa, mat = mat_age, vul_type = vulnerability,
+               weight = Wa, mat = mat_age, vul_type = vulnerability, SR_type = SR,
                est_rec_dev = as.integer(random_map(CAA_n_nominal)))
 
   info <- list(Year = Data@Year, data = data, params = params, control = control)
 
-  map <- list()
+  map <- list(log_sigma = factor(NA))
   if(U_begin == "virgin") map$U_equilibrium <- factor(NA)
   if(any(is.na(CAA_n_nominal))) {
     map$log_rec_dev <- random_map(CAA_n_nominal)
@@ -105,7 +105,7 @@ SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("l
   else {
     Yearplusone <- c(Year, max(Year) + 1)
     Yearrandom <- seq(Year[2], max(Year))
-    Assessment <- new("Assessment", Model = "SCA", UMSY = report$UMSY,
+    Assessment <- new("Assessment", Model = "SCA2", UMSY = report$UMSY,
                       MSY = report$MSY, BMSY = report$BMSY, SSBMSY = report$EMSY,
                       VBMSY = report$VBMSY, B0 = report$B0, R0 = report$R0, N0 = report$N0,
                       SSB0 = report$E0, VB0 = report$VB0,

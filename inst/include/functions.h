@@ -35,7 +35,23 @@ Type calc_q(vector<Type> I_y, vector<Type> B_y) {
 //////////// Functions for SCA.h
 template<class Type>
 Type BH_SR(Type SSB, Type h, Type R0, Type SSB0) {
-  Type Rpred = 4 * h * R0 * SSB/(SSB0*(1-h) + (5*h-1)*SSB);
+  Type Rpred = 4 * h * R0 * SSB;
+  Type den = SSB0 * (1-h);
+  den += (5*h-1) * SSB;
+  Rpred /= den;
+  return Rpred;
+}
+
+template<class Type>
+Type Ricker_SR(Type SSB, Type h, Type R0, Type SSB0) {
+  Type SSBPR0 = SSB0/R0;
+  Type expon = 1;
+  expon -= SSB/SSB0;
+  expon *= 1.25;
+
+  Type Rpred = pow(5*h, expon);
+  Rpred *= SSB;
+  Rpred /= SSBPR0;
   return Rpred;
 }
 
