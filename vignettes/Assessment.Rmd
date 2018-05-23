@@ -71,10 +71,10 @@ browseVignettes("MSEtool")
 
 # Delay Difference (DD_TMB) Model
 
-There has been a rich history of development for the delay difference model for catch and index data. For the formulation used in MSEtool, the most relevant citations are Chapter of Hilborn and Walters (1992) and Carruthers et al. (2012).
+There has been a rich history of development for the delay difference model for catch and index data. For the formulation used in MSEtool, the most relevant citations are Chapter 9 of Hilborn and Walters (1992) and Carruthers et al. (2012).
 
 ## Growth
-Growth in weigh-at-age $w_a$ follows the recursive Ford-Brody equation:
+Growth in weight-at-age $w_a$ follows the recursive Ford-Brody equation:
 $$w_a = \rho + \tilde\alpha w_{a-1}.$$
 We can obtain $\tilde\alpha$ and $\rho$ for the delay difference model if weight is also described by the equation 
 $$w_a = W_{\infty}(1 - \exp[K\{a-a_0\}])^b.$$ 
@@ -308,7 +308,7 @@ $$ R_t = \alpha E_{t-1} \exp(-\beta E_{t-1}) \exp(\delta_t - 0.5 \tau^2).$$
 Using the derivation analogous to that in Forrest et al (2008), parameters $\alpha$ and $\beta$ are solved as functions of $u_{MSY}$ and $MSY$, where
 $$ \begin{align}
 \alpha &= \dfrac{1}{\phi_{MSY}}\exp\left(\dfrac{-u_{MSY} \psi_{MSY} \phi'_{MSY}}
-{\phi_{MSY}[u_{MSY} \psi'_{MSY} + psi_{MSY}] - u_{MSY} \phi'_{MSY} \psi_{MSY}}\right)\\
+{\phi_{MSY}[u_{MSY} \psi'_{MSY} + \psi_{MSY}] - u_{MSY} \phi'_{MSY} \psi_{MSY}}\right)\\
 \beta &= \dfrac{\log(\alpha \phi_{MSY})}{R_{MSY} \phi_{MSY}}.
 \end{align}$$
 
