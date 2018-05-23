@@ -4,7 +4,7 @@
 \alias{make_MP}
 \title{Make a custom management procedure (MP)}
 \usage{
-make_MP(.Assess, .HCR, diagnostic = TRUE, ...)
+make_MP(.Assess, .HCR, diagnostic = FALSE, ...)
 }
 \arguments{
 \item{.Assess}{A function of class \code{Assess}.}
