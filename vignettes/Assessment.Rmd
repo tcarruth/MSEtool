@@ -1,6 +1,5 @@
 ---
-title: "Appendix: Description of the Assessment Models"
-subtitle: "Assess-class objects in MSEtool"
+title: "Appendix: Description of the Assessment Models in MSEtool"
 author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>) 
          Adrian Hordyk  (<a.hordyk@oceans.ubc.ca>),
          Quang Huynh (<q.huynh@oceans.ubc.ca>)"
@@ -9,11 +8,11 @@ output:
   rmarkdown::html_vignette:
     toc: true
     number_sections: true
+  #rmarkdown::pdf_document:
   #  toc: true
   #  number_sections: true    
-  #rmarkdown::pdf_vignette:
 vignette: >
-  %\VignetteIndexEntry{Assessment}
+  %\VignetteIndexEntry{Appendix: Description of the Assessment Models in MSEtool}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -62,9 +61,17 @@ options(width = 650)
 
 In MSEtool, assessment models are of class `Assess`. This appendix provides a brief description and references for the `Assess` objects. Further details regarding parameterization and tuning (when needed) are provided in the function documentation.
 
-# Delay Difference (DD) Model
+## Note
 
-There has been a rich history of development for the delay difference model for catch and index data. For the formulation used in MSEtol, the most relevant citations are Chapter of Hilborn and Walters (1992) and Carruthers et al. ().
+For LaTeX equation rendering, it is recommended that this vignette be viewed in a HTML browser. This can be done with the `browseVignettes` function in R:
+
+```{r, eval = FALSE}
+browseVignettes("MSEtool")
+```
+
+# Delay Difference (DD_TMB) Model
+
+There has been a rich history of development for the delay difference model for catch and index data. For the formulation used in MSEtool, the most relevant citations are Chapter of Hilborn and Walters (1992) and Carruthers et al. (2012).
 
 ## Growth
 Growth in weigh-at-age $w_a$ follows the recursive Ford-Brody equation:
@@ -104,8 +111,10 @@ The model is parameterized such $u_{MSY}$ and $MSY$ are estimated productivity p
 stock-recruit parameters for the model can be derived (Martell et al. 2008).
 
 ### Beverton-Holt relationship
-Assuming a Beverton-Holt stock recruit relationship, then recruitment (at age $k$) in year $t$ is:
-$$ R_t = \dfrac{\alpha B_{t-k}(1 - u_{t-k})}{1 + \beta B_{t-k}(1 - u_{t-k})}.$$
+Assuming a Beverton-Holt stock recruit relationship and spawning occurring after fishing in each annual time step, then recruitment (at age $k$) in year $t$ is:
+$$ R_t = \dfrac{\alpha B_{t-k}(1 - u_{t-k})}{1 + \beta B_{t-k}(1 - u_{t-k})},$$
+where $B_{t-k}(1-u_{t-k})$ is the population biomass after fishing in year $t-k$.
+
 From $u_{MSY}$ and $MSY$, the stock-recruit parameters $\alpha$ and $\beta$ are:
 $$ \begin{align}
 \alpha &= (1 - u_{MSY})^{-2}(u_{MSY} \phi'_{MSY} + \phi_{MSY})^{-1}\\
@@ -233,7 +242,7 @@ $$L(I_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(I_t/\hat{I}_t
 
 ## Estimation of recruitment and reference points
 
-There are two variants of the statistical catch-at-age model for estimation of recruitment and reference points. In function `SCA`, recruitment is estimated as annual deviations from mean recruitment, similar to Cadigan (2014). MSY reference points are estimated outside the model. In `SCA2`, the parameters of the stock-recruit function, MSY reference points, and recruitment deviations are all estimated internally in the model. `SCA` generally will have a faster runtime than `SCA2`.
+There are two variants of the statistical catch-at-age model for estimation of recruitment and reference points. In function `SCA`, recruitment is estimated as annual deviations from mean recruitment, similar to Cadigan (2016). MSY reference points are estimated outside the model. In `SCA2`, the parameters of the stock-recruit function, MSY reference points, and recruitment deviations are all estimated internally in the model. `SCA` generally will have a faster runtime than `SCA2`.
 
 ### External reference points (SCA)
 
@@ -243,16 +252,21 @@ where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations in lognormal space
 
 ### Internal reference points (SCA2)
 
+In `SCA2`, parameters $u_{MSY}$ and $MSY$ are estimated, from which stock-recruit parameters are obtained. The mathematical description of the models are described below, and the full derivation is described in Forrest et al. (2008).
+
 #### Beverton-Holt stock-recruit function
 
 Recruitment $R_t$ in year $t$ is
-$$ R_t = \dfrac{\alpha E_{t-1}}{1 + \beta E_{t-1}} \exp(\delta_t - 0.5 \tau^2), $$
-where
+$$ R_t = \dfrac{\alpha E_{t-1}}{1 + \beta E_{t-1}} \exp(\delta_t - 0.5 \tau^2),$$
+where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations from the stock-recruit relationship in lognormal space and $\tau$ is the standard deviation of the recruitment deviations. Parameters $\alpha$ and $\beta$ are defined as
 $$ \begin{align}
 \alpha &= \dfrac{1 - \left(\dfrac{\psi'_{MSY}}{\psi_{MSY}} - \dfrac{\phi'_{MSY}}{\phi_{MSY}}\right) u_{MSY}}{\phi_{MSY}\left(1 + \dfrac{\psi'_{MSY}}{\psi_{MSY}}u_{MSY}\right)}\\
 \beta &= \dfrac{\alpha \phi_{MSY} - 1}{R_{MSY} \phi_{MSY}},
 \end{align}$$
-with $\phi_{MSY} = \sum_{a=1}^A m_a w_a l_a$ is the spawning biomass per recruit at $MSY$, and
+where $\phi_{MSY}$ is the spawning biomass per recruit at $u = u_{MSY}$, 
+
+$$\phi_{MSY} = \sum_{a=1}^A m_a w_a l_a$$
+and
 $$
 l_a = 
 \begin{cases} 
@@ -261,7 +275,9 @@ l_a =
       \dfrac{l_{a-1} (1 - v_{a-1} u_{MSY}) \exp(-M_{a-1})}{1 - (1 - v_a u_{MSY}) \exp(-M_a)} & a = A \\
 \end{cases}; 
 $$
-$\phi'_{MSY} = \sum_{a=1}^A m_a w_a l'_a$ is the derivation of $\phi$ with respect to $u$ and evaluated at $u_{MSY}$, and
+$\phi'_{MSY}$ is the derivative of $\phi$ with respect to $u$ and evaluated at $u_{MSY}$, 
+$$ \phi'_{MSY} = \sum_{a=1}^A m_a w_a l'_a $$
+and
 $$
 l'_a = 
 \begin{cases} 
@@ -271,18 +287,39 @@ l'_a =
 {[1 - (1- v_a u_{MSY}) \exp(-M_a)]^2} & a = A \\
 \end{cases}; 
 $$
-$\psi_{MSY} = \sum_{a=1}^A v_a w_a l_a$ is the vulnerable biomass per recruit at $MSY$; and $\psi'_{MSY} = \sum_{a=1}^A v_a w_a l'_a$ is the derivative of vulnerable biomass per recruit evaluated $u_{MSY}$.
+$\psi_{MSY}$ is the vulnerable biomass per recruit at $MSY$
+$$\psi_{MSY} = \sum_{a=1}^A v_a w_a l_a;$$
+and $\psi'_{MSY}$ is the derivative of vulnerable biomass per recruit evaluated $u_{MSY}$ 
+$$\psi'_{MSY} = \sum_{a=1}^A v_a w_a l'_a.$$
 
+Parameter $\alpha$ is derived from the yield equation
+$$Y = u \psi_u R $$
+where is $\psi_u$ defined by equation 54 for any given $u$ and recruitment $R$ is
+$$ R = \dfrac{\alpha \phi_u - 1}{\beta \phi_u}, $$ 
+by setting $\frac{dY}{du} = 0$ and solving for $\alpha$; all quantities correspond to those at $MSY$. Equation 49 is obtained by solving for $\beta$ in Equation 57 in the $MSY$ scenario where
+
+$$R_{MSY} = \dfrac{VB_{MSY}}{\psi_{MSY}} = \dfrac{MSY}{u_{MSY} \psi_{MSY}}. $$
 
 #### Ricker stock-recruit function
 
 Recruitment $R_t$ in year $t$ is
-
-$$ R_t = \alpha E_{t-1} \exp(-\beta E_{t-1}) \exp(\delta_t - 0.5 \tau^2),$$
-where
+ 
+$$ R_t = \alpha E_{t-1} \exp(-\beta E_{t-1}) \exp(\delta_t - 0.5 \tau^2).$$
+Using the derivation analogous to that in Forrest et al (2008), parameters $\alpha$ and $\beta$ are solved as functions of $u_{MSY}$ and $MSY$, where
 $$ \begin{align}
 \alpha &= \dfrac{1}{\phi_{MSY}}\exp\left(\dfrac{-u_{MSY} \psi_{MSY} \phi'_{MSY}}
 {\phi_{MSY}[u_{MSY} \psi'_{MSY} + psi_{MSY}] - u_{MSY} \phi'_{MSY} \psi_{MSY}}\right)\\
-\beta &= \dfrac{\log(\alpha \phi_{MSY})}{R_{MSY} \phi_{MSY}},
+\beta &= \dfrac{\log(\alpha \phi_{MSY})}{R_{MSY} \phi_{MSY}}.
 \end{align}$$
-End.
+
+# References
+
+Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and variable natural mortality rates. Canadian Journal of Fisheries and Aquatic Science 72:296-308.
+
+Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify fisheries stock status using only fisheries catch data. Fisheries Research 119-120:66-79.
+
+Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
+
+Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008. An age-structured model with leading management parameters, incorporating age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic Science 65:286-296.
+
+Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice, Dynamics and Uncertainty. Chapman and Hall, New York.
