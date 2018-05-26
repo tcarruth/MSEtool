@@ -9,26 +9,29 @@
 #' @param x An index for the objects in \code{Data} when running in closed loop simulation.
 #' Otherwise, equals to 1 when running an assessment.
 #' @param Data An object of class \linkS4class{Data}.
-#' @param SR Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}.
+#' @param SR Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).
 #' @param start Optional list of starting values. See details.
-#' @param tau The standard deviation of the recruitment deviations in \code{DD_SS}
-#' from the estimated stock-recruit relationship (by default, euqal to one).
+#' @param fix_sigma Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+#' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Cat}.
+#' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
+#' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
+#' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
+#' of the recruitment deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param control A named list of parameters regarding optimization to be passed to
 #' \code{\link[stats]{nlminb}}.
 #' @param inner.control A named list of arguments for optimization of the random effects, which
-#' is passed on to \code{\link[TMB]{newton}}.
+#' is passed on to \code{\link[TMB]{newton}} via \code{\link[TMB]{MakeADFun}}.
 #' @param ... Additional arguments (not currently used).
 #' @return An object of \code{\linkS4class{Assessment}} containing objects and output
 #' from TMB.
 #' @details
-#' To provide starting values for the model, a named list can be provided for \code{UMSY},
+#' To provide starting values for \code{DD_TMB}, a named list can be provided for \code{UMSY},
 #' \code{MSY}, and \code{q} via the \code{start} argument (see example).
 #'
-#' For \code{DD_SS}, a start value can also be provided for \code{tau}, the standard
-#' deviation of the recruitment variability. The catch standard deviation is fixed based
-#' on the value of \code{Data@@CV_Cat}.
+#' For \code{DD_SS}, additional start values can be provided for and \code{sigma} and \code{tau}, the standard
+#' deviation of the catch and recruitment variability, respectively.
 #' @note Similar to many other assessment
 #' models, the model depends on assumptions such as stationary productivity and
 #' proportionality between the abundance index and real abundance.
@@ -54,8 +57,8 @@
 #' res <- DD_SS(1, sim_snapper)
 #'
 #' # Provide starting values
-#' start <- list(UMSY = 0.05, MSY = 4, q = 0.3, tau = 0.5)
-#' res <- DD_TMB(1, sim_snapper, start = start)
+#' start <- list(UMSY = 0.05, MSY = 4, q = 0.3)
+#' res <- DD_SS(1, sim_snapper, start = start)
 #'
 #' summary(res@@SD) # Look at parameter estimates
 #' @useDynLib MSEtool
@@ -154,8 +157,8 @@ class(DD_TMB) <- "Assess"
 
 #' @describeIn DD_TMB State-Space version of Delay-Difference model
 #' @export
-DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, tau = 1, control = list(eval.max = 1e3),
-                  inner.control = list(), ...) {
+DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
+                  silent = TRUE, control = list(eval.max = 1e3), inner.control = list(), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -164,7 +167,7 @@ DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, 
   wa <- Data@wla[x] * la^Data@wlb[x]
   a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x],  Data@L50[x])
   a50V <- max(a50V, 1)
-  ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x,   ]))[1]
+  ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x, ]))[1]
   yind <- ystart:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
@@ -187,6 +190,7 @@ DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, 
     if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
     if(!is.null(start$q) && is.numeric(start$q)) params$log_q <- log(start$q[1])
+    if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma[1])
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
   if(is.null(params$logit_UMSY)) {
@@ -198,16 +202,25 @@ DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, 
     params$log_MSY <- log(3 * AvC)
   }
   if(is.null(params$log_q)) params$log_q <- log(Data@Mort[x])
-
-  sigmaC <- max(0.05, sdconv(1, Data@CV_Cat[x]))
-  params$log_sigma <- log(sigmaC)
-  params$log_tau <- log(tau)
+  if(is.null(params$log_sigma)) {
+    sigmaC <- max(0.05, sdconv(1, Data@CV_Cat[x]))
+    params$log_sigma <- log(sigmaC)
+  }
+  if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_rec_dev = rep(0, ny - k)
+
   info <- list(Year = Year, data = data, params = params, sigma = sigmaC,
                I_hist = I_hist, control = control)
 
-  obj <- MakeADFun(data = info$data, parameters = info$params, random = "log_rec_dev",
-                   map = list(log_sigma = factor(NA)), checkParameterOrder = FALSE,
+  map <- list()
+  if(fix_sigma) map$log_sigma <- factor(NA)
+  if(fix_tau) map$log_tau <- factor(NA)
+
+  random <- NULL
+  if(integrate) random <- "log_rec_dev"
+
+  obj <- MakeADFun(data = info$data, parameters = info$params, random = random,
+                   map = map, checkParameterOrder = FALSE,
                    DLL = "MSEtool", inner.control = inner.control, silent = silent)
   opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
@@ -220,7 +233,15 @@ DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, 
   } else {
     Yearplusone <- c(Year, max(Year) + 1)
     Yearplusk <- c(Year, max(Year) + 1:k)
-    Yearrandom <- seq(Year[1] + k, max(Year))
+    YearDev <- seq(Year[1] + k, max(Year))
+
+    if(integrate) {
+      Dev <- SD$par.random
+      SE_Dev <- sqrt(SD$diag.cov.random)
+    } else {
+      Dev <- SD$par.fixed[names(SD$par.fixed) == "log_rec_dev"]
+      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+    }
 
     Assessment <- new("Assessment", Model = "DD_SS",
                       UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY,
@@ -242,14 +263,14 @@ DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, 
                       N = structure(report$N, names = Yearplusone),
                       Obs_Catch = structure(C_hist, names = Year),
                       Catch = structure(report$Cpred, names = Year),
-                      Random = structure(SD$par.random, names = Yearrandom),
-                      Random_type = "log-Recruitment deviations",
-                      NLL = structure(c(opt$objective, report$jnll_comp), names = c("Total", "Catch", "Random")),
+                      Dev = structure(Dev, names = YearDev),
+                      Dev_type = "log-Recruitment deviations",
+                      NLL = structure(c(opt$objective, report$jnll_comp), names = c("Total", "Catch", "Dev")),
                       SE_UMSY = SD$sd[1], SE_MSY = SD$sd[2], SE_U_UMSY_final = SD$sd[6],
                       SE_B_BMSY_final = SD$sd[7], SE_B_B0_final = SD$sd[8],
                       SE_SSB_SSBMSY_final = SD$sd[7], SE_SSB_SSB0_final = SD$sd[8],
                       SE_VB_VBMSY_final = SD$sd[7], SE_VB_VB0_final = SD$sd[8],
-                      SE_Random = structure(sqrt(SD$diag.cov.random), names = Yearrandom),
+                      SE_Dev = structure(SE_Dev, names = YearDev),
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   }

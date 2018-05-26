@@ -8,8 +8,9 @@
 DD_TMB(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
   control = list(eval.max = 1000), ...)
 
-DD_SS(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
-  tau = 1, control = list(eval.max = 1000), inner.control = list(), ...)
+DD_SS(x, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma = FALSE,
+  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(eval.max = 1000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -17,7 +18,7 @@ Otherwise, equals to 1 when running an assessment.}
 
 \item{Data}{An object of class \linkS4class{Data}.}
 
-\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}.}
+\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).}
 
 \item{start}{Optional list of starting values. See details.}
 
@@ -29,11 +30,17 @@ will print trace information during optimization. Used for dignostics for model 
 
 \item{...}{Additional arguments (not currently used).}
 
-\item{tau}{The standard deviation of the recruitment deviations in \code{DD_SS}
-from the estimated stock-recruit relationship (by default, euqal to one).}
+\item{fix_sigma}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Cat}.}
+
+\item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
+tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
+
+\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
+of the recruitment deviations (thus, treating it as a state-space variable).}
 
 \item{inner.control}{A named list of arguments for optimization of the random effects, which
-is passed on to \code{\link[TMB]{newton}}.}
+is passed on to \code{\link[TMB]{newton}} via \code{\link[TMB]{MakeADFun}}.}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output
@@ -47,12 +54,11 @@ recruitment deviations from the stock-recruit relationship are estimated as a
 random effect variable.
 }
 \details{
-To provide starting values for the model, a named list can be provided for \code{UMSY},
+To provide starting values for \code{DD_TMB}, a named list can be provided for \code{UMSY},
 \code{MSY}, and \code{q} via the \code{start} argument (see example).
 
-For \code{DD_SS}, a start value can also be provided for \code{tau}, the standard
-deviation of the recruitment variability. The catch standard deviation is fixed based
-on the value of \code{Data@CV_Cat}.
+For \code{DD_SS}, additional start values can be provided for and \code{sigma} and \code{tau}, the standard
+deviation of the catch and recruitment variability, respectively.
 }
 \section{Functions}{
 \itemize{
@@ -78,8 +84,8 @@ res <- DD_TMB(1, sim_snapper)
 res <- DD_SS(1, sim_snapper)
 
 # Provide starting values
-start <- list(UMSY = 0.05, MSY = 4, q = 0.3, tau = 0.5)
-res <- DD_TMB(1, sim_snapper, start = start)
+start <- list(UMSY = 0.05, MSY = 4, q = 0.3)
+res <- DD_SS(1, sim_snapper, start = start)
 
 summary(res@SD) # Look at parameter estimates
 }
