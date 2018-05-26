@@ -83,9 +83,9 @@ An S4 class that contains assessment output. Created from a function of class \c
 
 \item{\code{C_at_age}}{Predicted catch-at-age matrix.}
 
-\item{\code{Random}}{A vector of estimated random effects.}
+\item{\code{Dev}}{A vector of estimated deviation parameters.}
 
-\item{\code{Random_type}}{A description of the random effects, e.g. "log recruitment deviations".}
+\item{\code{Dev_type}}{A description of the deviation parameters, e.g. "log recruitment deviations".}
 
 \item{\code{NLL}}{Negative log-likelihood (total [integrated across random effects] and components).}
 
@@ -111,7 +111,7 @@ An S4 class that contains assessment output. Created from a function of class \c
 
 \item{\code{SE_VB_VB0_final}}{Standard error of VB/VB0 in the terminal year.}
 
-\item{\code{SE_Random}}{A vector of standard errors of the random effects.}
+\item{\code{SE_Dev}}{A vector of standard errors of the deviation parameters.}
 
 \item{\code{info}}{A list containing the data and starting values of estimated parameters
 for the assessment.}

@@ -54,8 +54,8 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot Catch Predicted catch.
 #' @slot Index Predicted index.
 #' @slot C_at_age Predicted catch-at-age matrix.
-#' @slot Random A vector of estimated random effects.
-#' @slot Random_type A description of the random effects, e.g. "log recruitment deviations".
+#' @slot Dev A vector of estimated deviation parameters.
+#' @slot Dev_type A description of the deviation parameters, e.g. "log recruitment deviations".
 #' @slot NLL Negative log-likelihood (total [integrated across random effects] and components).
 #' @slot SE_UMSY Standard error of UMSY estimate.
 #' @slot SE_FMSY Standard error of FMSY estimate.
@@ -68,7 +68,7 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot SE_SSB_SSB0_final Standard error of SSB/SSB0 in the terminal year.
 #' @slot SE_VB_VBMSY_final Standard error of VB/VBMSY in the terminal year.
 #' @slot SE_VB_VB0_final Standard error of VB/VB0 in the terminal year.
-#' @slot SE_Random A vector of standard errors of the random effects.
+#' @slot SE_Dev A vector of standard errors of the deviation parameters.
 #' @slot info A list containing the data and starting values of estimated parameters
 #' for the assessment.
 #' @slot obj A list with components returned from \code{\link[TMB]{MakeADFun}}.
@@ -97,14 +97,13 @@ Assessment <- setClass("Assessment",
  R = "numeric", N = "numeric", N_at_age = "matrix",
  Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
  Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
- C_at_age = "matrix", Random = "numeric", Random_type = "character",
+ C_at_age = "matrix", Dev = "numeric", Dev_type = "character",
  NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
  SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
  SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric",
  SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
  SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
- SE_Random = "numeric",
- info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
+ SE_Dev = "numeric", info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
  TMB_report = "list", dependencies = "character", Data = "Data"))
 
 
@@ -153,9 +152,12 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
 Model <- UMSY <- FMSY <- MSY <- BMSY <- SSBMSY <- VBMSY <- B0 <- R0 <- N0 <- SSB0 <- VB0 <- h <- U <-
   U_UMSY <- F <- F_FMSY <- B <- B_BMSY <- B_B0 <- SSB <- SSB_SSBMSY <- SSB_SSB0 <- VB_VBMSY <- VB_VB0 <-
   R <- N <- N_at_age <- Selectivity <- Obs_Catch <- Obs_Index <- Obs_C_at_age <- Catch <- Index <-
-  C_at_age <- Random <- Random_type <- NLL <- SE_UMSY <- SE_FMSY <- SE_MSY <- SE_U_UMSY_final <-
+  C_at_age <- Dev <- Dev_type <- NLL <- SE_UMSY <- SE_FMSY <- SE_MSY <- SE_U_UMSY_final <-
   SE_F_FMSY_final <- SE_B_BMSY_final <- SE_B_B0_final <- SE_SSB_SSBMSY_final <- SE_SSB_SSB0_final <-
-  SE_VB_VBMSY_final <- SE_VB_VB0_final <- SE_Random <- info <- obj <- opt <-
+  SE_VB_VBMSY_final <- SE_VB_VB0_final <- SE_Dev <- info <- obj <- opt <-
   SD <- TMB_report <- dependencies <- Data <- NULL
 
 plot.dir <- NULL
+
+# For Awatea2OM - Quang assumes these variables are loaded in from .rda files
+Bmcmc <- currentMCMC <- currentRes <- NULL
