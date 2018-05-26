@@ -1,11 +1,11 @@
 #' @describeIn SCA The parameterization by Forrest et al. (2008) is used where UMSY and MSY are leading parameters.
 #' Recruitment deviations are only estimated beginning in the year when age composition are available.
 #' @export
-SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("logistic", "dome"),
-                 SR = c("BH", "Ricker"), CAA_multiplier = 50, start = NULL, tau = 1, integrate = TRUE,
-                 silent = TRUE, control = list(eval.max = 1e3), inner.control = list(), ...) {
+SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
+                 CAA_multiplier = 50, start = NULL, fix_U_equilibrium = TRUE,
+                 fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+                 control = list(eval.max = 1e3), inner.control = list(), ...) {
   dependencies = ""
-  U_begin <- match.arg(U_begin)
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
   yind <- which(!is.na(Data@Cat[x, ]))[1]
@@ -42,7 +42,9 @@ SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("l
     if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
     if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
-    if(!is.null(start$vulnerability) && is.numeric(start$vulnerability)) params$vul_par <- start$vul_par
+    if(!is.null(start$vul_par) && is.numeric(start$vul_par)) params$vul_par <- start$vul_par
+    if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
+    if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
   if(is.null(params$logit_UMSY)) {
     UMSY_start <- 1 - exp(-Data@Mort[x] * 0.5)
@@ -59,40 +61,32 @@ SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("l
       params$vul_par <- c(CAA_mode-1, log(1)) # 50 and log(95%-offset) vulnerability respectively
     }
     if(vulnerability == "dome") {
-      # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
-      params$vul_par <- c(log(1), CAA_mode, log(0.5), log(5))
+      params$vul_par <- c(log(1), CAA_mode, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
     }
   }
-  sigma_I <- sdconv(1, max(0.05, Data@CV_Ind[x])) # can't fit to perfect data
-  params$log_sigma <- log(sigma_I)
-  params$log_tau <- log(tau)
+  if(is.null(params$log_sigma)) {
+    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
+    params$log_sigma <- log(sigmaI)
+  }
+  if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_rec_dev <- rep(0, n_y - 1)
-
-  CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
-  if(vulnerability == "logistic") {
-    vul_par <- c(CAA_mode-1, log(1)) # 50 and log(95%-offset) vulnerability respectively
-  }
-  if(vulnerability == "dome") {
-    # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
-    vul_par <- c(log(1), CAA_mode, log(0.5), log(5))
-  }
 
   data <- list(model = "SCA2", C_hist = C_hist, I_hist = I_hist,
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = vulnerability, SR_type = SR,
                est_rec_dev = as.integer(random_map(CAA_n_nominal)))
-
   info <- list(Year = Data@Year, data = data, params = params, control = control)
 
-  map <- list(log_sigma = factor(NA))
-  if(U_begin == "virgin") map$U_equilibrium <- factor(NA)
-  if(any(is.na(CAA_n_nominal))) {
-    map$log_rec_dev <- random_map(CAA_n_nominal)
-  }
+  map <- list()
+  if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
+  if(fix_sigma) map$log_sigma <- factor(NA)
+  if(fix_tau) map$log_tau <- factor(NA)
+
   random <- NULL
   if(integrate) random <- "log_rec_dev"
-  obj <- MakeADFun(data = info$data, parameters = info$params,
+
+  obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
   opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
@@ -104,7 +98,16 @@ SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("l
   }
   else {
     Yearplusone <- c(Year, max(Year) + 1)
-    Yearrandom <- seq(Year[2], max(Year))
+    YearDev <- seq(Year[2], max(Year))
+
+    if(integrate) {
+      Dev <- SD$par.random
+      SE_Dev <- sqrt(SD$diag.cov.random)
+    } else {
+      Dev <- SD$par.fixed[names(SD$par.fixed) == "log_rec_dev"]
+      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+    }
+
     Assessment <- new("Assessment", Model = "SCA2", UMSY = report$UMSY,
                       MSY = report$MSY, BMSY = report$BMSY, SSBMSY = report$EMSY,
                       VBMSY = report$VBMSY, B0 = report$B0, R0 = report$R0, N0 = report$N0,
@@ -130,15 +133,15 @@ SCA2 <- function(x = 1, Data, U_begin = c("virgin", "est"), vulnerability = c("l
                       Obs_C_at_age = CAA_hist,
                       Index = structure(report$Ipred, names = Year),
                       C_at_age = report$CAApred,
-                      Random = structure(SD$par.random, names = Yearrandom),
-                      Random_type = "log-Recruitment deviations",
+                      Dev = structure(Dev, names = YearDev),
+                      Dev_type = "log-Recruitment deviations",
                       NLL = structure(c(opt$objective, report$nll_comp),
-                                      names = c("Total", "Index", "CAA", "Random")),
+                                      names = c("Total", "Index", "CAA", "Dev")),
                       SE_UMSY = SD$sd[1], SE_MSY = SD$sd[2], SE_U_UMSY_final = SD$sd[6],
                       SE_B_BMSY_final = SD$sd[7], SE_B_B0_final = SD$sd[8],
                       SE_SSB_SSBMSY_final = SD$sd[9], SE_SSB_SSB0_final = SD$sd[10],
                       SE_VB_VBMSY_final = SD$sd[11], SE_VB_VB0_final = SD$sd[12],
-                      SE_Random = structure(sqrt(SD$diag.cov.random), names = Yearrandom),
+                      SE_Dev = structure(SE_Dev, names = YearDev),
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   }

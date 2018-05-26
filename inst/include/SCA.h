@@ -34,12 +34,6 @@
     vul = calc_dome_vul(vul_par, max_age);
   }
 
-  ////// Equilibrium reference points and per-recruit quantities
-  vector<Type> NPR_virgin(max_age);
-  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
-  // Virgin reference points and stock-recruit parameters
-  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);                        // Egg-per-recruit at U = 0
-
   ////// During time series year = 1, 2, ..., n_y
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
   matrix<Type> CAApred(n_y, max_age);   // Catch (in numbers) at year and age at the mid-point of the season
@@ -121,8 +115,6 @@
   ADREPORT(tau);
   ADREPORT(q);
 
-  REPORT(NPR_virgin);
-  REPORT(EPR0);
   REPORT(meanR);
 
   REPORT(vul_par);

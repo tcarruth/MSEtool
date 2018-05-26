@@ -5,41 +5,42 @@
 \alias{SCA2}
 \title{Statistical catch-at-age (SCA) model}
 \usage{
-SCA(x = 1, Data, U_begin = c("virgin", "est"),
-  vulnerability = c("logistic", "dome"), SR = c("BH", "Ricker"),
-  CAA_multiplier = 50, start = NULL, tau = 1, integrate = FALSE,
-  silent = TRUE, control = list(eval.max = 1000), inner.control = list(),
-  ...)
+SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
+  "dome"), CAA_multiplier = 50, start = NULL, fix_U_equilibrium = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(eval.max = 1000), inner.control = list(), ...)
 
-SCA2(x = 1, Data, U_begin = c("virgin", "est"),
-  vulnerability = c("logistic", "dome"), SR = c("BH", "Ricker"),
-  CAA_multiplier = 50, start = NULL, tau = 1, integrate = TRUE,
-  silent = TRUE, control = list(eval.max = 1000), inner.control = list(),
-  ...)
+SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
+  "dome"), CAA_multiplier = 50, start = NULL, fix_U_equilibrium = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(eval.max = 1000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}
 
-\item{Data}{An object of class Data.}
+\item{Data}{An object of class Data}
 
-\item{U_begin}{Indicates how to handle the equilibrium harvest rate prior to the first
-year of model. \code{"virgin"} fixes \code{U = 0} prior to year 1 while \code{"est"} will
-estimate it.}
+\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).}
 
 \item{vulnerability}{Whether estimated vulnerability is logistic or dome (double-normal).
 See details for parameterization.}
-
-\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}.}
 
 \item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix. See details.}
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{tau}{The standard deviation of the recruitment deviations from the estimated mean recruitment
-or stock-recruit relationship (by default, euqal to one).}
+\item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model
+is estimated. If \code{TRUE}, \code{U_equilibruim} is fixed to value provided in \code{start} (if provided),
+otherwise, equal to zero (assumes virgin conditions).}
 
-\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood of
-the recruitment deviations (thus, treating it as a state-space variable).}
+\item{fix_sigma}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
+
+\item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
+tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
+
+\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
+of the recruitment deviations (thus, treating it as a state-space variable).}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
@@ -57,9 +58,8 @@ An object of class \linkS4class{Assessment}.
 }
 \description{
 A generic statistical catch-at-age model that uses catch, index, and catch-at-age composition
-data. An annual harvest rate is calculated (assuming a pulse fishery) in lieu of an instantaneous
-fishing mortality rate from continuous fishing as described in Forrest et al. (2008). There are
-several parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
+data. An annual harvest rate is calculated (assuming a pulse fishery) as described in Forrest et al. (2008).
+There are two parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
 and reference points (see functions section below).
 }
 \details{
@@ -85,12 +85,12 @@ respectively. The age of 95\% vulnerability is an offset, i.e.,
 With dome vulnerability, a double normal parameterization is used, where \code{vul_par}
 is an estimated vector of length 4:
 \itemize{
-\item \code{vulpar[1]} \code{log(sd_asc)}, where sd_asc of the normal distribution function for the ascending limb
-\item \code{vulpar[2]} \code{mu_asc}, mean of the normal distribution function for the ascending limb
-\item \code{vulpar[3]} \code{mu_des}, mean of the normal distribution function for the descending limb.
+\item \code{vulpar[1]}: \code{log(sd_asc)}, where sd_asc of the normal distribution function for the ascending limb
+\item \code{vulpar[2]}: \code{mu_asc}, mean of the normal distribution function for the ascending limb
+\item \code{vulpar[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb.
 This is parameterized as an offset, i.e., \code{mu_desc = mu_asc + exp(vulpar[3])} to ensure
 \code{mu_desc > mu_asc}.
-\item \code{vulpar[4]} \code{log(sd_des)}, where sd_des of the normal distribution function for the descending limb.
+\item \code{vulpar[4]}: \code{log(sd_des)}, where sd_des of the normal distribution function for the descending limb.
 }
 
 For \code{start}, a named list of starting values of estimates for:
@@ -98,8 +98,10 @@ For \code{start}, a named list of starting values of estimates for:
 \item \code{UMSY} Only for \code{SCA2}.
 \item \code{MSY} Only for \code{SCA2}.
 \item \code{meanR} Mean recruitment, only for \code{SCA}.
-\item \code{U_equilibrium} (typically 0). See \code{U_begin} argument.
+\item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means virgin conditions.
 \item \code{vul_par} (length 2 vector for logistic or length 4 for dome, see above).
+\item \code{sigma} Standard deviation of index.
+\item \code{tau} Standard deviation of recruitment deviations.
 }
 }
 \section{Functions}{
@@ -112,9 +114,10 @@ assessment run, assuming that the recruitment in the first year of the model is 
 Recruitment deviations are only estimated beginning in the year when age composition are available.
 }}
 
-\note{
-Convergence problems may occur if perfect data are used (e.g., \code{Data@CV_Ind}
-is very low).
+\examples{
+\dontrun{
+res <- SCA(Data = SimulatedData)
+}
 }
 \references{
 Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and
