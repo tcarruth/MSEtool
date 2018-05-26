@@ -6,8 +6,8 @@
 #'
 #' @param .Assess A function of class \code{Assess}.
 #' @param .HCR A function of class \code{HCR}.
-#' @param diagnostic (TRUE/FALSE) Whether assessment output will be written to
-#' \code{\link[DLMtool]{DLMenv}}. Intended for use with \code{\link[DLMtool]{runMSE}}.
+#' @param diagnostic Logical. Whether assessment output will be written to \code{\link[DLMtool]{DLMenv}}.
+#' Intended for use with \code{\link[DLMtool]{runMSE}}. See example.
 #' @param ... Additional arguments to be passed to \code{.Assess} and \code{.HCR}.
 #'
 #' @return A function of class \code{MP}.
@@ -17,16 +17,17 @@
 #' DD_40_10 <- make_MP(DD_TMB, HCR40_10)
 #'
 #' \dontrun{
-#' myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
+#' DD_40_10 <- make_MP(DD_TMB, HCR40_10, diagnostic = TRUE)
+#' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
 #'
 #' ls(DLMenv) # Model output during MSE is assigned to this environment.
-#' plot_diagnostic()
+#' diagnostic_AM(myMSE)
 #' }
 #'
-#' # MP that uses a surplus production model which assumes Binit_frac = 0.5.
-#' SP_MSY <- make_MP(SP, HCR_MSY, Binit_frac = 0.5)
+#' # MP that uses a Delay-Difference which assumes a Ricker stock-recruit function.
+#' DD_MSY <- make_MP(DD_TMB, HCR_MSY, SR = "Ricker")
 #' @importFrom pryr make_function
-#' @seealso \link{plot_diagnostics}
+#' @seealso \link{diagnostic_AM} \link{retrospective_AM}
 #' @export
 make_MP <- function(.Assess, .HCR, diagnostic = FALSE, ...) {
   if(is.character(.Assess)) {

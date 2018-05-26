@@ -11,8 +11,8 @@ make_MP(.Assess, .HCR, diagnostic = FALSE, ...)
 
 \item{.HCR}{A function of class \code{HCR}.}
 
-\item{diagnostic}{(TRUE/FALSE) Whether assessment output will be written to
-\code{\link[DLMtool]{DLMenv}}. Intended for use with \code{\link[DLMtool]{runMSE}}.}
+\item{diagnostic}{Logical. Whether assessment output will be written to \code{\link[DLMtool]{DLMenv}}.
+Intended for use with \code{\link[DLMtool]{runMSE}}. See example.}
 
 \item{...}{Additional arguments to be passed to \code{.Assess} and \code{.HCR}.}
 }
@@ -29,15 +29,16 @@ can then be tested in closed-loop simulation via \code{\link[DLMtool]{runMSE}}.
 DD_40_10 <- make_MP(DD_TMB, HCR40_10)
 
 \dontrun{
-myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
+DD_40_10 <- make_MP(DD_TMB, HCR40_10, diagnostic = TRUE)
+myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
 
 ls(DLMenv) # Model output during MSE is assigned to this environment.
-plot_diagnostic()
+diagnostic_AM(myMSE)
 }
 
-# MP that uses a surplus production model which assumes Binit_frac = 0.5.
-SP_MSY <- make_MP(SP, HCR_MSY, Binit_frac = 0.5)
+# MP that uses a Delay-Difference which assumes a Ricker stock-recruit function.
+DD_MSY <- make_MP(DD_TMB, HCR_MSY, SR = "Ricker")
 }
 \seealso{
-\link{plot_diagnostics}
+\link{diagnostic_AM} \link{retrospective_AM}
 }
