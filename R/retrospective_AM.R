@@ -1,4 +1,4 @@
-#' retrospective_AM - retrospective of Assessment model in MSE
+#' retrospective_AM (retrospective of Assessment model in MSE)
 #'
 #' Plots the true retrospective of an assessment model during the MSE. A series of time series estimates of SSB, F, and VB
 #' are plotted over the course of the MSE are plotted against the operating model (true) values (in black).
@@ -29,7 +29,9 @@
 #' retrospective_AM(myMSE, sim = 1, MP = "DD_MSY", Hist = myMSE_hist)
 #'
 #' ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-#' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData") # Save to disk for future use. File may be very large due to size of DLMenv!
+#'
+#' # Save to disk for future use. File may be very large due to size of DLMenv!
+#' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 #' }
 #'
 #' @seealso \link{diagnostic_AM}

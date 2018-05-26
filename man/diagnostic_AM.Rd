@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnostic_AM.R
 \name{diagnostic_AM}
 \alias{diagnostic_AM}
-\title{diagnostic_AM - diagnostic of Assessments in MSE. Did Assess models converge during MSE?}
+\title{diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?}
 \usage{
 diagnostic_AM(MSE, DLMenv = DLMtool::DLMenv, gradient_threshold = 0.1)
 }
@@ -36,7 +36,9 @@ myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 diagnostic_AM(myMSE)
 
 ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData") # Save to disk for future use. File may be very large due to size of DLMenv!
+
+# Save to disk for future use. File may be very large due to size of DLMenv!
+save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 }
 }
 \seealso{

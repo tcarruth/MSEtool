@@ -1,5 +1,5 @@
 
-#' diagnostic_AM - diagnostic of Assessments in MSE. Did Assess models converge during MSE?
+#' diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?
 #'
 #' Diagnostic check for convergence of Assess models converge during MSE.
 #' Assess models write output to the DLMenv environement if their argument
@@ -25,7 +25,9 @@
 #' diagnostic_AM(myMSE)
 #'
 #' ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-#' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData") # Save to disk for future use. File may be very large due to size of DLMenv!
+#'
+#' # Save to disk for future use. File may be very large due to size of DLMenv!
+#' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 #' }
 #' @importFrom graphics layout
 #' @seealso \link{retrospective_AM}

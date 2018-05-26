@@ -2,7 +2,7 @@
 % Please edit documentation in R/retrospective_AM.R
 \name{retrospective_AM}
 \alias{retrospective_AM}
-\title{retrospective_AM - retrospective of Assessment model in MSE}
+\title{retrospective_AM (retrospective of Assessment model in MSE)}
 \usage{
 retrospective_AM(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP,
   MSE_Hist = NULL, plot_type = c("SSB", "F", "SSB_SSBMSY", "F_FMSY",
@@ -50,7 +50,9 @@ retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
 retrospective_AM(myMSE, sim = 1, MP = "DD_MSY", Hist = myMSE_hist)
 
 ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData") # Save to disk for future use. File may be very large due to size of DLMenv!
+
+# Save to disk for future use. File may be very large due to size of DLMenv!
+save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 }
 
 }
