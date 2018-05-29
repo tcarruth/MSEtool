@@ -84,17 +84,15 @@ If you have convergence difficulties with \code{SP_SS}, try using a smaller valu
 data(swordfish)
 
 #### Observation-error surplus production model
-res <- SP(1, swordfish)
+res <- SP(Data = swordfish)
 
-# Provide starting values
-start <- list(UMSY = 0.1, MSY = 1e5, Binit_frac = 1, n = 2)
-res <- SP(1, swordfish, start = start)
-
-# Assume B/K = 0.95 in first year of model
-res <- SP(1, swordfish, start = list(Binit_frac = 0.95))
+# Provide starting values, assume B/K = 0.95 in first year of model
+# and symmetrical production curve (n = 2)
+start <- list(UMSY = 0.1, MSY = 1e5, Binit_frac = 0.95, n = 2)
+res <- SP(Data = swordfish, start = start)
 
 #### State-space version
-res <- SP_SS(1, swordfish, start = list(tau = 0.1))
+res <- SP_SS(Data = swordfish, start = list(Binit_frac = 0.95, tau = 0.1))
 
 }
 \references{

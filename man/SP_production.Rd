@@ -9,7 +9,7 @@ SP_production(depletion, figure = TRUE)
 \arguments{
 \item{depletion}{The hypothesized depletion that produces MSY.}
 
-\item{figure}{(TRUE/FALSE) Plots figure of production function as a function of depletion (B/K)}
+\item{figure}{Local, plots figure of production function as a function of depletion (B/K)}
 }
 \value{
 The production function exponent n (numeric).
@@ -18,8 +18,11 @@ The production function exponent n (numeric).
 For surplus production models, this function returns the production exponent n corresponding
 to BMSY/K (Fletcher 1978).
 }
+\note{
+May be useful for parameterizing \code{n} in \link{SP} and \link{SP_SS}.
+}
 \examples{
-SP_production(2)
+SP_production(0.5)
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
