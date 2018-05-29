@@ -23,7 +23,7 @@ summary_DD_TMB <- function(Assessment) {
   model_estimates <- summary(SD)
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
 
-  output <- list(model = "Delay Difference",
+  output <- list(model = "Delay-Difference",
                  current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
                  model_estimates = model_estimates)
@@ -205,7 +205,8 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
   SSB <- B[1:ny] - Catch # B*(1-u)
   Arec <- TMB_report$Arec
   Brec <- TMB_report$Brec
-  expectedR <- Arec * SSB / (1 + Brec * SSB)
+  if(info$data$SR_type == "BH") expectedR <- Arec * SSB / (1 + Brec * SSB)
+  if(info$data$SR_type == "Ricker") expectedR <- Arec * SSB * exp(-Brec * SSB)
 
   plot_SR(SSB, expectedR, R0, B0)
   if(save_figure) {
@@ -341,21 +342,20 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
-  params <- Assessment@info$params
+  #params <- Assessment@info$params
+  params <- as.list(Assessment@obj$env$last.par.best)
   map <- Assessment@obj$env$map
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
     params$log_MSY <- log(profile.grid[i, 2])
-    obj <- MakeADFun(data = Assessment@info$data, parameters = params,
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
 
-    if(!is.character(opt) && opt$convergence == 0) {
-      nll[i] <- opt$objective
-    }
+    if(!is.character(opt2)) nll[i] <- opt2$objective
   }
-  profile.grid$nll <- nll - min(nll, na.rm = TRUE)
+  profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
@@ -414,10 +414,10 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
     data$E_hist <- E_hist_ret
 
     obj <- MakeADFun(data = data, parameters = params, DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj)
+    opt <- optimize_TMB_model(obj, info$control)
     SD <- get_sdreport(obj, opt)
 
-    if(!is.character(opt) && opt$convergence == 0 && !is.character(SD)) {
+    if(!is.character(opt) && !is.character(SD)) {
       report <- obj$report(obj$env$last.par.best)
       B <- c(report$B, rep(NA, k - 1 + i))
       B_BMSY <- B/report$BMSY
@@ -532,6 +532,8 @@ plot_yield_DD <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01),
   Alpha <- data$Alpha
   wk <- data$wk
   Rho <- data$Rho
+  SR_type  <- data$SR_type
+
   Arec <- report$Arec
   Brec <- report$Brec
   BMSY <- report$BMSY
@@ -539,7 +541,8 @@ plot_yield_DD <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01),
   Surv <- S0 * (1 - u.vector)
 
   BPR <- (Surv * Alpha/(1 - Surv) + wk)/(1 - Rho * Surv)
-  R <- (Arec * BPR * (1 - u.vector)- 1)/(Brec * BPR * (1 - u.vector))
+  if(SR_type == "BH") R <- (Arec * BPR * (1 - u.vector)- 1)/(Brec * BPR * (1 - u.vector))
+  if(SR_type == "Ricker") R <- log(Arec * BPR * (1 - u.vector))/(Brec * BPR * (1 - u.vector))
 
   Biomass <- BPR * R
   Yield <- u.vector * BPR * R

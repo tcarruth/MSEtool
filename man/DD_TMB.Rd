@@ -5,11 +5,11 @@
 \alias{DD_SS}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
+DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
   control = list(eval.max = 1000), ...)
 
-DD_SS(x, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma = FALSE,
-  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+DD_SS(x = 1, Data, SR = c("BH", "Ricker"), start = NULL,
+  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
   control = list(eval.max = 1000), inner.control = list(), ...)
 }
 \arguments{
@@ -78,16 +78,21 @@ violated tends to be the biggest driver of performance for this method.
 data(sim_snapper)
 
 #### Observation-error delay difference model
-res <- DD_TMB(1, sim_snapper)
+res <- DD_TMB(1, Data = sim_snapper)
 
 ### State-space version
-res <- DD_SS(1, sim_snapper)
+res <- DD_SS(Data = sim_snapper)
 
 # Provide starting values
 start <- list(UMSY = 0.05, MSY = 4, q = 0.3)
 res <- DD_SS(1, sim_snapper, start = start)
 
 summary(res@SD) # Look at parameter estimates
+
+\dontrun{
+# Plot and save figures
+plot(res)
+}
 }
 \references{
 Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify

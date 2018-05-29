@@ -51,19 +51,24 @@
 #' data(sim_snapper)
 #'
 #' #### Observation-error delay difference model
-#' res <- DD_TMB(1, sim_snapper)
+#' res <- DD_TMB(1, Data = sim_snapper)
 #'
 #' ### State-space version
-#' res <- DD_SS(1, sim_snapper)
+#' res <- DD_SS(Data = sim_snapper)
 #'
 #' # Provide starting values
 #' start <- list(UMSY = 0.05, MSY = 4, q = 0.3)
 #' res <- DD_SS(1, sim_snapper, start = start)
 #'
 #' summary(res@@SD) # Look at parameter estimates
+#'
+#' \dontrun{
+#' # Plot and save figures
+#' plot(res)
+#' }
 #' @useDynLib MSEtool
 #' @export
-DD_TMB <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, control = list(eval.max = 1e3), ...) {
+DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE, control = list(eval.max = 1e3), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -157,7 +162,7 @@ class(DD_TMB) <- "Assess"
 
 #' @describeIn DD_TMB State-Space version of Delay-Difference model
 #' @export
-DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
+DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
                   silent = TRUE, control = list(eval.max = 1e3), inner.control = list(), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
@@ -210,7 +215,7 @@ DD_SS <- function(x, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma = FAL
   params$log_rec_dev = rep(0, ny - k)
 
   info <- list(Year = Year, data = data, params = params, sigma = sigmaC,
-               I_hist = I_hist, control = control)
+               I_hist = I_hist, control = control, inner.control = inner.control)
 
   map <- list()
   if(fix_sigma) map$log_sigma <- factor(NA)
