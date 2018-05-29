@@ -29,6 +29,18 @@ Performs a profile likelihood.
 \details{
 For \code{DD_TMB}, sequence of values for \code{UMSY} and \code{MSY} are needed.
 }
+\examples{
+\dontrun{
+data(sim_snapper)
+output <- DD_TMB(Data = sim_snapper)
+pro <- profile_likelihood(output, UMSY = seq(0.05, 0.15, 0.01), MSY = seq(0.1, 3, 0.01))
+
+# Ensure your grid is of proper resolution.
+# This grid is too coarse.
+poor_profile <- profile_likelihood(output, UMSY = seq(0.05, 0.15, 0.1), MSY = seq(0.1, 3, 0.1),
+save_figure = FALSE)
+}
+}
 \author{
 Q. Huynh
 }

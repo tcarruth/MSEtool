@@ -29,9 +29,11 @@ with successive number of years removed. Returns invisibly an array of model out
 Perform a retrospective analysis.
 }
 \examples{
-data(Snapper_sim)
-output <- DD_TMB(Snapper_sim)
-RS_retro <- retrospective(output, nyr = 5)
+\dontrun{
+data(sim_snapper)
+output <- DD_TMB(Data = sim_snapper)
+get_retro <- retrospective(output, nyr = 5)
+}
 }
 \author{
 Q. Huynh
