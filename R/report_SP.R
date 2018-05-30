@@ -66,11 +66,11 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
+    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
@@ -88,11 +88,11 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind, label = "Index")
+  if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
+    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind, label = "Index")
+      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
