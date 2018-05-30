@@ -1,3 +1,19 @@
+//posfun2 from ADMB
+template<class Type>
+Type posfun2(Type x) {
+  Type eps = 1e-3;
+  Type x_eps = x/eps;
+  Type pen = 1.;
+  pen += x_eps;
+  pen += pow(x_eps, 2);
+  pen += pow(x_eps, 3);
+  Type pen2 = pow(pen, -1);
+  pen2 *= eps;
+  Type ans = CppAD::CondExpGe(x, eps, x, pen2);
+  return ans;
+}
+
+
 // Calculates analytical solution of a lognormal variable
 template<class Type>
 Type calc_sigma(vector<Type> I_y, vector<Type> Ipred_y) {
