@@ -184,11 +184,11 @@
   }
 
   // Very large penalties to likelihood if stock-recruitment parameters (a and b) are negative.
-  Type penalty = CppAD::CondExpLe(Arec, Type(0), Type(1e5), Type(0));
-  penalty += CppAD::CondExpLe(Brec, Type(0), Type(1e5), Type(0));
+  // For both B-H and Ricker, Brec > 0 if Arec * EPR_UMSY - 1 > 0.
+  // FOr Ricker, Arec is always > 0. Need to find conditions for Arec with B-H S-R relationship.
+  Type penalty = CppAD::CondExpGt(Arec * EPR_UMSY - 1, Type(0), Type(0), Type(UMSY * 1e3));
 
   Type nll = nll_comp.sum() + penalty;
-  nll -= dnorm(log_tau, Type(log(0.6)), Type(0.4), true);
 
   Type U_UMSY_final = U(U.size()-1)/UMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;
