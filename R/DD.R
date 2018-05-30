@@ -95,6 +95,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, silent = T
 
   data <- list(model = "DD", S0 = S0, Alpha = Alpha, Rho = Rho, ny = ny, k = k,
                wk = wk, E_hist = E_hist, C_hist = C_hist, SR_type = SR)
+  LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k)
 
   params <- list()
   if(!is.null(start)) {
@@ -112,7 +113,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, silent = T
   }
   if(is.null(params$log_q)) params$log_q <- log(Data@Mort[x])
 
-  info <- list(Year = Year, data = data, params = params, I_hist = I_hist, control = control)
+  info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH, control = control)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    DLL = "MSEtool", silent = silent)
   opt <- optimize_TMB_model(obj, control)
@@ -189,6 +190,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma =
   wk <- wa[k]
   data <- list(model = "DD_SS", S0 = S0, Alpha = Alpha, Rho = Rho, ny = ny, k = k,
                wk = wk, E_hist = E_hist, C_hist = C_hist, SR_type = SR)
+  LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k)
 
   params <- list()
   if(!is.null(start)) {
@@ -214,8 +216,8 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, fix_sigma =
   if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_rec_dev = rep(0, ny - k)
 
-  info <- list(Year = Year, data = data, params = params, sigma = sigmaC,
-               I_hist = I_hist, control = control, inner.control = inner.control)
+  info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH,
+               control = control, inner.control = inner.control)
 
   map <- list()
   if(fix_sigma) map$log_sigma <- factor(NA)

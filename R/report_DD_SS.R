@@ -66,7 +66,51 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                 name = Data@Name, report_type = "Index")
   }
 
-  lh.file.caption <- plot_life_history(Data, save_figure = save_figure, save_dir = save_dir, Model = Model)
+  #lh.file.caption <- plot_life_history(Data, save_figure = save_figure, save_dir = save_dir, Model = Model)
+
+  age <- 1:info$LH$maxage
+
+  plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "lifehistory_1_length_at_age.png"))
+    plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
+    dev.off()
+    lh.file.caption <- c("lifehistory_1_length_at_age.png",
+                         paste("Mean Length-at-age from Data object."))
+  }
+
+  plot_generic_at_age(age, info$LH$WAA, label = 'Mean Weight-at-age')
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "lifehistory_2_mean_weight_at_age.png"))
+    plot_generic_at_age(age, info$LH$WAA, label = 'Mean Weight-at-age')
+    dev.off()
+    lh.file.caption <- rbind(lh.file.caption,
+                             c("lifehistory_2_mean_weight_at_age.png",
+                               "Mean Weight at age from Data object."))
+  }
+
+  plot(info$LH$LAA, info$LH$WAA, typ = 'o', xlab = 'Length', ylab = 'Weight')
+  abline(h = 0, col = 'grey')
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "lifehistory_3_length_weight.png"))
+    plot(info$LH$LAA, info$LH$WAA, typ = 'o', xlab = 'Length', ylab = 'Weight')
+    abline(h = 0, col = 'grey')
+    dev.off()
+    lh.file.caption <- rbind(lh.file.caption,
+                             c("lifehistory_3_length_weight.png",
+                               "Length-weight relationship from Data object."))
+  }
+
+  k <- info$data$k
+  sel <- ifelse(age < k, 0, 1)
+  plot_ogive(age, sel, label = "Maturity")
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "lifehistory_4_maturity.png"))
+    plot_ogive(age, sel, label = "Maturity")
+    dev.off()
+    lh.file.caption <- rbind(lh.file.caption,
+                             c("lifehistory_4_maturity.png", "Assumed knife-edge maturity at the age corresponding to the length of 50% maturity."))
+  }
 
   if(save_figure) {
     html_report(plot.dir, model = "Delay Difference (State-Space)",
@@ -84,11 +128,11 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
+    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
@@ -104,11 +148,11 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Ind[1])) {
-    plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind, label = "Index")
+  if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
+    plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-      plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind, label = "Index")
+      plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
@@ -178,10 +222,6 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                    paste0("Estimate of B/B0 in ", By, ", distribution based on
                                           normal approximation of estimated covariance matrix.")))
   }
-
-  k <- info$data$k
-  age <- 1:Data@MaxAge
-  sel <- ifelse(age < k, 0, 1)
 
   plot_ogive(age, sel)
   if(save_figure) {
