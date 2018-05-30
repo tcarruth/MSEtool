@@ -115,9 +115,7 @@ Recruitment deviations are only estimated beginning in the year when age composi
 }}
 
 \examples{
-\dontrun{
 res <- SCA(Data = SimulatedData)
-}
 }
 \references{
 Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and

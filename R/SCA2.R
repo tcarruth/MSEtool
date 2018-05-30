@@ -35,6 +35,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   A50 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
   A95 <- max(A50+0.5, iVB(t0, K, Linf, Data@L95[x]))
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
+  LH <- c(Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
   # Starting values
   params <- list()
@@ -76,7 +77,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = vulnerability, SR_type = SR,
                est_rec_dev = as.integer(random_map(CAA_n_nominal)))
-  info <- list(Year = Data@Year, data = data, params = params, control = control)
+  info <- list(Year = Data@Year, data = data, params = params, LH = LH, control = control)
 
   map <- list()
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
