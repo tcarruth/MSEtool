@@ -2,12 +2,13 @@
 #' Recruitment deviations are only estimated beginning in the year when age composition are available.
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                 CAA_multiplier = 50, start = NULL, fix_U_equilibrium = TRUE,
-                 fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-                 control = list(eval.max = 1e3), inner.control = list(), ...) {
+                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = 1/mean(C_hist),
+                 start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
+                 silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), inner.control = list(), ...) {
   dependencies = ""
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
+  I_type <- match.arg(I_type)
   yind <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- yind:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
@@ -35,7 +36,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   A50 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
   A95 <- max(A50+0.5, iVB(t0, K, Linf, Data@L95[x]))
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
-  LH <- c(Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
+  LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
   # Starting values
   params <- list()
@@ -72,12 +73,13 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_rec_dev <- rep(0, n_y - 1)
 
-  data <- list(model = "SCA2", C_hist = C_hist, I_hist = I_hist,
+  data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist,
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
-               weight = Wa, mat = mat_age, vul_type = vulnerability, SR_type = SR,
-               est_rec_dev = as.integer(random_map(CAA_n_nominal)))
-  info <- list(Year = Data@Year, data = data, params = params, LH = LH, control = control)
+               weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
+               SR_type = SR, est_rec_dev = as.integer(random_map(CAA_n_nominal)))
+  info <- list(Year = Data@Year, data = data, params = params, LH = LH, control = control,
+               inner.control = inner.control, rescale = rescale)
 
   map <- list()
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
@@ -92,6 +94,15 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
+  if(rescale != 1) {
+    vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
+                  "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
+    vars_mult <- "Brec"
+    var_trans <- "MSY"
+    trans_fun <- "log"
+    rescale_report(vars_div, vars_mult, var_trans, trans_fun)
+  }
+
   if(is.character(opt) || is.character(SD)) {
     Assessment <- new("Assessment", Model = "SCA2", info = info,
                       obj = obj, opt = opt, SD = SD, TMB_report = report,
