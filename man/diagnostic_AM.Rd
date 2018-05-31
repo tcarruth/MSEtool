@@ -4,7 +4,8 @@
 \alias{diagnostic_AM}
 \title{diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?}
 \usage{
-diagnostic_AM(MSE, DLMenv = DLMtool::DLMenv, gradient_threshold = 0.1)
+diagnostic_AM(MSE, DLMenv = DLMtool::DLMenv, gradient_threshold = 0.1,
+  figure = TRUE)
 }
 \arguments{
 \item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}.}
@@ -14,9 +15,12 @@ generated during the MSE.}
 
 \item{gradient_threshold}{The value of the maximum gradient magnitude below which the
 model is considered to have converged.}
+
+\item{figure}{Logical, whether a figure will be drawn.}
 }
 \value{
-Figure. Traffic light (red/green) plots indicating whether model converged,
+A data frame with diagnostic information for the assesssment-based MPs. If \code{figure = TRUE},
+a set of figures: traffic light (red/green) plots indicating whether model converged,
 according to \code{convergence} code in list returned by \code{\link[stats]{nlminb}}
 the Hessian matrix is positive-definite, according to \code{pdHess} in
 list returned by \code{\link[TMB]{sdreport}}, and the maximum gradient magnitude is
