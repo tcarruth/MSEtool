@@ -14,9 +14,10 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(eval.max = 1000), inner.control = list(), ...)
+  rescale = 1/mean(C_hist), start = NULL, fix_U_equilibrium = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}
@@ -67,7 +68,7 @@ is passed on to \code{\link[TMB]{newton}}.}
 An object of class \linkS4class{Assessment}.
 }
 \description{
-A generic statistical catch-at-age model that uses catch, index, and catch-at-age composition
+A generic statistical catch-at-age model (single fleet, single season) that uses catch, index, and catch-at-age composition
 data. An annual harvest rate is calculated (assuming a pulse fishery) as described in Forrest et al. (2008).
 There are two parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
 and reference points (see functions section below).
@@ -125,7 +126,9 @@ Recruitment deviations are only estimated beginning in the year when age composi
 }}
 
 \examples{
-res <- SCA(Data = SimulatedData)
+res <- SCA(Data = DLMtool::SimulatedData)
+
+res <- SCA2(Data = DLMtool::Simulation_1)
 }
 \references{
 Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and

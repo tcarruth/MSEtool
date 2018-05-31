@@ -22,7 +22,7 @@ summary_SCA <- function(Assessment) {
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
 
-  Value = c(h, R0, VB0, E0, MSY, UMSY, VBMSY, EMSY)
+  Value = c(h, R0, VB0, SSB0, MSY, UMSY, VBMSY, SSBMSY)
   Description = c("Stock-recruit steepness", "Virgin recruitment", "Virgin vulnerable biomass",
                   "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
                   "Vulnerable biomass at MSY", "SSB at MSY")
@@ -442,9 +442,9 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
     opt <- optimize_TMB_model(obj, Assessment@info$control)
     if(!is.character(opt)) nll[i] <- opt$objective
   }
-  profile.grid <- data.frame(meanR = dot$meanR, nll = nll)
+  profile.grid <- data.frame(meanR = dots$meanR, nll = nll)
   if(figure) {
-    plot(meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
+    plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
     abline(v = Assessment@SD$value[1], lty = 2)
 
     if(save_figure) {
@@ -452,7 +452,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
       prepare_to_save_figure()
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
+      plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
       abline(v = Assessment@SD$value[1], lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
@@ -489,6 +489,9 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
 
+  SD <- NULL
+  rescale <- info$rescale
+
   for(i in 0:nyr) {
     n_y_ret <- n_y - i
     data$n_y <- n_y_ret
@@ -502,7 +505,6 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, info$control)
     SD2 <- get_sdreport(obj2, opt2)
-    SD <- NULL
 
     if(!is.character(opt2) && !is.character(SD2)) {
       report <- obj2$report(obj2$env$last.par.best)

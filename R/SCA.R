@@ -1,6 +1,6 @@
 #' Statistical catch-at-age (SCA) model
 #'
-#' A generic statistical catch-at-age model that uses catch, index, and catch-at-age composition
+#' A generic statistical catch-at-age model (single fleet, single season) that uses catch, index, and catch-at-age composition
 #' data. An annual harvest rate is calculated (assuming a pulse fishery) as described in Forrest et al. (2008).
 #' There are two parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
 #' and reference points (see functions section below).
@@ -88,7 +88,9 @@
 #' (as penalized parameters similar to Cadigan 2016). This generally runs quickly. MSY reference points are estimated after the
 #' assessment run, assuming that the recruitment in the first year of the model is the virgin recruitment.
 #' @examples
-#' res <- SCA(Data = SimulatedData)
+#' res <- SCA(Data = DLMtool::SimulatedData)
+#'
+#' res <- SCA2(Data = DLMtool::Simulation_1)
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = 1/mean(C_hist),
@@ -157,7 +159,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
 
   data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
-               vul_type = vulnerability, Itype = Itype, est_rec_dev = rep(1L, length(CAA_n_nominal)))
+               vul_type = vulnerability, I_type = I_type, est_rec_dev = rep(1L, length(CAA_n_nominal)))
   info <- list(Year = Data@Year, data = data, params = params, LH = LH, SR = SR, control = control,
                inner.control = inner.control, rescale = rescale)
 
@@ -365,7 +367,7 @@ rescale_report <- function(var_div, var_mult, var_trans, trans_fun) {
       fixed_name <- paste0(trans_fun2, "_", var_trans2)
       ind_fixed <- pmatch(paste0(trans_fun2, "_", var_trans2), names(SD$par.fixed))
       if(trans_fun2 == "log") SD$par.fixed[ind_fixed] <- log(SD$value[var_trans2])
-      if(trans_fun2 == "logit") SD$par.fixed[ind_fixed] <- log(SD$value[var_trans2]/(1 - SD$value[var_trans2]))
+      #if(trans_fun2 == "logit") SD$par.fixed[ind_fixed] <- log(SD$value[var_trans2]/(1 - SD$value[var_trans2]))
     }
 
     assign("SD", SD, envir = parent.frame())

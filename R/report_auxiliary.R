@@ -325,7 +325,7 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
     plot(Year, obs, typ = 'o', ylab = label, ylim = c(0, 1.1 * y.max))
     arrows(Year, obs_lower, Year, obs_upper, length = 0.025, angle = 90,
            code = 3, col = 'grey30')
-    lines(Year, fit, lwd = 2)
+    #lines(Year, fit, lwd = 2)
   }
   if(!is.null(fit)) lines(Year, fit, lwd = fit_linewidth, col = fit_color)
   abline(h = 0, col = 'grey')
