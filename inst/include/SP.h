@@ -28,12 +28,19 @@
   vector<Type> U(ny);
 
   Type nll = 0.;
+  Type penalty = 0.;
 
   B(0) = Binit_frac * K;
   for(int y=0;y<ny;y++) {
-    U(y) = C_hist(y)/B(y);
+    //U(y) = C_hist(y)/B(y);
+    U(y) = CppAD::CondExpLt(1 - C_hist(y)/B(y), Type(0.025),
+      1 - posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y)/B(y));
     SP(y) = gamma * MSY * (B(y)/K - pow(B(y)/K, n));
-    B(y+1) = CppAD::CondExpGt(B(y) + SP(y) - C_hist(y), Type(1e-15), B(y) + SP(y) - C_hist(y), Type(1e-15));
+    B(y+1) = B(y) + SP(y) - U(y) * B(y);
+    //B(y+1) -= CppAD::CondExpLe(1 - C_hist(y)/B(y), Type(0.025),
+    //  B(y) * posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y));
+    //B(y+1) = CppAD::CondExpGt(B(y) + SP(y) - C_hist(y), Type(1e-15), B(y) + SP(y) - C_hist(y), Type(1e-15));
+    //B(y+1) = posfun(B(y) + SP(y) - C_hist(y), penalty);
   }
 
   Type q = calc_q(I_hist, B);
@@ -43,6 +50,8 @@
   for(int y=0;y<ny;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
   }
+
+  nll += penalty;
 
   Type U_UMSY_final = U(U.size()-1)/UMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;
@@ -72,6 +81,7 @@
   REPORT(SP);
   REPORT(U);
   REPORT(nll);
+  REPORT(penalty);
 
   return nll;
 

@@ -12,6 +12,7 @@
   DATA_VECTOR(weight);    // Weight-at-age at the beginning of the year
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
+  DATA_STRING(I_type);    // String whether index surveys B, VB, or SSB
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
@@ -29,6 +30,8 @@
   Type MSY = exp(log_MSY);
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
+
+  Type penalty = 0.;
 
   // Vulnerability
   vector<Type> vul(max_age);
@@ -146,7 +149,9 @@
     }
     N(y+1,0) = R(y+1);
 
-    U(y) = C_hist(y)/VB(y);
+
+    U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
+      1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
     for(int a=0;a<max_age;a++) {
       CAApred(y,a) = vul(a) * U(y) * N(y,a);
       CN(y) += CAApred(y,a);
@@ -163,8 +168,17 @@
   }
 
   // Calculate nuisance parameters and likelihood
-  Type q = calc_q(I_hist, VB);
-  for(int y=0;y<n_y;y++) Ipred(y) = q * VB(y);
+  Type q;
+  if(I_type == "B") {
+    q = calc_q(I_hist, B);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * B(y);
+  } else if(I_type == "VB") {
+    q = calc_q(I_hist, VB);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * VB(y);
+  } else {
+    q = calc_q(I_hist, E);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * E(y);
+  }
 
   vector<Type> nll_comp(3);
   nll_comp.setZero();
@@ -186,7 +200,7 @@
   // Very large penalties to likelihood if stock-recruitment parameters (a and b) are negative.
   // For both B-H and Ricker, Brec > 0 if Arec * EPR_UMSY - 1 > 0.
   // FOr Ricker, Arec is always > 0. Need to find conditions for Arec with B-H S-R relationship.
-  Type penalty = CppAD::CondExpGt(Arec * EPR_UMSY - 1, Type(0), Type(0), Type(UMSY * 1e3));
+  penalty += CppAD::CondExpGt(Arec * EPR_UMSY - 1, Type(0), Type(0), Type(UMSY * 1e3));
 
   Type nll = nll_comp.sum() + penalty;
 
