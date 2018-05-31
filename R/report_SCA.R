@@ -22,8 +22,7 @@ summary_SCA <- function(Assessment) {
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
 
-  Value = c(TMB_report$h, TMB_report$R0, TMB_report$VB0, TMB_report$E0, TMB_report$MSY, TMB_report$UMSY,
-            TMB_report$VBMSY, TMB_report$EMSY)
+  Value = c(h, R0, VB0, E0, MSY, UMSY, VBMSY, EMSY)
   Description = c("Stock-recruit steepness", "Virgin recruitment", "Virgin vulnerable biomass",
                   "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
                   "Vulnerable biomass at MSY", "SSB at MSY")
@@ -427,49 +426,38 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
 profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE,
                                    save_dir = getwd(), ...) {
   dots <- list(...)
-  if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
-  if(!"MSY" %in% names(dots)) stop("Sequence of MSY was not found. See help file.")
-  UMSY <- dots$UMSY
-  MSY <- dots$MSY
+  if(!"meanR" %in% names(dots)) stop("Sequence of meanR was not found. See help file.")
+  meanR <- dots$meanR * Assessment@info$rescale
 
-  profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
-  nll <- rep(NA, nrow(profile.grid))
+  nll <- rep(NA, length(meanR))
   params <- Assessment@info$params
   random <- Assessment@obj$env$random
   map <- Assessment@obj$env$map
-  map$logit_UMSY <- map$log_MSY <- factor(NA)
-  for(i in 1:nrow(profile.grid)) {
-    params$logit_UMSY = log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
+  map$log_meanR <- factor(NA)
+  for(i in 1:length(meanR)) {
+    params$log_meanR <- log(meanR[i])
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, random = random, inner.control = Assessment@info$inner.control,
                      DLL = "MSEtool", silent = TRUE)
     opt <- optimize_TMB_model(obj, Assessment@info$control)
-    if(!is.character(opt)) {
-      nll[i] <- opt$objective
-    }
+    if(!is.character(opt)) nll[i] <- opt$objective
   }
-  profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
+  profile.grid <- data.frame(meanR = dot$meanR, nll = nll)
   if(figure) {
-    z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
-    contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
-            nlevels = 20)
+    plot(meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
+    abline(v = Assessment@SD$value[1], lty = 2)
 
-    UMSY.MLE <- Assessment@UMSY
-    MSY.MLE <- Assessment@MSY
-    points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
     if(save_figure) {
       Model <- Assessment@Model
       prepare_to_save_figure()
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
-      contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
-              nlevels = 20)
-      points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
+      plot(meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
+      abline(v = Assessment@SD$value[1], lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
-                                "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
-      html_report(plot.dir, model = "Delay Difference (State-Space)",
+                                "Profile likelihood of mean recruitment. Vertical, dashed line indicates maximum likelihood estimate.")
+      html_report(plot.dir, model = "Statistical Catch-at-Age",
                   captions = matrix(profile.file.caption, nrow = 1),
                   name = Assessment@Data@Name, report_type = "Profile_Likelihood")
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
@@ -484,51 +472,68 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
                               save_figure = FALSE, save_dir = getwd()) {
   assign_Assessment_slots()
   data <- info$data
-  ny <- data$ny
-  k <- data$k
+  n_y <- data$n_y
 
-  Year <- info$Year
-  moreRecruitYears <- max(Year) + 1:k
-  Year <- c(Year, moreRecruitYears)
+  Year <- c(info$Year, max(info$Year) + 1)
   C_hist <- data$C_hist
-  E_hist <- data$E_hist
+  I_hist <- data$I_hist
+  CAA_hist <- data$CAA_hist
+  CAA_n <- data$CAA_n
   params <- info$params
 
   map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, B, B_BMSY, B_B0, N, R, U, U_UMSY, log_rec_dev
-  retro_ts <- array(NA, dim = c(nyr+1, ny + k, 9))
+  # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, U, U_UMSY, log_rec_dev
+  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 9))
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
-  #retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
 
   for(i in 0:nyr) {
-    ny_ret <- ny - i
-    C_hist_ret <- C_hist[1:ny_ret]
-    E_hist_ret <- E_hist[1:ny_ret]
-    data$ny <- ny_ret
-    data$C_hist <- C_hist_ret
-    data$E_hist <- E_hist_ret
-    params$log_rec_dev <- rep(0, ny_ret - k)
+    n_y_ret <- n_y - i
+    data$n_y <- n_y_ret
+    data$C_hist <- C_hist[1:n_y_ret]
+    data$I_hist <- I_hist[1:n_y_ret]
+    data$CAA_hist <- CAA_hist[1:n_y_ret, ]
+    data$CAA_n <- CAA_n[1:n_y_ret]
+    params$log_rec_dev <- rep(0, n_y_ret)
 
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, info$control)
     SD2 <- get_sdreport(obj2, opt2)
+    SD <- NULL
 
     if(!is.character(opt2) && !is.character(SD2)) {
       report <- obj2$report(obj2$env$last.par.best)
-      B <- c(report$B, rep(NA, k - 1 + i))
-      B_BMSY <- B/report$BMSY
-      B_B0 <- B/report$B0
-      R <- c(report$R, rep(NA, i))
-      N <- c(report$N, rep(NA, k - 1 + i))
-      U <- c(report$U, rep(NA, k + i))
-      U_UMSY <- U/report$UMSY
-      log_rec_dev <- c(report$log_rec_dev, rep(NA, 2 * k + i))
+      if ("U_equilibrium" %in% names(map) && params$U_equilibrium == 0) {
+        SSB0 <- report$E[1]
+        R0 <- report$R[1]
+      }
+      else SSB0 <- R0 <- NULL
+      refpt <- get_refpt(SSB = report$E[1:(length(report$E)-1)], rec = report$R[2:length(report$R)], SSB0 = SSB0,
+                         R0 = R0, M = data$M, weight = data$weight, mat = data$mat, vul = report$vul,
+                         SR = info$SR)
+      report <- c(report, refpt)
+      if(info$rescale != 1) {
+        vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
+                      "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
+        vars_mult <- "Brec"
+        var_trans <- "meanR"
+        trans_fun <- "log"
+        rescale_report(vars_div, vars_mult, var_trans, trans_fun)
+      }
 
-      retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, R, N, U, U_UMSY, log_rec_dev)
+      SSB <- c(report$E, rep(NA, i))
+      SSB_SSBMSY <- SSB/report$EMSY
+      SSB_SSB0 <- SSB/report$E0
+      R <- c(report$R, rep(NA, i))
+      N <- c(rowSums(report$N), rep(NA, i))
+      U <- c(report$U, rep(NA, i + 1))
+      U_UMSY <- U/report$UMSY
+      log_rec_dev <- c(report$log_rec_dev, rep(NA, i + 1))
+
+      retro_ts[i+1, , ] <- cbind(Year, SSB, SSB_SSBMSY, SSB_SSB0, R, N, U, U_UMSY, log_rec_dev)
       retro_est[i+1, , ] <- summary(SD2)[rownames(summary(SD2)) != "log_rec_dev", ]
 
     } else {
@@ -536,8 +541,8 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
     }
   }
   if(figure) {
-    plot_retro_DD_SS(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
-                     nyr_label = 0:nyr, color = rich.colors(nyr+1))
+    plot_retro_SCA(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
+                   nyr_label = 0:nyr, color = rich.colors(nyr+1))
   }
   # Need to write legend?
   legend <- NULL
@@ -546,15 +551,15 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
 
 
 plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
-                             save_dir = getwd(), nyr_label, color) {
+                           save_dir = getwd(), nyr_label, color) {
   n_tsplots <- dim(retro_ts)[3] - 1
-  ts_label <- c("Biomass", expression(B/B[MSY]), expression(B/B[0]), "Recruitment",
+  ts_label <- c("Spawning Stock Biomass", expression(SSB/SSB[MSY]), expression(SSB/SSB[0]), "Recruitment",
                 "Population Abundance (N)", "Exploitation rate (U)",
                 expression(U/U[MSY]), "Recruitment deviations")
   Year <- retro_ts[1, , 1]
 
   if(save_figure) {
-    Model <- "DD_SS"
+    Model <- "SCA"
     prepare_to_save_figure()
   }
 
@@ -590,39 +595,13 @@ plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
     }
   }
 
-  plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], logit = TRUE,
-               label = expression(hat(U)[MSY]), color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-         title = "Years removed:")
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
-    plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], logit = TRUE,
-                 label = expression(hat(U)[MSY]), color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    dev.off()
-  }
-
-  plot_lognormalvar(retro_est[, 2, 1], retro_est[, 2, 2], logtransform = TRUE,
-                    label = expression(widehat(MSY)), color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-         title = "Years removed:")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
-    plot_lognormalvar(retro_est[, 2, 1], retro_est[, 2, 2], logtransform = TRUE,
-                      label = expression(widehat(MSY)), color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    dev.off()
-  }
-
-  if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+2)), ".png"),
+    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:n_tsplots), ".png"),
                                    x2 = paste0("Retrospective pattern in ",
                                                c("biomass", "B/BMSY", "biomass depletion", "recruitment",
-                                                 "abundance", "exploitation", "U/UMSY", "recruitment deviations", "UMSY estimate", "MSY estimate"), "."))
+                                                 "abundance", "exploitation", "U/UMSY", "recruitment deviations"), "."))
     Assessment <- get("Assessment", envir = parent.frame())
-    html_report(plot.dir, model = "Delay Difference (State-Space)", captions = ret.file.caption,
+    html_report(plot.dir, model = "Statistical Catch-at-Age", captions = ret.file.caption,
                 name = Assessment@Data@Name, report_type = "Retrospective")
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }

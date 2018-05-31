@@ -6,13 +6,16 @@
 \title{Statistical catch-at-age (SCA) model}
 \usage{
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
-  "dome"), CAA_multiplier = 50, start = NULL, fix_U_equilibrium = TRUE,
+  "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
+  rescale = 1/mean(C_hist), start = NULL, fix_U_equilibrium = TRUE,
   fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(eval.max = 1000), inner.control = list(), ...)
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
-  "dome"), CAA_multiplier = 50, start = NULL, fix_U_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
+  start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
   control = list(eval.max = 1000), inner.control = list(), ...)
 }
 \arguments{
@@ -26,6 +29,13 @@ SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
 See details for parameterization.}
 
 \item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix. See details.}
+
+\item{I_type}{Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
+vulnerable biomass (VB), or spawning stock biomass (SSB).}
+
+\item{rescale}{Numeric, a multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, scales the catch so that time series mean is 1. Output is re-converted
+back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
