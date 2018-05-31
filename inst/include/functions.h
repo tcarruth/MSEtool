@@ -1,15 +1,25 @@
+//posfun from ADMB
+template<class Type>
+Type posfun(Type x, Type eps, Type &penalty) {
+  Type denom = 2;
+  denom -= x/eps;
+  Type ans = CppAD::CondExpGe(x, eps, x, eps/denom);
+  penalty += CppAD::CondExpGe(x, eps, Type(0), 100 * pow(x - eps, 2));
+  return ans;
+}
+
 //posfun2 from ADMB
 template<class Type>
-Type posfun2(Type x) {
-  Type eps = 1e-3;
+Type posfun2(Type x, Type eps, Type &penalty) {
   Type x_eps = x/eps;
-  Type pen = 1.;
-  pen += x_eps;
-  pen += pow(x_eps, 2);
-  pen += pow(x_eps, 3);
-  Type pen2 = pow(pen, -1);
+  Type denom = 1.;
+  denom += x_eps;
+  denom += pow(x_eps, 2);
+  denom += pow(x_eps, 3);
+  Type pen2 = pow(denom, -1);
   pen2 *= eps;
   Type ans = CppAD::CondExpGe(x, eps, x, pen2);
+  penalty += CppAD::CondExpGe(x, eps, Type(0), 0.01 * pow(x - eps, 3));
   return ans;
 }
 
