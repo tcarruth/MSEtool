@@ -14,8 +14,9 @@ get_sdreport <- function(obj, opt) {
   if(is.character(opt)) {
     res <- "nlminb() optimization returned an error. Could not run TMB::sdreport()."
   } else {
-    res <- tryCatch(sdreport(obj, par.fixed = opt$par, getReportCovariance = FALSE),
-                    error = function(e) as.character(e))
+    if(is.null(obj$env$random)) hess <- obj$he(opt$par) else hess <- NULL
+    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = hess,
+                             getReportCovariance = FALSE), error = function(e) as.character(e))
   }
   if(inherits(res, "sdreport") && !res$pdHess) {
     res <- "Estimated covariance matrix was not positive definite."
