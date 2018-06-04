@@ -6,8 +6,8 @@
 \usage{
 plot_composition(Year, obs, fit = NULL, plot_type = c("annual",
   "bubble_data", "bubble_residuals", "mean"), data_type = c(NULL, "length",
-  "age"), N = rowSums(obs), CAL_bins = NULL, bubble_adj = 5,
-  fit_linewidth = 3, fit_color = "red")
+  "age"), N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+  bubble_adj = 5, fit_linewidth = 3, fit_color = "red")
 }
 \arguments{
 \item{Year}{A vector of years.}
@@ -28,6 +28,8 @@ bubble plot of the data, and bubble plot of the residuals, and annual means.}
 
 \item{CAL_bins}{A vector of lengths corresponding to the columns in \code{obs}.
 and \code{fit}. Ignored for age data.}
+
+\item{ind}{A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.}
 
 \item{bubble_adj}{Numeric, for adjusting the relative size of bubbles in bubble plots
 (larger number = larger bubbles).}
