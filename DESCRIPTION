@@ -9,16 +9,17 @@ Authors@R: c(person("Tom","Carruthers",,"t.carruthers@oceans.ubc.ca",role=c("aut
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
 Description: Simulation tools for informing data-rich fisheries. 
 License: GPL-3
-Depends: 
+Depends:
   R(>= 3.3.0),
   DLMtool
-Imports: 
+Imports:
   MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm, pryr,
   r4ss, reshape2, snowfall, stats, utils
 LinkingTo: TMB, RcppEigen
 LazyData: yes
 LazyLoad: yes
 RoxygenNote: 6.0.1
-Suggests: knitr
+Suggests: knitr,
+    testthat
 VignetteBuilder: knitr
 BugReports: https://github.com/tcarruth/MSEtool/issues
