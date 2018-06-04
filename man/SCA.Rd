@@ -7,14 +7,14 @@
 \usage{
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = 1/mean(C_hist), start = NULL, fix_U_equilibrium = TRUE,
+  rescale = "mean1", start = NULL, fix_U_equilibrium = TRUE,
   fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
   control = list(iter.max = 1e+06, eval.max = 1e+06),
   inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = 1/mean(C_hist), start = NULL, fix_U_equilibrium = TRUE,
+  rescale = "mean1", start = NULL, fix_U_equilibrium = TRUE,
   fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
   control = list(iter.max = 1e+06, eval.max = 1e+06),
   inner.control = list(), ...)
@@ -34,9 +34,9 @@ See details for parameterization.}
 \item{I_type}{Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
 vulnerable biomass (VB), or spawning stock biomass (SSB).}
 
-\item{rescale}{Numeric, a multiplicative factor that rescales the catch in the assessment model, which
-can improve convergence. By default, scales the catch so that time series mean is 1. Output is re-converted
-back to original units.}
+\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
@@ -119,7 +119,7 @@ For \code{start}, a named list of starting values of estimates for:
 \itemize{
 \item \code{SCA}: The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
 (as penalized parameters similar to Cadigan 2016). This generally runs quickly. MSY reference points are estimated after the
-assessment run, assuming that the recruitment in the first year of the model is the virgin recruitment.
+assessment run.
 
 \item \code{SCA2}: The parameterization by Forrest et al. (2008) is used where UMSY and MSY are leading parameters.
 Recruitment deviations are only estimated beginning in the year when age composition are available.

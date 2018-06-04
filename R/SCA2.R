@@ -2,7 +2,7 @@
 #' Recruitment deviations are only estimated beginning in the year when age composition are available.
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = 1/mean(C_hist),
+                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                  start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
                  silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), inner.control = list(), ...) {
   dependencies = ""
@@ -38,6 +38,13 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
+  if(rescale == "mean1") rescale <- 1/mean(C_hist)
+  data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist,
+               CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
+               CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
+               weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
+               SR_type = SR, est_rec_dev = as.integer(random_map(CAA_n_nominal)))
+
   # Starting values
   params <- list()
   if(!is.null(start)) {
@@ -53,7 +60,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     params$logit_UMSY <- log(UMSY_start/(1 - UMSY_start))
   }
   if(is.null(params$log_MSY)) {
-    AvC <- mean(C_hist, na.rm = TRUE)
+    AvC <- mean(C_hist * rescale)
     params$log_MSY <- log(3 * AvC)
   }
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
@@ -73,11 +80,6 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_rec_dev <- rep(0, n_y - 1)
 
-  data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist,
-               CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
-               CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
-               weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
-               SR_type = SR, est_rec_dev = as.integer(random_map(CAA_n_nominal)))
   info <- list(Year = Data@Year, data = data, params = params, LH = LH, control = control,
                inner.control = inner.control, rescale = rescale)
 
@@ -85,6 +87,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
+  if(any(is.na(CAA_n_nominal) | CAA_n_nominal <= 0)) map$log_rec_dev <- random_map(CAA_n_nominal)
 
   random <- NULL
   if(integrate) random <- "log_rec_dev"
@@ -94,13 +97,15 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   opt <- optimize_TMB_model(obj, control)
   SD <- get_sdreport(obj, opt)
   report <- obj$report(obj$env$last.par.best)
+
   if(rescale != 1) {
     vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
                   "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
     vars_mult <- "Brec"
-    var_trans <- "MSY"
-    trans_fun <- "log"
-    rescale_report(vars_div, vars_mult, var_trans, trans_fun)
+    var_trans <- c("MSY", "q")
+    fun_trans <- c("/", "*")
+    fun_fixed <- c("log", NA)
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
 
   if(is.character(opt) || is.character(SD)) {
@@ -112,12 +117,11 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     Yearplusone <- c(Year, max(Year) + 1)
     YearDev <- seq(Year[2], max(Year))
 
+    Dev <- report$log_rec_dev
     if(integrate) {
-      Dev <- SD$par.random
-      SE_Dev <- sqrt(SD$diag.cov.random)
+      SE_Dev <- c(rep(0, sum(Dev == 0)), sqrt(SD$diag.cov.random))
     } else {
-      Dev <- SD$par.fixed[names(SD$par.fixed) == "log_rec_dev"]
-      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+      SE_Dev <- c(rep(0, sum(Dev == 0)), sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"]))
     }
 
     Assessment <- new("Assessment", Model = "SCA2", UMSY = report$UMSY,

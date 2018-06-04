@@ -13,9 +13,9 @@
 #' @param CAA_multiplier Numeric for data weighting of catch-at-age matrix. See details.
 #' @param I_type Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
 #' vulnerable biomass (VB), or spawning stock biomass (SSB).
-#' @param rescale Numeric, a multiplicative factor that rescales the catch in the assessment model, which
-#' can improve convergence. By default, scales the catch so that time series mean is 1. Output is re-converted
-#' back to original units.
+#' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
+#' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+#' Output is re-converted back to original units.
 #' @param start Optional list of starting values. See details.
 #' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model
 #' is estimated. If \code{TRUE}, \code{U_equilibruim} is fixed to value provided in \code{start} (if provided),
@@ -86,18 +86,18 @@
 #' Science 65:286-296.
 #' @describeIn SCA The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
 #' (as penalized parameters similar to Cadigan 2016). This generally runs quickly. MSY reference points are estimated after the
-#' assessment run, assuming that the recruitment in the first year of the model is the virgin recruitment.
+#' assessment run.
 #' @examples
 #' res <- SCA(Data = DLMtool::SimulatedData)
 #'
 #' res <- SCA2(Data = DLMtool::Simulation_1)
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = 1/mean(C_hist),
+                CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                 start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                 integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
                 inner.control = list(), ...) {
-  dependencies = ""
+  dependencies = "Data@Cat, Data@Ind, Data@CAA, Data@Mort, Data@wla, Data@wlb, Data@vbLinf, Data@vbK, Data@vbt0, Data@L50, Data@L95, Data@MaxAge"
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)
@@ -130,17 +130,22 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
+  if(rescale == "mean1") rescale <- 1/mean(C_hist)
+  data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
+               CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
+               vul_type = vulnerability, I_type = I_type, est_rec_dev = rep(1L, length(CAA_n_nominal)))
+
   # Starting values
   params <- list()
   if(!is.null(start)) {
     if(!is.null(start$meanR) && is.numeric(start$meanR)) params$log_meanR <- log(start$meanR)
-	  if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
-	  if(!is.null(start$vul_par) && is.numeric(start$vul_par)) params$vul_par <- start$vul_par
-	  if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
-	  if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
+    if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
+    if(!is.null(start$vul_par) && is.numeric(start$vul_par)) params$vul_par <- start$vul_par
+    if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
+    if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
-  if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale))
-	if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
+  if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale)) + 1
+  if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
   if(is.null(params$vul_par)) {
     CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
     if(vulnerability == "logistic") {
@@ -157,9 +162,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_rec_dev <- rep(0, n_y)
 
-  data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
-               CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
-               vul_type = vulnerability, I_type = I_type, est_rec_dev = rep(1L, length(CAA_n_nominal)))
   info <- list(Year = Data@Year, data = data, params = params, LH = LH, SR = SR, control = control,
                inner.control = inner.control, rescale = rescale)
 
@@ -181,7 +183,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                       obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   } else {
-
     if(fix_U_equilibrium && params$U_equilibrium == 0) {
       SSB0 <- report$E[1]
       R0 <- report$R[1]
@@ -193,9 +194,10 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
                     "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
       vars_mult <- "Brec"
-      var_trans <- "meanR"
-      trans_fun <- "log"
-      rescale_report(vars_div, vars_mult, var_trans, trans_fun)
+      var_trans <- c("meanR", "q")
+      fun_trans <- c("/", "*")
+      fun_fixed <- c("log", NA)
+      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
     }
 
     Yearplusone <- c(Year, max(Year) + 1)
@@ -344,38 +346,6 @@ get_refpt <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR 
               RMSY = RMSY, BMSY = BMSY, EMSY = EMSY, VB0 = VB0, R0 = R0, B0 = B0, E0 = E0, N0 = N0))
 }
 
-rescale_report <- function(var_div, var_mult, var_trans, trans_fun) {
-  output <- mget(c("report", "rescale", "SD"), envir = parent.frame(), ifnotfound = list(NULL))
-  report <- output$report
-
-  report[var_div] <- lapply(report[var_div], "/", output$rescale)
-  report[var_mult] <- lapply(report[var_mult], "*", output$rescale)
-  assign("report", report, envir = parent.frame())
-
-  if(!is.null(output$SD)) {
-    SD <- output$SD
-
-    for(i in 1:length(var_trans)) {
-      var_trans2 <- var_trans[i]
-      trans_fun2 <- trans_fun[i]
-
-      SD$value[var_trans2] <- SD$value[var_trans2] / output$rescale
-
-      ind <- pmatch(var_trans2, names(SD$value))
-      SD$sd[ind] <- SD$sd[ind] / output$rescale
-
-      fixed_name <- paste0(trans_fun2, "_", var_trans2)
-      ind_fixed <- pmatch(paste0(trans_fun2, "_", var_trans2), names(SD$par.fixed))
-      if(trans_fun2 == "log") SD$par.fixed[ind_fixed] <- log(SD$value[var_trans2])
-      #if(trans_fun2 == "logit") SD$par.fixed[ind_fixed] <- log(SD$value[var_trans2]/(1 - SD$value[var_trans2]))
-    }
-
-    assign("SD", SD, envir = parent.frame())
-  }
-  #mult_scale <- SD$par.fixed[ind_fixed]/output$SD$par.fixed[ind_fixed]
-  #SD$cov.fixed[ind_fixed, ] <- SD$cov.fixed[, ind_fixed] <- mult_scale * SD$cov.fixed[ind_fixed, ]
-  invisible()
-}
 
 
 SCA_jacobian <- function(obj, par_fixed, nll_comp, ...) {
