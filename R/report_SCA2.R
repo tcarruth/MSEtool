@@ -37,7 +37,7 @@ summary_SCA2 <- function(Assessment) {
   }
 
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
-  rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev))
+  rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev)[Dev != 0])
 
   output <- list(model = "Statistical Catch-at-Age (SCA2)",
                  current_status = current_status, input_parameters = input_parameters,
@@ -150,24 +150,27 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
     }
   }
 
-  plot_composition(Year, Obs_C_at_age, plot_type = 'bubble_data', data_type = 'age')
+  ind_valid <- rowSums(Obs_C_at_age, na.rm = TRUE) > 0
+  Year2 <- Year[ind_valid]
+  Obs_CAA <- Obs_C_at_age[ind_valid, ]
+  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_age_comps_bubble.png"))
-    plot_composition(Year, Obs_C_at_age, plot_type = 'bubble_data', data_type = 'age')
+    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_age_comps_bubble.png", "Age composition bubble plot."))
   }
 
-  plot_composition(Year, Obs_C_at_age, plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age')
   if(save_figure) {
-    nplots <- ceiling(length(Year)/16)
+    nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
       ind <- (16*(i-1)+1):(16*i)
-      if(i == nplots) ind <- (16*(i-1)+1):length(Year)
+      if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("data_age_comps_", i, ".png")))
-      plot_composition(Year[ind], Obs_C_at_age[ind, ], plot_type = 'annual', data_type = 'age')
+      plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age', ind = ind)
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c(paste0("data_age_comps_", i, ".png"), paste0("Annual age compositions (", i, "/", nplots, ")")))
@@ -277,29 +280,29 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                  c("assessment_index_qqplot.png", "QQ-plot of index residuals in log-space."))
   }
 
-  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 10)
+  Fit_CAA <- C_at_age[ind_valid, ]
+  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assess_age_comps_bubble.png"))
-    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 10)
+    create_png(filename = file.path(plot.dir, "assess_age_comps_bubble_resids.png"))
+    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                               c("assess_age_comps_bubble.png", "Age composition bubble plot of residuals (black are negative, white are positive)."))
+                                 c("assess_age_comps_bubble_resids.png", "Age composition bubble plot of residuals (black are negative, white are positive)."))
   }
 
-  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'annual', data_type = 'age', N = info$data$CAA_n)
+  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual', data_type = 'age')
   if(save_figure) {
-    nplots <- ceiling(length(Year)/16)
+    nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
       ind <- (16*(i-1)+1):(16*i)
-      if(i == nplots) ind <- (16*(i-1)+1):length(Year)
+      if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("assess_age_comps_", i, ".png")))
-      plot_composition(Year[ind], Obs_C_at_age[ind, ], C_at_age[ind, ], plot_type = 'annual', data_type = 'age',
-                       N = info$data$CAA_n[ind])
+      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', data_type = 'age', N = info$data$CAA_n[ind_valid], ind = ind)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c(paste0("assess_age_comps_", i, ".png"), paste0("Annual observed (black) and predicted (red) age compositions (",
-                                                                                  i, "/", nplots, ")")))
+                                                                                    i, "/", nplots, ")")))
     }
   }
 
@@ -488,7 +491,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
   if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
   if(!"MSY" %in% names(dots)) stop("Sequence of MSY was not found. See help file.")
   UMSY <- dots$UMSY
-  MSY <- dots$MSY * Assessment@info$rescale
+  MSY <- dots$MSY
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
@@ -498,15 +501,14 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY = log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, random = random, inner.control = Assessment@info$inner.control,
                      DLL = "MSEtool", silent = TRUE)
     opt <- optimize_TMB_model(obj, Assessment@info$control)
     if(!is.character(opt)) nll[i] <- opt$objective
   }
-  profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
-  profile.grid$MSY <- MSY <- dots$MSY
+  profile.grid$nll <- nll
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
@@ -558,6 +560,7 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE,
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
 
+  SD <- NULL
   rescale <- info$rescale
 
   for(i in 0:nyr) {
@@ -580,9 +583,10 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE,
         vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
                       "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
         vars_mult <- "Brec"
-        var_trans <- "MSY"
-        trans_fun <- "log"
-        rescale_report(vars_div, vars_mult, var_trans, trans_fun)
+        var_trans <- c("MSY", "q")
+        fun_trans <- c("/", "*")
+        fun_fixed <- c("log", NA)
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
 
       SSB <- c(report$E, rep(NA, i))
@@ -685,7 +689,7 @@ plot_retro_SCA2 <- function(retro_ts, retro_est, save_figure = FALSE,
   if(save_figure) {
     ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+2)), ".png"),
                                    x2 = paste0("Retrospective pattern in ",
-                                               c("biomass", "B/BMSY", "biomass depletion", "recruitment",
+                                               c("spawning stock biomass", "SSB/SSBMSY", "spawning depletion", "recruitment",
                                                  "abundance", "exploitation", "U/UMSY", "recruitment deviations",
                                                  "UMSY estimate", "MSY estimate"), "."))
     Assessment <- get("Assessment", envir = parent.frame())
