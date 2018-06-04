@@ -5,12 +5,15 @@
 \alias{DD_SS}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), start = NULL, silent = TRUE,
-  control = list(eval.max = 1000), ...)
+DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
+  start = NULL, fix_U_equilibrium = TRUE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06), ...)
 
-DD_SS(x = 1, Data, SR = c("BH", "Ricker"), start = NULL,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(eval.max = 1000), inner.control = list(), ...)
+DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
+  start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -20,7 +23,15 @@ Otherwise, equals to 1 when running an assessment.}
 
 \item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).}
 
+\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+Output is re-converted back to original units.}
+
 \item{start}{Optional list of starting values. See details.}
+
+\item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model is
+estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
+(assumes virgin conditions).}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}

@@ -46,8 +46,6 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                 name = Data@Name, report_type = "Index")
   }
 
-  #lh.file.caption <- plot_life_history(Data, save_figure = save_figure, save_dir = save_dir, Model = Model)
-
   age <- 1:info$LH$maxage
 
   plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
@@ -382,20 +380,19 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
-  #params <- Assessment@info$params
-  params <- as.list(Assessment@obj$env$last.par.best)
+  params <- Assessment@info$params
   map <- Assessment@obj$env$map
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
 
     if(!is.character(opt2)) nll[i] <- opt2$objective
   }
-  profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
+  profile.grid$nll <- nll
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
@@ -438,12 +435,14 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
   Year <- c(Year, moreRecruitYears)
   C_hist <- data$C_hist
   E_hist <- data$E_hist
-  params <- as.list(obj$env$last.par.best)
 
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, B, B/BMSY, B/B0, N, R, U, U/UMSY
   retro_ts <- array(NA, dim = c(nyr+1, ny + k, 8))
   retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
+
+  SD <- NULL
+  rescale <- info$rescale
 
   for(i in 0:nyr) {
     ny_ret <- ny - i
@@ -453,12 +452,22 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
     data$C_hist <- C_hist_ret
     data$E_hist <- E_hist_ret
 
-    obj <- MakeADFun(data = data, parameters = params, DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj, info$control)
-    SD <- get_sdreport(obj, opt)
+    obj2 <- MakeADFun(data = data, parameters = info$params, map = obj$env$map, DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, info$control)
+    SD <- get_sdreport(obj2, opt2)
 
-    if(!is.character(opt) && !is.character(SD)) {
-      report <- obj$report(obj$env$last.par.best)
+    if(!is.character(opt2) && !is.character(SD)) {
+      report <- obj2$report(obj2$env$last.par.best)
+
+      if(rescale != 1) {
+        vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
+        vars_mult <- c("Brec")
+        var_trans <- c("MSY")
+        fun_trans <- c("/")
+        fun_fixed <- c("log")
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
+
       B <- c(report$B, rep(NA, k - 1 + i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/B0

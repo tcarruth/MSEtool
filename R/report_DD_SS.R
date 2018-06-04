@@ -451,14 +451,12 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY = log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
-    obj <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = map, random = random, inner.control = Assessment@info$inner.control,
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj, Assessment@info$control)
-    if(!is.character(opt)) {
-      nll[i] <- opt$objective
-    }
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
+                      map = map, random = random, inner.control = Assessment@info$inner.control,
+                      DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
+    if(!is.character(opt2)) nll[i] <- opt2$objective
   }
   profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
   if(figure) {
@@ -503,16 +501,15 @@ retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE,
   Year <- c(Year, moreRecruitYears)
   C_hist <- data$C_hist
   E_hist <- data$E_hist
-  params <- info$params
-
-  map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, B, B_BMSY, B_B0, N, R, U, U_UMSY, log_rec_dev
   retro_ts <- array(NA, dim = c(nyr+1, ny + k, 9))
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
-  #retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
+
+  SD <- NULL
+  rescale <- info$rescale
 
   for(i in 0:nyr) {
     ny_ret <- ny - i
@@ -523,13 +520,23 @@ retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE,
     data$E_hist <- E_hist_ret
     params$log_rec_dev <- rep(0, ny_ret - k)
 
-    obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
+    obj2 <- MakeADFun(data = data, parameters = info$params, map = obj$env$map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, info$control)
-    SD2 <- get_sdreport(obj2, opt2)
+    SD <- get_sdreport(obj2, opt2)
 
-    if(!is.character(opt2) && !is.character(SD2)) {
+    if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
+
+      if(rescale != 1) {
+        vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
+        vars_mult <- c("Brec")
+        var_trans <- c("MSY")
+        fun_trans <- c("/")
+        fun_fixed <- c("log")
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
+
       B <- c(report$B, rep(NA, k - 1 + i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$B0
@@ -540,7 +547,7 @@ retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE,
       log_rec_dev <- c(report$log_rec_dev, rep(NA, 2 * k + i))
 
       retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, R, N, U, U_UMSY, log_rec_dev)
-      retro_est[i+1, , ] <- summary(SD2)[rownames(summary(SD2)) != "log_rec_dev", ]
+      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
 
     } else {
       warning(paste("Non-convergence when", i, "years of data were removed."))
