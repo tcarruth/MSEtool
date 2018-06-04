@@ -142,6 +142,8 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
   old.warning <- options()$warn
   options(warn = -1)
   on.exit(options(warn = old.warning))
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par), add = TRUE)
 
   f <- get(paste0("generate_plots_", x@Model))
   f(x, save_figure = save_figure, save_dir = save_dir)

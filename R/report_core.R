@@ -28,6 +28,15 @@
 #' @export profile_likelihood
 profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
                                save_dir = getwd(), ...) {
+  if(figure) {
+    old.warning <- options()$warn
+    options(warn = -1)
+    on.exit(options(warn = old.warning))
+
+    old_par <- par(no.readonly = TRUE)
+    on.exit(par(old_par), add = TRUE)
+  }
+
   f <- get(paste0('profile_likelihood_', Assessment@Model))
   f(Assessment, figure = figure, save_figure = save_figure, save_dir = save_dir, ...)
 }
@@ -56,6 +65,15 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
 #' @export
 retrospective <- function(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
                           save_dir = getwd()) {
+  if(figure) {
+    old.warning <- options()$warn
+    options(warn = -1)
+    on.exit(options(warn = old.warning))
+
+    old_par <- par(no.readonly = TRUE)
+    on.exit(par(old_par), add = TRUE)
+  }
+
   f <- get(paste0('retrospective_', Assessment@Model))
   f(Assessment, nyr, figure = figure, save_figure = save_figure, save_dir = save_dir)
 }

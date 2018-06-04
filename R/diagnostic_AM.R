@@ -93,11 +93,11 @@ diagnostic_AM <- function(MSE, DLMenv = DLMtool::DLMenv, gradient_threshold = 0.
 
   res_df <- as.data.frame(round(res_df, 2))
   colnames(res_df) <- MPs
-  res_df$Description <- c("Percent convergence", "Percent positive-definite Hessian",
-                          paste0("Percent max. gradient <= ", gradient_threshold),
-                          "Median runtime (seconds)", "Mean runtime (seconds)")
+  out_df <- data.frame(Description <- c("Percent convergence", "Percent positive-definite Hessian",
+                                        paste0("Percent max. gradient <= ", gradient_threshold),
+                                        "Median runtime (seconds)", "Mean runtime (seconds)"))
 
-  return(res_df)
+  return(cbind(out_df, res_df))
 }
 
 plot_convergence <- function(convergence_code, plot_type = c('converge', 'hessian')) {
