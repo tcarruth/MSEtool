@@ -70,10 +70,11 @@
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
-    R(y+1) = meanR;
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) = meanR * exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      else R(y+1) = meanR;
     }
+    if(y==n_y-1) R(y+1) = R(y);
     N(y+1,0) = R(y+1);
 
     U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
@@ -81,16 +82,8 @@
     for(int a=0;a<max_age;a++) {
       CAApred(y,a) = vul(a) * U(y) * N(y,a);
       CN(y) += CAApred(y,a);
-      if(a<max_age-1) {
-        N(y+1,a+1) = N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
-        //N(y+1,a+1) = CppAD::CondExpGt(N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8),
-        //                              N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
-	    }
-      if(a==max_age-1) {
-        N(y+1,a) += N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
-      }
-      //N(y+1,a) += CppAD::CondExpGt(N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8),
-	    //                                             N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
+      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
+      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
 	    B(y+1) += N(y+1,a) * weight(a);
 	    VB(y+1) += N(y+1,a) * weight(a) * vul(a);
 	    E(y+1) += N(y+1,a) * weight(a) * mat(a);

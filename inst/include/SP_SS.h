@@ -34,11 +34,14 @@
   vector<Type> Ipred(ny);
   vector<Type> U(ny);
 
+  Type penalty = 0;
+
   B(0) = Binit_frac * K;
   for(int y=0;y<ny;y++) {
-    U(y) = C_hist(y)/B(y);
+    U(y) = CppAD::CondExpLt(1 - C_hist(y)/B(y), Type(0.025),
+      1 - posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y)/B(y));
     SP(y) = gamma * MSY * (B(y)/K - pow(B(y)/K, n));
-    B(y+1) = CppAD::CondExpGt(B(y) + SP(y) - C_hist(y), Type(1e-15), B(y) + SP(y) - C_hist(y), Type(1e-15));
+    B(y+1) = B(y) + SP(y) - U(y) * B(y);
 	  if(y<ny-1) {
 	    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y+1) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
 	  }
@@ -68,6 +71,9 @@
   ADREPORT(Binit_frac);
   ADREPORT(n);
   ADREPORT(q);
+  ADREPORT(r);
+  ADREPORT(K);
+  ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(U_UMSY_final);
   ADREPORT(B_BMSY_final);
@@ -76,7 +82,6 @@
   REPORT(MSY);
   REPORT(Binit_frac);
   REPORT(n);
-  REPORT(q);
   REPORT(sigma);
   REPORT(tau);
   REPORT(gamma);
@@ -90,6 +95,7 @@
   REPORT(log_B_dev);
   REPORT(nll_comp);
   REPORT(nll);
+  REPORT(penalty);
 
   return nll;
 
