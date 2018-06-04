@@ -5,18 +5,25 @@
 \alias{SP_SS}
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
-SP(x = 1, Data, start = NULL, fix_Binit_frac = TRUE, fix_n = TRUE,
-  silent = TRUE, control = list(eval.max = 1000), ...)
+SP(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TRUE,
+  fix_n = TRUE, silent = TRUE, control = list(iter.max = 1e+06, eval.max =
+  1e+06), ...)
 
-SP_SS(x = 1, Data, start = NULL, fix_Binit_frac = TRUE, fix_n = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(eval.max = 1000), inner.control = list(), ...)
+SP_SS(x = 1, Data, rescale = "mean1", start = NULL,
+  fix_Binit_frac = TRUE, fix_n = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
 Otherwise, equals to 1 When running an assessment interactively.}
 
-\item{Data}{A data-limited methods data object}
+\item{Data}{An object of class Data.}
+
+\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
@@ -77,8 +84,6 @@ data are available.
 The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
 leading parameters. The default conditions assume virgin conditions in the first year of the time series
 and a symmetric production function.
-
-If you have convergence difficulties with \code{SP_SS}, try using a smaller value of \code{tau}.
 }
 \examples{
 data(swordfish)

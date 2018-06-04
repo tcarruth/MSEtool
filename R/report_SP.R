@@ -302,7 +302,7 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
   nll <- rep(NA, nrow(profile.grid))
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
     if(length(Assessment@obj$par) == 2) {
       nll[i] <- Assessment@obj$fn(x = c(params$logit_UMSY, params$log_MSY))
     } else { # More than 2 parameters
@@ -370,6 +370,9 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
   retro_ts <- array(NA, dim = c(nyr + 1, ny + 1, 6))
   retro_est <- array(NA, dim = c(nyr + 1, dim(summary(SD))))
 
+  SD <- NULL
+  rescale <- info$rescale
+
   for(i in 0:nyr) {
     ny_ret <- ny - i
     data$ny <- ny_ret
@@ -379,10 +382,18 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
     obj2 <- MakeADFun(data = data, parameters = params, map = map,
                       DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2)
-    SD2 <- get_sdreport(obj2, opt2)
+    SD <- get_sdreport(obj2, opt2)
 
-    if(!is.character(opt2) && !is.character(SD2)) {
-      report <- obj2$report(obj$env$last.par.best)
+    if(!is.character(opt2) && !is.character(SD)) {
+      report <- obj2$report(obj2$env$last.par.best)
+      if(rescale != 1) {
+        vars_div <- c("B", "BMSY", "SP", "K", "MSY")
+        vars_mult <- NULL
+        var_trans <- c("MSY", "K", "q")
+        fun_trans <- c("/", "/", "*")
+        fun_fixed <- c("log", NA, NA)
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
 	    B <- c(report$B, rep(NA, i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$K
@@ -391,7 +402,7 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
       U_UMSY <- U/report$UMSY
 
       retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY)
-      retro_est[i+1, , ] <- summary(SD2)
+      retro_est[i+1, , ] <- summary(SD)
 
     } else {
       warning(paste("Non-convergence when", i, "years of data were removed."))
@@ -549,14 +560,15 @@ SP_production <- function(depletion, figure = TRUE) {
     depletion <- depletion[1]
     message(paste("Function is not vectorized. Depletion value of", depletion, "is used."))
   }
+  if(depletion <= 0 || depletion >= 1) stop(paste("Proposed depletion =", depletion, "but value must be between 0 and 1."))
 
   calc_depletion <- function(n) {
     depletion_MSY <- n^(1/(1-n))
     return(depletion_MSY)
   }
   n_solver <- function(x) calc_depletion(x) - depletion
-  n_answer <- uniroot(f = n_solver, interval = c(0, 1e8))$root
-  n_answer <- round(n_answer, 3)
+  get_n <- uniroot(f = n_solver, interval = c(0, 1e3))
+  n_answer <- round(get_n$root, 3)
 
   if(figure) {
     gamm <- n_answer^(n_answer/(n_answer-1))/(n_answer-1)
@@ -564,7 +576,7 @@ SP_production <- function(depletion, figure = TRUE) {
     msy <- umsy * depletion
     plot_yield_SP(report = list(gamma = gamm, n = n_answer, BMSY = depletion, K = 1), umsy = umsy,
                   msy = msy, xaxis = "Depletion", relative_yaxis = TRUE)
-    title(paste0("Production function n = ", n_answer))
+    title(paste0("Production exponent n = ", n_answer))
   }
   return(n_answer)
 }

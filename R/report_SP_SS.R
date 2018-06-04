@@ -337,14 +337,14 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                       map = map, random = Assessment@obj$env$random, DLL = "MSEtool",
                       inner.control = Assessment@info$inner.control, silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
     if(!is.character(opt)) nll[i] <- opt2$objective
   }
-  profile.grid$nll <- nll - min(nll, na.rm = TRUE)
+  profile.grid$nll <- nll
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
@@ -398,6 +398,9 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
   #retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
 
+  SD <- NULL
+  rescale <- info$rescale
+
   for(i in 0:nyr) {
     ny_ret <- ny - i
     data$ny <- ny_ret
@@ -411,10 +414,18 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, info$control)
-    SD2 <- get_sdreport(obj2, opt2)
+    SD <- get_sdreport(obj2, opt2)
 
-    if(!is.character(opt2) && !is.character(SD2)) {
+    if(!is.character(opt2) && !is.character(SD)) {
       report <- obj$report(obj$env$last.par.best)
+      if(rescale != 1) {
+        vars_div <- c("B", "BMSY", "SP", "K", "MSY")
+        vars_mult <- NULL
+        var_trans <- c("MSY", "K", "q")
+        fun_trans <- c("/", "/", "*")
+        fun_fixed <- c("log", NA, NA)
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
       B <- c(report$B, rep(NA, i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$K
@@ -423,11 +434,9 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
       U_UMSY <- U/report$UMSY
       log_B_dev <- c(report$log_B_dev, rep(NA, 2 + i))
 
-      browser()
-
       retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY, log_B_dev)
       #retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY)
-      retro_est[i+1, , ] <- summary(SD2)[rownames(summary(SD2)) != "log_B_dev", ]
+      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
 
     } else {
       warning(paste("Non-convergence when", i, "years of data were removed."))
