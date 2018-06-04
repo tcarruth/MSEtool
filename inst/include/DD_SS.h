@@ -18,6 +18,7 @@
   PARAMETER(logit_UMSY);
   PARAMETER(log_MSY);
   PARAMETER(log_q);
+  PARAMETER(U_equilibrium);
   PARAMETER(log_sigma);
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_rec_dev);
@@ -80,14 +81,26 @@
   vector<Type> U(ny);
 
   //--INITIALIZE
-  B(0) = B0;
-  N(0) = N0;
-  for(int tt=0;tt<k;tt++) R(tt) = R0;
+  Type Seq = S0 * (1 - U_equilibrium);
+  Type SprEq = (Seq * Alpha/(1 - Seq) + wk)/(1 - Rho * Seq);
+  Type Req;
+  if(SR_type == "BH") {
+    Req = (Arec * SprEq * (1 - U_equilibrium) - 1)/(Brec * SprEq * (1 - U_equilibrium));
+  } else {
+    Req = log(Arec * SprEq * (1 - U_equilibrium))/(Brec * SprEq * (1 - U_equilibrium));
+  }
+
+  B(0) = Req * SprEq;
+  N(0) = Req/(1 - Seq);
+  for(int tt=0;tt<k;tt++) R(tt) = Req;
+
+  Type penalty = 0;
 
   for(int tt=0; tt<ny; tt++){
-    U(tt) = 1 - exp(-q * E_hist(tt));
+    U(tt) = CppAD::CondExpLt(exp(-q * E_hist(tt)), Type(0.025),
+      1 - posfun(exp(-q * E_hist(tt)), Type(0.025), penalty), 1 - exp(-q * E_hist(tt)));
     Surv(tt) = S0 * (1 - U(tt));
-    Cpred(tt) = CppAD::CondExpGt(U(tt) * B(tt), Type(1e-15), U(tt) * B(tt), Type(1e-15));
+    Cpred(tt) = U(tt) * B(tt);
     Sp(tt) = B(tt) - Cpred(tt);
 
     if(SR_type == "BH") {
@@ -110,7 +123,7 @@
   //       Spr * (1 - UMSY) > 0 (Ricker)
   // Brec: Arec * Spr * (1 - UMSY) - 1 > 0 (both BH and Ricker)
   // Thus, create a likelihood penalty of 100 when either condition is not met
-  Type penalty = CppAD::CondExpGt(Arec * Spr * (1 - UMSY) - 1, Type(0), Type(0), Type(UMSY * 1e3));
+  penalty += CppAD::CondExpGt(Arec * Spr * (1 - UMSY) - 1, Type(0), Type(0), Type(UMSY * 1e3));
   if(SR_type == "BH") penalty += CppAD::CondExpGt(Spr + UMSY * DsprDu, Type(0), Type(0), Type(UMSY * 1e3));
   if(SR_type == "Ricker") penalty += CppAD::CondExpGt(Spr * (1 - UMSY), Type(0), Type(0), Type(UMSY * 1e3));
 
@@ -142,7 +155,6 @@
   ADREPORT(B_B0_final);
   REPORT(UMSY);
   REPORT(MSY);
-  REPORT(q);
   REPORT(sigma);
   REPORT(tau);
   REPORT(jnll_comp);

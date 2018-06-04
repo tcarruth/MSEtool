@@ -17,6 +17,7 @@
   PARAMETER(logit_UMSY);
   PARAMETER(log_MSY);
   PARAMETER(log_q);
+  PARAMETER(U_equilibrium);
 
   Type UMSY = 1/(1 + exp(-logit_UMSY));
   Type MSY = exp(log_MSY);
@@ -72,14 +73,26 @@
   vector<Type> U(ny);
 
   //--INITIALIZE
-  B(0) = B0;
-  N(0) = N0;
-  for(int tt=0;tt<k;tt++) R(tt) = R0;
+  Type Seq = S0 * (1 - U_equilibrium);
+  Type SprEq = (Seq * Alpha/(1 - Seq) + wk)/(1 - Rho * Seq);
+  Type Req;
+  if(SR_type == "BH") {
+    Req = (Arec * SprEq * (1 - U_equilibrium) - 1)/(Brec * SprEq * (1 - U_equilibrium));
+  } else {
+    Req = log(Arec * SprEq * (1 - U_equilibrium))/(Brec * SprEq * (1 - U_equilibrium));
+  }
+
+  B(0) = Req * SprEq;
+  N(0) = Req/(1 - Seq);
+  for(int tt=0;tt<k;tt++) R(tt) = Req;
+
+  Type penalty = 0;
 
   for(int tt=0; tt<ny; tt++){
-    U(tt) = 1 - exp(-q * E_hist(tt));
+    U(tt) = CppAD::CondExpLt(exp(-q * E_hist(tt)), Type(0.025),
+      1 - posfun(exp(-q * E_hist(tt)), Type(0.025), penalty), 1 - exp(-q * E_hist(tt)));
     Surv(tt) = S0 * (1 - U(tt));
-    Cpred(tt) = CppAD::CondExpGt(U(tt) * B(tt), Type(1e-15), U(tt) * B(tt), Type(1e-15));
+    Cpred(tt) = U(tt) * B(tt);
     Sp(tt) = B(tt) - Cpred(tt);
 
     if(SR_type == "BH") {
@@ -99,7 +112,7 @@
   //       Spr * (1 - UMSY) > 0 (Ricker)
   // Brec: Arec * Spr * (1 - UMSY) - 1 > 0 (both BH and Ricker)
   // Thus, create a likelihood penalty of 100 when either condition is not met
-  Type penalty = CppAD::CondExpGt(Arec * Spr * (1 - UMSY) - 1, Type(0), Type(0), Type(UMSY * 1e3));
+  penalty += CppAD::CondExpGt(Arec * Spr * (1 - UMSY) - 1, Type(0), Type(0), Type(UMSY * 1e3));
   if(SR_type == "BH") penalty += CppAD::CondExpGt(Spr + UMSY * DsprDu, Type(0), Type(0), Type(UMSY * 1e3));
   if(SR_type == "Ricker") penalty += CppAD::CondExpGt(Spr * (1 - UMSY), Type(0), Type(0), Type(UMSY * 1e3));
 
@@ -116,34 +129,33 @@
   Type B_BMSY_final = B(B.size()-1)/BMSY;
   Type B_B0_final = B(B.size()-1)/B0;
 
-  ADREPORT( UMSY );
-  ADREPORT( MSY );
-  ADREPORT( q );
-  ADREPORT( sigma );
-  ADREPORT( U_UMSY_final );
-  ADREPORT( B_BMSY_final );
-  ADREPORT( B_B0_final );
-  REPORT( UMSY );
-  REPORT( MSY );
-  REPORT( q );
-  REPORT( sigma );
-  REPORT( nll );
-  REPORT( Arec );
-  REPORT( Brec );
-  REPORT( Spr );
-  REPORT( Spr0 );
-  REPORT( DsprDu );
-  REPORT( Cpred );
-  REPORT( B );
-  REPORT( N );
-  REPORT( R );
-  REPORT( U );
-  REPORT( h );
-  REPORT( BMSY );
-  REPORT( R0 );
-  REPORT( N0 );
-  REPORT( B0 );
-  REPORT( penalty );
+  ADREPORT(UMSY);
+  ADREPORT(MSY);
+  ADREPORT(q);
+  ADREPORT(sigma);
+  ADREPORT(U_UMSY_final);
+  ADREPORT(B_BMSY_final);
+  ADREPORT(B_B0_final);
+  REPORT(UMSY);
+  REPORT(MSY);
+  REPORT(sigma);
+  REPORT(nll);
+  REPORT(Arec);
+  REPORT(Brec);
+  REPORT(Spr);
+  REPORT(Spr0);
+  REPORT(DsprDu);
+  REPORT(Cpred);
+  REPORT(B);
+  REPORT(N);
+  REPORT(R);
+  REPORT(U);
+  REPORT(h);
+  REPORT(BMSY);
+  REPORT(R0);
+  REPORT(N0);
+  REPORT(B0);
+  REPORT(penalty);
 
   return nll;
 //}
