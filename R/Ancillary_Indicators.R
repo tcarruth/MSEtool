@@ -140,7 +140,7 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
       keep2[ind[cum<(removethresh*100)]]<-FALSE
       ind3PPD<-ind3PPD[,keep2]
       ind3Data<-ind3Data[,keep2]
-      if(pp==2)keep3<-rbind(mag,keep2)
+      if(pp==1)keep3<-rbind(mag,keep2)
     }
 
     # NULL = TRUE  (true negatives, false negatives)
