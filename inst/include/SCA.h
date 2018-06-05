@@ -12,6 +12,7 @@
   DATA_VECTOR(weight);    // Weight-at-age at the beginning of the year
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
+  DATA_STRING(I_type);    // String whether index surveys B, VB, or SSB
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
   PARAMETER(log_meanR);
@@ -26,6 +27,8 @@
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
 
+  Type penalty = 0;
+
   // Vulnerability
   vector<Type> vul(max_age);
   if(vul_type == "logistic") {
@@ -33,12 +36,6 @@
   } else {
     vul = calc_dome_vul(vul_par, max_age);
   }
-
-  ////// Equilibrium reference points and per-recruit quantities
-  vector<Type> NPR_virgin(max_age);
-  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
-  // Virgin reference points and stock-recruit parameters
-  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);                        // Egg-per-recruit at U = 0
 
   ////// During time series year = 1, 2, ..., n_y
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
@@ -73,22 +70,20 @@
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
-    R(y+1) = meanR;
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) = meanR * exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      else R(y+1) = meanR;
     }
+    if(y==n_y-1) R(y+1) = R(y);
     N(y+1,0) = R(y+1);
 
-    U(y) = C_hist(y)/VB(y);
+    U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
+      1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
     for(int a=0;a<max_age;a++) {
       CAApred(y,a) = vul(a) * U(y) * N(y,a);
       CN(y) += CAApred(y,a);
-      if(a<max_age-1) {
-        N(y+1,a+1) = CppAD::CondExpGt(N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8),
-                                      N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
-	    }
-      if(a==max_age-1) N(y+1,a) += CppAD::CondExpGt(N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8),
-	                                                  N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y)), Type(1e-8));
+      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
+      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
 	    B(y+1) += N(y+1,a) * weight(a);
 	    VB(y+1) += N(y+1,a) * weight(a) * vul(a);
 	    E(y+1) += N(y+1,a) * weight(a) * mat(a);
@@ -96,8 +91,17 @@
   }
 
   // Calculate nuisance parameters and likelihood
-  Type q = calc_q(I_hist, VB);
-  for(int y=0;y<n_y;y++) Ipred(y) = q * VB(y);
+  Type q;
+  if(I_type == "B") {
+    q = calc_q(I_hist, B);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * B(y);
+  } else if(I_type == "VB") {
+    q = calc_q(I_hist, VB);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * VB(y);
+  } else {
+    q = calc_q(I_hist, E);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * E(y);
+  }
 
   vector<Type> nll_comp(3);
   nll_comp.setZero();
@@ -114,15 +118,13 @@
 	  if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
 
-  Type nll = nll_comp.sum();
+  Type nll = nll_comp.sum() + penalty;
 
   ADREPORT(meanR);
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
 
-  REPORT(NPR_virgin);
-  REPORT(EPR0);
   REPORT(meanR);
 
   REPORT(vul_par);
@@ -141,6 +143,7 @@
   REPORT(log_rec_dev);
   REPORT(nll_comp);
   REPORT(nll);
+  REPORT(penalty);
 
   return nll;
 //}

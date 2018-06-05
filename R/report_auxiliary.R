@@ -86,18 +86,18 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
       xlim_truncated <- range(pretty(support))
       plot(support, dist[, 1], typ = 'l', xlab = label,
            ylab = 'Probability density function', xlim = xlim_truncated,
-           ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), color = color[1])
+           ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), col = color[1])
       if(ncurve > 1) {
-        for(i in 2:ncurve) lines(support, dist[, i], color = color[i])
+        for(i in 2:ncurve) lines(support, dist[, i], col = color[i])
       }
     }
     if(all(true.m) > 0) {
       xlim_truncated <- range(pretty(support))
       plot(support, dist[, 1], typ = 'l', xlab = label,
            ylab = 'Probability density function', xlim = xlim_truncated,
-           ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), color = color[1])
+           ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), col = color[1])
       if(ncurve > 1) {
-        for(i in 2:ncurve) lines(support, dist[, i], color = color[i])
+        for(i in 2:ncurve) lines(support, dist[, i], col = color[i])
       }
     }
     abline(h = 0, col = 'grey')
@@ -157,9 +157,9 @@ plot_normalvar <- function(m, sd, label = NULL, color = "black") {
 
   xlim_truncated <- range(pretty(support))
   plot(support, dist[, 1], typ = 'l', xlab = label, ylab = 'Probability density function',
-       xlim = xlim_truncated, ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), color = color[1])
+       xlim = xlim_truncated, ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), col = color[1])
   if(ncurve > 1) {
-    for(i in 2:ncurve) lines(support, dist[, i], color = color[i])
+    for(i in 2:ncurve) lines(support, dist[, i], col = color[i])
   }
   abline(h = 0, col = 'grey')
   abline(v = m, lty = 2, col = color)
@@ -325,7 +325,7 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
     plot(Year, obs, typ = 'o', ylab = label, ylim = c(0, 1.1 * y.max))
     arrows(Year, obs_lower, Year, obs_upper, length = 0.025, angle = 90,
            code = 3, col = 'grey30')
-    lines(Year, fit, lwd = 2)
+    #lines(Year, fit, lwd = 2)
   }
   if(!is.null(fit)) lines(Year, fit, lwd = fit_linewidth, col = fit_color)
   abline(h = 0, col = 'grey')
@@ -407,17 +407,24 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' @param fit A matrix of predicted length or age composition from an assessment model.
 #' Same dimensions as obs.
 #' @param plot_type Indicates which plots to create. Options include annual distributions,
-#' bubble plot, and annual means.
+#' bubble plot of the data, and bubble plot of the residuals, and annual means.
+#' @param N Annual sample sizes. Vector of length \code{nrow(obs)}.
 #' @param data_type Indicates whether length or age data are being used.
-#' @param CAL_bins A vector of lengths corresponding to the columns in \code{obs}
+#' @param CAL_bins A vector of lengths corresponding to the columns in \code{obs}.
 #' and \code{fit}. Ignored for age data.
+#' @param ind A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.
+#' @param bubble_adj Numeric, for adjusting the relative size of bubbles in bubble plots
+#' (larger number = larger bubbles).
+#' @param fit_linewidth Argument \code{lwd} for fitted line.
+#' @param fit_color Color of fitted line.
 #' @return Plots depending on \code{plot_type}.
 #' @author Q. Huynh
 #' @export plot_composition
-plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bubble', 'mean'),
-                             data_type = c(NULL, 'length', 'age'), CAL_bins = NULL) {
+plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bubble_data', 'bubble_residuals', 'mean'),
+                             data_type = c(NULL, 'length', 'age'), N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+                             bubble_adj = 5, fit_linewidth = 3, fit_color = "red") {
   old_par <- par(no.readonly = TRUE)
-  on.exit(par(list = old_par), add = TRUE)
+  on.exit(par(old_par))
 
   plot_type <- match.arg(plot_type, several.ok = TRUE)
   data_type <- match.arg(data_type)
@@ -425,6 +432,7 @@ plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bub
   if(data_type == 'length' & is.null(CAL_bins)) {
     stop('Need vector of length bins.')
   }
+  if(!is.null(fit) && !all(dim(fit) == dim(obs))) stop("Dimensions of 'obs' and 'fit' do not match.")
 
   if(data_type == 'length') {
     data_val <- CAL_bins
@@ -435,23 +443,31 @@ plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bub
     data_val <- 1:MaxAge
     data_lab <- "Age"
   }
+  N <- round(N, 1)
+
+  # subset
+  #ind <- rowSums(obs, na.rm = TRUE) > 0
+  Year <- Year[ind]
+  obs <- obs[ind, ]
+  if(!is.null(fit)) fit <- fit[ind, ]
+  N <- N[ind]
+
+  obs_prob <- obs/rowSums(obs, na.rm = TRUE)
+  if(!is.null(fit)) fit_prob <- fit/rowSums(fit, na.rm = TRUE)
+  else fit_prob <- NULL
 
   # Annual comps (obs vs. fitted if available)
   if('annual' %in% plot_type) {
 
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
-    ylim <- c(0, 1.1)
+    ylim <- c(0, 1.1 * max(obs_prob, fit_prob))
     yaxp <- c(0, 1, 4)
     las <- 1
     type <- 'o'
     for(i in 1:length(Year)) {
-      obs.vec <- obs[i, ]
-      N.true <- sum(obs.vec)
-      obs.vec <- obs.vec/N.true
-      obs.vec <- obs.vec/max(obs.vec, na.rm = TRUE)
-      N <- round(N.true, 0)
+      obs.vec <- obs_prob[i, ]
 
-      if(i < (length(Year)-1)) {
+      if(i < (length(Year))) {
         if(i %% 16 %in% c(1:4)) { # First column
           yaxt <- 's'
 
@@ -471,7 +487,11 @@ plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bub
         plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
              xaxt = xaxt, yaxt = yaxt, las = las)
         abline(h = 0, col = 'grey')
-        legend('topright', legend = c(Year[i], paste0("N = ", N)), bty = 'n', xjust = 1)
+        if(!is.null(fit)) {
+          fit.vec <- fit_prob[i, ]
+          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
+        }
+        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
       }
 
       if(i == length(Year)) {
@@ -480,41 +500,69 @@ plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bub
         plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
              xaxt = xaxt, yaxt = yaxt, las = las)
         abline(h = 0, col = 'grey')
-        legend('topright', legend = c(Year[i], paste0("N = ", N)), bty = 'n', xjust = 1)
+        if(!is.null(fit)) {
+          fit.vec <- fit_prob[i, ]
+          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
+        }
+        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
       }
       if(i %% 16 == 0 || i == length(Year)) {
         mtext(data_lab, side = 1, line = 3, outer = TRUE)
-        mtext('Relative Frequency', side = 2, line = 3.5, outer = TRUE)
+        mtext('Frequency', side = 2, line = 3.5, outer = TRUE)
       }
     }
+    return(invisible())
 
   }
   # Bubble plot (obs)
-  if('bubble' %in% plot_type) {
-    par(mfcol = c(1, 1), oma = rep(0, 4), mar = c(5.1, 5.1, 2.1, 2.1))
-
-    #x.pretty <- pretty(Year)
-    radius <- 5 / max(obs, na.rm = TRUE)
+  if('bubble_data' %in% plot_type) {
+    range_obs <- pretty(obs, n = 6)
+    n1 <- range_obs[2]
+    n2 <- pretty(quantile(obs[obs > 0], na.rm = TRUE, probs = 0.9))[2]
+    diameter_max <- bubble_adj / n2
     plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
          ylim = c(0, max(data_val)), ylab = data_lab)
     for(i in 1:length(Year)) {
-      #obs.vec <- obs[i, ]/sum(obs[i, ])
       for(j in 1:length(data_val)) {
-        points(Year[i], data_val[j], pch = 1, cex = radius * obs[i, j])
+        points(Year[i], data_val[j], cex = 0.5 * diameter_max * pmin(obs[i, j], n2), pch = 21, bg = "white")
       }
     }
+    legend("topleft", legend = c(n1, paste0(">", n2)), pt.cex = 0.5 * diameter_max * c(n1, n2),
+           pt.bg = "white", pch = 21, horiz = TRUE)
+    return(invisible())
   }
   # Bubble plot (residuals if applicable)
+  if('bubble_residuals' %in% plot_type) {
+    if(is.null(fit)) stop("No fitted data available.")
 
+    resid <- (obs_prob - fit_prob) / sqrt(fit_prob)
+    diameter_max <- bubble_adj / pmin(10, max(abs(resid), na.rm = TRUE))
+    plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
+         ylim = c(0, max(data_val)), ylab = data_lab)
+
+    Year_mat <- matrix(Year, ncol = ncol(resid), nrow = nrow(resid))
+    data_mat <- matrix(data_val, ncol = ncol(resid), nrow = nrow(resid), byrow = TRUE)
+    isPositive <- resid > 0
+    points(Year_mat[!isPositive], data_mat[!isPositive], cex = pmin(0.5 * diameter_max * abs(resid[!isPositive]), diameter_max), pch = 21, bg = "grey80")
+    points(Year_mat[isPositive], data_mat[isPositive], cex = pmin(0.5 * diameter_max * resid[isPositive], diameter_max), pch = 21, bg = "white")
+    legend("topleft", legend = c("<-10", "-1", "1", ">10"),
+           pt.cex = c(diameter_max, 0.5 * diameter_max, 0.5 * diameter_max, diameter_max),
+           pt.bg = c("grey80", "grey80", "white", "white"), pch = 21, horiz = TRUE)
+
+    return(invisible())
+  }
   # Mean length or age over time
   if('mean' %in% plot_type) {
-    mu <- numeric(length = length(Year))
-    for(i in 1:length(mu)) mu[i] <- weighted.mean(data_val, obs[i, ], na.rm = TRUE)
+    mu <- mupred <- numeric(length = length(Year))
+    for(i in 1:length(mu)) {
+      mu[i] <- weighted.mean(data_val, obs[i, ], na.rm = TRUE)
+      if(!is.null(fit)) mupred[i] <- weighted.mean(data_val, fit[i, ], na.rm = TRUE)
+    }
+    ind2 <- (which(!is.na(mu) & mu > 0)[1]):length(mu)
+    plot(Year[ind2], mu[ind2], xlab = 'Year', ylab = paste0('Mean ', data_type), typ = 'o')
+    if(!is.null(fit)) lines(Year[ind2], mupred[ind2], lwd = fit_linewidth, col = fit_color)
 
-    x.pretty <- pretty(Year)
-    y.pretty <- pretty(mu)
-    plot(Year, mu, xlim = range(x.pretty), ylim = range(y.pretty),
-         ylab = paste0('Mean ', data_type), typ = 'o')
+    return(invisible())
   }
 
   invisible()
@@ -523,103 +571,6 @@ plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bub
 
 
 
-#' Plot life history parameters from Data object
-#'
-#' Produces plots of growth parameters.
-#'
-#' @param Data An object of class Data.
-#' @param save_figure Indicates whether figures will be saved to directory.
-#' @param save_dir The directory to which figures will be saved. By default: \code{getwd()}
-#' @param Model Name of assessment model to save into appropriate sub-directory (optional).
-#' @return Plots of length-at-age, weight-at-age, and weight-at-length
-#' (if appropriate parameters are available).
-#'
-#' @author Q. Huynh
-#' @seealso \code{\link{plot_steepness}}
-#' \code{\link{plot_lognormalvar}} \code{\link{plot_betavar}}
-#' @export plot_life_history
-#' @examples plot_life_history(Red_snapper)
-plot_life_history <- function(Data, save_figure = FALSE, save_dir = getwd(),
-                              Model = NULL) {
-  if(save_figure) prepare_to_save_figure()
-
-  # Plot growth
-  # Need: Linf, K, t0, Maxage
-  # Optional: LenCV, a, b
-  if(!is.na(Data@vbLinf) & !is.na(Data@vbK) & !is.na(Data@vbt0) & !is.na(Data@MaxAge)) {
-
-    Linf <- Data@vbLinf
-    K <- Data@vbK
-    t0 <- Data@vbt0
-    MaxAge <- Data@MaxAge
-    if(!is.na(Data@LenCV)) LenCV <- Data@LenCV else LenCV <- NULL
-
-    age <- 1:MaxAge
-    Laa <- Linf * (1 - exp(-K * (age - t0)))
-    if(!is.null(LenCV)) {
-      sigmaLaa <- LenCV * Laa
-      upper <- Laa + 2 * sigmaLaa
-      lower <- Laa - 2 * sigmaLaa
-      y.max <- max(upper)
-    } else y.max <- max(Laa)
-    plot(age, Laa, typ = 'n', ylim = c(0, 1.1 * y.max), xlab = 'Age', ylab = 'Length')
-    if(!is.null(LenCV)) {
-      polygon(c(age, rev(age)), c(upper, rev(lower)), col = 'grey80', border = NA)
-      title.add <- " (with 95% probability interval)"
-    } else title.add <- ""
-    lines(age, Laa, typ = 'o')
-    abline(h = 0, col = 'grey')
-
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "lifehistory_1_length_at_age.png"))
-      plot(age, Laa, typ = 'n', ylim = c(0, 1.1 * y.max), xlab = 'Age', ylab = 'Length')
-      if(!is.null(LenCV)) {
-        polygon(c(age, rev(age)), c(upper, rev(lower)), col = 'grey80', border = NA)
-        title.add <- "(with 95% probability interval)"
-      } else title.add <- ""
-      lines(age, Laa, typ = 'o')
-      abline(h = 0, col = 'grey')
-      dev.off()
-      lh.file.caption <- c("lifehistory_1_length_at_age.png",
-                           paste("Length at age", title.add, "from Data object."))
-    }
-
-    if(!is.na(Data@wla) & !is.na(Data@wlb)) {
-      a <- Data@wla
-      b <- Data@wlb
-
-      Waa <- a * Laa ^ b
-      plot(age, Waa, typ = 'o', ylim = c(0, 1.1 * max(Waa)),
-           xlab = 'Age', ylab = 'Weight')
-      abline(h = 0, col = 'grey')
-      if(save_figure) {
-        create_png(filename = file.path(plot.dir, "lifehistory_2_mean_weight_at_age.png"))
-        plot(age, Waa, typ = 'o', ylim = c(0, 1.1 * max(Waa)),
-             xlab = 'Age', ylab = 'Weight')
-        abline(h = 0, col = 'grey')
-        dev.off()
-        lh.file.caption <- rbind(lh.file.caption,
-                                 c("lifehistory_2_mean_weight_at_age.png",
-                                   "Mean weight at age from Data object."))
-      }
-
-      plot(Laa, Waa, typ = 'o', xlab = 'Length', ylab = 'Weight')
-      abline(h = 0, col = 'grey')
-      if(save_figure) {
-        create_png(filename = file.path(plot.dir, "lifehistory_3_length_weight.png"))
-        plot(Laa, Waa, typ = 'o', xlab = 'Length', ylab = 'Weight')
-        abline(h = 0, col = 'grey')
-        dev.off()
-        lh.file.caption <- rbind(lh.file.caption,
-                                 c("lifehistory_2_mean_weight_at_age.png",
-                                   "Length-weight relationship from Data object."))
-      }
-    }
-  }
-
-  if(save_figure) return(invisible(lh.file.caption))
-  else return(invisible())
-}
 
 
 
@@ -654,8 +605,8 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE) {
   n.arrows <- length(exploit)
   if(length(biomass) > n.arrows) biomass <- biomass[1:n.arrows]
 
-  x.max <- max(biomass)
-  y.max <- max(exploit)
+  x.max <- max(biomass, 1)
+  y.max <- max(exploit, 1)
   plot(NULL, NULL, typ = 'n', xlab = expression(B/B[MSY]), ylab = expression(U/U[MSY]),
        xlim = c(0, 1.1 * x.max), ylim = c(0, 1.1 * y.max))
   if(color) {
@@ -719,7 +670,6 @@ plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FA
     old.warning <- options()$warn
     on.exit(options(warn = old.warning), add = TRUE)
     options(warn = -1)
-
     n.arrows <- length(Spawners)
 
     arrows(x0 = Spawners[1:(n.arrows-1)], y0 = rec_dev[1:(n.arrows-1)],
@@ -730,10 +680,18 @@ plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FA
   abline(v = 0, col = 'grey')
 }
 
-plot_ogive <- function(Age, ogive, label = "Selectivity") {
-  plot(Age, ogive, ylab = label, typ = 'n', ylim = c(0, 1))
+
+plot_generic_at_age <- function(Age, quantity, label, ymax = 1.1 * max(quantity)) {
+  plot(Age, quantity, ylab = label, typ = 'n', ylim = c(0, ymax))
   abline(h = 0, col = 'grey')
-  lines(Age, ogive, typ = 'o')
+  lines(Age, quantity, typ = 'o')
+
+  invisible()
+
+}
+
+plot_ogive <- function(Age, ogive, label = "Selectivity") {
+  plot_generic_at_age(Age = Age, quantity = ogive, label = label, ymax = 1.1)
 
   invisible()
 }

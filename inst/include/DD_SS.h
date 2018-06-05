@@ -4,22 +4,24 @@
 //{
   using namespace density;
 
-  DATA_SCALAR( S0 );
-  DATA_SCALAR( Alpha );
-  DATA_SCALAR( Rho );
-  DATA_INTEGER( ny );
-  DATA_INTEGER( k );
-  DATA_SCALAR( wk );
-  DATA_VECTOR( E_hist );
-  DATA_VECTOR( C_hist );
+  DATA_SCALAR(S0);
+  DATA_SCALAR(Alpha);
+  DATA_SCALAR(Rho);
+  DATA_INTEGER(ny);
+  DATA_INTEGER(k);
+  DATA_SCALAR(wk);
+  DATA_VECTOR(E_hist);
+  DATA_VECTOR(C_hist);
+  DATA_STRING(SR_type);
   DATA_VECTOR_INDICATOR(keep, C_hist);
 
-  PARAMETER( logit_UMSY );
-  PARAMETER( log_MSY );
-  PARAMETER( log_q );
-  PARAMETER( log_sigma );
-  PARAMETER( log_tau );
-  PARAMETER_VECTOR( log_rec_dev );
+  PARAMETER(logit_UMSY);
+  PARAMETER(log_MSY);
+  PARAMETER(log_q);
+  PARAMETER(U_equilibrium);
+  PARAMETER(log_sigma);
+  PARAMETER(log_tau);
+  PARAMETER_VECTOR(log_rec_dev);
 
   Type UMSY = 1/(1 + exp(-logit_UMSY));
   Type MSY = exp(log_MSY);
@@ -35,10 +37,33 @@
   DsprDu += Alpha * SS/((1 - Rho * SS) * pow(1 - SS, 2));
   DsprDu -= Spr/(1 - SS);
   DsprDu *= -S0;
-  Type Arec = 1/(pow(1 - UMSY, 2) * (Spr + UMSY * DsprDu));
-  Type Brec = UMSY * (Arec * Spr - 1/(1 - UMSY))/MSY;
   Type Spr0 = (S0 * Alpha/(1 - S0) + wk)/(1 - Rho * S0);
-  Type R0 = (Arec * Spr0 - 1)/(Brec * Spr0);
+
+  Type Arec;
+  Type Brec;
+  Type h;
+  Type R0;
+
+  if(SR_type == "BH") {
+    Arec = 1/(pow(1 - UMSY, 2) * (Spr + UMSY * DsprDu));
+    Brec = UMSY * (Arec * Spr - 1/(1 - UMSY))/MSY;
+    h = Arec * Spr0 / (4 + Arec * Spr0);
+    R0 = (Arec * Spr0 - 1)/(Brec * Spr0);
+  } else {
+    Type log_aphi = -UMSY * (1 - UMSY) * DsprDu;
+    log_aphi /=	Spr;
+    log_aphi += UMSY;
+
+    Arec = exp(log_aphi);
+    Arec /= Spr * (1 - UMSY);
+    Brec = UMSY * Spr * log_aphi;
+    Brec /= MSY * (1 - UMSY);
+
+    h = exp(0.8 * Brec * Spr0);
+    h *= 0.2;
+    R0 = log(Arec * Spr0)/(Brec * Spr0);
+  }
+
   Type B0 = R0 * Spr0;
   Type N0 = R0/(1 - S0);
 
@@ -56,17 +81,33 @@
   vector<Type> U(ny);
 
   //--INITIALIZE
-  B(0) = B0;
-  N(0) = N0;
-  for(int tt=0;tt<k;tt++) R(tt) = R0;
+  Type Seq = S0 * (1 - U_equilibrium);
+  Type SprEq = (Seq * Alpha/(1 - Seq) + wk)/(1 - Rho * Seq);
+  Type Req;
+  if(SR_type == "BH") {
+    Req = (Arec * SprEq * (1 - U_equilibrium) - 1)/(Brec * SprEq * (1 - U_equilibrium));
+  } else {
+    Req = log(Arec * SprEq * (1 - U_equilibrium))/(Brec * SprEq * (1 - U_equilibrium));
+  }
+
+  B(0) = Req * SprEq;
+  N(0) = Req/(1 - Seq);
+  for(int tt=0;tt<k;tt++) R(tt) = Req;
+
+  Type penalty = 0;
 
   for(int tt=0; tt<ny; tt++){
-    U(tt) = 1 - exp(-q * E_hist(tt));
+    U(tt) = CppAD::CondExpLt(exp(-q * E_hist(tt)), Type(0.025),
+      1 - posfun(exp(-q * E_hist(tt)), Type(0.025), penalty), 1 - exp(-q * E_hist(tt)));
     Surv(tt) = S0 * (1 - U(tt));
-    Cpred(tt) = CppAD::CondExpGt(U(tt) * B(tt), Type(1e-15), U(tt) * B(tt), Type(1e-15));
+    Cpred(tt) = U(tt) * B(tt);
     Sp(tt) = B(tt) - Cpred(tt);
 
-    R(tt + k) = Arec * Sp(tt)/(1 + Brec * Sp(tt));
+    if(SR_type == "BH") {
+      R(tt + k) = Arec * Sp(tt)/(1 + Brec * Sp(tt));
+    } else {
+      R(tt + k) = Arec * Sp(tt) * exp(-Brec * Sp(tt));
+    }
     if(tt + k < ny) {
       Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau, 2));
       R(tt + k) *= Rec_dev(tt);
@@ -77,12 +118,14 @@
   }
 
   //--ARGUMENTS FOR NLL
-  // The following conditions must be met for positive values
-  // of Arec_DD and Brec_DD, respectively:
-  // umsy * DsprDu + Spr_DD > 0 and Arec_DD * Spr_DD * (1 - UMSY_DD) - 1 > 0
+  // The following conditions must be met for positive values of:
+  // Arec: UMSY * DsprDu + Spr > 0 (BH)
+  //       Spr * (1 - UMSY) > 0 (Ricker)
+  // Brec: Arec * Spr * (1 - UMSY) - 1 > 0 (both BH and Ricker)
   // Thus, create a likelihood penalty of 100 when either condition is not met
-  Type penalty = CppAD::CondExpGt(Spr + UMSY * DsprDu, Type(0), Type(0), Type(UMSY * 1e3));
   penalty += CppAD::CondExpGt(Arec * Spr * (1 - UMSY) - 1, Type(0), Type(0), Type(UMSY * 1e3));
+  if(SR_type == "BH") penalty += CppAD::CondExpGt(Spr + UMSY * DsprDu, Type(0), Type(0), Type(UMSY * 1e3));
+  if(SR_type == "Ricker") penalty += CppAD::CondExpGt(Spr * (1 - UMSY), Type(0), Type(0), Type(UMSY * 1e3));
 
   // Objective function
   //creates storage for jnll and sets value to 0
@@ -98,45 +141,42 @@
   Type jnll = jnll_comp.sum() + penalty;
 
   //-------REPORTING-------//
-  Type h = Arec * Spr0 / (4 + Arec * Spr0);
-
   Type U_UMSY_final = U(U.size()-1)/UMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;
   Type B_B0_final = B(B.size()-1)/B0;
 
-  ADREPORT( UMSY );
-  ADREPORT( MSY );
-  ADREPORT( q );
-  ADREPORT( sigma );
-  ADREPORT( tau );
-  ADREPORT( U_UMSY_final );
-  ADREPORT( B_BMSY_final );
-  ADREPORT( B_B0_final );
-  REPORT( UMSY );
-  REPORT( MSY );
-  REPORT( q );
-  REPORT( sigma );
-  REPORT( tau );
-  REPORT( jnll_comp );
-  REPORT( jnll );
-  REPORT( Arec );
-  REPORT( Brec );
-  REPORT( Spr );
-  REPORT( Spr0 );
-  REPORT( DsprDu );
-  REPORT( Cpred );
-  REPORT( B );
-  REPORT( N );
-  REPORT( R );
-  REPORT( log_rec_dev );
-  REPORT( Rec_dev );
-  REPORT( U );
-  REPORT( h );
-  REPORT( BMSY );
-  REPORT( R0 );
-  REPORT( N0 );
-  REPORT( B0 );
-  REPORT( penalty );
+  ADREPORT(UMSY);
+  ADREPORT(MSY);
+  ADREPORT(q);
+  ADREPORT(sigma);
+  ADREPORT(tau);
+  ADREPORT(U_UMSY_final);
+  ADREPORT(B_BMSY_final);
+  ADREPORT(B_B0_final);
+  REPORT(UMSY);
+  REPORT(MSY);
+  REPORT(sigma);
+  REPORT(tau);
+  REPORT(jnll_comp);
+  REPORT(jnll);
+  REPORT(Arec);
+  REPORT(Brec);
+  REPORT(Spr);
+  REPORT(Spr0);
+  REPORT(DsprDu);
+  REPORT(Cpred);
+  REPORT(B);
+  REPORT(N);
+  REPORT(R);
+  REPORT(log_rec_dev);
+  REPORT(Rec_dev);
+  REPORT(U);
+  REPORT(h);
+  REPORT(BMSY);
+  REPORT(R0);
+  REPORT(N0);
+  REPORT(B0);
+  REPORT(penalty);
 
   return jnll;
 //}

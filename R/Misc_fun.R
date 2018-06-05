@@ -1,6 +1,6 @@
 # Internal DLMtool functions that are also needed for MSEtool
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
-mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
+#mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
 
 optimize_TMB_model <- function(obj, control = list()) {
   # Use hessian for fixed-effects models
@@ -12,10 +12,11 @@ optimize_TMB_model <- function(obj, control = list()) {
 
 get_sdreport <- function(obj, opt) {
   if(is.character(opt)) {
-    res <- "Model did not converge with nlminb(). Did not run TMB::sdreport()."
+    res <- "nlminb() optimization returned an error. Could not run TMB::sdreport()."
   } else {
-    res <- tryCatch(sdreport(obj, getReportCovariance = FALSE),
-                    error = function(e) as.character(e))
+    if(is.null(obj$env$random)) hess <- obj$he(opt$par) else hess <- NULL
+    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = hess,
+                             getReportCovariance = FALSE), error = function(e) as.character(e))
   }
   if(inherits(res, "sdreport") && !res$pdHess) {
     res <- "Estimated covariance matrix was not positive definite."
@@ -57,3 +58,39 @@ expand_comp_matrix <- function(Data, comp_type = c("CAA", "CAL")) {
   return(Data)
 }
 
+# var_div - report variables which are divided by the catch rescale
+# var_mult - report variables which are multiplied by the catch rescale
+# var_trans - transformed variables which need to be rescaled
+# fun_trans - the function for rescaling the transformed variables (usually either "*" or "/")
+# fun_fixed - the transformation from the output variable to the estimated variable indicated in var_trans (e.g. log, logit, NULL)
+rescale_report <- function(var_div, var_mult, var_trans = NULL, fun_trans = NULL, fun_fixed = NULL) {
+  output <- mget(c("report", "rescale", "SD"), envir = parent.frame(), ifnotfound = list(NULL))
+  report <- output$report
+
+  if(!is.null(var_div)) report[var_div] <- lapply(report[var_div], "/", output$rescale)
+  if(!is.null(var_mult)) report[var_mult] <- lapply(report[var_mult], "*", output$rescale)
+  assign("report", report, envir = parent.frame())
+
+  if(!is.null(output$SD) && !is.character(output$SD)) {
+    SD <- output$SD
+    if(!is.null(var_trans)) {
+      for(i in 1:length(var_trans)) {
+        var_trans2 <- var_trans[i]
+        fun_trans2 <- fun_trans[i]
+        fun_fixed2 <- fun_fixed[i]
+
+        ind <- pmatch(var_trans2, names(SD$value))
+        SD$value[ind] <- do.call(match.fun(fun_trans2), list(SD$value[ind], output$rescale))
+        SD$sd[ind] <- do.call(match.fun(fun_trans2), list(SD$sd[ind], output$rescale))
+
+        if(!is.na(fun_fixed2)) {
+          fixed_name <- paste0(fun_fixed2, "_", var_trans2)
+          ind_fixed <- pmatch(fixed_name, names(SD$par.fixed))
+          SD$par.fixed[ind_fixed] <- do.call(match.fun(fun_fixed2), list(SD$value[var_trans2]))
+        }
+      }
+    }
+    assign("SD", SD, envir = parent.frame())
+  }
+  invisible()
+}

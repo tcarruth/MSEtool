@@ -1,5 +1,5 @@
 ---
-title: "MSEtool"
+title: "User guide to MSEtool"
 subtitle: "Development, Testing and Implementation of Management Procedures for Data-Rich Fisheries (v1.1)"
 author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>) 
          Adrian Hordyk  (<a.hordyk@oceans.ubc.ca>),
@@ -13,7 +13,7 @@ output:
     toc: true
     number_sections: true    
 vignette: >
-  %\VignetteIndexEntry{MSEtool}
+  %\VignetteIndexEntry{User guide to MSEtool}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -63,7 +63,7 @@ The package uses the Management Strategy Evaluation engine of [DLMtool](http://w
 
 DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
 
-<br>
+<a href="http://www.datalimitedtoolkit.org"><img src="DLMtool_logo.png" width=250></a>
 
 
 # Version Notes
@@ -72,56 +72,179 @@ The package is subject to ongoing testing. If you find a bug or a problem please
 
 ## New Additions to this Version (v1.1)
 
-* The MCMC outputs of iSCAM models are now used to characterise operating model uncertainty
+* Assessment models (`Assess` functions)
+    * Statistical Catch at Age (SCA and SCA2)
+    * Delay Difference (DD_TMB)
+    * State-Space Delay Difference (DD_SS)
+    * Surplus Production (SP)
+    * State-Space Surplus Production (SP_SS)
 
-* iSCAM2DLM function added to rip from iSCAM assessments
+* Visualization
+    * Standardized assessment reports
+    * Diagnostics for assessment models
 
-* SS2DLM function updated for latest version of R4SS
+* Other features 
+    * Harvest control rules (`HCR` functions)
+    * `make_MP` function conveniently combines a __Assess__ and __HCR__ function to create a __MP__ function
+    * Movement matrices for parameterizing OM
+    * The MCMC outputs of iSCAM models are now used to characterise operating model uncertainty
+    * iSCAM2OM and iSCAM2Data functions rip from iSCAM assessments
+    * SS2OM and SS2Data functions updated for latest version of r4ss
 
 
 ## Coming soon 
 
-Data-rich MPs
+* More data-rich assessment models
+    * Virtual Population Analysis (VPA)
+    * Age-Structure Production Models (ASPM)
+    * Kalman filter assessment approximation
 
-* Statistical Catch at Age (SCA)
-* Age-Structure Production Models (ASPM)
-* State-Space Delay Difference models (DD_SS)
-* Surplus Production models (SP)
-* State-Space Surplus Production Models (SP_SS)
-* Kalman filer assessment approximation
-
-Visualization
-
-* Standardized assessment reports
-
+* Stock projections for assessment models
 
 # Introduction
 
-## Management Strategy Evaluation and DLMtool
+The MSEtool package is an extension of the DLMtool R package for implementing management strategy evaluation (MSE) simulations. Whereas DLMtool is primarily designed for testing data-limited management procedures, MSEtool provides an object-oriented framework for testing data-rich management procedures (MPs), which typically involve combining an assessment model with a harvest control rule to provide a fishery management recommendation. MSEtool management procedures are designed to be used with the operating model of DLMtool through the `runMSE` function. The user guide to the DLMtool package is accessible via
 
-<img src="DLMtool_logo.png" width="90">
-
-Some text
-
-## The operating model 
-
-
-## MSE design
-
-
-## The MSE process
-
-<img src="DLMtool_process.jpg" width="400">
-
-<br>
-
-
-#References
-
-```{r, echo=FALSE, eval=FALSE}
-sfStop()                            
+```{r, eval = FALSE}
+DLMtool::userguide()
 ```
 
-<br>
+The overall structure of a closed-loop simulation for a MSE in DLMtool can be described through the classes deployed in the package. An operating model (class __OM__ object) parameterizes the stock (biology), fleet, observation, and implementation dynamics of the MSE. To begin the MSE, the __OM__ object generates the data to be used for a management procedure and stores them in an object of class __Data__. A function of class __MP__ uses the __Data__ object and returns an object of class __Rec__ containing the management recommendations, e.g., effort and/or catch limits. From the management recommendations, the __OM__ object is updated and the process is successively repeated. The output for the closed-loop simulation is returned in an object of class __MSE__.
+
+<img src="DLMtool_design.png" width=400>
+
+_Figure 1: Design of DLMtool package for management strategy evaluations_
+
+## Overview of MSEtool
+
+To facilitate a standardized design for data-rich MPs, MSEtool builds out the __MP__ class with constituent functions of class __Assess__ and __HCR__. An __MP__ can be made from these functions to be tested in a MSE within the DLMtool framework. 
+
+Additionally, __Assess__ functions can be used in an assessment-only context (external to management strategy evaluations). Output of an __Assess__ function can be used to provide standardized stock assessment reporting and diagnostics, such as Kobe plots, likelihood profiles for parameter estimates, and retrospective analyses of time series estimates of biomass, fishing mortality, recruitment, etc.
+
+<img src="MSEtool_design.png" width=690>
+
+_Figure 2: Design of MSEtool package for building management procedures from assessment models and harvest control rules for management strategy evaluations with the DLMtool package. Separate functions are also available for standardized reporting of output from assessment models in a stock assessment setting._
+
+MSEtool provides functions for converting the results of assessment models into DLMtool __OM__ and __Data__ objects. The SS2OM and SS2Data functions convert SS (Stock Synthesis) assessments, while iSCAM2OM and iSCAM2Data functions are provided for iSCAM assessments. 
+
+Summary additional features created by Tom... for movement.
+
+
+# Assessment models
+
+Assessment models in MSEtool are functions of class __Assess__. 
+Currently, six assessment functions are available: __DD_TMB__ (Delay-Difference model and its state-space counterpart, __DD_SS__), __SP__ (Surplus Production model and its state-space counterpart, __SP_SS__), and __SCA__ (Statistical Catch at age model and another variant __SCA2__). These functions take a __Data__ object as an argument and return an object of class __Assessment__, for example,
+
+```{r, eval = FALSE}
+DD_result <- DD_TMB(1, sim_snapper, ...)
+```
+where `...` are model configuration arguments.
+
+The __Assessment__ object contains the raw output from TMB estimation model, optimization output from `nlminb`, and parameter estimates with covariance matrix (slots obj, opt, and SD, respectively). If applicable, time series estimates of total biomass, vulnerable biomass, spawning stock biomass, fishing mortality and/or exploitation rate, as well as their corresponding MSY and virgin reference points. The __Assess__ object also reports likelihood values and predicted values for the data used in the assessment model.
+
+Descriptions of the __Assess__ functions are provided in a separate Appendix vignette:
+
+```{r, eval = FALSE}
+vignette("Assessment", package = "MSEtool")
+```
+
+## Reporting and diagnostic functions
+
+Assessment results and summary, along with diagnostic procedures are available for each assessment model. Generic functions `summary` and `plot` are available for __Assessment__ objects. The `summary` function returns a list of estimated current stock status ($F/F_{MSY}$ , $B/B_{MSY}$ in the terminal year), input parameters to the model, derived quantities, and parameter estimates. The `plot` function generates time series figures of data, fitted data, and estimated quantities (e.g., biomass and recruitment). By default, these figures are save to disk and can be viewed with a HTML webpage generated by the function.
+
+```{r, eval = FALSE}
+summary(DD_result)
+plot(DD_result, save_figure = TRUE, save_dir = getwd()) # By default, also saves figures in the working directory and HTML browser for viewing
+```
+
+Two diagnostic functions are available: `retrospective` for retrospective analyses (re-running the model by sequentially removing terminal years of data) and `profile_likelihood` for profiling the likelihood function over a grid of parameters.
+
+```{r, eval = FALSE}
+retrospective(DD_result, 5) # Retrospective analysis going back 5 years from current year
+profile_likelihood(DD_result, UMSY = seq(0.05, 0.15, 0.01), MSY = seq(1, 3, 0.1)) # Joint profile over grid of UMSY and MSY
+```
+<img src="DD_profile.png" width=400>
+
+_Figure 3: Joint profile of UMSY and MSY from Delay-Difference assessment model (DD_TMB function). Contours indicate change in likelihood values from minimum (red point)._
+
+# Harvest control rules (HCRs)
+
+Harvest control rules in MSEtool are functions of class __HCR__, and are designed to provide different for a given assessment model. __HCR__ functions take an object of class __Assessment__ and return an object of class __Rec__. Currently, three __HCR__ functions are available as output controls (catch limits): HCR_MSY, HCR40_10, and HCR60_20. HCR_MSY prescribes the TAC to be the catch predicted with fishing at the estimated $F_{MSY}$ (the product of $F_{MSY}$ and estimated vulnerable biomass), while HCR40_10 and HCR60_20 are ramped control rules which reduce the $F_{MSY}$ catch limit based on spawning depletion.
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+par(mar = c(5,5,3,1))
+Brel <- seq(0, 1, length.out = 200)
+plot(Brel, MSEtool::HCRlin(Brel, 0.1, 0.4), xlab = "Estimated SSB/SSB0", ylab = "TAC adjustment factor \n(proportion of FMSY catch)", main = "40-10 harvest control rule", type = "l", col = "blue")
+abline(v = c(0.1, 0.4), col = "red", lty = 2)
+```
+
+_Figure 4: The 40-10 harvest control rule prescribes an additional reduction in the TAC based on estimated spawning depletion._
+
+# Creating MPs from assessments and HCRs
+
+The `make_MP` function is a convenient way to stitch together a MP from an assessment model and HCR. The resulting function can then be passed to `DLMtool::runMSE()` for a management procedure.
+
+```{r, eval = FALSE}
+DD_MSY <- make_MP(DD_TMB, HCR_MSY, ...)
+DD_4010 <- make_MP(DD_TMB, HCR40_10)
+myMSE <- DLMtool::runMSE(OM = DLMtool::testOM, MPs = c("FMSYref", "DD_MSY", "DD_4010"))
+Tplot2(myMSE)
+```
+
+<img src="DD_MSE.png">
+
+_Figure 5. Trade-off plot of the MSE for the MPs that use the Delay-Difference model with two harvest control rules and the FMSY reference MP._
+
+Model configuration arguments can be passed through `...` when the MP is made. For example, the Ricker stock-recruitment relationship can be used in the Delay-Difference model instead of the default Beverton-Holt relationship with argument `SR = "Ricker"`:
+
+```{r, eval = FALSE}
+DD_MSY_Ricker <- make_MP(DD_TMB, HCR_MSY, SR = "Ricker")
+```
+
+This MP will call `DD_TMB(SR = "Ricker")`.
+
+## Diagnostic of assessment models in MSE
+
+By default, assessment model results are not saved during the MSE. However, this feature can be turned on with argument `diagnostic = TRUE` in `make_MP`:
+
+```{r, eval = FALSE}
+DD_MSY <- make_MP(DD_TMB, HCR_MSY, diagnostic = TRUE)
+```
+
+
+For each MP, two diagnostic objects are saved and reported in the `DLMtool::DLMenv` environment: the system time needed to run each assessment call and the __Assessment__ objects from each assessment call. The timing information may be useful to estimate total run time for additional MSE simulations or identify iterations in which the model has trouble with convergence. The __Assessment__ objects are used to obtain convergence information, as well as retrospective estimates of biomass and mortality over successive applications.
+
+Currently, this feature is memory-intensive and may cause performance issues or crashes. If the MSE is crashing with large number of simulations, a solution may be to run `DLMtool::runMSE()` in several batches with different seed numbers. MSE performance over all batches can be calculated by stitching the class __MSE__ objects together with `DLMtool::joinMSE()`.
+
+The `diagnosic_AM` function plots the timing and convergence information, and `retrospective_AM` plots the assessment model's retrospective patterns (for a single simulation in the MSE).
+
+```{r, eval = FALSE}
+DD_MSY <- make_MP(DD_TMB, HCR_MSY, diagnostic = TRUE)
+myMSE <- DLMtool::runMSE(OM = DLMtool::testOM, MPs = c("FMSYref", "DD_MSY", "DD_4010"))
+diagnostic_AM(myMSE)
+retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
+```
+<img src="DD_diag_AM.png">
+
+_Figure 6. Convergence and runtime diagnostics for DD_MSY MP during the MSE. In MSEtool, convergence is defined by a positive-definite Hessian matrix. In the case of non-convergence, the previous management recommendation is used._
+
+
+<img src="DD_retro_AM.png">
+
+_Figure 7. Retrospective analysis of the Delay-Difference model in the DD_MSY MP during the MSE for simulation #1. Operating model (true) values of spawning biomass (SSB), relative spawning biomass (SSB_SSBMSY), spawning biomass depletion (SSB_SSB0), fishing mortality (F), relative F (F_FMSY), and vulnerable bimoass (VB) are in dark black. Colored lines indicate model estimates sequentially over the projection years. Note that this assessment model assumes the vulnerable biomass to be the spawning biomass._
+
+## Obtaining management recommendations
+
+Like all other output MPs, `DLMtool::TAC()` can be used to obtain a catch limit:
+```{r, eval = FALSE}
+DD_MSY <- make_MP(DD_TMB, HCR_MSY)
+snapper_TAC <- TAC(sim_snapper, MPs = c("DD_MSY", "DD_4010"))
+plot(snapper_TAC)
+```
+<img src="DD_TAC.png">
+
+_Figure 8. Stochastic TAC recommendations from the Delay-Difference model with two harvest control rules. DD_4010 prescribes zero catch because the estimated depletion is less than 0.1._
+
+
 
 

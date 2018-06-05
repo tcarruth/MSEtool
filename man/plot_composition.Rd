@@ -4,8 +4,10 @@
 \alias{plot_composition}
 \title{Plot composition data}
 \usage{
-plot_composition(Year, obs, fit = NULL, plot_type = c("annual", "bubble",
-  "mean"), data_type = c(NULL, "length", "age"), CAL_bins = NULL)
+plot_composition(Year, obs, fit = NULL, plot_type = c("annual",
+  "bubble_data", "bubble_residuals", "mean"), data_type = c(NULL, "length",
+  "age"), N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+  bubble_adj = 5, fit_linewidth = 3, fit_color = "red")
 }
 \arguments{
 \item{Year}{A vector of years.}
@@ -18,12 +20,23 @@ years and age, respectively.}
 Same dimensions as obs.}
 
 \item{plot_type}{Indicates which plots to create. Options include annual distributions,
-bubble plot, and annual means.}
+bubble plot of the data, and bubble plot of the residuals, and annual means.}
 
 \item{data_type}{Indicates whether length or age data are being used.}
 
-\item{CAL_bins}{A vector of lengths corresponding to the columns in \code{obs}
+\item{N}{Annual sample sizes. Vector of length \code{nrow(obs)}.}
+
+\item{CAL_bins}{A vector of lengths corresponding to the columns in \code{obs}.
 and \code{fit}. Ignored for age data.}
+
+\item{ind}{A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.}
+
+\item{bubble_adj}{Numeric, for adjusting the relative size of bubbles in bubble plots
+(larger number = larger bubbles).}
+
+\item{fit_linewidth}{Argument \code{lwd} for fitted line.}
+
+\item{fit_color}{Color of fitted line.}
 }
 \value{
 Plots depending on \code{plot_type}.

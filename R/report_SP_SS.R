@@ -5,24 +5,54 @@ summary_SP_SS <- function(Assessment) {
                                          B_B0[length(B_B0)]))
   rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
-  input_parameters <- data.frame()
+  Value <- numeric(0)
+  Description <- character(0)
+  rownam <- character(0)
+  if("log_Binit_frac" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$Binit_frac)
+    Description <- c(Description, "Initial depletion")
+    rownam <- c(rownam, "Binit_frac")
+  }
+  if("log_n" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$n)
+    Description <- c(Description, "Production exponent")
+    rownam <- c(rownam, "n")
+  }
+  if("log_sigma" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$sigma)
+    Description <- c(Description, "Index SD (log-space)")
+    rownam <- c(rownam, "sigma")
+  }
+  if("log_tau" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$tau)
+    Description <- c(Description, "log-Biomass deviation SD (log-space)")
+    rownam <- c(rownam, "tau")
+  }
+  if(length(Value) == 0) input_parameters <- data.frame()
+  else {
+    input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
+    rownames(input_parameters) <- rownam
+  }
 
-  derived <- data.frame(Value = c(TMB_report$r, TMB_report$K, TMB_report$BMSY,
-                                  TMB_report$sigma),
+  derived <- data.frame(Value = c(TMB_report$r, TMB_report$K, TMB_report$BMSY),
                         Description = c("Intrinsic rate of population increase", "Carrying capacity",
-                                        "Biomass at MSY", "Index observation error (log-space)"),
-                        stringsAsFactors = FALSE)
-  rownames(derived) <- c("r", "K", "BMSY", "sigma")
+                                        "Biomass at MSY"), stringsAsFactors = FALSE)
+  rownames(derived) <- c("r", "K", "BMSY")
 
-  model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
+  if(is.null(obj$env$random)) {
+    model_estimates <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
+    dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_B_dev", ]
+  } else {
+    model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
+    dev_estimates <- summary(SD, "random")
+  }
+
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
-  random_estimates <- summary(SD, "random")
-  rownames(random_estimates) <- paste0(rownames(random_estimates), "_", names(Assessment@Random))
-
+  rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev)[Dev != 0])
   output <- list(model = "Surplus Production (State-Space)",
                  current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
-                 model_estimates = rbind(model_estimates, random_estimates))
+                 model_estimates = rbind(model_estimates, dev_estimates))
   return(output)
 }
 
@@ -52,11 +82,11 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
+    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
@@ -74,11 +104,11 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind, label = "Index")
+  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
+    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind, label = "Index")
+      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
@@ -207,23 +237,22 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                  c("assessment_B_B0.png", "Time series of biomass depletion."))
   }
 
-  plot_residuals(as.numeric(names(Random)), Random, label = "Biomass deviations")
+  plot_residuals(as.numeric(names(Dev)), Dev, label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_Biomass_devs.png"))
-    plot_residuals(as.numeric(names(Random)), Random, label = "Biomass deviations")
+    plot_residuals(as.numeric(names(Dev)), Dev, label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_Biomass_devs.png", "Time series of biomass deviations."))
   }
 
-  plot_residuals(as.numeric(names(Random)), Random, SE_Random, label = Random_type)
+  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_Biomass_devs_with_CI.png"))
-    plot_residuals(as.numeric(names(Random)), Random, SE_Random, label = Random_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_Biomass_devs_with_CI.png", "Time series of biomass deviations with 95% confidence intervals."))
-
   }
 
   plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
@@ -308,15 +337,14 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
     params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    params$log_MSY <- log(profile.grid[i, 2])
-    obj <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = map, random = "log_B_dev", DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj)
-    if(!is.character(opt) && opt$convergence == 0) {
-      nll[i] <- opt$objective
-    }
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
+                      map = map, random = Assessment@obj$env$random, DLL = "MSEtool",
+                      inner.control = Assessment@info$inner.control, silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
+    if(!is.character(opt)) nll[i] <- opt2$objective
   }
-  profile.grid$nll <- nll - min(nll, na.rm = TRUE)
+  profile.grid$nll <- nll
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
@@ -362,12 +390,16 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
   C_hist <- data$C_hist
   I_hist <- data$I_hist
   params <- info$params
-  map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, B, U, relU, relB, log_B_dev
   retro_ts <- array(NA, dim = c(nyr+1, ny + 1, 7))
-  retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
+  SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
+  retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
+  #retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
+
+  SD <- NULL
+  rescale <- info$rescale
 
   for(i in 0:nyr) {
     ny_ret <- ny - i
@@ -376,13 +408,24 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
     data$Index <- I_hist[1:ny_ret]
     params$log_B_dev <- rep(0, ny_ret - 1)
 
-    obj <- MakeADFun(data = data, parameters = params, map = map, random = "log_B_dev",
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj)
-    SD <- get_sdreport(obj, opt)
+    map <- obj$env$map
+    if("log_B_dev" %in% names(map)) map$log_B_dev <- map$log_B_dev[1:(length(map$log_B_dev) - i)]
 
-    if(!is.character(opt) && opt$convergence == 0 && !is.character(SD)) {
+    obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
+                      inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, info$control)
+    SD <- get_sdreport(obj2, opt2)
+
+    if(!is.character(opt2) && !is.character(SD)) {
       report <- obj$report(obj$env$last.par.best)
+      if(rescale != 1) {
+        vars_div <- c("B", "BMSY", "SP", "K", "MSY")
+        vars_mult <- NULL
+        var_trans <- c("MSY", "K", "q")
+        fun_trans <- c("/", "/", "*")
+        fun_fixed <- c("log", NA, NA)
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
       B <- c(report$B, rep(NA, i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$K
@@ -392,7 +435,8 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
       log_B_dev <- c(report$log_B_dev, rep(NA, 2 + i))
 
       retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY, log_B_dev)
-      retro_est[i+1, , ] <- rbind(summary(SD, "fixed"), summary(SD, "report"))
+      #retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY)
+      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
 
     } else {
       warning(paste("Non-convergence when", i, "years of data were removed."))

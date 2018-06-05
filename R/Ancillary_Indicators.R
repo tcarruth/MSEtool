@@ -98,7 +98,7 @@ CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),re
 }
 
 
-#' @importFrom diptest dip
+
 #' @export
 Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
 

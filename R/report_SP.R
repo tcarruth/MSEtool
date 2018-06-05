@@ -5,7 +5,24 @@ summary_SP <- function(Assessment) {
                                          B_B0[length(B_B0)]))
   rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
-  input_parameters <- data.frame()
+  if(length(obj$env$map) == 0) input_parameters <- data.frame()
+  else {
+    Value <- numeric(0)
+    Description <- character(0)
+    rownam <- character(0)
+    if("log_Binit_frac" %in% names(obj$env$map)) {
+      Value <- c(Value, TMB_report$Binit_frac)
+      Description <- c(Description, "Initial depletion")
+      rownam <- c(rownam, "Binit_frac")
+    }
+    if("log_n" %in% names(obj$env$map)) {
+      Value <- c(Value, TMB_report$n)
+      Description <- c(Description, "Production exponent")
+      rownam <- c(rownam, "n")
+    }
+    input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
+    rownames(input_parameters) <- rownam
+  }
 
   derived <- data.frame(Value = c(TMB_report$r, TMB_report$K, TMB_report$BMSY),
                         Description = c("Intrinsic rate of population increase", "Carrying capacity",
@@ -16,9 +33,8 @@ summary_SP <- function(Assessment) {
   model_estimates <- summary(SD)
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
 
-  output <- list(model = "Delay Difference",
-                 current_status = current_status, input_parameters = input_parameters,
-                 derived_quantities = derived,
+  output <- list(model = "Surplus Production", current_status = current_status,
+                 input_parameters = input_parameters, derived_quantities = derived,
                  model_estimates = model_estimates)
   return(output)
 
@@ -50,11 +66,11 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
+    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat, label = "Catch")
+      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
@@ -72,11 +88,11 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Cat[1])) {
-    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind, label = "Index")
+  if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
+    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind, label = "Index")
+      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
@@ -271,7 +287,7 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
 
 
 #' @importFrom reshape2 acast
-profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = TRUE,
+profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE,
                                   save_dir = getwd(), ...) {
   dots <- list(...)
   if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
@@ -279,14 +295,27 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = TRUE,
   UMSY <- dots$UMSY
   MSY <- dots$MSY
 
+  map <- Assessment@obj$env$map
+  params <- Assessment@info$params
+
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
   nll <- rep(NA, nrow(profile.grid))
   for(i in 1:nrow(profile.grid)) {
-    logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
-    log_MSY <- log(profile.grid[i, 2])
-    nll[i] <- Assessment@obj$fn(x = c(logit_UMSY, log_MSY))
+    params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
+    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
+    if(length(Assessment@obj$par) == 2) {
+      nll[i] <- Assessment@obj$fn(x = c(params$logit_UMSY, params$log_MSY))
+    } else { # More than 2 parameters
+      map$logit_UMSY <- map$log_MSY <- factor(NA)
+      obj2 <- MakeADFun(data = Assessment@info$data, parameters = Assessment@info$params,
+                        map = map, DLL = "MSEtool", silent = TRUE)
+
+      opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
+      if(!is.character(opt2)) nll[i] <- opt2$objective
+    }
+
   }
-  profile.grid$nll <- nll - min(nll, na.rm = TRUE)
+  profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
@@ -341,20 +370,31 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
   retro_ts <- array(NA, dim = c(nyr + 1, ny + 1, 6))
   retro_est <- array(NA, dim = c(nyr + 1, dim(summary(SD))))
 
+  SD <- NULL
+  rescale <- info$rescale
+
   for(i in 0:nyr) {
     ny_ret <- ny - i
     data$ny <- ny_ret
     data$C_hist <- C_hist[1:ny_ret]
     data$I_hist <- I_hist[1:ny_ret]
 
-    obj <- MakeADFun(data = data, parameters = params, map = map,
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj)
-    SD <- get_sdreport(obj, opt)
+    obj2 <- MakeADFun(data = data, parameters = params, map = map,
+                      DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2)
+    SD <- get_sdreport(obj2, opt2)
 
-    if(!is.character(opt) && opt$convergence == 0 && !is.character(SD)) {
-      report <- obj$report(obj$env$last.par.best)
-	  B <- c(report$B, rep(NA, i))
+    if(!is.character(opt2) && !is.character(SD)) {
+      report <- obj2$report(obj2$env$last.par.best)
+      if(rescale != 1) {
+        vars_div <- c("B", "BMSY", "SP", "K", "MSY")
+        vars_mult <- NULL
+        var_trans <- c("MSY", "K", "q")
+        fun_trans <- c("/", "/", "*")
+        fun_fixed <- c("log", NA, NA)
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
+	    B <- c(report$B, rep(NA, i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$K
 
@@ -379,7 +419,7 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
 }
 
 plot_retro_SP <- function(retro_ts, retro_est, save_figure = FALSE,
-                              save_dir = getwd(), nyr_label, color) {
+                          save_dir = getwd(), nyr_label, color) {
   n_tsplots <- dim(retro_ts)[3] - 1
   ts_label <- c("Biomass", expression(B/B[MSY]), expression(B/B[0]),
                 "Exploitation rate (U)", expression(U/U[MSY]))
@@ -503,12 +543,13 @@ plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
 #' to BMSY/K (Fletcher 1978).
 #'
 #' @param depletion The hypothesized depletion that produces MSY.
-#' @param figure (TRUE/FALSE) Plots figure of production function as a function of depletion (B/K)
+#' @param figure Local, plots figure of production function as a function of depletion (B/K)
 #'
 #' @author Q. Huynh
 #' @references
 #' Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
-#' @examples SP_production(2)
+#' @note May be useful for parameterizing \code{n} in \link{SP} and \link{SP_SS}.
+#' @examples SP_production(0.5)
 #' @return The production function exponent n (numeric).
 #' @importFrom stats uniroot
 #' @seealso \link{SP} \link{SP_SS}
@@ -519,14 +560,15 @@ SP_production <- function(depletion, figure = TRUE) {
     depletion <- depletion[1]
     message(paste("Function is not vectorized. Depletion value of", depletion, "is used."))
   }
+  if(depletion <= 0 || depletion >= 1) stop(paste("Proposed depletion =", depletion, "but value must be between 0 and 1."))
 
   calc_depletion <- function(n) {
     depletion_MSY <- n^(1/(1-n))
     return(depletion_MSY)
   }
   n_solver <- function(x) calc_depletion(x) - depletion
-  n_answer <- uniroot(f = n_solver, interval = c(0, 1e8))$root
-  n_answer <- round(n_answer, 3)
+  get_n <- uniroot(f = n_solver, interval = c(0, 1e3))
+  n_answer <- round(get_n$root, 3)
 
   if(figure) {
     gamm <- n_answer^(n_answer/(n_answer-1))/(n_answer-1)
@@ -534,7 +576,7 @@ SP_production <- function(depletion, figure = TRUE) {
     msy <- umsy * depletion
     plot_yield_SP(report = list(gamma = gamm, n = n_answer, BMSY = depletion, K = 1), umsy = umsy,
                   msy = msy, xaxis = "Depletion", relative_yaxis = TRUE)
-    title(paste0("Production function n = ", n_answer))
+    title(paste0("Production exponent n = ", n_answer))
   }
   return(n_answer)
 }

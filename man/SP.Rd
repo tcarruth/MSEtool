@@ -5,33 +5,55 @@
 \alias{SP_SS}
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
-SP(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
-  control = list(), ...)
+SP(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TRUE,
+  fix_n = TRUE, silent = TRUE, control = list(iter.max = 1e+06, eval.max =
+  1e+06), ...)
 
-SP_SS(x = 1, Data, n = 2, Binit_frac = 1, start = NULL, silent = TRUE,
-  control = list(), ...)
+SP_SS(x = 1, Data, rescale = "mean1", start = NULL,
+  fix_Binit_frac = TRUE, fix_n = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
 Otherwise, equals to 1 When running an assessment interactively.}
 
-\item{Data}{A data-limited methods data object}
+\item{Data}{An object of class Data.}
 
-\item{n}{The exponent of the production function (fixed in the model).
-Typically fixed at \code{n = 2}, where the biomass at MSY is half of carrying capacity.}
-
-\item{Binit_frac}{The ratio of biomass to carrying capacity in the first year
-(fixed in the model). A value of 1 assumes virgin conditions.}
+\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{silent}{(TRUE/FALSE) Passed to \code{\link[TMB]{MakeADFun}}, whether TMB
+\item{fix_Binit_frac}{Logical, whether to fix the ratio of biomass to carrying capacity in the
+first year of the model. If \code{TRUE}, uses the value in \code{start}, otherwise equal to 1
+(assumes virgin conditions).}
+
+\item{fix_n}{Logical, whether to fix the exponent of the production function. If \code{TRUE},
+uses the value in \code{start}, otherwise equal to \code{n = 2}, where the biomass at MSY
+is half of carrying capacity.}
+
+\item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
 
 \item{control}{A named list of parameters regarding optimization to be passed to
 \code{\link[stats]{nlminb}}.}
 
 \item{...}{Additional arguments (not currently used).}
+
+\item{fix_sigma}{Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
+sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
+
+\item{fix_tau}{Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
+tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
+
+\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
+of the biomass deviations (thus, treating it as a state-space variable).}
+
+\item{inner.control}{A named list of arguments for optimization of the random effects, which
+is passed on to \link[TMB]{newton} via \code{\link[TMB]{MakeADFun}}.}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output
@@ -44,13 +66,12 @@ The model is conditioned on catch and estimates a predicted index. The state-spa
 estimates annual deviates in biomass.
 }
 \details{
-To provide starting values for the model, a named list can be provided for \code{UMSY} and
-\code{MSY} via the start argument (see example).
+To provide starting values for the \code{SP}, a named list can be provided for \code{UMSY},
+\code{MSY}, \code{Binit_frac}, and \code{n} via the start argument (see example).
 
-For \code{SP_SS}, a start value can also be provided for \code{tau}, the standard deviation
-of the log-biomass deviates. Deviations are estimated beginning in the year when index
-data are available. The index standard deviation is fixed based on the value of
-\code{Data@CV_Ind}.
+For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
+of the index and log-biomass deviates, respectively. Deviations are estimated beginning in the year when index
+data are available.
 }
 \section{Functions}{
 \itemize{
@@ -68,17 +89,15 @@ and a symmetric production function.
 data(swordfish)
 
 #### Observation-error surplus production model
-res <- SP(1, swordfish)
+res <- SP(Data = swordfish)
 
-# Provide starting values
-start <- list(UMSY = 0.1, MSY = 1e5)
-res <- SP(1, swordfish, start = start)
-
-# Assume B/K = 0.95 in first year of model
-res <- SP(1, swordfish, Binit_frac = 0.95)
+# Provide starting values, assume B/K = 0.95 in first year of model
+# and symmetrical production curve (n = 2)
+start <- list(UMSY = 0.1, MSY = 1e5, Binit_frac = 0.95, n = 2)
+res <- SP(Data = swordfish, start = start)
 
 #### State-space version
-res <- SP_SS(1, swordfish)
+res <- SP_SS(Data = swordfish, start = list(Binit_frac = 0.95, tau = 0.1))
 
 }
 \references{

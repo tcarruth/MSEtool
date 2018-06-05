@@ -5,19 +5,33 @@
 \alias{DD_SS}
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
-DD_TMB(x, Data, start = NULL, silent = TRUE, control = list(eval.max =
-  1000), ...)
+DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
+  start = NULL, fix_U_equilibrium = TRUE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06), ...)
 
-DD_SS(x, Data, start = NULL, silent = TRUE, tau = 1,
-  control = list(eval.max = 1000), inner.control = list(), ...)
+DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
+  start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
 Otherwise, equals to 1 when running an assessment.}
 
-\item{Data}{An object of class \linkS4class{Data}.#'}
+\item{Data}{An object of class \linkS4class{Data}.}
 
-\item{start}{Optional list of starting values. See details.#'}
+\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).}
+
+\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+Output is re-converted back to original units.}
+
+\item{start}{Optional list of starting values. See details.}
+
+\item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model is
+estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
+(assumes virgin conditions).}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
@@ -27,11 +41,17 @@ will print trace information during optimization. Used for dignostics for model 
 
 \item{...}{Additional arguments (not currently used).}
 
-\item{tau}{The standard deviation of the recruitment deviations in \code{DD_SS}
-from the estimated stock-recruit relationship (by default, euqal to one).}
+\item{fix_sigma}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Cat}.}
+
+\item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
+tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
+
+\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
+of the recruitment deviations (thus, treating it as a state-space variable).}
 
 \item{inner.control}{A named list of arguments for optimization of the random effects, which
-is passed on to \code{\link[TMB]{newton}}.}
+is passed on to \code{\link[TMB]{newton}} via \code{\link[TMB]{MakeADFun}}.}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output
@@ -45,12 +65,11 @@ recruitment deviations from the stock-recruit relationship are estimated as a
 random effect variable.
 }
 \details{
-To provide starting values for the model, a named list can be provided for \code{UMSY},
+To provide starting values for \code{DD_TMB}, a named list can be provided for \code{UMSY},
 \code{MSY}, and \code{q} via the \code{start} argument (see example).
 
-For \code{DD_SS}, a start value can also be provided for \code{tau}, the standard
-deviation of the recruitment variability. The catch standard deviation is fixed based
-on the value of \code{Data@CV_Cat}.
+For \code{DD_SS}, additional start values can be provided for and \code{sigma} and \code{tau}, the standard
+deviation of the catch and recruitment variability, respectively.
 }
 \section{Functions}{
 \itemize{
@@ -70,16 +89,21 @@ violated tends to be the biggest driver of performance for this method.
 data(sim_snapper)
 
 #### Observation-error delay difference model
-res <- DD_TMB(1, sim_snapper)
+res <- DD_TMB(1, Data = sim_snapper)
 
 ### State-space version
-res <- DD_SS(1, sim_snapper)
+res <- DD_SS(Data = sim_snapper)
 
 # Provide starting values
-start <- list(UMSY = 0.05, MSY = 4, q = 0.3, tau = 0.5)
-res <- DD_TMB(1, sim_snapper, start = start)
+start <- list(UMSY = 0.05, MSY = 4, q = 0.3)
+res <- DD_SS(1, sim_snapper, start = start)
 
 summary(res@SD) # Look at parameter estimates
+
+\dontrun{
+# Plot and save figures
+plot(res)
+}
 }
 \references{
 Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify

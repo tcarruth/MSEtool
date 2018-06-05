@@ -1,3 +1,29 @@
+//posfun from ADMB
+template<class Type>
+Type posfun(Type x, Type eps, Type &penalty) {
+  Type denom = 2;
+  denom -= x/eps;
+  Type ans = CppAD::CondExpGe(x, eps, x, eps/denom);
+  penalty += CppAD::CondExpGe(x, eps, Type(0), 100 * pow(x - eps, 2));
+  return ans;
+}
+
+//posfun2 from ADMB
+template<class Type>
+Type posfun2(Type x, Type eps, Type &penalty) {
+  Type x_eps = x/eps;
+  Type denom = 1.;
+  denom += x_eps;
+  denom += pow(x_eps, 2);
+  denom += pow(x_eps, 3);
+  Type pen2 = pow(denom, -1);
+  pen2 *= eps;
+  Type ans = CppAD::CondExpGe(x, eps, x, pen2);
+  penalty += CppAD::CondExpGe(x, eps, Type(0), 0.01 * pow(x - eps, 3));
+  return ans;
+}
+
+
 // Calculates analytical solution of a lognormal variable
 template<class Type>
 Type calc_sigma(vector<Type> I_y, vector<Type> Ipred_y) {
@@ -35,7 +61,23 @@ Type calc_q(vector<Type> I_y, vector<Type> B_y) {
 //////////// Functions for SCA.h
 template<class Type>
 Type BH_SR(Type SSB, Type h, Type R0, Type SSB0) {
-  Type Rpred = 4 * h * R0 * SSB/(SSB0*(1-h) + (5*h-1)*SSB);
+  Type Rpred = 4 * h * R0 * SSB;
+  Type den = SSB0 * (1-h);
+  den += (5*h-1) * SSB;
+  Rpred /= den;
+  return Rpred;
+}
+
+template<class Type>
+Type Ricker_SR(Type SSB, Type h, Type R0, Type SSB0) {
+  Type SSBPR0 = SSB0/R0;
+  Type expon = 1;
+  expon -= SSB/SSB0;
+  expon *= 1.25;
+
+  Type Rpred = pow(5*h, expon);
+  Rpred *= SSB;
+  Rpred /= SSBPR0;
   return Rpred;
 }
 
