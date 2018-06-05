@@ -634,6 +634,7 @@ plot_yield_SCA <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01), 
   Arec <- report$Arec
   Brec <- report$Brec
 
+  EPR <- Req <- NA
   solveMSY <- function(logit_U, SR) {
     U <- 1/(1 + exp(-logit_U))
     surv <- exp(-M) * (1 - vul * U)

@@ -249,11 +249,9 @@ plot_betavar <- function(m, sd, label = NULL, logit = FALSE, color = "black") {
 #' @export plot_steepness
 #' @seealso \code{\link{plot_lognormalvar}} \code{\link{plot_betavar}}
 #' @examples
-#' data(Red_snapper)
-#' mu <- Red_snapper@steep
-#' stddev <- Red_snapper@steep * Red_snapper@CV_steep
+#' mu <- DLMtool::Simulation_1@steep
+#' stddev <- DLMtool::Simulation_1@steep * DLMtool::Simulation_1@CV_steep
 #' plot_steepness(mu, stddev)
-#'
 plot_steepness <- function(m, sd) {
   #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
   #where f is the pdf of distribution, g(y) = 0.8X + 0.2 is the transformation
@@ -263,7 +261,11 @@ plot_steepness <- function(m, sd) {
   b <- betaconv(m = m.transformed, sd = sd/0.8)
 
   support <- seq(0.201, 0.999, 0.001)
-  dist <- dbeta((support - 0.2)/0.8, a, b) / 0.8
+  if(a > 0 && b > 0) dist <- dbeta((support - 0.2)/0.8, a, b) / 0.8
+  else {
+    dist <- rep(1, lenth(support))
+    warning("Transformation not possible with value of m and sd. Typically, sd is too high given the value of m, resulting in negative beta distribution parameters).")
+  }
 
   plot(support, dist, typ = 'l', xlab = 'Steepness (h)',
        ylab = 'Probability density function', xlim = c(0.2, 1),

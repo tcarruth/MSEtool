@@ -25,11 +25,9 @@ that are converted from the mean and standard deviation. Then, the distribution 
 transformed from 0 - 1 to 0.2 - 1.
 }
 \examples{
-data(Red_snapper)
-mu <- Red_snapper@steep
-stddev <- Red_snapper@steep * Red_snapper@CV_steep
+mu <- DLMtool::Simulation_1@steep
+stddev <- DLMtool::Simulation_1@steep * DLMtool::Simulation_1@CV_steep
 plot_steepness(mu, stddev)
-
 }
 \seealso{
 \code{\link{plot_lognormalvar}} \code{\link{plot_betavar}}

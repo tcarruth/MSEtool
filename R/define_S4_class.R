@@ -132,10 +132,10 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' @param save_dir The directory (by default, the current working directory) in which a
 #' sub-directory will be created to save figures.
 #' @examples
-#' data(Red_snapper)
-#' output <- DD_TMB(1, Red_snapper)
+#' \dontrun{
+#' output <- DD_TMB(Data = Simulation_1)
 #' plot(output, save_figure = FALSE)
-#'
+#' }
 #' @exportMethod plot
 setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {
   if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge? Check slots obj, opt, and SD.")

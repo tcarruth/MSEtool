@@ -348,11 +348,11 @@ get_refpt <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR 
 
 
 
-SCA_jacobian <- function(obj, par_fixed, nll_comp, ...) {
-
-  f <- function(x) {
-    obj$report(x)[[nll_comp]]
-  }
-
-  jacobian(f, par_fixed, ...)
-}
+#SCA_jacobian <- function(obj, par_fixed, nll_comp, ...) {
+#
+#  f <- function(x) {
+#    obj$report(x)[[nll_comp]]
+#  }
+#
+#  jacobian(f, par_fixed, ...)
+#}
