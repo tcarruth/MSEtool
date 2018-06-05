@@ -2,10 +2,10 @@
 % Please edit documentation in R/Movement_calcs.R
 \name{simmov}
 \alias{simmov}
-\title{Calculates movement matrices from user inputs}
+\title{Calculates movement matrices from user inputs.}
 \usage{
 simmov(OM, dist = c(0.1, 0.2, 0.3, 0.4), prob = 0.5, distE = 0.1,
-  probE = 0.1, prob2 = NA)
+  probE = 0.1, prob2 = NA, figure = TRUE)
 }
 \arguments{
 \item{OM}{Operating model, an object of class \linkS4class{OM}.}
@@ -19,13 +19,19 @@ simmov(OM, dist = c(0.1, 0.2, 0.3, 0.4), prob = 0.5, distE = 0.1,
 \item{probE}{Logit (normal) St.Dev error for sampling desired probability of staying either by area (prob is same length as dist) or the mean probability of staying (prob is a single number)}
 
 \item{prob2}{Optional vector as long as prob and dist. Upper bounds on uniform sampling of probability of staying, lower bound is prob.}
+
+\item{figure}{Logical to indicate if the movement matrix will be plotted (mean values and range across \code{OM@nsim} simulations.)}
 }
 \value{
 The operating model \code{OM} with movement parameters in slot \code{cpars}.
 The \code{mov} array is of dimension \code{nsim}, \code{maxage}, \code{nareas}, \code{nareas}.
 }
 \description{
-A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
+A wrapper function for \link{makemov} used to generate movement matrices for a DLMtool operating model.
+Calculates a movement matrix from user-specified unfished stock biomass fraction in each area and probability of staying in the area in each time step.
+}
+\note{
+Although, the \code{mov} is age-specific, but the movement is independent of age.
 }
 \examples{
 movOM_5areas<-simmov(testOM,dist=c(0.01,0.1,0.2,0.3,0.39),prob=c(0.1,0.6,0.6,0.7,0.9))

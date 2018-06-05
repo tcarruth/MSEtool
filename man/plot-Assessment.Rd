@@ -20,8 +20,8 @@ sub-directory will be created to save figures.}
 Plot Assessment object
 }
 \examples{
-data(Red_snapper)
-output <- DD_TMB(1, Red_snapper)
+\dontrun{
+output <- DD_TMB(Data = Simulation_1)
 plot(output, save_figure = FALSE)
-
+}
 }

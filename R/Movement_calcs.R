@@ -1,16 +1,19 @@
 
 # Movement matrix calculation functions
-#' Calculates movement matrices from user inputs
+#' Calculates movement matrices from user inputs.
 #'
-#' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
+#' @description A wrapper function for \link{makemov} used to generate movement matrices for a DLMtool operating model.
+#' Calculates a movement matrix from user-specified unfished stock biomass fraction in each area and probability of staying in the area in each time step.
 #' @param OM Operating model, an object of class \linkS4class{OM}.
 #' @param dist A vector of length \code{nareas} of fractions of unfished stock in each area
 #' @param prob Mean probability of staying across all areas (single value) or a vector of the probability of individuals staying in each area (same length as dist)
 #' @param distE Logit (normal) St.Dev error for sampling stock fractions from the fracs vector
 #' @param probE Logit (normal) St.Dev error for sampling desired probability of staying either by area (prob is same length as dist) or the mean probability of staying (prob is a single number)
 #' @param prob2 Optional vector as long as prob and dist. Upper bounds on uniform sampling of probability of staying, lower bound is prob.
+#' @param figure Logical to indicate if the movement matrix will be plotted (mean values and range across \code{OM@@nsim} simulations.)
 #' @return The operating model \code{OM} with movement parameters in slot \code{cpars}.
 #' The \code{mov} array is of dimension \code{nsim}, \code{maxage}, \code{nareas}, \code{nareas}.
+#' @note Although, the \code{mov} is age-specific, but the movement is independent of age.
 #' @author T. Carruthers
 #' @export simmov
 #' @import TMB
@@ -19,13 +22,14 @@
 #' movOM_5areas<-simmov(testOM,dist=c(0.01,0.1,0.2,0.3,0.39),prob=c(0.1,0.6,0.6,0.7,0.9))
 #' movOM_5areas@cpars$mov[1,1,,] # sim 1, age 1, movement from areas to areas
 #'
-simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=NA){
+simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=NA,figure=TRUE){
 
   logit<-function(p)log(p/(1-p))
   ilogit<-function(x)exp(x)/(1+exp(x))
   ilogitm<-function(x)exp(x)/apply(exp(x),1,sum)
 
   nareas<-length(dist)
+  if(nareas < 2) stop("Error: nareas, i.e., length(dist), is less than 2.")
   nsim<-OM@nsim
   maxage<-OM@maxage
 
@@ -61,6 +65,7 @@ simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=N
   } # nsim
 
   OM@cpars$mov<-mov
+  if(figure)plot_mov(mov)
   OM
 
 }
@@ -69,7 +74,8 @@ simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=N
 
 #' Calculates movement matrices from user inputs for fraction in each area (fracs) and probability of staying in areas (prob)
 #'
-#' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
+#' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area.
+#' Used by \link{simmov} to generate movement matrices for a DLMtool operating model.
 #' @param fracs A vector nareas long of fractions of unfished stock biomass in each area
 #' @param prob A vector of the probability of individuals staying in each area or a single value for the mean probability of staying among all areas
 #' @author T. Carruthers
@@ -77,6 +83,7 @@ simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=N
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
+#' @seealso \link{simmov}
 #' @examples
 #' makemov(fracs=c(0.1,0.5,0.2,0.2),prob=c(0.9,0.5,0.3,0.8))
 makemov<-function(fracs=c(0.1,0.2,0.3,0.4),prob=c(0.5,0.8,0.9,0.95)){
@@ -136,5 +143,22 @@ validateTMB<-function(obj){
 
 }
 
+plot_mov <- function(mov, age = 1) {
+  nsim <- dim(mov)[1]
+  mov <- mov[ , 1, , , drop = FALSE] # mov is of dimension nsim, narea, narea
+  mov2 <- apply(mov, c(2, 3), mean)
+  nareas <- nrow(mov2)
 
+  plot(NULL, NULL, xlab = "Area (to)", ylab = "Area (from)", xaxs = "i", yaxs = "i",
+       xlim = c(0.5, nareas + 0.5), ylim = c(0.5, nareas + 0.5))
+  abline(h = 1.5:(nareas - 0.5), v = 1.5:(nareas - 0.5))
+  for(i in 1:nareas) {
+    for(j in 1:nareas) {
+      text(j, i, labels = paste0(signif(mov2[i, j], 2), "\n(", signif(min(mov[, age, i, j]), 2), "-", signif(max(mov[, age, i, j]), 2), ")"))
+    }
+  }
+  title(paste("Movement matrix (mean and range across", nsim, "simulations)"))
+
+  invisible()
+}
 
