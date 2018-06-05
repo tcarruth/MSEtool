@@ -41,7 +41,7 @@ An S4 class that contains assessment output. Created from a function of class \c
 
 \item{\code{U_UMSY}}{Time series of relative exploitation.}
 
-\item{\code{F}}{Time series of fishing mortality.}
+\item{\code{FMort}}{Time series of instantaneous fishing mortality.}
 
 \item{\code{F_FMSY}}{Time series of fishing mortality relative to MSY.}
 

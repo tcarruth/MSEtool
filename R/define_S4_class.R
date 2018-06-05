@@ -33,7 +33,7 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot h Steepness.
 #' @slot U Time series of exploitation.
 #' @slot U_UMSY Time series of relative exploitation.
-#' @slot F Time series of fishing mortality.
+#' @slot FMort Time series of instantaneous fishing mortality.
 #' @slot F_FMSY Time series of fishing mortality relative to MSY.
 #' @slot B Time series of biomass.
 #' @slot B_BMSY Time series of biomass relative to MSY.
@@ -90,7 +90,7 @@ Assessment <- setClass("Assessment",
  slots = c(Model = "character", UMSY = "numeric", FMSY = "numeric",
  MSY = "numeric", BMSY = "numeric", SSBMSY = "numeric", VBMSY = "numeric",
  B0 = "numeric", R0 = "numeric", N0 = "numeric", SSB0 = "numeric", VB0 = "numeric",
- h = "numeric", U = "numeric", U_UMSY = "numeric", F = "numeric", F_FMSY  = "numeric",
+ h = "numeric", U = "numeric", U_UMSY = "numeric", FMort = "numeric", F_FMSY  = "numeric",
  B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
  SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric", VB = "numeric",
  VB_VBMSY = "numeric", VB_VB0 = "numeric",
@@ -150,16 +150,26 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
 })
 
 
-# Define global variables
-Model <- UMSY <- FMSY <- MSY <- BMSY <- SSBMSY <- VBMSY <- B0 <- R0 <- N0 <- SSB0 <- VB0 <- h <- U <-
-  U_UMSY <- F <- F_FMSY <- B <- B_BMSY <- B_B0 <- SSB <- SSB_SSBMSY <- SSB_SSB0 <- VB_VBMSY <- VB_VB0 <-
-  R <- N <- N_at_age <- Selectivity <- Obs_Catch <- Obs_Index <- Obs_C_at_age <- Catch <- Index <-
-  C_at_age <- Dev <- Dev_type <- NLL <- SE_UMSY <- SE_FMSY <- SE_MSY <- SE_U_UMSY_final <-
-  SE_F_FMSY_final <- SE_B_BMSY_final <- SE_B_B0_final <- SE_SSB_SSBMSY_final <- SE_SSB_SSB0_final <-
-  SE_VB_VBMSY_final <- SE_VB_VB0_final <- SE_Dev <- info <- obj <- opt <-
-  SD <- TMB_report <- dependencies <- Data <- NULL
+# Define global variables for Assessment objects
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("Model", "UMSY", "FMSY", "MSY", "BMSY", "SSBMSY", "VBMSY", "B0",
+                           "R0", "N0", "SSB0", "VB0", "h", "U", "U_UMSY", "FMort", "F_FMSY",
+                           "B", "B_BMSY", "B_B0", "SSB", "SSB_SSBMSY", "SSB_SSB0", "VB",
+                           "VB_VBMSY", "VB_VB0", "R", "N", "N_at_age", "Selectivity", "Obs_Catch",
+                           "Obs_Index", "Obs_C_at_age", "Catch", "Index", "C_at_age", "Dev", "Dev_type",
+                           "NLL", "SE_UMSY", "SE_FMSY", "SE_MSY", "SE_U_UMSY_final", "SE_F_FMSY_final",
+                           "SE_B_BMSY_final", "SE_B_B0_final", "SE_SSB_SSBMSY_final", "SE_SSB_SSB0_final",
+                           "SE_VB_VBMSY_final", "SE_VB_VB0_final", "SE_Dev", "info", "obj", "opt", "SD",
+                           "TMB_report", "dependencies", "Data"))
+
+  utils::globalVariables("plot.dir")
+
+  # For Awatea2OM - Quang assumes these variables are loaded in from .rda files
+  utils::globalVariables(c("Bmcmc", "currentMCMC", "currentRes"))
+
+}
+
+
+
 
 plot.dir <- NULL
-
-# For Awatea2OM - Quang assumes these variables are loaded in from .rda files
-Bmcmc <- currentMCMC <- currentRes <- NULL
