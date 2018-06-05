@@ -9,6 +9,8 @@
 #' @param distE Logit (normal) St.Dev error for sampling stock fractions from the fracs vector
 #' @param probE Logit (normal) St.Dev error for sampling desired probability of staying either by area (prob is same length as dist) or the mean probability of staying (prob is a single number)
 #' @param prob2 Optional vector as long as prob and dist. Upper bounds on uniform sampling of probability of staying, lower bound is prob.
+#' @return The operating model \code{OM} with movement parameters in slot \code{cpars}.
+#' The \code{mov} array is of dimension \code{nsim}, \code{maxage}, \code{nareas}, \code{nareas}.
 #' @author T. Carruthers
 #' @export simmov
 #' @import TMB
@@ -98,7 +100,7 @@ makemov<-function(fracs=c(0.1,0.2,0.3,0.4),prob=c(0.5,0.8,0.9,0.95)){
   info <- list(data = data, params = params.new)
   obj.new<-MakeADFun(data = info$data, parameters = info$params, DLL = "MSEtool", silent = TRUE)
 
-  obj.new$report()$mov
+  obj.new$report(obj.new$env$last.par.best)$mov
   #validateTMB(obj.new)
 
 }

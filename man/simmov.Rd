@@ -20,6 +20,10 @@ simmov(OM, dist = c(0.1, 0.2, 0.3, 0.4), prob = 0.5, distE = 0.1,
 
 \item{prob2}{Optional vector as long as prob and dist. Upper bounds on uniform sampling of probability of staying, lower bound is prob.}
 }
+\value{
+The operating model \code{OM} with movement parameters in slot \code{cpars}.
+The \code{mov} array is of dimension \code{nsim}, \code{maxage}, \code{nareas}, \code{nareas}.
+}
 \description{
 A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
 }

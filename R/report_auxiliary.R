@@ -26,9 +26,9 @@ prepare_to_save_figure <- function() {
 }
 
 
-create_png <- function(filename, units = "in", res = 400, height = 4, width = 6) {
+create_png <- function(filename, units = "in", res = 400, height = 4, width = 6, ...) {
   png(filename = filename, units = units, res = res, height = height, width = width)
-  par(mar = c(5, 4, 1, 1))
+  par(mar = c(5, 4, 1, 1), ...)
   invisible()
 }
 
