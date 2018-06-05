@@ -2,7 +2,7 @@
 % Please edit documentation in R/Ancillary_Indicators.R
 \name{PRBcalc}
 \alias{PRBcalc}
-\title{Exceptional Circumstances}
+\title{Calculate mahalanobis distance (null and alternative MSEs) and statistical power for all MPs in an MSE}
 \usage{
 PRBcalc(MSE_null, MSE_alt, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
   stat = c("slp", "AAV", "mu", "slp", "slp"), dnam = c("C_S", "C_V", "C_M",
@@ -14,28 +14,30 @@ PRBcalc(MSE_null, MSE_alt, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
 
 \item{MSE_alt}{An object of class MSE representing the alternative hypothesis}
 
-\item{tsd}{Character string of data types}
+\item{tsd}{Character string of data types: Cat = catch, Ind = relative abundance index, ML = mean length in catches}
 
-\item{stat}{Character string defining the statistic to be calculated for each data type}
+\item{stat}{Character string defining the quantity to be calculated for each data type, slp = slope(log(x)), AAV = average annual variability, mu = mean(log(x))}
 
-\item{dnam}{Character string of names for the data calculated}
+\item{dnam}{Character string of names for the quantities calculated}
 
-\item{res}{Integer, the resolution for the calculation of PPD}
+\item{res}{Integer, the resolution (time blocking) for the calculation of PPD}
 
-\item{alpha}{Probability of incorrectly rejecting the null hypothesis of normal data when it is true}
+\item{alpha}{Probability of incorrectly rejecting the null operating model when it is valid}
 
 \item{plotCC}{Logical, should the PPD cross correlations be plotted?}
 
-\item{removedat}{Logical, should data types be removed if they have no explanatory power?}
+\item{removedat}{Logical, should data not contributing to the mahalanobis distance be removed?}
+
+\item{removethresh}{Positive fraction: the cumulative percentage of removed data (removedat=TRUE) that contribute to the mahalanobis distance}
 }
 \value{
-Indicators of MSE misspecification
+A list object (first hierarcy is by MP, second has two positions one mahalanobis distance, two is a matrix of type 1 error (first row) and statistical power (second row), by time block)
 }
 \description{
-Exceptional Circumstances
+Calculate mahalanobis distance (null and alternative MSEs) and statistical power for all MPs in an MSE
 }
 \references{
-Carruthers et al. 2018
+Carruthers and Hordyk 2018
 }
 \author{
 T. Carruthers
