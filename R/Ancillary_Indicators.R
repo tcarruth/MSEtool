@@ -2,35 +2,48 @@
 # === Ancilary indicators ===========================================
 # ===================================================================
 
-slp<-function(x,mat,ind){
+# Linear model version
+slp2<-function(x,mat,ind){
 
   lm(y~x1,data.frame(x1=1:length(ind),y=log(mat[x,ind])))$coef[2]
 
 }
 
-
-slp2<-function(x,mat,ind){
+# MLE version
+slp<-function(x,mat,ind){
 
   x1<-1:length(ind)
   y=log(mat[x,ind])
-  mux<-mean(x1)
-  muy<-mean(y)
-  SS<-sum((x1-mux)^2)
-  (1/SS)*sum((x1-mux)*(y-muy))
+  mux<-mean(x1,na.rm=T)
+  muy<-mean(y,na.rm=T)
+  SS<-sum((x1-mux)^2,na.rm=T)
+  (1/SS)*sum((x1-mux)*(y-muy),na.rm=T)
 
 }
 
+# Average annual variability
 AAV<-function(x,mat,ind){
   ni<-length(ind)
   mean(abs((mat[x,ind[2:ni]]-mat[x,ind[1:(ni-1)]])/mat[x,ind[1:(ni-1)]]))
 }
 
+# Log mean
 mu<-function(x,mat,ind){
   log(mean(mat[x,ind]))
 }
 
+#' Characterize posterior predictive data
+#'
+#' @param PPD An object of class Data stored in the Misc slot of an MSE object following a call of runMSE(PPD=T)
+#' @param styr Positive integer, the starting year for calculation of quantities
+#' @param res Positive integer, the temporal resolution (chunks - normally years) over which to calculate quantities
+#' @param tsd Character vector of names of types of data: Cat = catch, Ind = relative abundance index, ML = mean length in catches
+#' @param stat Character vector of types of quantity to be calculated: slp = slope(log(x)), AAV = average annual variability, mu = mean(log(x))
+#' @return A 3D array of results (type of data/stat (e.g. mean catches),time period (chunk), simulation)
+#' @author T. Carruthers
+#' @references Carruthers and Hordyk 2018
 #' @export
-getinds<-function(PPD,styr,res, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("slp","AAV","mu","slp", "slp")){
+getinds<-function(PPD,styr,res=6, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("slp","AAV","mu","slp", "slp")){
 
   nsim<-dim(PPD@Cat)[1]
   proyears<-dim(PPD@Cat)[2]-styr+1
@@ -52,8 +65,18 @@ getinds<-function(PPD,styr,res, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("slp
 
 }
 
+#' Produce a cross-correlation plot of the derived data arising from getinds(MSE_object)
+#'
+#' @param indPPD A 3D array of results arising from running getind on an MSE of the Null operating model (type of data/stat (e.g. mean catches),time period (chunk), simulation)
+#' @param indData A 3D array of results arising from running getind on an MSE of the Alternative operating model (type of data/stat (e.g. mean catches),time period (chunk), simulation)
+#' @param pp Positive integer, the number of time chunks (blocks of years normally, second dimension of indPPD and indData) to produce the plot for.
+#' @param dnam A character vector of names of the data for plotting purposes (as long as dimension 1 of indPPD and indData).
+#' @param res The size of the temporal blocking that greated indPPD and indData - this is just used for labelling purposes
+#' @return A cross-correlation plot (ndata-1) x (ndata-1)
+#' @author T. Carruthers
+#' @references Carruthers and Hordyk 2018
 #' @export
-CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),res){
+CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","MLS"),res=1){
 
   if(pp>1)namst<-paste(rep(dnam,pp),rep((1:pp)*res,each=length(dnam)))
   if(pp==1)namst=dnam
@@ -70,26 +93,22 @@ CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),re
 
       if(j==i|j>i){
 
-        plot(1,1,col='white',axes=F)
+        plot(1,1,col='white',axes=FALSE)
 
       }else{
 
-        #coly=cols[ceiling(posmean(cor(mcmc@rawdat[1:maxn,keep1[i]],mcmc@rawdat[1:maxn,keep2[j]]))*ncols)]
         xlim<-quantile(c(ind2PPD[j,],ind2Data[j,]),c(0.02,0.98))
         ylim<-quantile(c(ind2PPD[i,],ind2Data[i,]),c(0.02,0.98))
-        plot(ind2PPD[j,],ind2PPD[i,],pch=19,xlim=xlim,ylim=ylim,cex=0.8,col=cols[1],axes=F)
+        plot(ind2PPD[j,],ind2PPD[i,],pch=19,xlim=xlim,ylim=ylim,cex=0.8,col=cols[1],axes=FALSE)
         points(ind2Data[j,],ind2Data[i,],pch=19,cex=0.8,col=cols[2])
 
       }
       if(i==2&j==(ni-1)){
         legend('center',legend=c("Null - stable M", "Alternative - inc M"),text.col=c("blue","red"),bty='n')
-
       }
 
       if(j==1)mtext(namst[i],2,line=2,cex=0.6,las=2)
       if(i==ni)mtext(namst[j],1,line=1,cex=0.6,las=2)
-      #if(j==1)mtext(i,2,line=2,cex=0.5,las=2)
-      #if(i==nplotted)mtext(j,1,line=1,cex=0.5,las=2)
 
     }
 
@@ -97,15 +116,26 @@ CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","IM","MLS","MLM"),re
 
 }
 
-
-
+#' Calculates mahalanobis distance and rejection of the Null operating model
+#'
+#' @param indPPD A 3D array of results arising from running getind on an MSE of the Null operating model (type of data/stat (e.g. mean catches),time period (chunk), simulation)
+#' @param indData A 3D array of results arising from running getind on an MSE of the Alternative operating model (type of data/stat (e.g. mean catches),time period (chunk), simulation)
+#' @param alpha Positive fraction: rate of type I error, alpha
+#' @param removedat Logical, should data not contributing to the mahalanobis distance be removed?
+#' @param removethresh Positive fraction: the cumulative percentage of removed data (removedat=TRUE) that contribute to the mahalanobis distance
+#' @return A list object.
+#'  Position 1 is an array of the mahalanobis distances. Dimension 1 is length 2 for the Null OM (indPPD) and the alternative OM (indData).
+#'  Dimension 2 is the time block (same length as indPPD dim 2). Dimension 3 is the simulation number (same length at indPPD dim 3.),
+#'  Position 2 is a matrix (2 rows, ntimeblock columns) which is (row 1) alpha: the rate of false positives, and row 2 the power (1-beta) the rate of true positives
+#' @author T. Carruthers
+#' @references Carruthers and Hordyk 2018
+#' @importFrom corpcor pseudoinverse
 #' @export
-Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
+Probs<-function(indPPD,indData,alpha=0.05,removedat=FALSE,removethresh=0.05){
 
   ntsd<-dim(indPPD)[1]
   np<-dim(indPPD)[2]
   nsim<-dim(indPPD)[3]
-  #PRB<-array(NA,c(4,np)) # False Positive, True Positive
   PRB<-array(NA,c(2,np))  # False Positive, True Positive
   mah<-array(NA,c(2,np,nsim))
 
@@ -125,11 +155,6 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
     covr <- cov(ind3PPD)
     mu<-apply(ind3PPD,2,median)
 
-    #mahN <- mahalanobis(ind3PPD, center = covr$center, cov = covr$cov, tol = 1e-25)
-    #mahA <- mahalanobis(ind3Data, center = covr$center, cov = covr$cov, tol = 1e-25)
-    #mahN1 <- mahalanobis(ind3PPD, center = mu, cov = covr, tol = 1e-25)
-    #mahA1 <- mahalanobis(ind3Data, center = mu, cov = covr, tol = 1e-25)
-
     if(!removedat)keep3<-NA
     if(removedat){
       keep2<-rep(TRUE,ncol(ind3PPD))
@@ -140,13 +165,10 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
       keep2[ind[cum<(removethresh*100)]]<-FALSE
       ind3PPD<-ind3PPD[,keep2]
       ind3Data<-ind3Data[,keep2]
-      if(pp==2)keep3<-rbind(mag,keep2)
+      if(pp==1)keep3<-rbind(mag,keep2)
     }
 
-    # NULL = TRUE  (true negatives, false negatives)
-    #covr <- cov.mcd(ind3PPD)
     covr <- cov(ind3PPD)
-     #test<-svd(covr)
     mu<-apply(ind3PPD,2,median)
 
     mahN <- mahalanobis_robust(ind3PPD, center = mu, cov = covr)
@@ -159,36 +181,33 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=F,removethresh=0.05){
     mah[2,pp,]<-mahA
 
     Thres<-quantile(mahN,1-alpha,na.rm=T)
-    #plot(density(mah[1,pp,],na.rm=T),type="l",col="blue")
-    #lines(density(mah[2,pp,],na.rm=T),col="red")
-    #abline(v=Thres)
-
 
     PRB[1,pp]<-mean(mah[1,pp,]>Thres,na.rm=T)   # False positive
     PRB[2,pp]<-mean(mah[2,pp,]>Thres,na.rm=T)   # True positive
 
   }
 
-  return(list(mah=mah,PRB=PRB,keep=keep,remove=keep3))
+  return(list(mah=mah,PRB=PRB))
 
 }
 
-#' Exceptional Circumstances
+#' Calculate mahalanobis distance (null and alternative MSEs) and statistical power for all MPs in an MSE
 #'
 #' @param MSE_null An object of class MSE representing the null hypothesis
 #' @param MSE_alt An object of class MSE representing the alternative hypothesis
-#' @param tsd Character string of data types
-#' @param stat Character string defining the statistic to be calculated for each data type
-#' @param dnam Character string of names for the data calculated
-#' @param res Integer, the resolution for the calculation of PPD
-#' @param alpha Probability of incorrectly rejecting the null hypothesis of normal data when it is true
+#' @param tsd Character string of data types: Cat = catch, Ind = relative abundance index, ML = mean length in catches
+#' @param stat Character string defining the quantity to be calculated for each data type, slp = slope(log(x)), AAV = average annual variability, mu = mean(log(x))
+#' @param dnam Character string of names for the quantities calculated
+#' @param res Integer, the resolution (time blocking) for the calculation of PPD
+#' @param alpha Probability of incorrectly rejecting the null operating model when it is valid
 #' @param plotCC Logical, should the PPD cross correlations be plotted?
-#' @param removedat Logical, should data types be removed if they have no explanatory power?
+#' @param removedat Logical, should data not contributing to the mahalanobis distance be removed?
+#' @param removethresh Positive fraction: the cumulative percentage of removed data (removedat=TRUE) that contribute to the mahalanobis distance
 #' @importFrom MASS cov.mcd
 #' @importFrom corpcor pseudoinverse
-#' @return Indicators of MSE misspecification
+#' @return A list object (first hierarcy is by MP, second has two positions one mahalanobis distance, two is a matrix of type 1 error (first row) and statistical power (second row), by time block)
 #' @author T. Carruthers
-#' @references Carruthers et al. 2018
+#' @references Carruthers and Hordyk 2018
 #' @export
 PRBcalc=function(MSE_null,MSE_alt,
                  tsd= c("Cat","Cat","Cat","Ind","ML"),
@@ -223,8 +242,6 @@ PRBcalc=function(MSE_null,MSE_alt,
 
 }
 
-#' @importFrom corpcor pseudoinverse
-#' @export
 mahalanobis_robust<-function (x, center, cov, inverted = FALSE) {
 
   x <- if (is.vector(x))
@@ -238,7 +255,7 @@ mahalanobis_robust<-function (x, center, cov, inverted = FALSE) {
 
 }
 
-#' @export
+
 mahalanobis_contribution<-function(ind3Data,mu,covr){
 
   InvSD <- 1/sqrt(covr[cbind(1:nrow(covr),1:nrow(covr))])
@@ -264,14 +281,21 @@ mahalanobis_contribution<-function(ind3Data,mu,covr){
 }
 
 
-
+#' Plot statistical power of the indicator with increasing time blocks
+#'
+#' @param outlist A list object produced by the function PRBcalc(MSEnull,MSEalt)
+#' @param res Integer, the resolution (time blocking) for the calculation of PPD
+#' @param maxups Integer, the maximum number of update time blocks to plot
+#' @param MPs Character vector of MP names
+#' @author T. Carruthers
+#' @references Carruthers and Hordyk 2018
 #' @export
 mahplot<-function(outlist,res=6,maxups=5,MPs){
 
   nMP<-length(outlist)
   ncol<-floor(nMP^(1/2))
   nrow<-ceiling(nMP/ncol)
-  par(mai=c(0.1,0.2,0.2,0.01),omi=c(0.6,0.6,0.01,0.01))
+  par(mai=c(0.15,0.25,0.25,0.01),omi=c(0.6,0.6,0.01,0.01))
   layout(matrix(1:(nrow*ncol*2),nrow=nrow*2),heights=rep(c(2,1),nrow))
   pmin<-max(0,min(c(0.95,sapply(outlist,function(x)min(x$PRB[2,]))-0.05)))
   plabs<-matrix(paste0("(",letters[1:(nMP*2)],")"),nrow=2)
@@ -297,8 +321,6 @@ mahplot<-function(outlist,res=6,maxups=5,MPs){
 }
 
 
-
-#' @export
 mahdensplot<-function(out,adj=0.9,alpha=0.1,xaxis=FALSE,yaxis=FALSE,res=6,maxups=5){
 
   heightadj<-0.7
@@ -361,7 +383,7 @@ mahdensplot<-function(out,adj=0.9,alpha=0.1,xaxis=FALSE,yaxis=FALSE,res=6,maxups
   }
 }
 
-#' @export
+
 PRBplot<-function(out,res,xaxis=FALSE,yaxis=FALSE,ylim=c(0,1),maxups=5){
   np<-min(dim(out$PRB)[2],maxups)
   plot(c(0.5,np+0.5),range(out$PRB),col='white',axes=F,xlab="",ylab="",ylim=ylim)
@@ -381,7 +403,6 @@ PRBplot<-function(out,res,xaxis=FALSE,yaxis=FALSE,ylim=c(0,1),maxups=5){
 
 }
 
-#' @export
 getsegment<-function(densobj,thresh,lower=T,inv=T){
 
   if(lower){
@@ -399,7 +420,6 @@ getsegment<-function(densobj,thresh,lower=T,inv=T){
 
 }
 
-#' @export
 extreme.outlier<-function(x){
   sd<-mean(abs(x-median(x)))
   cond<-(x<(median(x)-3*sd(x)))|(x>(median(x)+3*sd(x)))
