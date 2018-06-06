@@ -4,14 +4,17 @@
 \alias{diagnostic_AM}
 \title{diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?}
 \usage{
-diagnostic_AM(MSE, DLMenv = DLMtool::DLMenv, gradient_threshold = 0.1,
-  figure = TRUE)
+diagnostic_AM(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL,
+  gradient_threshold = 0.1, figure = TRUE)
 }
 \arguments{
-\item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}.}
+\item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}. If no MSE object
+is available, use argument \code{MP} instead.}
 
 \item{DLMenv}{The name of the environment that contains the Assessment output
 generated during the MSE.}
+
+\item{MP}{A character vector of MPs with assessment models.}
 
 \item{gradient_threshold}{The value of the maximum gradient magnitude below which the
 model is considered to have converged.}
@@ -19,18 +22,18 @@ model is considered to have converged.}
 \item{figure}{Logical, whether a figure will be drawn.}
 }
 \value{
-A data frame with diagnostic information for the assesssment-based MPs. If \code{figure = TRUE},
+A matrix with diagnostic information for the assesssment-based MPs. If \code{figure = TRUE},
 a set of figures: traffic light (red/green) plots indicating whether model converged,
 according to \code{convergence} code in list returned by \code{\link[stats]{nlminb}}
 the Hessian matrix is positive-definite, according to \code{pdHess} in
 list returned by \code{\link[TMB]{sdreport}}, and the maximum gradient magnitude is
-below \code{gradient_threshold}. Model run time during all simulations if the
-model was timed in the management procedure.
+below \code{gradient_threshold}. Also includes model runtime, number of optimization iterations, and
+number of function evaluations of the assessment model during each application of the management procedure.
 }
 \description{
-Diagnostic check for convergence of Assess models converge during MSE.
-Assess models write output to the DLMenv environement if their argument
-\code{diagnostic = TRUE}.
+Diagnostic check for convergence of Assess models during MSE.
+Assess models write output to the DLMenv environment if the MP was created with \link{make_MP}
+with argument \code{diagnostic = TRUE}. This function summarizes and plots the diagnostic information.
 }
 \examples{
 \dontrun{
@@ -38,6 +41,9 @@ DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = TRUE) # is FALSE by default
 show(DD_MSY)
 myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 diagnostic_AM(myMSE)
+
+# If MSE object is not available (e.g. runMSE crashed), use MP argument instead.
+diagnostic_AM(MP = "DD_MSY")
 
 ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
 
