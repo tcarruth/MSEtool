@@ -545,7 +545,7 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
       retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
 
     } else {
-      warning(paste("Non-convergence when", i, "years of data were removed."))
+      message(paste("Non-convergence when", i, "years of data were removed."))
     }
   }
   if(figure) {
@@ -636,7 +636,7 @@ plot_yield_SCA <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01), 
 
   EPR <- Req <- NA
   solveMSY <- function(logit_U, SR) {
-    U <- 1/(1 + exp(-logit_U))
+    U <- ilogit(logit_U)
     surv <- exp(-M) * (1 - vul * U)
     NPR <- c(1, cumprod(surv[1:(maxage-1)]))
     NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])

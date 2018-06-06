@@ -24,10 +24,6 @@
 #'
 simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=NA,figure=TRUE){
 
-  logit<-function(p)log(p/(1-p))
-  ilogit<-function(x)exp(x)/(1+exp(x))
-  ilogitm<-function(x)exp(x)/apply(exp(x),1,sum)
-
   nareas<-length(dist)
   if(nareas < 2) stop("Error: nareas, i.e., length(dist), is less than 2.")
   nsim<-OM@nsim

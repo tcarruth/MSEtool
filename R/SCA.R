@@ -318,7 +318,7 @@ get_refpt <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR 
   B0 <- R0 * sum(NPR0 * weight)
 
   solveMSY <- function(logit_U) {
-    U <- 1/(1 + exp(-logit_U))
+    U <- ilogit(logit_U)
     surv <- exp(-M) * (1 - vul * U)
     NPR <- c(1, cumprod(surv[1:(maxage-1)]))
     NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])

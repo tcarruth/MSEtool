@@ -145,10 +145,10 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
   logit.umsy <- as.numeric(obj$env$last.par.best[1])
   logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[1])
 
-  plot_betavar(logit.umsy, logit.umsy.sd, logit = TRUE, label = expression(hat(U)[MSY]))
+  plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_UMSYestimate.png"))
-    plot_betavar(logit.umsy, logit.umsy.sd, logit = TRUE, label = expression(hat(U)[MSY]))
+    plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
     dev.off()
     assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
   }
@@ -384,7 +384,7 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
   map <- Assessment@obj$env$map
   map$logit_UMSY <- map$log_MSY <- factor(NA)
   for(i in 1:nrow(profile.grid)) {
-    params$logit_UMSY <- log(profile.grid[i, 1]/(1-profile.grid[i, 1]))
+    params$logit_UMSY <- logit(profile.grid[i, 1])
     params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, DLL = "MSEtool", silent = TRUE)
@@ -480,7 +480,7 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
       if(!is.character(SD)) retro_est[i+1, , ] <- summary(SD)
 
     } else {
-      warning(paste("Non-convergence when", i, "years of data were removed."))
+      message(paste("Non-convergence when", i, "years of data were removed."))
     }
 
   }
@@ -533,13 +533,13 @@ plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
     }
   }
 
-  plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], logit = TRUE,
+  plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], is_logit = TRUE,
                label = expression(hat(U)[MSY]), color = color)
   legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
          title = "Years removed:")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
-    plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], logit = TRUE,
+    plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], is_logit = TRUE,
                  label = expression(hat(U)[MSY]), color = color)
     legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
            title = "Years removed:")

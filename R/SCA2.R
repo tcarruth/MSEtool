@@ -48,7 +48,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   # Starting values
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
+    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- logit(start$UMSY)
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
     if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
     if(!is.null(start$vul_par) && is.numeric(start$vul_par)) params$vul_par <- start$vul_par
@@ -57,7 +57,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   }
   if(is.null(params$logit_UMSY)) {
     UMSY_start <- 1 - exp(-Data@Mort[x] * 0.5)
-    params$logit_UMSY <- log(UMSY_start/(1 - UMSY_start))
+    params$logit_UMSY <- logit(UMSY_start)
   }
   if(is.null(params$log_MSY)) {
     AvC <- mean(C_hist * rescale)

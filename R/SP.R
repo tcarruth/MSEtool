@@ -87,14 +87,14 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
 
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
+    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- logit(start$UMSY[1])
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
     if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
     if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
   }
   if(is.null(params$logit_UMSY)) {
     UMSY_start <- ifelse(is.na(Data@Mort[x]), 0.2, 1 - exp(-0.5 * Data@Mort[x]))
-    params$logit_UMSY <- log(UMSY_start/(1 - UMSY_start))
+    params$logit_UMSY <- logit(UMSY_start)
   }
   if(is.null(params$log_MSY)) {
     AvC <- mean(C_hist * rescale)
@@ -179,7 +179,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
 
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
+    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- logit(start$UMSY[1])
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
     if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
     if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
@@ -188,7 +188,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   }
   if(is.null(params$logit_UMSY)) {
     UMSY_start <- ifelse(is.na(Data@Mort[x]), 0.2, 1 - exp(-0.5 * Data@Mort[x]))
-    params$logit_UMSY <- log(UMSY_start/(1 - UMSY_start))
+    params$logit_UMSY <- logit(UMSY_start)
   }
   if(is.null(params$log_MSY)) {
     AvC <- mean(C_hist * rescale)

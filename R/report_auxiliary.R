@@ -175,7 +175,7 @@ plot_normalvar <- function(m, sd, label = NULL, color = "black") {
 #' @param m A vector of means of the distribution.
 #' @param sd A vector of standard deviations of the distribution.
 #' @param label Name of the variable to be used as x-axis label.
-#' @param logit Boolean that indicates whether the means and standard deviations are in
+#' @param is_logit Logical that indicates whether the means and standard deviations are in
 #' transformed (logit) or untransformed space.
 #' @param color A vector of colors.
 #' @return A plot of the probability distribution function. Vertical dotted line
@@ -192,23 +192,23 @@ plot_normalvar <- function(m, sd, label = NULL, color = "black") {
 #' #logit parameters
 #' mu <- 0
 #' stddev <- 0.1
-#' plot_betavar(mu, stddev, logit = TRUE) # mean of plot should be 0.5
-plot_betavar <- function(m, sd, label = NULL, logit = FALSE, color = "black") {
+#' plot_betavar(mu, stddev, is_logit = TRUE) # mean of plot should be 0.5
+plot_betavar <- function(m, sd, label = NULL, is_logit = FALSE, color = "black") {
   support <- seq(0.01, 0.99, length.out = 1e3)
   ncurve <- length(m)
   dist <- matrix(NA, nrow = length(support), ncol = ncurve)
-  if(!logit) {
+  if(!is_logit) {
     a <- alphaconv(m, sd)
     b <- betaconv(m, sd)
     for(i in 1:ncurve) dist[, i] <- dbeta(support, a[i], b[i])
   }
-  if(logit) {
+  if(is_logit) {
     for(i in 1:ncurve) {
       #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
       #where f is the pdf of distribution, g(y) = 1/(1 + exp(-X)) is the transformation
       #y is the beta variable, x is a normal variable
       dist[, i] <- dnorm(log(support/(1-support)), m[i], sd[i])/abs(support * (1-support))
-      m[i] <- 1/(1 + exp(-m[i]))
+      m[i] <- ilogit(m[i])
     }
   }
   dist[is.infinite(dist)] <- NA
@@ -377,25 +377,6 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 }
 
 
-#plot_ts(Red_snapper@Year, Red_snapper@Cat[1, ], Red_snapper@CV_Cat, "Catch")
-#plot_ts(Red_snapper@Year, Red_snapper@Ind[1, ], Red_snapper@CV_Ind, "Abundance Index")
-#nyrs <- dim(Red_snapper@CAL)[2]
-#nbins <- dim(Red_snapper@CAL)[3]
-#CAL_bins <- 0.5 * (Red_snapper@CAL_bins[1:nbins] + Red_snapper@CAL_bins[2:(nbins+1)])
-#par(mar = c(5.1, 4.1, 2.1, 2.1), oma = c(0, 0, 0, 0))
-#plot_composition(1:nyrs, obs = Red_snapper@CAL[1, , ],
-#          plot_type = 'annual', data_type = 'length',
-#          CAL_bins = CAL_bins)
-
-
-#plot_composition(1:nyrs, obs = Red_snapper@CAL[1, , ],
-#                 plot_type = 'bubble', data_type = 'length',
-#                 CAL_bins = CAL_bins)
-
-#nyrs <- dim(Red_snapper@CAA)[2]
-#par(mar = c(5.1, 4.1, 2.1, 2.1), oma = c(0, 0, 0, 0))
-#plot_composition(1:nyrs, obs = Red_snapper@CAA[1, , ],
-#                 plot_type = 'mean', data_type = 'age')
 
 
 #' Plot composition data

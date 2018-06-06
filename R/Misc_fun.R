@@ -2,6 +2,10 @@
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
 mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
 
+logit <- function(p) log(p/(1 - p))
+ilogit <- function(x) 1/(1 + exp(-x))
+ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
+
 optimize_TMB_model <- function(obj, control = list()) {
   # Use hessian for fixed-effects models
   if(is.null(obj$env$random)) hess <- obj$he else hess <- NULL

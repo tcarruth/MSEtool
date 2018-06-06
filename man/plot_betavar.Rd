@@ -4,7 +4,7 @@
 \alias{plot_betavar}
 \title{Plots a beta variable}
 \usage{
-plot_betavar(m, sd, label = NULL, logit = FALSE, color = "black")
+plot_betavar(m, sd, label = NULL, is_logit = FALSE, color = "black")
 }
 \arguments{
 \item{m}{A vector of means of the distribution.}
@@ -13,7 +13,7 @@ plot_betavar(m, sd, label = NULL, logit = FALSE, color = "black")
 
 \item{label}{Name of the variable to be used as x-axis label.}
 
-\item{logit}{Boolean that indicates whether the means and standard deviations are in
+\item{is_logit}{Logical that indicates whether the means and standard deviations are in
 transformed (logit) or untransformed space.}
 
 \item{color}{A vector of colors.}
@@ -35,7 +35,7 @@ plot_betavar(mu, stddev) # mean of plot should be 0.5
 #logit parameters
 mu <- 0
 stddev <- 0.1
-plot_betavar(mu, stddev, logit = TRUE) # mean of plot should be 0.5
+plot_betavar(mu, stddev, is_logit = TRUE) # mean of plot should be 0.5
 }
 \seealso{
 \code{\link{plot_lognormalvar}} \code{\link{plot_steepness}}
