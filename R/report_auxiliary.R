@@ -64,7 +64,7 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
   ncurve <- length(m)
   if(!logtransform) {
     true.m <- m
-    if(all(m) < 0) m <- -1 * m # special case needed when t0 < 0
+    if(all(m < 0)) m <- -1 * m # special case needed when t0 < 0
     mu <- mconv(m, sd)
     sdlog <- sdconv(m, sd)
     support <- seq(0.001, max(m + 5*sdlog), length.out = 1e3)
@@ -81,7 +81,7 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
     support <- support[ind.tails]
     dist <- as.matrix(dist[ind.tails, ])
 
-    if(all(true.m) < 0) {
+    if(all(true.m < 0)) {
       support <- -1 * support
       xlim_truncated <- range(pretty(support))
       plot(support, dist[, 1], typ = 'l', xlab = label,
@@ -91,7 +91,7 @@ plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color =
         for(i in 2:ncurve) lines(support, dist[, i], col = color[i])
       }
     }
-    if(all(true.m) > 0) {
+    if(all(true.m > 0)) {
       xlim_truncated <- range(pretty(support))
       plot(support, dist[, 1], typ = 'l', xlab = label,
            ylab = 'Probability density function', xlim = xlim_truncated,
@@ -263,7 +263,7 @@ plot_steepness <- function(m, sd) {
   support <- seq(0.201, 0.999, 0.001)
   if(a > 0 && b > 0) dist <- dbeta((support - 0.2)/0.8, a, b) / 0.8
   else {
-    dist <- rep(1, lenth(support))
+    dist <- rep(1, length(support))
     warning("Transformation not possible with value of m and sd. Typically, sd is too high given the value of m, resulting in negative beta distribution parameters).")
   }
 

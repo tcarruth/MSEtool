@@ -57,7 +57,7 @@
 #' data(sim_snapper)
 #'
 #' #### Observation-error delay difference model
-#' res <- DD_TMB(1, Data = sim_snapper)
+#' res <- DD_TMB(Data = sim_snapper)
 #'
 #' ### State-space version
 #' res <- DD_SS(Data = sim_snapper)

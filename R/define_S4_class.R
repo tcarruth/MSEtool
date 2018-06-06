@@ -113,8 +113,7 @@ Assessment <- setClass("Assessment",
 #' @param object An object of class \linkS4class{Assessment}
 #' @return A list of parameters
 #' @examples
-#' data(Red_snapper)
-#' output <- DD_TMB(1, Red_snapper)
+#' output <- DD_TMB(Data = DLMtool::Simulation_1)
 #' summary(output)
 #' @exportMethod summary
 setMethod("summary", signature(object = "Assessment"), function(object) {

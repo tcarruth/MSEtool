@@ -1,6 +1,6 @@
 # Internal DLMtool functions that are also needed for MSEtool
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
-#mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
+mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
 
 optimize_TMB_model <- function(obj, control = list()) {
   # Use hessian for fixed-effects models

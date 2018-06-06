@@ -17,7 +17,6 @@ A list of parameters
 Summary of Assessment object
 }
 \examples{
-data(Red_snapper)
-output <- DD_TMB(1, Red_snapper)
+output <- DD_TMB(Data = DLMtool::Simulation_1)
 summary(output)
 }
