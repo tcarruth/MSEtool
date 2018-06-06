@@ -1,3 +1,9 @@
+//invlogit
+template<class Type>
+Type ilogit(Type x) {
+  return pow(1 + exp(-x), -1);
+}
+
 //posfun from ADMB
 template<class Type>
 Type posfun(Type x, Type eps, Type &penalty) {

@@ -26,7 +26,7 @@
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_rec_dev);
 
-  Type UMSY = 1/(1 + exp(-logit_UMSY));
+  Type UMSY = ilogit(logit_UMSY);
   Type MSY = exp(log_MSY);
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);

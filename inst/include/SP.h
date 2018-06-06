@@ -12,7 +12,7 @@
   PARAMETER(log_dep);
   PARAMETER(log_n);
 
-  Type UMSY = 1/(1 + exp(-logit_UMSY));
+  Type UMSY = ilogit(logit_UMSY);
   Type MSY = exp(log_MSY);
   Type dep = exp(log_dep);
   Type n = exp(log_n);

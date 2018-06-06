@@ -19,7 +19,7 @@
   PARAMETER(log_q);
   PARAMETER(U_equilibrium);
 
-  Type UMSY = 1/(1 + exp(-logit_UMSY));
+  Type UMSY = ilogit(logit_UMSY);
   Type MSY = exp(log_MSY);
   Type q = exp(log_q);
 
