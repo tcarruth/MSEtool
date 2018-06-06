@@ -342,7 +342,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
                       map = map, random = Assessment@obj$env$random, DLL = "MSEtool",
                       inner.control = Assessment@info$inner.control, silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
-    if(!is.character(opt)) nll[i] <- opt2$objective
+    if(!is.character(opt2)) nll[i] <- opt2$objective
   }
   profile.grid$nll <- nll
   if(figure) {

@@ -7,7 +7,7 @@ context("Surplus production in assessment mode")
 
 test_that("SP assess model", {
   expect_s4_class(SP(Data = swordfish), "Assessment")
-  res <- expect_s4_class(SP(Data = swordfish, start = list(Binit_frac = 0.95)), "Assessment")
+  res <- expect_s4_class(SP(Data = swordfish, start = list(dep = 0.95)), "Assessment")
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
@@ -22,7 +22,7 @@ test_that("SP assess model", {
 
 
 test_that("SP_SS assess model", {
-  res <- expect_s4_class(SP_SS(Data = swordfish, start = list(Binit_frac = 0.95, tau = 0.1)), "Assessment")
+  res <- expect_s4_class(SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1)), "Assessment")
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
