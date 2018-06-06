@@ -5,14 +5,13 @@
 \alias{SP_SS}
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
-SP(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TRUE,
+SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   fix_n = TRUE, silent = TRUE, control = list(iter.max = 1e+06, eval.max =
   1e+06), ...)
 
-SP_SS(x = 1, Data, rescale = "mean1", start = NULL,
-  fix_Binit_frac = TRUE, fix_n = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(iter.max = 1e+06, eval.max = 1e+06),
+SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
+  fix_n = TRUE, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
+  silent = TRUE, control = list(iter.max = 1e+06, eval.max = 1e+06),
   inner.control = list(), ...)
 }
 \arguments{
@@ -27,8 +26,8 @@ Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{fix_Binit_frac}{Logical, whether to fix the ratio of biomass to carrying capacity in the
-first year of the model. If \code{TRUE}, uses the value in \code{start}, otherwise equal to 1
+\item{fix_dep}{Logical, whether to fix the initial depletion (ratio of biomass to carrying capacity in the
+first year of the model). If \code{TRUE}, uses the value in \code{start}, otherwise equal to 1
 (assumes virgin conditions).}
 
 \item{fix_n}{Logical, whether to fix the exponent of the production function. If \code{TRUE},
@@ -67,7 +66,7 @@ estimates annual deviates in biomass.
 }
 \details{
 To provide starting values for the \code{SP}, a named list can be provided for \code{UMSY},
-\code{MSY}, \code{Binit_frac}, and \code{n} via the start argument (see example).
+\code{MSY}, \code{dep}, and \code{n} via the start argument (see example).
 
 For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
 of the index and log-biomass deviates, respectively. Deviations are estimated beginning in the year when index
@@ -93,11 +92,11 @@ res <- SP(Data = swordfish)
 
 # Provide starting values, assume B/K = 0.95 in first year of model
 # and symmetrical production curve (n = 2)
-start <- list(UMSY = 0.1, MSY = 1e5, Binit_frac = 0.95, n = 2)
+start <- list(UMSY = 0.1, MSY = 1e5, dep = 0.95, n = 2)
 res <- SP(Data = swordfish, start = start)
 
 #### State-space version
-res <- SP_SS(Data = swordfish, start = list(Binit_frac = 0.95, tau = 0.1))
+res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1))
 
 }
 \references{

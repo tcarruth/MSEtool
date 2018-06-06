@@ -12,8 +12,8 @@
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
 #' @param start Optional list of starting values. See details.
-#' @param fix_Binit_frac Logical, whether to fix the ratio of biomass to carrying capacity in the
-#' first year of the model. If \code{TRUE}, uses the value in \code{start}, otherwise equal to 1
+#' @param fix_dep Logical, whether to fix the initial depletion (ratio of biomass to carrying capacity in the
+#' first year of the model). If \code{TRUE}, uses the value in \code{start}, otherwise equal to 1
 #' (assumes virgin conditions).
 #' @param fix_n Logical, whether to fix the exponent of the production function. If \code{TRUE},
 #' uses the value in \code{start}, otherwise equal to \code{n = 2}, where the biomass at MSY
@@ -33,7 +33,7 @@
 #' @param ... Additional arguments (not currently used).
 #' @details
 #' To provide starting values for the \code{SP}, a named list can be provided for \code{UMSY},
-#' \code{MSY}, \code{Binit_frac}, and \code{n} via the start argument (see example).
+#' \code{MSY}, \code{dep}, and \code{n} via the start argument (see example).
 #'
 #' For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
 #' of the index and log-biomass deviates, respectively. Deviations are estimated beginning in the year when index
@@ -61,16 +61,16 @@
 #'
 #' # Provide starting values, assume B/K = 0.95 in first year of model
 #' # and symmetrical production curve (n = 2)
-#' start <- list(UMSY = 0.1, MSY = 1e5, Binit_frac = 0.95, n = 2)
+#' start <- list(UMSY = 0.1, MSY = 1e5, dep = 0.95, n = 2)
 #' res <- SP(Data = swordfish, start = start)
 #'
 #' #### State-space version
-#' res <- SP_SS(Data = swordfish, start = list(Binit_frac = 0.95, tau = 0.1))
+#' res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1))
 #'
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TRUE, fix_n = TRUE,
+SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
                silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), ...) {
   dependencies = "Data@Cat, Data@Ind"
   ystart <- which(!is.na(Data@Cat[x, ]))[1]
@@ -89,7 +89,7 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TR
   if(!is.null(start)) {
     if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
-    if(!is.null(start$Binit_frac) && is.numeric(start$Binit_frac)) params$log_Binit_frac <- log(start$Binit_frac[1])
+    if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
     if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
   }
   if(is.null(params$logit_UMSY)) {
@@ -100,13 +100,13 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TR
     AvC <- mean(C_hist * rescale)
     params$log_MSY <- log(3 * AvC)
   }
-  if(is.null(params$log_Binit_frac)) params$log_Binit_frac <- log(1)
+  if(is.null(params$log_dep)) params$log_dep <- log(1)
   if(is.null(params$log_n)) params$log_n <- log(2)
 
   info <- list(Year = Year, data = data, params = params, rescale = rescale, control = control)
 
   map <- list()
-  if(fix_Binit_frac) map$log_Binit_frac <- factor(NA)
+  if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n = factor(NA)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
@@ -160,7 +160,7 @@ class(SP) <- "Assess"
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac = TRUE, fix_n = TRUE, fix_sigma = FALSE,
+SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = FALSE,
                   fix_tau = TRUE, integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
                   inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
@@ -181,7 +181,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac =
   if(!is.null(start)) {
     if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- log(start$UMSY[1]/(1 - start$UMSY[1]))
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
-    if(!is.null(start$Binit_frac) && is.numeric(start$Binit_frac)) params$log_Binit_frac <- log(start$Binit_frac[1])
+    if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
     if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma[1])
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
@@ -194,7 +194,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac =
     AvC <- mean(C_hist * rescale)
     params$log_MSY <- log(3 * AvC)
   }
-  if(is.null(params$log_Binit_frac)) params$log_Binit_frac <- log(1)
+  if(is.null(params$log_dep)) params$log_dep <- log(1)
   if(is.null(params$log_n)) params$log_n <- log(2)
   if(is.null(params$log_sigma)) {
     sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
@@ -204,7 +204,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_Binit_frac =
   params$log_B_dev = rep(0, ny - 1)
 
   map <- list()
-  if(fix_Binit_frac) map$log_Binit_frac <- factor(NA)
+  if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n = factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)

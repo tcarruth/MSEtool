@@ -8,10 +8,10 @@ summary_SP_SS <- function(Assessment) {
   Value <- numeric(0)
   Description <- character(0)
   rownam <- character(0)
-  if("log_Binit_frac" %in% names(obj$env$map)) {
-    Value <- c(Value, TMB_report$Binit_frac)
+  if("log_dep" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$dep)
     Description <- c(Description, "Initial depletion")
-    rownam <- c(rownam, "Binit_frac")
+    rownam <- c(rownam, "dep")
   }
   if("log_n" %in% names(obj$env$map)) {
     Value <- c(Value, TMB_report$n)
@@ -396,7 +396,6 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
   retro_ts <- array(NA, dim = c(nyr+1, ny + 1, 7))
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
-  #retro_est <- array(NA, dim = c(nyr+1, dim(rbind(summary(SD, "fixed"), summary(SD, "report")))))
 
   SD <- NULL
   rescale <- info$rescale
@@ -435,7 +434,6 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
       log_B_dev <- c(report$log_B_dev, rep(NA, 2 + i))
 
       retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY, log_B_dev)
-      #retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY)
       retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
 
     } else {

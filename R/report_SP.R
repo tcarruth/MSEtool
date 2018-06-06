@@ -10,10 +10,10 @@ summary_SP <- function(Assessment) {
     Value <- numeric(0)
     Description <- character(0)
     rownam <- character(0)
-    if("log_Binit_frac" %in% names(obj$env$map)) {
-      Value <- c(Value, TMB_report$Binit_frac)
+    if("log_dep" %in% names(obj$env$map)) {
+      Value <- c(Value, TMB_report$dep)
       Description <- c(Description, "Initial depletion")
-      rownam <- c(rownam, "Binit_frac")
+      rownam <- c(rownam, "dep")
     }
     if("log_n" %in% names(obj$env$map)) {
       Value <- c(Value, TMB_report$n)
@@ -360,9 +360,7 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
   Year <- c(Year, max(Year) + 1)
   C_hist <- data$C_hist
   I_hist <- data$I_hist
-  params <- as.list(obj$env$last.par.best)
-  params$log_Binit_frac <- info$params$log_Binit_frac
-  params$log_n <- info$params$log_n
+  params <- info$params
   map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts

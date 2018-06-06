@@ -11,7 +11,7 @@
 
   PARAMETER(logit_UMSY);
   PARAMETER(log_MSY);
-  PARAMETER(log_Binit_frac);
+  PARAMETER(log_dep);
   PARAMETER(log_n);
   PARAMETER(log_sigma);
   PARAMETER(log_tau);
@@ -19,7 +19,7 @@
 
   Type UMSY = 1/(1 + exp(-logit_UMSY));
   Type MSY = exp(log_MSY);
-  Type Binit_frac = exp(log_Binit_frac);
+  Type dep = exp(log_dep);
   Type n = exp(log_n);
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
@@ -36,7 +36,7 @@
 
   Type penalty = 0;
 
-  B(0) = Binit_frac * K;
+  B(0) = dep * K;
   for(int y=0;y<ny;y++) {
     U(y) = CppAD::CondExpLt(1 - C_hist(y)/B(y), Type(0.025),
       1 - posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y)/B(y));
@@ -68,7 +68,7 @@
 
   ADREPORT(UMSY);
   ADREPORT(MSY);
-  ADREPORT(Binit_frac);
+  ADREPORT(dep);
   ADREPORT(n);
   ADREPORT(q);
   ADREPORT(r);
@@ -80,7 +80,7 @@
   ADREPORT(B_K_final);
   REPORT(UMSY);
   REPORT(MSY);
-  REPORT(Binit_frac);
+  REPORT(dep);
   REPORT(n);
   REPORT(sigma);
   REPORT(tau);
