@@ -54,21 +54,20 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @examples
-#' data(sim_snapper)
-#'
 #' #### Observation-error delay difference model
 #' res <- DD_TMB(Data = sim_snapper)
 #'
-#' ### State-space version
-#' res <- DD_SS(Data = sim_snapper)
 #'
 #' # Provide starting values
-#' start <- list(UMSY = 0.05, MSY = 4, q = 0.3)
-#' res <- DD_SS(1, sim_snapper, start = start)
+#' start <- list(UMSY = 0.05, MSY = 4)
+#' res <- DD_TMB(Data = sim_snapper, start = start)
 #'
 #' summary(res@@SD) # Look at parameter estimates
 #'
 #' \dontrun{
+#' ### State-space version
+#' res <- DD_SS(Data = sim_snapper)
+#'
 #' # Plot and save figures
 #' plot(res)
 #' }
