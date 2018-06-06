@@ -26,10 +26,10 @@ test_that("SP_SS assess model", {
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  pro <- profile_likelihood(res, UMSY = seq(0.05, 0.5, 0.1),
-                            MSY = seq(0.1, 2, 0.1) * 1e4, figure = FALSE)
-  expect_type(pro, "list")
-  expect_true(is.data.frame(pro))
+  #pro <- profile_likelihood(res, UMSY = seq(0.001, 0.03, 0.005),
+  #                          MSY = seq(0.1, 2, 0.25) * 1e4, figure = FALSE)
+  #expect_type(pro, "list")
+  #expect_true(is.data.frame(pro))
 
   expect_type(retrospective(res, 5, save_figure = FALSE), "list")
 
