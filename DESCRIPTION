@@ -2,12 +2,15 @@ Package: MSEtool
 Type: Package
 Title: Management Strategy Evaluation Toolkit
 Version: 1.1.0
-Date: 2018-2-26
 Authors@R: c(person("Tom","Carruthers",,"t.carruthers@oceans.ubc.ca",role=c("aut","cre")),
   person("Adrian","Hordyk",,"a.hordyk@oceans.ubc.ca",role="aut"), 
   person("Quang","Huynh",,"q.huynh@oceans.ubc.ca",role="aut"))
+Date: 2018-06-05
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
-Description: Simulation tools for informing data-rich fisheries. 
+Description: Simulation tools for informing data-rich fisheries, including assessment models of
+  varying complexity with standardized reporting, diagnostic tools for evaluating goodness of fit,
+  and functions for building more complex operating models. Assessment models can paired with 
+  harvest control rules to use in management strategy evaluation simulations. 
 License: GPL-3
 Depends:
   R(>= 3.3.0),
@@ -22,4 +25,5 @@ RoxygenNote: 6.0.1
 Suggests: knitr,
     testthat
 VignetteBuilder: knitr
+URL: http://www.datalimitedtoolkit.org
 BugReports: https://github.com/tcarruth/MSEtool/issues
