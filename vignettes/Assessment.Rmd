@@ -8,9 +8,6 @@ output:
   rmarkdown::html_vignette:
     toc: true
     number_sections: true
-  #rmarkdown::pdf_document:
-  #  toc: true
-  #  number_sections: true    
 vignette: >
   %\VignetteIndexEntry{Appendix: Description of the Assessment Models in MSEtool}
   %\VignetteEncoding{UTF-8}

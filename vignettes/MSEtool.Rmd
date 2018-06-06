@@ -8,10 +8,7 @@ date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
     toc: true
-    number_sections: true
-  rmarkdown::pdf_vignette:
-    toc: true
-    number_sections: true    
+    number_sections: true 
 vignette: >
   %\VignetteIndexEntry{User guide to MSEtool}
   %\VignetteEngine{knitr::rmarkdown}
