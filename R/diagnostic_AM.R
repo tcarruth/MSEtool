@@ -206,7 +206,7 @@ plot_iter <- function(x, plot_type = c('line', 'hist'), lab = c("Optimization it
 
     for(i in 1:nsim) {
       points(1:npro, x[i, ], col = color.vec[i], typ = 'l')
-      text(1:npro, x[i, ]/denom, labels = i, col = color.vec[i])
+      text(1:npro, x[i, ], labels = i, col = color.vec[i])
     }
   }
 
