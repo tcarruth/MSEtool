@@ -44,7 +44,8 @@ diagnostic_AM <- function(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL, gradi
 
   if(figure) {
     old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par))
+    on.exit(layout(matrix(1)))
+    on.exit(par(old_par), add = TRUE)
 
     par(mar = c(5, 4, 1, 1), oma = c(0, 0, 8, 0))
   }
@@ -92,7 +93,7 @@ diagnostic_AM <- function(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL, gradi
       res_mat[, i] <- c(100 * (1 - sum(convergence_code)/length(convergence_code)),
                         100 * sum(hessian_code)/length(hessian_code),
                         100 * sum(abs(max_gr) <= gradient_threshold)/length(max_gr),
-                        median(opt_time), median(iter), median(fn_eval))
+                        median(opt_time), median(iter, na.rm = TRUE), median(fn_eval, na.rm = TRUE))
 
       if(figure) {
         layout(matrix(c(1, 2, 3, 4, 4, 5), ncol = 3, byrow = TRUE))
