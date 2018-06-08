@@ -144,7 +144,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
-  if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale)) + 1
+  if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale)) + 2
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
   if(is.null(params$vul_par)) {
     CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))

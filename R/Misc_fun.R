@@ -6,10 +6,10 @@ logit <- function(p) log(p/(1 - p))
 ilogit <- function(x) 1/(1 + exp(-x))
 ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 
-optimize_TMB_model <- function(obj, control = list()) {
+optimize_TMB_model <- function(obj, control = list(), use_hessian = TRUE) {
   # Use hessian for fixed-effects models
-  if(is.null(obj$env$random)) hess <- obj$he else hess <- NULL
-  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, hess,
+  if(is.null(obj$env$random) && use_hessian) h <- obj$he else h <- NULL
+  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h,
                          control = control), error = function(e) as.character(e))
   return(opt)
 }
@@ -18,8 +18,8 @@ get_sdreport <- function(obj, opt) {
   if(is.character(opt)) {
     res <- "nlminb() optimization returned an error. Could not run TMB::sdreport()."
   } else {
-    if(is.null(obj$env$random)) hess <- obj$he(opt$par) else hess <- NULL
-    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = hess,
+    if(is.null(obj$env$random)) h <- obj$he(opt$par) else h <- NULL
+    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
                              getReportCovariance = FALSE), error = function(e) as.character(e))
   }
   if(inherits(res, "sdreport") && !res$pdHess) {
