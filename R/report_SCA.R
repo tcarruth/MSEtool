@@ -31,14 +31,13 @@ summary_SCA <- function(Assessment) {
 
   if(is.null(obj$env$random)) {
     model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
-    dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_rec_dev", ]
   } else {
     model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
-    dev_estimates <- summary(SD, "random")
   }
+  dev_estimates <- cbind(Dev, SE_Dev)
 
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
-  rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev))
+  rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
 
   output <- list(model = "Statistical Catch-at-Age",
                  current_status = current_status, input_parameters = input_parameters,
@@ -433,7 +432,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
   if(!"meanR" %in% names(dots)) stop("Sequence of meanR was not found. See help file.")
   meanR <- dots$meanR
 
-  nll <- rep(NA, length(meanR))
+  nll <- UMSY <- MSY <- rep(NA, length(meanR))
   params <- Assessment@info$params
   random <- Assessment@obj$env$random
   map <- Assessment@obj$env$map
@@ -444,11 +443,26 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
                      map = map, random = random, inner.control = Assessment@info$inner.control,
                      DLL = "MSEtool", silent = TRUE)
     opt <- optimize_TMB_model(obj, Assessment@info$control)
-    if(!is.character(opt)) nll[i] <- opt$objective
+
+    if(!is.character(opt)) {
+      report <- obj$report(obj$env$last.par.best)
+      if(is.na(map$U_equilibrium) && params$U_equilibrium == 0) {
+        SSB0 <- report$E[1]
+        R0 <- report$R[1]
+      } else SSB0 <- R0 <- NULL
+      refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
+                         SSB0 = SSB0, R0 = R0, M = obj$env$data$M, weight = obj$env$data$weight,
+                         mat = obj$env$data$mat, vul = report$vul, SR = Assessment@info$SR)
+      report <- c(report, refpt)
+      nll[i] <- opt$objective
+      UMSY[i]  <- report$UMSY
+      MSY[i] <- report$MSY
+    }
   }
-  profile.grid <- data.frame(meanR = meanR, nll = nll)
+  profile.grid <- data.frame(meanR = meanR, UMSY = UMSY, MSY = MSY/Assessment@info$rescale,
+                             nll = nll - Assessment@opt$objective)
   if(figure) {
-    plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
+    plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
     abline(v = Assessment@SD$value[1], lty = 2)
 
     if(save_figure) {
@@ -456,7 +470,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
       prepare_to_save_figure()
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Negative log-likelihood value")
+      plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
       abline(v = Assessment@SD$value[1], lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
@@ -485,8 +499,6 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
   CAA_n <- data$CAA_n
   params <- info$params
 
-  map <- obj$env$map
-
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, U, U_UMSY, log_rec_dev
   retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 9))
@@ -504,6 +516,10 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
     data$CAA_hist <- CAA_hist[1:n_y_ret, ]
     data$CAA_n <- CAA_n[1:n_y_ret]
     params$log_rec_dev <- rep(0, n_y_ret)
+
+    map <- obj$env$map
+    new_map <- as.numeric(map$log_rec_dev) - i
+    map$log_rec_dev <- factor(new_map[new_map > 0])
 
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)

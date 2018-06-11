@@ -24,6 +24,10 @@
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Ind}.
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
+#' @param common_dev Typically, a numeric for the number of most recent years in which a common recruitment deviation will
+#' be estimated (in \code{SCA}, uninformative years will have a recruitment closer to the mean, which can be very misleading,
+#' especially near the end of the time series). By default, \code{"comp50"} uses the number of ages (smaller than the mode)
+#' for which the catch-at-age matrix has less than half the abundance than that at the mode (only ages .
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
@@ -95,7 +99,7 @@
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                 start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-                integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
+                common_dev = "comp50", integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
                 inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CAA, Data@Mort, Data@wla, Data@wlb, Data@vbLinf, Data@vbK, Data@vbt0, Data@L50, Data@L95, Data@MaxAge"
   vulnerability <- match.arg(vulnerability)
@@ -129,11 +133,12 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   A95 <- max(A50+0.5, iVB(t0, K, Linf, Data@L95[x]))
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
+  est_rec_dev <- rep(1L, length(CAA_n_nominal))
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
-               vul_type = vulnerability, I_type = I_type, est_rec_dev = rep(1L, length(CAA_n_nominal)))
+               vul_type = vulnerability, I_type = I_type, est_rec_dev = est_rec_dev)
 
   # Starting values
   params <- list()
@@ -170,6 +175,19 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
 
+  if(is.character(common_dev) && common_dev == "comp50") {
+    CAA_all <- colSums(CAA_hist, na.rm = TRUE)/max(colSums(CAA_hist, na.rm = TRUE)) #CAA with max = 1
+    CAA_mode <- which.max(CAA_all)[1] # Find max
+    comp50_ind <- which(CAA_all[1:CAA_mode] <= 0.5)[1] # Find first age class with abundance <= 0.5
+    common_dev <- comp50_ind
+  }
+  if(is.numeric(common_dev) && common_dev > 0) {
+    map_log_rec_dev <- 1:length(params$log_rec_dev)
+    ind <- (length(map_log_rec_dev) - common_dev + 1):length(map_log_rec_dev)
+    map_log_rec_dev[ind] <- map_log_rec_dev[ind[1]-1]
+    map$log_rec_dev <- factor(map_log_rec_dev)
+  }
+
   random <- NULL
   if(integrate) random <- "log_rec_dev"
 
@@ -203,12 +221,11 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     Yearplusone <- c(Year, max(Year) + 1)
     YearDev <- Year
 
+    Dev <- report$log_rec_dev
     if(integrate) {
-      Dev <- SD$par.random
-      SE_Dev <- sqrt(SD$diag.cov.random)
+      SE_Dev <- sqrt(SD$diag.cov.random)[map_log_rec_dev]
     } else {
-      Dev <- SD$par.fixed[names(SD$par.fixed) == "log_rec_dev"]
-      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])[map_log_rec_dev]
     }
     Assessment <- new("Assessment", Model = "SCA", UMSY = report$UMSY,
                       MSY = report$MSY, BMSY = report$BMSY, SSBMSY = report$EMSY,

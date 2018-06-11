@@ -8,9 +8,9 @@
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
   rescale = "mean1", start = NULL, fix_U_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(iter.max = 1e+06, eval.max = 1e+06),
-  inner.control = list(), ...)
+  fix_sigma = FALSE, fix_tau = TRUE, common_dev = "comp50",
+  integrate = FALSE, silent = TRUE, control = list(iter.max = 1e+06,
+  eval.max = 1e+06), inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
@@ -49,6 +49,11 @@ sigma is fixed to value provided in \code{start} (if provided), otherwise, value
 
 \item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
+
+\item{common_dev}{Typically, a numeric for the number of most recent years in which a common recruitment deviation will
+be estimated (in \code{SCA}, uninformative years will have a recruitment closer to the mean, which can be very misleading,
+especially near the end of the time series). By default, \code{"comp50"} uses the number of ages (smaller than the mode)
+for which the catch-at-age matrix has less than half the abundance than that at the mode (only ages .}
 
 \item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
 of the recruitment deviations (thus, treating it as a state-space variable).}
