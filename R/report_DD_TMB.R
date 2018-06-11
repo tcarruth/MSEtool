@@ -379,7 +379,7 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
   MSY <- dots$MSY
 
   profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
-  nll <- rep(NA, nrow(profile.grid))
+  nll <- h <- rep(NA, nrow(profile.grid))
   params <- Assessment@info$params
   map <- Assessment@obj$env$map
   map$logit_UMSY <- map$log_MSY <- factor(NA)
@@ -390,30 +390,56 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
                      map = map, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
 
-    if(!is.character(opt2)) nll[i] <- opt2$objective
+    if(!is.character(opt2)) {
+      nll[i] <- opt2$objective
+      h[i] <- obj2$report(opt2$par)$h
+    }
   }
-  profile.grid$nll <- nll
+  profile.grid$h <- h
+  profile.grid$nll <- nll - Assessment@opt$objective
   if(figure) {
-    z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
-    contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
-            nlevels = 20)
-
-    UMSY.MLE <- Assessment@UMSY
-    MSY.MLE <- Assessment@MSY
-    points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
     if(save_figure) {
       Model <- Assessment@Model
       prepare_to_save_figure()
+    }
+    UMSY.MLE <- Assessment@UMSY
+    MSY.MLE <- Assessment@MSY
 
+    z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
+    contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
+            nlevels = 20)
+    points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
+    if(save_figure) {
       create_png(file.path(plot.dir, "profile_likelihood.png"))
       contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
               nlevels = 20)
       points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
-                                "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
+                                "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum.")
+
+    }
+
+    z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "h")
+    contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
+            nlevels = 20)
+    points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
+    if(save_figure) {
+      create_png(file.path(plot.dir, "profile_likelihood_steepness.png"))
+      contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
+              nlevels = 20)
+      points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
+      dev.off()
+      profile.file.caption <- rbind(profile.file.caption,
+                                    c("profile_likelihood_steepness.png",
+                                      "Values of steepness (derived) from values of UMSY and MSY. Red point indicates maximum likelihood estimate of UMSY and MSY."))
+
+    }
+
+
+    if(save_figure) {
       html_report(plot.dir, model = "Delay Difference",
-                  captions = matrix(profile.file.caption, nrow = 1),
+                  captions = profile.file.caption,
                   name = Assessment@Data@Name, report_type = "Profile_Likelihood")
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }

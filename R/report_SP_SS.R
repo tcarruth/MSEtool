@@ -344,7 +344,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
     if(!is.character(opt2)) nll[i] <- opt2$objective
   }
-  profile.grid$nll <- nll
+  profile.grid$nll <- nll - Assessment@opt$objective
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",

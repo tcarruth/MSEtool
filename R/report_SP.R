@@ -315,7 +315,7 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
     }
 
   }
-  profile.grid$nll <- nll #- min(nll, na.rm = TRUE)
+  profile.grid$nll <- nll - Assessment@opt$objective
   if(figure) {
     z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
     contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
