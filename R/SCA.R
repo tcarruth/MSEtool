@@ -138,7 +138,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
-               vul_type = vulnerability, I_type = I_type, est_rec_dev = est_rec_dev)
+               vul_type = vulnerability, I_type = I_type, est_early_rec_dev = rep(1L, max_age - 1),
+               est_rec_dev = est_rec_dev)
 
   # Starting values
   params <- list()
@@ -209,7 +210,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                        SSB0 = SSB0, R0 = R0, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
     report <- c(report, refpt)
     if(rescale != 1) {
-      vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
+      vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "R_early", "MSY", "VBMSY",
                     "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
       vars_mult <- "Brec"
       var_trans <- c("meanR", "q")
