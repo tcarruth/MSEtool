@@ -642,7 +642,7 @@ plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FA
     if(is.null(y_zoom)) R.max <- 1.1 * max(rec_dev)
     else R.max <- y_zoom * max(expectedR)
   }
-  S.max <- 1.1 * max(Spawners)
+  S.max <- 1.1 * max(c(Spawners, S0))
   plot(Spawners, expectedR, typ = 'l', xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
        xlab = 'Spawners', ylab = 'Recruits')
   if(!trajectory) {
