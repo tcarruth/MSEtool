@@ -14,7 +14,7 @@ test_that("SCA assess model", {
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  pro <- profile_likelihood(res, meanR = seq(1, 2.5, 0.1), figure = FALSE)
+  pro <- profile_likelihood(res, meanR = seq(1.5, 2.5, 0.1), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 
