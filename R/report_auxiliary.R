@@ -518,7 +518,7 @@ plot_composition <- function(Year, obs, fit = NULL, plot_type = c('annual', 'bub
   if('bubble_residuals' %in% plot_type) {
     if(is.null(fit)) stop("No fitted data available.")
 
-    resid <- (obs_prob - fit_prob) / sqrt(fit_prob)
+    resid <- N * (obs_prob - fit_prob) / sqrt(N * fit_prob)
     diameter_max <- bubble_adj / pmin(10, max(abs(resid), na.rm = TRUE))
     plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
          ylim = c(0, max(data_val)), ylab = data_lab)
