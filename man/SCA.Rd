@@ -7,10 +7,11 @@
 \usage{
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", start = NULL, fix_U_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, common_dev = "comp50",
-  integrate = FALSE, silent = TRUE, control = list(iter.max = 1e+06,
-  eval.max = 1e+06), inner.control = list(), ...)
+  rescale = "mean1", start = NULL, fix_h = FALSE,
+  fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+  common_dev = "comp50", integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 1e+06, eval.max = 1e+06),
+  inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
@@ -39,6 +40,9 @@ can improve convergence. By default, \code{"mean1"} scales the catch so that tim
 Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
+
+\item{fix_h}{Logical, whether to fix steepness when estimating stock recruit parameters and reference points. Uses
+value in \code{Data@steep}.}
 
 \item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model
 is estimated. If \code{TRUE}, \code{U_equilibruim} is fixed to value provided in \code{start} (if provided),
