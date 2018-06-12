@@ -96,21 +96,20 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
   }
 
   Year <- info$Year
-  C_hist <- info$data$C_hist
 
-  plot_timeseries(Year, C_hist, label = "Catch")
+  plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, label = "Catch")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_catch.png"))
-    plot_timeseries(Year, C_hist, label = "Catch")
+    plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, label = "Catch")
     dev.off()
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
   if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
-    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
+    plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
+      plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
@@ -142,8 +141,9 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                 name = Data@Name, report_type = "Data")
   }
 
-  logit.umsy <- as.numeric(obj$env$last.par.best[1])
-  logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[1])
+  umsy.ind <- names(SD$par.fixed) == "logit_UMSY"
+  logit.umsy <- SD$par.fixed[umsy.ind]
+  logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[umsy.ind])
 
   plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
   if(save_figure) {
@@ -153,8 +153,9 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
     assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
   }
 
-  log.msy <- as.numeric(obj$env$last.par.best[2])
-  log.msy.sd <- sqrt(diag(SD$cov.fixed)[2])
+  msy.ind <- names(SD$par.fixed) == "log_MSY"
+  log.msy <- SD$par.fixed[msy.ind]
+  log.msy.sd <- sqrt(diag(SD$cov.fixed)[msy.ind])
 
   plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
   if(save_figure) {
@@ -210,30 +211,30 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                                  c("assessment_selectivity.png", "Assumed knife-edge selectivity at the age corresponding to the length of 50% maturity."))
   }
 
-  plot_timeseries(Year, C_hist, Catch, label = "Catch")
+  plot_timeseries(Year, Obs_Catch, Catch, label = "Catch")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_catch.png"))
-    plot_timeseries(Year, C_hist, Catch, label = "Catch")
+    plot_timeseries(Year, Obs_Catch, Catch, label = "Catch")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_catch.png", "Observed (black) and predicted (red) catch."))
   }
 
-  plot_residuals(Year, log(C_hist/Catch), label = "log(Catch) Residual")
+  plot_residuals(Year, log(Obs_Catch/Catch), label = "log(Catch) Residual")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_catch_residual.png"))
-    plot_residuals(Year, log(C_hist/Catch), label = "log(Catch) Residual")
+    plot_residuals(Year, log(Obs_Catch/Catch), label = "log(Catch) Residual")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_catch_residual.png", "Catch residuals in log-space."))
   }
 
-  qqnorm(log(C_hist/Catch), main = "")
-  qqline(log(C_hist/Catch))
+  qqnorm(log(Obs_Catch/Catch), main = "")
+  qqline(log(Obs_Catch/Catch))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_catch_qqplot.png"))
-    qqnorm(log(C_hist/Catch), main = "")
-    qqline(log(C_hist/Catch))
+    qqnorm(log(Obs_Catch/Catch), main = "")
+    qqline(log(Obs_Catch/Catch))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_catch_qqplot.png", "QQ-plot of catch residuals in log-space."))
@@ -349,10 +350,10 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                                  c("assessment_yield_curve_B_B0.png", "Yield plot relative to depletion."))
   }
 
-  plot_surplus_production(B, B0, C_hist)
+  plot_surplus_production(B, B0, Obs_Catch)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-    plot_surplus_production(B, B0, C_hist)
+    plot_surplus_production(B, B0, Obs_Catch)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_surplus_production.png", "Surplus production relative to depletion."))

@@ -104,8 +104,9 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
                 captions = data.file.caption, name = Data@Name, report_type = "Data")
   }
 
-  logit.umsy <- as.numeric(obj$env$last.par.best[1])
-  logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[1])
+  umsy.ind <- names(SD$par.fixed) == "logit_UMSY"
+  logit.umsy <- SD$par.fixed[umsy.ind]
+  logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[umsy.ind])
 
   plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
   if(save_figure) {
@@ -115,8 +116,9 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
     assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
   }
 
-  log.msy <- as.numeric(obj$env$last.par.best[2])
-  log.msy.sd <- sqrt(diag(SD$cov.fixed)[2])
+  msy.ind <- names(SD$par.fixed) == "log_MSY"
+  log.msy <- SD$par.fixed[msy.ind]
+  log.msy.sd <- sqrt(diag(SD$cov.fixed)[msy.ind])
 
   plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
   if(save_figure) {
