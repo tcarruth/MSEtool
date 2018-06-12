@@ -41,8 +41,7 @@ Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{fix_h}{Logical, whether to fix steepness when estimating stock recruit parameters and reference points. Uses
-value in \code{Data@steep}.}
+\item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} when calculating reference points.}
 
 \item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model
 is estimated. If \code{TRUE}, \code{U_equilibruim} is fixed to value provided in \code{start} (if provided),
