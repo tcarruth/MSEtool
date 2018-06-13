@@ -292,6 +292,7 @@ plot_steepness <- function(m, sd) {
 #' @param obs_CV_CI The confidence interval for the error bars based for \code{obs_CV}.
 #' @param obs_upper A vector of year-specific upper bounds for the error bars of the observed data (in lieu of argument \code{obs_CV}).
 #' @param obs_lower A vector of year-specific lower bounds for the error bars of the observed data (in lieu of argument \code{obs_CV}).
+#' @param obs_ind_blue Indices of \code{obs} for which the plotted points and error bars will be blue.
 #' @param fit_linewidth Argument \code{lwd} for fitted line.
 #' @param fit_color Color of fitted line.
 #' @param label Character string that describes the data to label the y-axis.
@@ -303,7 +304,7 @@ plot_steepness <- function(m, sd) {
 #' obs_CV = Red_snapper@CV_Cat, label = "Catch")
 #' @export plot_timeseries
 plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.95,
-                            obs_upper = NULL, obs_lower = NULL, fit_linewidth = 3,
+                            obs_upper = NULL, obs_lower = NULL, obs_ind_blue = NULL, fit_linewidth = 3,
                             fit_color = "red", label = "Observed data") {
   old.warning <- options()$warn
   options(warn = -1)
@@ -312,7 +313,13 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
   # Without CV interval
   if(is.null(obs_CV)) {
     y.max <- max(c(obs, fit), na.rm = TRUE)
-    plot(Year, obs, typ = 'o', ylab = label, ylim = c(0, 1.1 * y.max))
+    if(is.null(obs_ind_blue)) {
+      plot(Year, obs, typ = 'o', ylab = label, ylim = c(0, 1.1 * y.max))
+    } else {
+      plot(Year, obs, typ = 'n', ylab = label, ylim = c(0, 1.1 * y.max))
+      lines(Year[-obs_ind_blue], obs[-obs_ind_blue], typ = 'o')
+      lines(Year[obs_ind_blue], obs[obs_ind_blue], typ = 'o', col = "blue")
+    }
   }
 
   # With CV interval
@@ -324,10 +331,19 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
       obs_lower <- exp(log(obs) + qnorm(0.5*(1-obs_CV_CI)) * sigma)
     y.max <- max(c(obs_lower, obs_upper, obs, fit), na.rm = TRUE)
 
-    plot(Year, obs, typ = 'o', ylab = label, ylim = c(0, 1.1 * y.max))
-    arrows(Year, obs_lower, Year, obs_upper, length = 0.025, angle = 90,
-           code = 3, col = 'grey30')
-    #lines(Year, fit, lwd = 2)
+    if(is.null(obs_ind_blue)) {
+      plot(Year, obs, typ = 'o', ylab = label, ylim = c(0, 1.1 * y.max))
+      arrows(Year, obs_lower, Year, obs_upper, length = 0.025, angle = 90, code = 3)
+    } else {
+      plot(Year, obs, typ = 'n', ylab = label, ylim = c(0, 1.1 * y.max))
+      lines(Year[-obs_ind_blue], obs[-obs_ind_blue], typ = 'o')
+      arrows(Year[-obs_ind_blue], obs_lower[-obs_ind_blue], Year[-obs_ind_blue],
+             obs_upper[-obs_ind_blue], length = 0.025, angle = 90, code = 3, col = "grey30")
+
+      lines(Year[obs_ind_blue], obs[obs_ind_blue], typ = 'o', col = "blue")
+      arrows(Year[obs_ind_blue], obs_lower[obs_ind_blue], Year[obs_ind_blue],
+             obs_upper[obs_ind_blue], length = 0.025, angle = 90, code = 3, col = "blue")
+    }
   }
   if(!is.null(fit)) lines(Year, fit, lwd = fit_linewidth, col = fit_color)
   abline(h = 0, col = 'grey')
@@ -345,6 +361,7 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
 #' @param res_sd_CI The confidence interval for the error bars based for \code{res_sd}.
 #' @param res_upper A vector of year-specific upper bounds for the error bars of the residual (in lieu of argument \code{res_CV}).
 #' @param res_lower A vector of year-specific lower bounds for the error bars of the residual (in lieu of argument \code{res_CV}).
+#' @param res_ind_blue Indices of \code{obs} for which the plotted residuals and error bars will be blue.
 #' @param draw_zero Indicates whether a horizontal line should be drawn at zero.
 #' @param zero_linetype Passes argument \code{lty} (e.g. solid line = 1, dotted = 2) to \code{draw_zero}.
 #' @param label Character string that describes the data to label the y-axis.
@@ -352,12 +369,18 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
 #' @seealso \code{\link{plot_timeseries}}
 #' @export plot_residuals
 plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
-                           res_upper = NULL, res_lower = NULL, draw_zero = TRUE,
+                           res_upper = NULL, res_lower = NULL, res_ind_blue = NULL, draw_zero = TRUE,
                            zero_linetype = 2, label = "Residual") {
   # Without sd interval
   if(is.null(res_sd)) {
     res.lim <- max(abs(res), na.rm = TRUE)
-    plot(Year, res, typ = 'o', ylab = label, ylim = c(-res.lim, res.lim))
+    if(is.null(res_ind_blue)) {
+      plot(Year, res, typ = 'o', ylab = label, ylim = c(-res.lim, res.lim))
+    } else {
+      plot(Year, res, typ = 'n', ylab = label, ylim = c(-res.lim, res.lim))
+      lines(Year[-res_ind_blue], res[-res_ind_blue], typ = 'o')
+      lines(Year[res_ind_blue], res[res_ind_blue], typ = 'o', col = "blue")
+    }
   }
 
   # With CV interval
@@ -368,9 +391,20 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
       res_lower <- res + qnorm(0.5*(1-res_sd_CI)) * res_sd
     res.lim <- max(abs(c(res_lower, res_upper, res)), na.rm = TRUE)
 
-    plot(Year, res, typ = 'o', ylab = label, ylim = c(-res.lim, res.lim))
-    arrows(Year, res_lower, Year, res_upper, length = 0.025, angle = 90,
-           code = 3, col = 'grey30')
+    if(is.null(res_ind_blue)) {
+      plot(Year, res, typ = 'o', ylab = label, ylim = c(-res.lim, res.lim))
+      arrows(Year, res_lower, Year, res_upper, length = 0.025, angle = 90,
+             code = 3, col = 'grey30')
+    } else {
+      plot(Year, res, typ = 'n', ylab = label, ylim = c(-res.lim, res.lim))
+      lines(Year[-res_ind_blue], res[-res_ind_blue], typ = 'o')
+      arrows(Year[-res_ind_blue], res_lower[-res_ind_blue], Year[-res_ind_blue],
+             res_upper[-res_ind_blue], length = 0.025, angle = 90, code = 3, col = 'grey30')
+
+      lines(Year[res_ind_blue], res[res_ind_blue], typ = 'o', col = "blue")
+      arrows(Year[res_ind_blue], res_lower[res_ind_blue], Year[res_ind_blue],
+             res_upper[res_ind_blue], length = 0.025, angle = 90, code = 3, col = 'blue')
+    }
   }
   if(draw_zero) abline(h = 0, lty = zero_linetype)
   invisible()
@@ -644,7 +678,7 @@ plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FA
   }
   S.max <- 1.1 * max(c(Spawners, S0))
   plot(Spawners, expectedR, typ = 'l', xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
-       xlab = 'Spawners', ylab = 'Recruits')
+       xlab = 'Spawning Stock Biomass (SSB)', ylab = 'Recruitment')
   if(!trajectory) {
     if(is.null(rec_dev)) points(Spawners, expectedR)
     if(!is.null(rec_dev)) points(Spawners, rec_dev)

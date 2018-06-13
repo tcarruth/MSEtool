@@ -29,14 +29,9 @@ summary_SCA <- function(Assessment) {
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(derived) <- c("h", "R0", "VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY")
 
-  if(is.null(obj$env$random)) {
-    model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
-  } else {
-    model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
-  }
-  dev_estimates <- cbind(Dev, SE_Dev)
-
+  model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+  dev_estimates <- cbind(Dev, SE_Dev)
   rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
 
   output <- list(model = "Statistical Catch-at-Age",
@@ -261,7 +256,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
   SSB_plot <- SSB[1:(length(SSB)-1)]
   if(info$SR == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
   if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
-  estR <- R[2:length(R)]
+  estR <- R[as.numeric(names(R)) > Year[1]]
 
   plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
   if(save_figure) {
@@ -323,32 +318,32 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
                                  c("assessment_SSB_SSB0.png", "Time series of spawning stock biomass depletion."))
   }
 
-  plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
+  plot_timeseries(as.numeric(names(R)), R, obs_ind_blue = as.numeric(names(R)) < Year[1], label = "Recruitment")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_recruitment.png"))
-    plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
+    plot_timeseries(as.numeric(names(R)), R, obs_ind_blue = as.numeric(names(R)) < Year[1], label = "Recruitment")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_recruitment.png", "Time series of recruitment."))
+                                 c("assessment_recruitment.png", "Time series of recruitment (recruitment prior to the first year of the model in blue)."))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, label = Dev_type)
+  plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs.png"))
-    plot_residuals(as.numeric(names(Dev)), Dev, label = Dev_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_rec_devs.png", "Time series of recruitment deviations from mean recruitment."))
+                                 c("assessment_rec_devs.png", "Time series of recruitment deviations from mean recruitment (deviations prior to the first year of the model in blue)."))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
+  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs_with_CI.png"))
-    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_rec_devs_with_CI.png", "Time series of recruitment deviations (from mean recruitment)
-                                   with 95% confidence intervals."))
+                                   with 95% confidence intervals (deviations prior to the first year of the model in blue)."))
   }
 
   plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")

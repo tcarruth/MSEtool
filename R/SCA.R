@@ -17,7 +17,8 @@
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
 #' @param start Optional list of starting values. See details.
-#' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} when calculating reference points.
+#' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the model for \code{SCA3}. This only affects
+#' calculation of reference points for \code{SCA}.
 #' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model
 #' is estimated. If \code{TRUE}, \code{U_equilibruim} is fixed to value provided in \code{start} (if provided),
 #' otherwise, equal to zero (assumes virgin conditions).
@@ -135,11 +136,12 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
   est_rec_dev <- rep(1L, length(CAA_n_nominal))
+  est_early_rec_dev <- rep(1L, max_age - 1)
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
-               vul_type = vulnerability, I_type = I_type, est_early_rec_dev = rep(1L, max_age - 1),
+               vul_type = vulnerability, I_type = I_type, est_early_rec_dev = est_early_rec_dev,
                est_rec_dev = est_rec_dev)
 
   # Starting values
@@ -196,8 +198,10 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  opt <- optimize_TMB_model(obj, control)
-  SD <- get_sdreport(obj, opt)
+  mod <- optimize_TMB_model(obj, control)
+  opt <- mod[[1]]
+  SD <- mod[[2]]
+
   report <- obj$report(obj$env$last.par.best)
   if(is.character(opt) || is.character(SD)) {
     Assessment <- new("Assessment", Model = "SCA", info = info,
@@ -222,14 +226,20 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     }
 
     Yearplusone <- c(Year, max(Year) + 1)
-    YearDev <- Year
+    YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
+    YearDev <- c(YearEarly, Year)
+    YearR <- c(YearDev, max(YearDev) + 1)
+    R <- c(rev(report$R_early), report$R)
 
-    Dev <- report$log_rec_dev
+    Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
     if(integrate) {
-      SE_Dev <- sqrt(SD$diag.cov.random)[map_log_rec_dev]
+      SE_Early <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_early_rec_dev"])
+      SE_Main <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_rec_dev"])[map_log_rec_dev]
     } else {
-      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])[map_log_rec_dev]
+      SE_Early <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_early_rec_dev"])
+      SE_Main <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])[map_log_rec_dev]
     }
+    SE_Dev <- c(rev(SE_Early), SE_Main)
     Assessment <- new("Assessment", Model = "SCA", UMSY = report$UMSY,
                       MSY = report$MSY, BMSY = report$BMSY, SSBMSY = report$EMSY,
                       VBMSY = report$VBMSY, B0 = report$B0, R0 = report$R0, N0 = report$N0,
@@ -245,7 +255,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                       VB = structure(report$VB, names = Yearplusone),
                       VB_VBMSY = structure(report$VB/report$VBMSY, names = Yearplusone),
                       VB_VB0 = structure(report$VB/report$VB0, names = Yearplusone),
-                      R = structure(report$R, names = Yearplusone),
+                      R = structure(R, names = YearR),
                       N = structure(rowSums(report$N), names = Yearplusone),
                       N_at_age = report$N,
                       Selectivity = matrix(report$vul, nrow = length(Year),
