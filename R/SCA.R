@@ -20,7 +20,7 @@
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the model for \code{SCA3}. This only affects
 #' calculation of reference points for \code{SCA}.
 #' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model
-#' is estimated. If \code{TRUE}, \code{U_equilibruim} is fixed to value provided in \code{start} (if provided),
+#' is estimated. If \code{TRUE}, \code{U_equilibrium} is fixed to value provided in \code{start} (if provided),
 #' otherwise, equal to zero (assumes virgin conditions).
 #' @param fix_sigma Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Ind}.
@@ -73,9 +73,11 @@
 #'
 #' For \code{start}, a named list of starting values of estimates for:
 #' \itemize{
+#' \item \code{meanR} Mean recruitment, only for \code{SCA}.
 #' \item \code{UMSY} Only for \code{SCA2}.
 #' \item \code{MSY} Only for \code{SCA2}.
-#' \item \code{meanR} Mean recruitment, only for \code{SCA}.
+#' \item \code{R0} Virgin recruitment, only for \code{SCA3}.
+#' \item \code{h} Steepness, only for \code{SCA3}.
 #' \item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means virgin conditions.
 #' \item \code{vul_par} (length 2 vector for logistic or length 4 for dome, see above).
 #' \item \code{sigma} Standard deviation of index.
@@ -215,6 +217,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     #refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
     #                   SSB0 = SSB0, R0 = R0, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
     report <- c(report, refpt)
+
     if(rescale != 1) {
       vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "R_early", "MSY", "VBMSY",
                     "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
@@ -280,7 +283,7 @@ class(SCA) <- "Assess"
 
 
 
-get_refpt <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR = c("BH", "Ricker")) {
+get_SR <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR = c("BH", "Ricker")) {
   SR <- match.arg(SR)
   maxage <- length(M)
 
@@ -347,6 +350,14 @@ get_refpt <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR 
   VB0 <- R0 * sum(NPR0 * weight * vul)
   B0 <- R0 * sum(NPR0 * weight)
 
+  return(list(h = h, Arec = Arec, Brec = Brec, VB0 = VB0, R0 = R0, B0 = B0, E0 = E0, N0 = N0))
+}
+
+
+get_MSY <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
+  SR <- match.arg(SR)
+  maxage <- length(M)
+
   solveMSY <- function(logit_U) {
     U <- ilogit(logit_U)
     surv <- exp(-M) * (1 - vul * U)
@@ -372,8 +383,7 @@ get_refpt <- function(SSB, rec, SSB0 = NULL, R0 = NULL, M, weight, mat, vul, SR 
   RMSY <- VBMSY/sum(vul * NPR_UMSY * weight)
   BMSY <- RMSY * sum(NPR_UMSY * weight)
   EMSY <- RMSY * sum(NPR_UMSY * weight * mat)
-  return(list(h = h, Arec = Arec, Brec = Brec, UMSY = UMSY, MSY = MSY, VBMSY = VBMSY,
-              RMSY = RMSY, BMSY = BMSY, EMSY = EMSY, VB0 = VB0, R0 = R0, B0 = B0, E0 = E0, N0 = N0))
+  return(list(UMSY = UMSY, MSY = MSY, VBMSY = VBMSY, RMSY = RMSY, BMSY = BMSY, EMSY = EMSY))
 }
 
 

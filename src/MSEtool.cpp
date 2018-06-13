@@ -3,10 +3,10 @@
 #include "../inst/include/functions.h"
 
 template<class Type>
-Type objective_function<Type>::operator() ()
+  Type objective_function<Type>::operator() ()
 {
   DATA_STRING(model);
-
+  
   if(model == "DD") {
     #include "../inst/include/DD.h"
   } else
@@ -24,18 +24,21 @@ Type objective_function<Type>::operator() ()
           } else
             if(model == "grav_Pbyarea") {
               #include "../inst/include/grav_Pbyarea.h"
-            } else 
-			  if(model == "SCA") {
-			    #include "../inst/include/SCA.h"
-			  } else 
-				if(model == "SCA2") {
-			      #include "../inst/include/SCA2.h"
-			    } else {
-                  error("No model found.");
-			    }
-
+            } else
+              if(model == "SCA") {
+                #include "../inst/include/SCA.h"
+              } else
+                if(model == "SCA2") {
+                  #include "../inst/include/SCA2.h"
+                } else
+                  if(model == "SCA3"){
+                    #include "../inst/include/SCA3.h"
+                  } else {
+                    error("No model found.");
+                  }
+  
   return 0;
-}
+  }
 
 
 
