@@ -59,10 +59,7 @@ diagnostic_AM <- function(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL, gradi
   MPs_in_env <- vapply(MPs, function(x) any(grepl(x, env_objects)), logical(1))
   MPs <- MPs[MPs_in_env]
 
-  get_code <- function(x, y) {
-    res <- x[names(x) == y]
-    do.call(c, res)
-  }
+  get_code <- function(x, y) vapply(x, getElement, numeric(1), y)
 
   res_mat <- matrix(NA, ncol = length(MPs), nrow = 6)
 
@@ -273,7 +270,8 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRU
   # Assign report objects to DLMenv
   diagnostic <- get0(paste0("diagnostic_", MP), envir = DLMenv,
                      ifnotfound = vector("list", nsim))
-  diagnostic[[x]] <- c(diagnostic[[x]], dg)
+  len_diag <- length(diagnostic[[x]])
+  diagnostic[[x]][[len_diag + 1]] <- dg
   assign(paste0("diagnostic_", MP), diagnostic, envir = DLMenv)
 
   if(include_assessment) {
@@ -288,7 +286,10 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRU
 
     Assessment_report <- get0(paste0("Assessment_report_", MP), envir = DLMenv,
                               ifnotfound = vector("list", nsim))
-    Assessment_report[[x]] <- c(Assessment_report[[x]], Assessment)
+    len_Assess <- length(Assessment_report[[x]])
+    if(len_Assess > 0) {
+      Assessment_report[[x]][[len_Assess + 1]] <- Assessment
+    } else Assessment_report[[x]] <- c(Assessment_report[[x]], Assessment)
     assign(paste0("Assessment_report_", MP), Assessment_report, envir = DLMenv)
   }
 

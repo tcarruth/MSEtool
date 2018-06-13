@@ -14,7 +14,7 @@ optimize_TMB_model <- function(obj, control = list()) {
   SD <- get_sdreport(obj, opt)
 
   # Re-run with hessian for fixed-effects models
-  if(is.null(obj$env$random) && (!SD$pdHess || is.character(SD))) {
+  if(is.null(obj$env$random) && (is.character(SD)) || !SD$pdHess) {
     if(is.character(opt)) par2 <- obj$par else par2 <- opt$par
 
     opt2 <- tryCatch(nlminb(par2, obj$fn, obj$gr, obj$he, control = control),
