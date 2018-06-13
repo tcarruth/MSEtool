@@ -94,8 +94,10 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  opt <- optimize_TMB_model(obj, control)
-  SD <- get_sdreport(obj, opt)
+  mod <- optimize_TMB_model(obj, control)
+  opt <- mod[[1]]
+  SD <- mod[[2]]
+
   report <- obj$report(obj$env$last.par.best)
 
   if(rescale != 1) {

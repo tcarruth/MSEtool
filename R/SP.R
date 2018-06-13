@@ -110,8 +110,9 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   if(fix_n) map$log_n = factor(NA)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj, control)
-  SD <- get_sdreport(obj, opt)
+  mod <- optimize_TMB_model(obj, control)
+  opt <- mod[[1]]
+  SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
   if(is.character(opt) || is.character(SD)) {
@@ -220,8 +221,9 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                inner.control = inner.control)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj, control)
-  SD <- get_sdreport(obj, opt)
+  mod <- optimize_TMB_model(obj, control)
+  opt <- mod[[1]]
+  SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
   if(is.character(opt) || is.character(SD)) {

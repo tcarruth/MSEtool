@@ -129,8 +129,9 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
-  opt <- optimize_TMB_model(obj, control)
-  SD <- get_sdreport(obj, opt)
+  mod <- optimize_TMB_model(obj, control)
+  opt <- mod[[1]]
+  SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
   if(is.character(opt) || is.character(SD)) {
@@ -261,8 +262,9 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = random,
                    map = map, checkParameterOrder = FALSE,
                    DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  opt <- optimize_TMB_model(obj, control)
-  SD <- get_sdreport(obj, opt)
+  mod <- optimize_TMB_model(obj, control)
+  opt <- mod[[1]]
+  SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
   if(is.character(opt) || is.character(SD)) {

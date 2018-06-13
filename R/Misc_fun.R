@@ -6,12 +6,26 @@ logit <- function(p) log(p/(1 - p))
 ilogit <- function(x) 1/(1 + exp(-x))
 ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 
-optimize_TMB_model <- function(obj, control = list(), use_hessian = TRUE) {
-  # Use hessian for fixed-effects models
-  if(is.null(obj$env$random) && use_hessian) h <- obj$he else h <- NULL
-  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h,
-                         control = control), error = function(e) as.character(e))
-  return(opt)
+
+optimize_TMB_model <- function(obj, control = list()) {
+  # Optimize without hessian
+  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, control = control),
+                  error = function(e) as.character(e))
+  SD <- get_sdreport(obj, opt)
+
+  # Re-run with hessian for fixed-effects models
+  if(is.null(obj$env$random) && (!SD$pdHess || is.character(SD))) {
+    if(is.character(opt)) par2 <- obj$par else par2 <- opt$par
+
+    opt2 <- tryCatch(nlminb(par2, obj$fn, obj$gr, obj$he, control = control),
+                     error = function(e) as.character(e))
+    SD2 <- get_sdreport(obj, opt2)
+    res <- list(opt = opt2, SD = SD2)
+  } else {
+    res <- list(opt = opt, SD = SD)
+  }
+
+  return(res)
 }
 
 get_sdreport <- function(obj, opt) {
