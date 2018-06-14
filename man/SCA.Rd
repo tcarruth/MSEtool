@@ -25,6 +25,7 @@ SCA3(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
   rescale = "mean1", start = NULL, fix_h = FALSE,
   fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+  early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50",
   integrate = FALSE, silent = TRUE, control = list(iter.max = 1e+06,
   eval.max = 1e+06), inner.control = list(), ...)
 }
@@ -49,7 +50,8 @@ Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
-\item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} when calculating reference points.}
+\item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the model for \code{SCA3}. This only affects
+calculation of reference points for \code{SCA}.}
 
 \item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model
 is estimated. If \code{TRUE}, \code{U_equilibrium} is fixed to value provided in \code{start} (if provided),
@@ -64,7 +66,7 @@ tau is fixed to value provided in \code{start} (if provided), otherwise, equal t
 \item{common_dev}{Typically, a numeric for the number of most recent years in which a common recruitment deviation will
 be estimated (in \code{SCA}, uninformative years will have a recruitment closer to the mean, which can be very misleading,
 especially near the end of the time series). By default, \code{"comp50"} uses the number of ages (smaller than the mode)
-for which the catch-at-age matrix has less than half the abundance than that at the mode (only ages .}
+for which the catch-at-age matrix has less than half the abundance than that at the mode.}
 
 \item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
 of the recruitment deviations (thus, treating it as a state-space variable).}
@@ -80,7 +82,14 @@ is passed on to \code{\link[TMB]{newton}}.}
 
 \item{...}{Other arguments to be passed.}
 
-\item{fix_h}{Logical, whether steepness is fixed. If \code{TRUE}, equal to \code{Data@steep}.}
+\item{early_dev}{Character string describing the years for which recruitment deviations are estimated in \code{SCA3}. By default, \code{"comp_onegen"}
+rec devs are estimated one full generation prior to the first year when catch-at-age (CAA) data are available. With \code{"comp"}, rec devs are
+estimated starting in the first year with CAA. With \code{"all"}, rec devs start at the beginning of the model.}
+
+\item{late_dev}{Typically, a numeric for the number of most recent years in which recruitment deviations will
+not be estimated in \code{SCA3} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).
+By default, \code{"comp50"} uses the number of ages (smaller than the mode)
+for which the catch-at-age matrix has less than half the abundance than that at the mode.}
 }
 \value{
 An object of class \linkS4class{Assessment}.

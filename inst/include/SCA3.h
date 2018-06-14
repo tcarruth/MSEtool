@@ -14,6 +14,7 @@
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
   DATA_STRING(I_type);    // String whether index surveys B, VB, or SSB
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
+  DATA_VECTOR(est_early_rec_dev);
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
   PARAMETER(log_R0);
@@ -23,6 +24,7 @@
 
   PARAMETER(log_sigma);
   PARAMETER(log_tau);
+  PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
 
   Type R0 = exp(log_R0);
@@ -82,6 +84,7 @@
   vector<Type> U(n_y);              // Harvest rate at year
   vector<Type> Ipred(n_y);          // Predicted index at year
   vector<Type> R(n_y+1);            // Recruitment at year
+  vector<Type> R_early(max_age-1);
   vector<Type> VB(n_y+1);           // Vulnerable biomass at year
   vector<Type> B(n_y+1);            // Total biomass at year
   vector<Type> E(n_y+1);            // Spawning biomass at year
@@ -104,9 +107,21 @@
     R_eq = log(Arec * EPR_eq);
   }
   R_eq /= Brec * EPR_eq;
+
   R(0) = R_eq;
+  if(!R_IsNA(asDouble(est_rec_dev(0)))) {
+    R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
+  }
   for(int a=0;a<max_age;a++) {
-    N(0,a) = R(0) * NPR_equilibrium(a);
+    if(a == 0) {
+      N(0,a) = R(0) * NPR_equilibrium(a);
+    } else {
+      R_early(a-1) = R_eq;
+      if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) {
+        R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * pow(tau, 2));
+      }
+      N(0,a) = R_early(a-1) * NPR_equilibrium(a);
+    }
     B(0) += N(0,a) * weight(a);
     VB(0) += N(0,a) * weight(a) * vul(a);
     E(0) += N(0,a) * weight(a) * mat(a);
@@ -167,6 +182,9 @@
       if(!R_IsNA(asDouble(est_rec_dev(y-1)))) nll_comp(2) -= dnorm(log_rec_dev(y-1), Type(0), tau, true);
     }
   }
+  for(int a=0;a<max_age-1;a++) {
+    if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
+  }
 
   Type nll = nll_comp.sum() + penalty;
 
@@ -197,10 +215,12 @@
   REPORT(U);
   REPORT(Ipred);
   REPORT(R);
+  REPORT(R_early);
   REPORT(VB);
   REPORT(B);
   REPORT(E);
 
+  REPORT(log_early_rec_dev);
   REPORT(log_rec_dev);
   REPORT(nll_comp);
   REPORT(nll);

@@ -29,7 +29,14 @@
 #' @param common_dev Typically, a numeric for the number of most recent years in which a common recruitment deviation will
 #' be estimated (in \code{SCA}, uninformative years will have a recruitment closer to the mean, which can be very misleading,
 #' especially near the end of the time series). By default, \code{"comp50"} uses the number of ages (smaller than the mode)
-#' for which the catch-at-age matrix has less than half the abundance than that at the mode (only ages .
+#' for which the catch-at-age matrix has less than half the abundance than that at the mode.
+#' @param early_dev Character string describing the years for which recruitment deviations are estimated in \code{SCA3}. By default, \code{"comp_onegen"}
+#' rec devs are estimated one full generation prior to the first year when catch-at-age (CAA) data are available. With \code{"comp"}, rec devs are
+#' estimated starting in the first year with CAA. With \code{"all"}, rec devs start at the beginning of the model.
+#' @param late_dev Typically, a numeric for the number of most recent years in which recruitment deviations will
+#' not be estimated in \code{SCA3} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).
+#' By default, \code{"comp50"} uses the number of ages (smaller than the mode)
+#' for which the catch-at-age matrix has less than half the abundance than that at the mode.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
