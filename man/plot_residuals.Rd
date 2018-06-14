@@ -5,8 +5,8 @@
 \title{Plot residuals}
 \usage{
 plot_residuals(Year, res, res_sd = NULL, res_sd_CI = 0.95,
-  res_upper = NULL, res_lower = NULL, draw_zero = TRUE,
-  zero_linetype = 2, label = "Residual")
+  res_upper = NULL, res_lower = NULL, res_ind_blue = NULL,
+  draw_zero = TRUE, zero_linetype = 2, label = "Residual")
 }
 \arguments{
 \item{Year}{A vector of years for the data.}
@@ -20,6 +20,8 @@ plot_residuals(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 \item{res_upper}{A vector of year-specific upper bounds for the error bars of the residual (in lieu of argument \code{res_CV}).}
 
 \item{res_lower}{A vector of year-specific lower bounds for the error bars of the residual (in lieu of argument \code{res_CV}).}
+
+\item{res_ind_blue}{Indices of \code{obs} for which the plotted residuals and error bars will be blue.}
 
 \item{draw_zero}{Indicates whether a horizontal line should be drawn at zero.}
 

@@ -5,8 +5,8 @@
 \title{Plot time series of data}
 \usage{
 plot_timeseries(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.95,
-  obs_upper = NULL, obs_lower = NULL, fit_linewidth = 3,
-  fit_color = "red", label = "Observed data")
+  obs_upper = NULL, obs_lower = NULL, obs_ind_blue = NULL,
+  fit_linewidth = 3, fit_color = "red", label = "Observed data")
 }
 \arguments{
 \item{Year}{A vector of years for the data.}
@@ -22,6 +22,8 @@ plot_timeseries(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.95,
 \item{obs_upper}{A vector of year-specific upper bounds for the error bars of the observed data (in lieu of argument \code{obs_CV}).}
 
 \item{obs_lower}{A vector of year-specific lower bounds for the error bars of the observed data (in lieu of argument \code{obs_CV}).}
+
+\item{obs_ind_blue}{Indices of \code{obs} for which the plotted points and error bars will be blue.}
 
 \item{fit_linewidth}{Argument \code{lwd} for fitted line.}
 

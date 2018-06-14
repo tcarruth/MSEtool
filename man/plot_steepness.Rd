@@ -4,12 +4,21 @@
 \alias{plot_steepness}
 \title{Plots probability distribution function of stock-recruit steepness}
 \usage{
-plot_steepness(m, sd)
+plot_steepness(m, sd, is_transform = FALSE, SR = c("BH", "Ricker"),
+  color = "black")
 }
 \arguments{
-\item{m}{The mean of the distribution.}
+\item{m}{The mean of the distribution (vectorized).}
 
-\item{sd}{The standard deviation of the distribution.}
+\item{sd}{The standard deviation of the distribution (vectorized).}
+
+\item{is_transform}{Logical, whether the mean and standard deviation are in normal space
+(FALSE) or transformed space.}
+
+\item{SR}{The stock recruitment relationship (determines the range and, if relevant, transformation of
+steepness).}
+
+\item{color}{A vector of colors.}
 }
 \value{
 A plot of the probability distribution function. Vertical dotted line

@@ -238,40 +238,112 @@ plot_betavar <- function(m, sd, label = NULL, is_logit = FALSE, color = "black")
 #' Plots the probability distribution function of steepness from the
 #' mean and standard deviation.
 #'
-#' @param m The mean of the distribution.
-#' @param sd The standard deviation of the distribution.
+#' @param m The mean of the distribution (vectorized).
+#' @param sd The standard deviation of the distribution (vectorized).
+#' @param is_transform Logical, whether the mean and standard deviation are in normal space
+#' (FALSE) or transformed space.
+#' @param SR The stock recruitment relationship (determines the range and, if relevant, transformation of
+#' steepness).
+#' @param color A vector of colors.
 #' @return A plot of the probability distribution function. Vertical dotted line
 #' indicates mean of distribution.
 #' @note The function samples from a beta distribution with parameters alpha and beta
 #' that are converted from the mean and standard deviation. Then, the distribution is
 #' transformed from 0 - 1 to 0.2 - 1.
 #' @author Q. Huynh
-#' @export plot_steepness
+#' @export
 #' @seealso \code{\link{plot_lognormalvar}} \code{\link{plot_betavar}}
 #' @examples
 #' mu <- DLMtool::Simulation_1@steep
 #' stddev <- DLMtool::Simulation_1@steep * DLMtool::Simulation_1@CV_steep
 #' plot_steepness(mu, stddev)
-plot_steepness <- function(m, sd) {
-  #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
-  #where f is the pdf of distribution, g(y) = 0.8X + 0.2 is the transformation
-  #y is steepness, x is a beta variable
-  m.transformed <- (m - 0.2)/0.8
-  a <- alphaconv(m = m.transformed, sd = sd/0.8)
-  b <- betaconv(m = m.transformed, sd = sd/0.8)
+plot_steepness <- function(m, sd, is_transform = FALSE, SR = c("BH", "Ricker"), color = "black") {
+  SR <- match.arg(SR)
+  ncurve <- length(m)
 
-  support <- seq(0.201, 0.999, 0.001)
-  if(a > 0 && b > 0) dist <- dbeta((support - 0.2)/0.8, a, b) / 0.8
-  else {
-    dist <- rep(1, length(support))
-    warning("Transformation not possible with value of m and sd. Typically, sd is too high given the value of m, resulting in negative beta distribution parameters).")
+  if(SR == "BH") {
+    support <- seq(0.201, 0.999, 0.001)
+    dist <- matrix(NA, nrow = length(support), ncol = ncurve)
+    if(is_transform) {
+      #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
+      #where f is the pdf of distribution, g(y) = 0.2 + 0.8/(1 + exp(-X)) is the transformation
+      #y is steepness, x is a normal variable
+      z <- (support - 0.2)/0.8
+      for(i in 1:ncurve) {
+        dist[, i] <- dnorm(logit(z), m, sd) * (1/z + 1/(1-z)) * 1.25 * support
+      }
+      m <- ilogit(m) * 0.8 + 0.2
+    } else {
+      #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
+      #where f is the pdf of distribution, g(y) = 0.8X + 0.2 is the transformation
+      #y is steepness, x is a beta variable
+      m.transformed <- (m - 0.2)/0.8
+      a <- alphaconv(m = m.transformed, sd = sd/0.8)
+      b <- betaconv(m = m.transformed, sd = sd/0.8)
+
+      for(i in 1:ncurve) {
+        if(a[i] > 0 && b[i] > 0) dist[, i] <- dbeta((support - 0.2)/0.8, a[i], b[i]) / 0.8
+        else {
+          dist[, i] <- dnorm(support, m[i], sd[i])
+          #warning("Transformation not possible with value of m and sd for steepness. Typically, sd is too high given the value of m, resulting in negative beta distribution parameters).")
+        }
+      }
+    }
   }
 
-  plot(support, dist, typ = 'l', xlab = 'Steepness (h)',
-       ylab = 'Probability density function', xlim = c(0.2, 1),
-       ylim = c(0, 1.1 * max(dist, na.rm = TRUE)))
+  if(SR == "Ricker") {
+    if(is_transform) {
+      #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
+      #where f is the pdf of distribution, g(y) = 0.2 + 0.8/(1 + exp(-X)) is the transformation
+      #y is steepness, x is a normal variable
+      support.norm <- seq(min(m - 5*sd, na.rm = TRUE), max(m+5*sd, na.rm = TRUE),
+                          length.out = 1e3)
+      support <- exp(support.norm) + 0.2
+      dist <- matrix(NA, nrow = length(support), ncol = ncurve)
+      for(i in 1:ncurve) dist[, i] <- dnorm(support.norm, m[i], sd[i]) / (support - 0.2)
+
+      dist[is.infinite(dist)] <- NA
+
+      dist.max <- max(dist, na.rm = TRUE)
+      tails <- apply(dist, 1, function(x) all(x < 0.001 * dist.max))
+      tails <- which(!tails)
+      ind.tails <- c(tails[1]:tails[length(tails)])
+
+      support <- support[ind.tails]
+      dist <- as.matrix(dist[ind.tails, ])
+      m <- exp(m) + 0.2
+
+    } else {
+      #f_y(y) = f_x(g-1(y)) * abs(d/dy[g-1(y)])
+      #where f is the pdf of distribution, g(y) = exp(X) + 0.2 is the transformation
+      #y is steepness, x is a lognormal variable
+      mulog <- mconv(m = m - 0.2, sd = sd)
+      sdlog <- sdconv(m = m - 0.2, sd = sd)
+      support <- seq(0.001, max(m + 5*sdlog), length.out = 1e3)
+
+      dist <- matrix(NA, nrow = length(support), ncol = ncurve)
+      for(i in 1:ncurve) dist[, i] <- dlnorm(support, mulog[i], sdlog[i])
+
+      dist[is.infinite(dist)] <- NA
+
+      dist.max <- max(dist, na.rm = TRUE)
+      tails <- apply(dist, 1, function(x) all(x < 0.001 * dist.max))
+      tails <- which(!tails)
+      ind.tails <- c(tails[1]:tails[length(tails)])
+
+      support <- support[ind.tails] + 0.2
+      dist <- as.matrix(dist[ind.tails, ])
+    }
+  }
+
+  plot(support, dist[, 1], typ = 'l', xlab = 'Steepness (h)',
+       ylab = 'Probability density function', xlim = range(pretty(support)),
+       ylim = c(0, 1.1 * max(dist, na.rm = TRUE)), col = color[1])
+  if(ncurve > 1) {
+    for(i in 2:ncurve) lines(support, dist[, i], col = color[i])
+  }
   abline(h = 0, col = 'grey')
-  abline(v = m, lty = 2)
+  abline(v = m, lty = 2, col = color)
 
   invisible()
 }
