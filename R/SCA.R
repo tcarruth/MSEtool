@@ -185,7 +185,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(is.character(common_dev) && common_dev == "comp50") {
     CAA_all <- colSums(CAA_hist, na.rm = TRUE)/max(colSums(CAA_hist, na.rm = TRUE)) #CAA with max = 1
     CAA_mode <- which.max(CAA_all)[1] # Find max
-    comp50_ind <- which(CAA_all[1:CAA_mode] <= 0.5)[1] # Find first age class with abundance <= 0.5
+    comp50_ind <- which(CAA_all[1:CAA_mode] <= 0.5)[1]
+    comp50_ind <- comp50_ind[length(comp50_ind)]
     common_dev <- ifelse(is.na(comp50_ind), 0, comp50_ind)
   }
   map_log_rec_dev <- 1:length(params$log_rec_dev)
