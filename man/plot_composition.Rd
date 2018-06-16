@@ -7,7 +7,7 @@
 plot_composition(Year = 1:nrow(obs), obs, fit = NULL,
   plot_type = c("annual", "bubble_data", "bubble_residuals", "mean"),
   N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs), bubble_adj = 5,
-  fit_linewidth = 3, fit_color = "red", ...)
+  fit_linewidth = 3, fit_color = "red")
 }
 \arguments{
 \item{Year}{A vector of years.}
@@ -35,8 +35,6 @@ and \code{fit}. Ignored for age data.}
 \item{fit_linewidth}{Argument \code{lwd} for fitted line.}
 
 \item{fit_color}{Color of fitted line.}
-
-\item{...}{Other arguments}
 }
 \value{
 Plots depending on \code{plot_type}.
