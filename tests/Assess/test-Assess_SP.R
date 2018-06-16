@@ -22,14 +22,14 @@ test_that("SP assess model", {
 
 
 test_that("SP_SS assess model", {
-  res <- expect_s4_class(SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1)), "Assessment")
+  res <- expect_s4_class(SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1, sigma = 0.1), fix_sigma = TRUE), "Assessment")
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  #pro <- profile_likelihood(res, UMSY = seq(0.001, 0.03, 0.005),
-  #                          MSY = seq(0.1, 2, 0.25) * 1e4, figure = FALSE)
-  #expect_type(pro, "list")
-  #expect_true(is.data.frame(pro))
+  pro <- profile_likelihood(res, UMSY = seq(0.15, 0.2, 0.005),
+                            MSY = seq(1.4, 1.5, 0.01) * 1e4, figure = FALSE)
+  expect_type(pro, "list")
+  expect_true(is.data.frame(pro))
 
   expect_type(retrospective(res, 5, save_figure = FALSE), "list")
 

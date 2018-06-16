@@ -23,7 +23,10 @@ test_that("DD_TMB assess model", {
 })
 
 test_that("DD_SS assess model", {
-  res <- expect_s4_class(DD_SS(Data = Simulation_1), "Assessment")
+  res <- expect_s4_class(DD_SS(Data = SimulatedData), "Assessment")
+  expect_s4_class(DD_SS(Data = SimulatedData, integrate = TRUE), "Assessment")
+  expect_s4_class(DD_SS(Data = SimulatedData, SR = "Ricker"), "Assessment")
+
   expect_s4_class(DD_SS(Data = Simulation_1, integrate = TRUE), "Assessment")
   expect_s4_class(DD_SS(Data = Simulation_1, SR = "Ricker"), "Assessment")
 
