@@ -523,7 +523,8 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' plot_composition(obs = Red_snapper@@CAA[1, , ], plot_type = "bubble_data")
 #'
 #' plot_composition(obs = Red_snapper@@CAL[1, , ], plot_type = "annual", Red_snapper@@CAL_bins[1:43])
-#' plot_composition(obs = Red_snapper@@CAL[1, , ], plot_type = "bubble_data", CAL_bins = Red_snapper@@CAL_bins[1:43])
+#' plot_composition(obs = Red_snapper@@CAL[1, , ], plot_type = "bubble_data",
+#' CAL_bins = Red_snapper@@CAL_bins[1:43])
 #' }
 plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c('annual', 'bubble_data', 'bubble_residuals', 'mean'),
                              N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
