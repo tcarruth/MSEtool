@@ -22,6 +22,9 @@
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Ind}.
 #' @param fix_tau Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
+#' @param early_dev Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
+#' By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
+#' once index data are available (\code{"index"}).
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the biomass deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
@@ -54,6 +57,7 @@
 #' @seealso \link{SP_production}
 #' @describeIn SP Fixed effects model
 #' @examples
+#' \dontrun{
 #' data(swordfish)
 #'
 #' #### Observation-error surplus production model
@@ -65,13 +69,14 @@
 #' res <- SP(Data = swordfish, start = start)
 #'
 #' #### State-space version
-#' res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1))
-#'
+#' res <- SP_SS(Data = swordfish, start = list(dep = 0.95, sigma = 0.1, tau = 0.1),
+#' fix_sigma = TRUE)
+#' }
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
 SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
-               silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), ...) {
+               silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies = "Data@Cat, Data@Ind"
   ystart <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- ystart:length(Data@Cat[x, ])
@@ -165,9 +170,10 @@ class(SP) <- "Assess"
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
 SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = FALSE,
-                  fix_tau = TRUE, integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
-                  inner.control = list(), ...) {
+                  fix_tau = TRUE, early_dev = c("all", "index"), integrate = FALSE, silent = TRUE,
+                  control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
+  early_dev <- match.arg(early_dev)
   yind <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- yind:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
@@ -178,8 +184,12 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   ny <- length(C_hist)
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
+  if(early_dev == "all") est_B_dev <- rep(1, ny)
+  if(early_dev == "index") {
+    est_B_dev <- ifelse(c(1:ny) < which(is.na(I_hist))[1], NA, 1)
+  }
   data <- list(model = "SP_SS", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
-               est_B_dev = as.integer(random_map(I_hist)))
+               est_B_dev = est_B_dev)
 
   params <- list()
   if(!is.null(start)) {
@@ -205,17 +215,22 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) params$log_tau <- log(1)
-  params$log_B_dev = rep(0, ny - 1)
+  params$log_B_dev = rep(0, ny)
 
   map <- list()
   if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n = factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
+  if(any(is.na(est_B_dev))) {
+    nest <- sum(!is.na(est_B_dev))
+    map_log_B_dev <- est_B_dev
+    map_log_B_dev[!is.na(est_B_dev)] <- 1:nest
+    map$log_B_dev <- factor(map_log_B_dev)
+  }
 
   random <- NULL
   if(integrate) random <- "log_B_dev"
-  if(any(is.na(I_hist))) map$log_B_dev <- random_map(I_hist)
 
   info <- list(Year = Year, data = data, params = params, rescale = rescale, control = control,
                inner.control = inner.control)
@@ -241,16 +256,16 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     }
 
     Yearplusone <- c(Year, max(Year) + 1)
-    YearDev <- Year[2]:max(Year)
-
-    Dev <- report$log_B_dev
 
     if(integrate) {
-      SE_Dev <- c(rep(0, sum(Dev == 0)), sqrt(SD$diag.cov.random))
+      SE_Dev <- sqrt(SD$diag.cov.random)
     } else {
-      SE_par <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"])
-      SE_Dev <- c(rep(0, sum(Dev == 0)), SE_par)
+      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"])
     }
+    SE_Dev_out <- est_B_dev
+    SE_Dev_out[is.na(SE_Dev_out)] <- 0
+    SE_Dev_out[!is.na(SE_Dev_out)] <- SE_Dev
+
     Assessment <- new("Assessment", Model = "SP_SS",
                       UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
                       B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
@@ -264,7 +279,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                       Obs_Catch = structure(C_hist, names = Year),
                       Obs_Index = structure(I_hist, names = Year),
                       Index = structure(report$Ipred, names = Year),
-                      Dev = structure(Dev, names = YearDev),
+                      Dev = structure(report$log_B_dev, names = Year),
                       Dev_type = "log-Biomass deviations",
                       NLL = structure(c(opt$objective, report$nll_comp), names = c("Total", "Index", "Dev")),
                       SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
@@ -273,7 +288,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                       SE_B_B0_final = SD$sd[names(SD$value) == "B_K_final"],
                       SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
                       SE_VB_VB0_final = SD$sd[names(SD$value) == "B_K_final"],
-                      SE_Dev = structure(SE_Dev, names = YearDev),
+                      SE_Dev = structure(SE_Dev_out, names = Year),
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   }

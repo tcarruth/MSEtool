@@ -37,13 +37,14 @@
   Type penalty = 0;
 
   B(0) = dep * K;
+  if(!R_IsNA(asDouble(est_B_dev(0)))) B(0) *= exp(log_B_dev(0) - 0.5 * pow(tau, 2));
   for(int y=0;y<ny;y++) {
     U(y) = CppAD::CondExpLt(1 - C_hist(y)/B(y), Type(0.025),
       1 - posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y)/B(y));
     SP(y) = gamma * MSY * (B(y)/K - pow(B(y)/K, n));
     B(y+1) = B(y) + SP(y) - U(y) * B(y);
 	  if(y<ny-1) {
-	    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y+1) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
+	    if(!R_IsNA(asDouble(est_B_dev(y+1)))) B(y+1) *= exp(log_B_dev(y+1) - 0.5 * pow(tau, 2));
 	  }
   }
 
@@ -55,9 +56,7 @@
 
   for(int y=0;y<ny;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= keep(y) * dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
-    if(y<ny-1) {
-      if(!R_IsNA(asDouble(est_B_dev(y)))) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
-    }
+    if(!R_IsNA(asDouble(est_B_dev(y)))) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
   }
 
   Type nll = nll_comp.sum();

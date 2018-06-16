@@ -343,7 +343,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                       map = map, random = Assessment@obj$env$random, DLL = "MSEtool",
                       inner.control = Assessment@info$inner.control, silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
     if(!is.character(opt2)) nll[i] <- opt2$objective
   }
   profile.grid$nll <- nll - Assessment@opt$objective
@@ -391,6 +391,7 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
   Year <- c(Year, max(Year) + 1)
   C_hist <- data$C_hist
   I_hist <- data$I_hist
+  est_B_dev <- data$est_B_dev
   params <- info$params
 
   # Array dimension: Retroyr, Year, ts
@@ -407,18 +408,23 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
     data$ny <- ny_ret
     data$Catch <- C_hist[1:ny_ret]
     data$Index <- I_hist[1:ny_ret]
-    params$log_B_dev <- rep(0, ny_ret - 1)
+    data$est_B_dev <- est_B_dev[1:ny_ret]
+    params$log_B_dev <- rep(0, ny_ret)
 
     map <- obj$env$map
-    if("log_B_dev" %in% names(map)) map$log_B_dev <- map$log_B_dev[1:(length(map$log_B_dev) - i)]
+    if("log_B_dev" %in% names(map)) {
+      new_map <- as.numeric(map$log_B_dev) - i
+      map$log_B_dev <- factor(new_map[new_map > 0])
+    }
 
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, info$control)
-    SD <- get_sdreport(obj2, opt2)
+    mod <- optimize_TMB_model(obj2, info$control)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
-      report <- obj$report(obj$env$last.par.best)
+      report <- obj2$report(obj2$env$last.par.best)
       if(rescale != 1) {
         vars_div <- c("B", "BMSY", "SP", "K", "MSY")
         vars_mult <- NULL
@@ -433,7 +439,7 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
 
       U <- c(report$U, rep(NA, 1 + i))
       U_UMSY <- U/report$UMSY
-      log_B_dev <- c(report$log_B_dev, rep(NA, 2 + i))
+      log_B_dev <- c(report$log_B_dev, rep(NA, 1 + i))
 
       retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, U, U_UMSY, log_B_dev)
       retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
