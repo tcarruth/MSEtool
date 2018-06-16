@@ -389,7 +389,7 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
     params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
 
     if(!is.character(opt2)) {
       nll[i] <- opt2$objective
@@ -480,8 +480,9 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
     data$E_hist <- E_hist_ret
 
     obj2 <- MakeADFun(data = data, parameters = info$params, map = obj$env$map, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, info$control)
-    SD <- get_sdreport(obj2, opt2)
+    mod <- optimize_TMB_model(obj2, info$control)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)

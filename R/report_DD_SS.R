@@ -456,7 +456,7 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
                       map = map, random = random, inner.control = Assessment@info$inner.control,
                       DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
     if(!is.character(opt2)) nll[i] <- opt2$objective
   }
   profile.grid$nll <- nll - Assessment@opt$objective
@@ -524,8 +524,9 @@ retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE,
 
     obj2 <- MakeADFun(data = data, parameters = params, map = obj$env$map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, info$control)
-    SD <- get_sdreport(obj2, opt2)
+    mod <- optimize_TMB_model(obj2, info$control)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
