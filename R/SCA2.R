@@ -1,14 +1,16 @@
 #' @describeIn SCA The parameterization by Forrest et al. (2008) is used where UMSY and MSY are leading parameters.
-#' Recruitment deviations are only estimated beginning in the year when age composition are available.
+#' This model should be functionally equivalent to \code{SCA3}.
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                  CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
-                 start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
-                 silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), inner.control = list(), ...) {
+                 start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
+                 silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = ""
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)
+  early_dev <- match.arg(early_dev)
   yind <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- yind:length(Data@Cat[x, ])
   Year <- Data@Year[yind]
@@ -38,12 +40,44 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
+  if(early_dev == "all") {
+    est_early_rec_dev <- rep(1, max_age-1)
+    est_rec_dev <- rep(1, n_y)
+  }
+  if(early_dev == "comp") {
+    est_early_rec_dev <- rep(NA, max_age-1)
+    ind1 <- which(!is.na(CAA_n_nominal))[1]
+    est_rec_dev <- ifelse(c(1:n_y) < ind1, NA, 1)
+  }
+  if(early_dev == "comp_onegen") {
+    ind1 <- which(!is.na(CAA_n_nominal))[1] - max_age
+    if(ind1 < 0) {
+      early_start <- max_age + ind1
+      est_early_rec_dev <- ifelse(c(1:(max_age-1)) < early_start, NA, 1)
+      est_rec_dev <- rep(1, n_y)
+    } else {
+      est_early_rec_dev <- rep(NA, max_age-1)
+      est_rec_dev <- ifelse(c(1:n_y) < ind1, NA, 1)
+    }
+  }
+  if(is.character(late_dev) && late_dev == "comp50") {
+    CAA_all <- colSums(CAA_hist, na.rm = TRUE)/max(colSums(CAA_hist, na.rm = TRUE))
+    CAA_mode <- which.max(CAA_all)[1]
+    comp50_ind <- which(CAA_all[1:CAA_mode] <= 0.5)
+    comp50_ind <- comp50_ind[length(comp50_ind)]
+    late_dev <- ifelse(is.na(comp50_ind), 0, comp50_ind)
+  }
+  if(is.numeric(late_dev) && late_dev > 0) {
+    ind_late <- (length(est_rec_dev) - late_dev + 1):length(est_rec_dev)
+    est_rec_dev[ind_late] <- NA
+  }
+
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist,
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
-               SR_type = SR, est_rec_dev = as.integer(random_map(CAA_n_nominal)))
+               SR_type = SR, est_early_rec_dev = est_early_rec_dev, est_rec_dev = est_rec_dev)
 
   # Starting values
   params <- list()
@@ -78,7 +112,8 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) params$log_tau <- log(1)
-  params$log_rec_dev <- rep(0, n_y - 1)
+  params$log_early_rec_dev <- rep(0, max_age-1)
+  params$log_rec_dev <- rep(0, n_y)
 
   info <- list(Year = Data@Year, data = data, params = params, LH = LH, control = control,
                inner.control = inner.control, rescale = rescale)
@@ -87,10 +122,22 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
-  if(any(is.na(CAA_n_nominal) | CAA_n_nominal <= 0)) map$log_rec_dev <- random_map(CAA_n_nominal)
+  if(any(is.na(est_early_rec_dev))) {
+    n_est <- sum(!is.na(est_early_rec_dev))
+    if(n_est == 0) map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
+    else {
+      est_early_rec_dev[!is.na(est_early_rec_dev)] <- 1:n_est
+      map$log_early_rec_dev <- factor(est_early_rec_dev)
+    }
+  }
+  if(any(is.na(est_rec_dev))) {
+    n_est <- sum(!is.na(est_rec_dev))
+    est_rec_dev[!is.na(est_rec_dev)] <- 1:n_est
+    map$log_rec_dev <- factor(est_rec_dev)
+  }
 
   random <- NULL
-  if(integrate) random <- "log_rec_dev"
+  if(integrate) random <- c("log_early_rec_dev", "log_rec_dev")
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
@@ -101,7 +148,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   report <- obj$report(obj$env$last.par.best)
 
   if(rescale != 1) {
-    vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
+    vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "R_early", "MSY", "VBMSY",
                   "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
     vars_mult <- "Brec"
     var_trans <- c("MSY", "q")
@@ -117,13 +164,36 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   }
   else {
     Yearplusone <- c(Year, max(Year) + 1)
-    YearDev <- seq(Year[2], max(Year))
+    YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
+    YearDev <- c(YearEarly, Year)
+    YearR <- c(YearDev, max(YearDev) + 1)
+    R <- c(rev(report$R_early), report$R)
 
-    Dev <- report$log_rec_dev
+    Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
+    Dev_out <- structure(Dev, names = YearDev)
+
     if(integrate) {
-      SE_Dev <- c(rep(0, sum(Dev == 0)), sqrt(SD$diag.cov.random))
+      if(!all(is.na(est_early_rec_dev))) SE_Early <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_early_rec_dev"])
+      SE_Main <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_rec_dev"])
     } else {
-      SE_Dev <- c(rep(0, sum(Dev == 0)), sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"]))
+      if(!all(is.na(est_early_rec_dev))) SE_Early <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_early_rec_dev"])
+      SE_Main <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+    }
+
+    SE_Early2 <- est_early_rec_dev
+    if(!all(is.na(est_early_rec_dev))) {
+      SE_Early2[!is.na(SE_Early2)] <- SE_Early
+    }
+    SE_Main2 <- est_rec_dev
+    SE_Main2[!is.na(SE_Main2)] <- SE_Main
+
+    SE_Dev <- structure(c(rev(SE_Early2), SE_Main2), names = YearDev)
+    SE_Dev[is.na(SE_Dev)] <- 0
+
+    first_non_zero <- which(Dev > 0)[1]
+    if(first_non_zero > 1) {
+      Dev_out <- Dev_out[-c(1:(first_non_zero - 1))]
+      SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
     }
 
     Assessment <- new("Assessment", Model = "SCA2", UMSY = report$UMSY,
@@ -141,7 +211,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                       VB = structure(report$VB, names = Yearplusone),
                       VB_VBMSY = structure(report$VB/report$VBMSY, names = Yearplusone),
                       VB_VB0 = structure(report$VB/report$VB0, names = Yearplusone),
-                      R = structure(report$R, names = Yearplusone),
+                      R = structure(R, names = YearR),
                       N = structure(rowSums(report$N), names = Yearplusone),
                       N_at_age = report$N,
                       Selectivity = matrix(report$vul, nrow = length(Year),
@@ -151,7 +221,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                       Obs_C_at_age = CAA_hist,
                       Index = structure(report$Ipred, names = Year),
                       C_at_age = report$CAApred,
-                      Dev = structure(Dev, names = YearDev),
+                      Dev = Dev_out,
                       Dev_type = "log-Recruitment deviations",
                       NLL = structure(c(opt$objective, report$nll_comp),
                                       names = c("Total", "Index", "CAA", "Dev")),
@@ -163,7 +233,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                       SE_SSB_SSB0_final = SD$sd[names(SD$value) == "E_E0_final"],
                       SE_VB_VBMSY_final = SD$sd[names(SD$value) == "VB_VBMSY_final"],
                       SE_VB_VB0_final = SD$sd[names(SD$value) == "VB_VB0_final"],
-                      SE_Dev = structure(SE_Dev, names = YearDev),
+                      SE_Dev = SE_Dev,
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   }

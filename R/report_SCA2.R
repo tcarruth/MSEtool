@@ -28,16 +28,10 @@ summary_SCA2 <- function(Assessment) {
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(derived) <- c("h", "R0", "VB0", "SSB0", "VBMSY", "SSBMSY")
 
-  if(is.null(obj$env$random)) {
-    model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
-    dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_rec_dev", ]
-  } else {
-    model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
-    dev_estimates <- summary(SD, "random")
-  }
-
+  model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
-  rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev)[Dev != 0])
+  dev_estimates <- cbind(Dev, SE_Dev)
+  rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
 
   output <- list(model = "Statistical Catch-at-Age (SCA2)",
                  current_status = current_status, input_parameters = input_parameters,
@@ -153,16 +147,16 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
   ind_valid <- rowSums(Obs_C_at_age, na.rm = TRUE) > 0
   Year2 <- Year[ind_valid]
   Obs_CAA <- Obs_C_at_age[ind_valid, ]
-  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_age_comps_bubble.png"))
-    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
+    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data')
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_age_comps_bubble.png", "Age composition bubble plot."))
   }
 
-  plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
@@ -170,7 +164,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
       if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("data_age_comps_", i, ".png")))
-      plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age', ind = ind)
+      plot_composition(Year2, Obs_CAA, plot_type = 'annual', ind = ind)
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c(paste0("data_age_comps_", i, ".png"), paste0("Annual age compositions (", i, "/", nplots, ")")))
@@ -283,16 +277,16 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
   }
 
   Fit_CAA <- C_at_age[ind_valid, ]
-  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
+  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assess_age_comps_bubble_resids.png"))
-    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
+    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assess_age_comps_bubble_resids.png", "Age composition bubble plot of residuals (black are negative, white are positive)."))
   }
 
-  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
@@ -300,7 +294,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
       if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("assess_age_comps_", i, ".png")))
-      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', data_type = 'age', N = info$data$CAA_n[ind_valid], ind = ind)
+      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', N = info$data$CAA_n[ind_valid], ind = ind)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c(paste0("assess_age_comps_", i, ".png"), paste0("Annual observed (black) and predicted (red) age compositions (",
@@ -308,10 +302,10 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
     }
   }
 
-  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean', data_type = 'age')
+  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_mean_age.png"))
-    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean', data_type = 'age')
+    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_mean_age.png", "Observed (black) and predicted (red) mean age of the composition data."))
@@ -322,7 +316,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
   SSB_plot <- SSB[1:(length(SSB)-1)]
   if(info$data$SR_type == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
   if(info$data$SR_type == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
-  estR <- R[2:length(R)]
+  estR <- R[as.numeric(names(R)) > Year[1]]
 
   plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
   if(save_figure) {
@@ -384,32 +378,41 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                  c("assessment_SSB_SSB0.png", "Time series of spawning stock biomass depletion."))
   }
 
-  plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
+  plot_timeseries(as.numeric(names(R)), R, obs_ind_blue = as.numeric(names(R)) < Year[1], label = "Recruitment")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_recruitment.png"))
-    plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
+    plot_timeseries(as.numeric(names(R)), R, obs_ind_blue = as.numeric(names(R)) < Year[1], label = "Recruitment")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_recruitment.png", "Time series of recruitment."))
+                                 c("assessment_recruitment.png", "Time series of recruitment (recruitment prior to the first year of the model in blue)."))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, label = Dev_type)
+  if(as.numeric(names(Dev))[1] < Year[1]) {
+    obs_ind_blue <- as.numeric(names(Dev)) < Year[1]
+    msg <- c("Time series of recruitment deviations  (deviations prior to the first year of the model in blue).",
+             "Time series of recruitment deviations with 95% confidence intervals (deviations prior to the first year of the model in blue).")
+
+  } else {
+    obs_ind_blue <- NULL
+    msg <- c("Time series of recruitment deviations.",
+             "Time series of recruitment deviations with 95% confidence intervals.")
+  }
+  plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs.png"))
-    plot_residuals(as.numeric(names(Dev)), Dev, label = Dev_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_rec_devs.png", "Time series of recruitment deviations from mean recruitment."))
+                                 c("assessment_rec_devs.png", msg[1]))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
+  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs_with_CI.png"))
-    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_rec_devs_with_CI.png", "Time series of recruitment deviations (from mean recruitment)
-                                   with 95% confidence intervals."))
+                                 c("assessment_rec_devs_with_CI.png", msg[2]))
   }
 
   plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
@@ -507,7 +510,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
     obj <- MakeADFun(data = Assessment@info$data, parameters = params,
                      map = map, random = random, inner.control = Assessment@info$inner.control,
                      DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj, Assessment@info$control)
+    opt <- optimize_TMB_model(obj, Assessment@info$control)[[1]]
     if(!is.character(opt)) nll[i] <- opt$objective
   }
   profile.grid$nll <- nll - Assessment@opt$objective
@@ -541,8 +544,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
 
 
 #' @importFrom gplots rich.colors
-retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE,
-                              save_figure = FALSE, save_dir = getwd()) {
+retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = getwd()) {
   assign_Assessment_slots()
   data <- info$data
   n_y <- data$n_y
@@ -552,14 +554,13 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE,
   I_hist <- data$I_hist
   CAA_hist <- data$CAA_hist
   CAA_n <- data$CAA_n
+  est_rec_dev <- data$est_rec_dev
   params <- info$params
-
-  map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, U, U_UMSY, log_rec_dev
   retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 9))
-  SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
+  SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
 
   SD <- NULL
@@ -572,17 +573,25 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE,
     data$I_hist <- I_hist[1:n_y_ret]
     data$CAA_hist <- CAA_hist[1:n_y_ret, ]
     data$CAA_n <- CAA_n[1:n_y_ret]
-    params$log_rec_dev <- rep(0, n_y_ret - 1)
+    data$est_rec_dev <- est_rec_dev[1:n_y_ret]
+    params$log_rec_dev <- rep(0, n_y_ret)
+
+    map <- obj$env$map
+    if(any(names(map) == "log_rec_dev")) {
+      new_map <- as.numeric(map$log_rec_dev) - i
+      map$log_rec_dev <- factor(new_map[new_map > 0])
+    }
 
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, info$control)
-    SD <- get_sdreport(obj2, opt2)
+    mod <- optimize_TMB_model(obj2, info$control)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
       if(info$rescale != 1) {
-        vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "MSY", "VBMSY",
+        vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "R_early", "MSY", "VBMSY",
                       "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
         vars_mult <- "Brec"
         var_trans <- c("MSY", "q")
@@ -598,10 +607,10 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE,
       N <- c(rowSums(report$N), rep(NA, i))
       U <- c(report$U, rep(NA, i + 1))
       U_UMSY <- U/report$UMSY
-      log_rec_dev <- c(NA, report$log_rec_dev, rep(NA, i + 1))
+      log_rec_dev <- c(report$log_rec_dev, rep(NA, i + 1))
 
       retro_ts[i+1, , ] <- cbind(Year, SSB, SSB_SSBMSY, SSB_SSB0, R, N, U, U_UMSY, log_rec_dev)
-      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
+      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
 
     } else {
       message(paste("Non-convergence when", i, "years of data were removed."))

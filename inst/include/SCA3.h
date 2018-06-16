@@ -178,9 +178,7 @@
       loglike_CAApred(a) = CAApred(y,a)/CN(y);
     }
     if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
-    if(y>0) {
-      if(!R_IsNA(asDouble(est_rec_dev(y-1)))) nll_comp(2) -= dnorm(log_rec_dev(y-1), Type(0), tau, true);
-    }
+	if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
     if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);

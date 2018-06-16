@@ -149,16 +149,16 @@ generate_plots_SCA3 <- function(Assessment, save_figure = FALSE, save_dir = getw
   ind_valid <- rowSums(Obs_C_at_age, na.rm = TRUE) > 0
   Year2 <- Year[ind_valid]
   Obs_CAA <- Obs_C_at_age[ind_valid, ]
-  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_age_comps_bubble.png"))
-    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
+    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data')
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_age_comps_bubble.png", "Age composition bubble plot."))
   }
 
-  plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
@@ -166,7 +166,7 @@ generate_plots_SCA3 <- function(Assessment, save_figure = FALSE, save_dir = getw
       if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("data_age_comps_", i, ".png")))
-      plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age', ind = ind)
+      plot_composition(Year2, Obs_CAA, plot_type = 'annual', ind = ind)
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c(paste0("data_age_comps_", i, ".png"), paste0("Annual age compositions (", i, "/", nplots, ")")))
@@ -242,16 +242,16 @@ generate_plots_SCA3 <- function(Assessment, save_figure = FALSE, save_dir = getw
 
 
   Fit_CAA <- C_at_age[ind_valid, ]
-  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
+  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assess_age_comps_bubble_resids.png"))
-    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
+    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                c("assess_age_comps_bubble_resids.png", "Age composition bubble plot of residuals (black are negative, white are positive)."))
   }
 
-  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
@@ -259,7 +259,7 @@ generate_plots_SCA3 <- function(Assessment, save_figure = FALSE, save_dir = getw
       if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("assess_age_comps_", i, ".png")))
-      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', data_type = 'age', N = info$data$CAA_n[ind_valid], ind = ind)
+      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', N = info$data$CAA_n[ind_valid], ind = ind)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c(paste0("assess_age_comps_", i, ".png"), paste0("Annual observed (black) and predicted (red) age compositions (",
@@ -267,10 +267,10 @@ generate_plots_SCA3 <- function(Assessment, save_figure = FALSE, save_dir = getw
     }
   }
 
-  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean', data_type = 'age')
+  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_mean_age.png"))
-    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean', data_type = 'age')
+    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_mean_age.png", "Observed (black) and predicted (red) mean age of the composition data."))

@@ -4,7 +4,7 @@ SCA3 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                  CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                  early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
-                 silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), inner.control = list(), ...) {
+                 silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = ""
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)

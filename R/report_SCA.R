@@ -148,16 +148,16 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
   ind_valid <- rowSums(Obs_C_at_age, na.rm = TRUE) > 0
   Year2 <- Year[ind_valid]
   Obs_CAA <- Obs_C_at_age[ind_valid, ]
-  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_age_comps_bubble.png"))
-    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data', data_type = 'age')
+    plot_composition(Year2, Obs_CAA, plot_type = 'bubble_data')
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_age_comps_bubble.png", "Age composition bubble plot."))
   }
 
-  plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
@@ -165,7 +165,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
       if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("data_age_comps_", i, ".png")))
-      plot_composition(Year2, Obs_CAA, plot_type = 'annual', data_type = 'age', ind = ind)
+      plot_composition(Year2, Obs_CAA, plot_type = 'annual', ind = ind)
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c(paste0("data_age_comps_", i, ".png"), paste0("Annual age compositions (", i, "/", nplots, ")")))
@@ -217,16 +217,16 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
 
 
   Fit_CAA <- C_at_age[ind_valid, ]
-  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
+  plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assess_age_comps_bubble_resids.png"))
-    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', data_type = 'age', bubble_adj = 35)
+    plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                c("assess_age_comps_bubble_resids.png", "Age composition bubble plot of residuals (black are negative, white are positive)."))
   }
 
-  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual', data_type = 'age')
+  plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year2)/16)
     for(i in 1:nplots) {
@@ -234,7 +234,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
       if(i == nplots) ind <- (16*(i-1)+1):length(Year2)
 
       create_png(filename = file.path(plot.dir, paste0("assess_age_comps_", i, ".png")))
-      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', data_type = 'age', N = info$data$CAA_n[ind_valid], ind = ind)
+      plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'annual', N = info$data$CAA_n[ind_valid], ind = ind)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c(paste0("assess_age_comps_", i, ".png"), paste0("Annual observed (black) and predicted (red) age compositions (",
@@ -242,10 +242,10 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
     }
   }
 
-  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean', data_type = 'age')
+  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_mean_age.png"))
-    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean', data_type = 'age')
+    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_mean_age.png", "Observed (black) and predicted (red) mean age of the composition data."))
@@ -427,38 +427,36 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
   if(!"meanR" %in% names(dots)) stop("Sequence of meanR was not found. See help file.")
   meanR <- dots$meanR
 
-  nll <- UMSY <- MSY <- rep(NA, length(meanR))
+  nll <- rep(NA, length(meanR))
+  # MSY <- UMSY <- nll
   params <- Assessment@info$params
   random <- Assessment@obj$env$random
   map <- Assessment@obj$env$map
   map$log_meanR <- factor(NA)
   for(i in 1:length(meanR)) {
     params$log_meanR <- log(meanR[i] * Assessment@info$rescale)
-    obj <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = map, random = random, inner.control = Assessment@info$inner.control,
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj, Assessment@info$control)
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
+                      map = map, random = random, inner.control = Assessment@info$inner.control,
+                      DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
 
-    if(!is.character(opt)) {
-      report <- obj$report(obj$env$last.par.best)
-      if(is.na(map$U_equilibrium) && params$U_equilibrium == 0) {
-        SSB0 <- report$E[1]
-        R0 <- report$R[1]
-      } else SSB0 <- R0 <- NULL
-      refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
-                         SSB0 = SSB0, R0 = R0, M = obj$env$data$M, weight = obj$env$data$weight,
-                         mat = obj$env$data$mat, vul = report$vul, SR = Assessment@info$SR)
-      report <- c(report, refpt)
-      nll[i] <- opt$objective
-      UMSY[i]  <- report$UMSY
-      MSY[i] <- report$MSY
+    if(!is.character(opt2)) {
+      #report <- obj$report(obj$env$last.par.best)
+      #refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
+      #                    SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = obj$env$data$weight,
+      #                    mat = obj$env$data$mat, M = obj$env$data$M, vul = report$vul, SR = Assessment@info$SR,
+      #                    fix_h = fix_h, h = info$h)
+      #report <- c(report, refpt)
+      nll[i] <- opt2$objective
+      #UMSY[i]  <- report$UMSY
+      #MSY[i] <- report$MSY
     }
   }
-  profile.grid <- data.frame(meanR = meanR, UMSY = UMSY, MSY = MSY/Assessment@info$rescale,
+  profile.grid <- data.frame(meanR = meanR, #UMSY = UMSY, MSY = MSY/Assessment@info$rescale,
                              nll = nll - Assessment@opt$objective)
   if(figure) {
     plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
-    abline(v = Assessment@SD$value[1], lty = 2)
+    abline(v = names(Assessment@SD$value) == "meanR", lty = 2)
 
     if(save_figure) {
       Model <- Assessment@Model
@@ -466,7 +464,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
       plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
-      abline(v = Assessment@SD$value[1], lty = 2)
+      abline(v = names(Assessment@SD$value) == "meanR", lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
                                 "Profile likelihood of mean recruitment. Vertical, dashed line indicates maximum likelihood estimate.")
@@ -497,11 +495,12 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
   # Array dimension: Retroyr, Year, ts
   # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, U, U_UMSY, log_rec_dev
   retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 9))
-  SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
+  SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
 
   SD <- NULL
   rescale <- info$rescale
+  fix_h <- ifelse(is.na(info$h), FALSE, TRUE)
 
   for(i in 0:nyr) {
     n_y_ret <- n_y - i
@@ -518,19 +517,15 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
 
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, info$control)
-    SD <- get_sdreport(obj2, opt2)
+    mod <- optimize_TMB_model(obj2, info$control)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
-      if ("U_equilibrium" %in% names(map) && params$U_equilibrium == 0) {
-        SSB0 <- report$E[1]
-        R0 <- report$R[1]
-      }
-      else SSB0 <- R0 <- NULL
-      refpt <- get_refpt(SSB = report$E[1:(length(report$E)-1)], rec = report$R[2:length(report$R)], SSB0 = SSB0,
-                         R0 = R0, M = data$M, weight = data$weight, mat = data$mat, vul = report$vul,
-                         SR = info$SR)
+      refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
+                          SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = data$weight, mat = data$mat,
+                          M = data$M, vul = report$vul, SR = info$SR, fix_h = fix_h, h = info$h)
       report <- c(report, refpt)
       if(info$rescale != 1) {
         vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB",
@@ -553,7 +548,7 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
       log_rec_dev <- c(report$log_rec_dev, rep(NA, i + 1))
 
       retro_ts[i+1, , ] <- cbind(Year, SSB, SSB_SSBMSY, SSB_SSB0, R, N, U, U_UMSY, log_rec_dev)
-      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
+      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
 
     } else {
       message(paste("Non-convergence when", i, "years of data were removed."))
@@ -583,7 +578,7 @@ plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
   }
 
   for(i in 1:n_tsplots) {
-    y.max <- max(retro_ts[, , i+1], na.rm = TRUE)
+    y.max <- max(abs(retro_ts[, , i+1]), na.rm = TRUE)
     if(i < n_tsplots) {
       ylim <- c(0, 1.1 * y.max)
     } else ylim <- c(-y.max, y.max)

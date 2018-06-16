@@ -30,11 +30,11 @@
 #' be estimated (in \code{SCA}, uninformative years will have a recruitment closer to the mean, which can be very misleading,
 #' especially near the end of the time series). By default, \code{"comp50"} uses the number of ages (smaller than the mode)
 #' for which the catch-at-age matrix has less than half the abundance than that at the mode.
-#' @param early_dev Character string describing the years for which recruitment deviations are estimated in \code{SCA3}. By default, \code{"comp_onegen"}
+#' @param early_dev Character string describing the years for which recruitment deviations are estimated in \code{SCA2} and \code{SCA3}. By default, \code{"comp_onegen"}
 #' rec devs are estimated one full generation prior to the first year when catch-at-age (CAA) data are available. With \code{"comp"}, rec devs are
 #' estimated starting in the first year with CAA. With \code{"all"}, rec devs start at the beginning of the model.
 #' @param late_dev Typically, a numeric for the number of most recent years in which recruitment deviations will
-#' not be estimated in \code{SCA3} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).
+#' not be estimated in \code{SCA2} and \code{SCA3} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).
 #' By default, \code{"comp50"} uses the number of ages (smaller than the mode)
 #' for which the catch-at-age matrix has less than half the abundance than that at the mode.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
@@ -100,17 +100,18 @@
 #' age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
 #' Science 65:286-296.
 #' @describeIn SCA The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
-#' (as penalized parameters similar to Cadigan 2016). This generally runs quickly. MSY reference points are estimated after the
+#' (as penalized parameters similar to Cadigan 2016). This generally runs quickly. Virgin and MSY reference points are estimated after the
 #' assessment run.
 #' @examples
+#' \dontrun{
 #' res <- SCA(Data = DLMtool::SimulatedData)
-#'
-#' res <- SCA2(Data = DLMtool::Simulation_1)
+#' res2 <- SCA2(Data = DLMtool::Simulation_1)
+#' }
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                 start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-                common_dev = "comp50", integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
+                common_dev = "comp50", integrate = FALSE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4),
                 inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CAA, Data@Mort, Data@wla, Data@wlb, Data@vbLinf, Data@vbK, Data@vbt0, Data@L50, Data@L95, Data@MaxAge"
   vulnerability <- match.arg(vulnerability)
@@ -218,10 +219,10 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                       obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   } else {
-    h <- ifelse(fix_h, Data@steep[x], NA)
+    info$h <- ifelse(fix_h, Data@steep[x], NA)
     refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
                         SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = Wa,
-                        mat = mat_age, M = M, vul = report$vul, SR = SR, fix_h = fix_h, h = h)
+                        mat = mat_age, M = M, vul = report$vul, SR = SR, fix_h = fix_h, h = info$h)
     #refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
     #                   SSB0 = SSB0, R0 = R0, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
     report <- c(report, refpt)
@@ -397,20 +398,19 @@ get_MSY <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
 
 get_refpt2 <- function(SSB, rec, SSBPR0, NPR0, weight, mat, M, vul, SR, fix_h, h) {
   maxage <- length(M)
-  SSB0 <- recpred <- NULL
+  SSB0 <- recpred <- sigmaR <- NULL
 
   solve_SR_par <- function(x, h = NULL) {
     R0 <- exp(x[1])
     SSB0 <<- R0 * SSBPR0
     if(!fix_h) {
-      transformed_h <- x[2]
-      if(SR == "BH") h <- 0.2 + 0.8 * ilogit(transformed_h)
-      if(SR == "Ricker") h <- 0.2 + exp(transformed_h)
+      if(SR == "BH") h <- 0.2 + 0.8 * ilogit(x[2])
+      if(SR == "Ricker") h <- 0.2 + exp(x[2])
     }
 
-    if(SR == "BH") recpred <<- ((0.8 * R0 * h * SSB)/(0.2 * SSBPR0 * R0*(1-h)+(h-0.2)*SSB))
+    if(SR == "BH") recpred <<- (0.8 * R0 * h * SSB)/(0.2 * SSBPR0 * R0 *(1-h)+(h-0.2)*SSB)
     if(SR == "Ricker") recpred <<- SSB/SSBPR0 * (5*h)^(1.25 * (1 - SSB/SSB0))
-    sigmaR <- sqrt(sum((log(rec/recpred))^2)/length(recpred))
+    sigmaR <<- sqrt(sum((log(rec/recpred))^2)/length(recpred))
     nLL <- -sum(dnorm(log(rec/recpred), 0, sigmaR, log = TRUE))
     return(nLL)
   }
