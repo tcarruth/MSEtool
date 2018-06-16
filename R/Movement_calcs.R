@@ -15,13 +15,14 @@
 #' The \code{mov} array is of dimension \code{nsim}, \code{maxage}, \code{nareas}, \code{nareas}.
 #' @note Although, the \code{mov} is age-specific, but the movement is independent of age.
 #' @author T. Carruthers
-#' @export simmov
+#' @export
 #' @import TMB
 #' @useDynLib MSEtool
 #' @examples
+#' \dontrun{
 #' movOM_5areas<-simmov(testOM,dist=c(0.01,0.1,0.2,0.3,0.39),prob=c(0.1,0.6,0.6,0.7,0.9))
 #' movOM_5areas@cpars$mov[1,1,,] # sim 1, age 1, movement from areas to areas
-#'
+#' }
 simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=NA,figure=TRUE){
 
   nareas<-length(dist)
@@ -81,7 +82,9 @@ simmov<-function(OM,dist=c(0.1,0.2,0.3,0.4),prob=0.5,distE=0.1,probE=0.1,prob2=N
 #' @useDynLib MSEtool
 #' @seealso \link{simmov}
 #' @examples
+#' \dontrun{
 #' makemov(fracs=c(0.1,0.5,0.2,0.2),prob=c(0.9,0.5,0.3,0.8))
+#' }
 makemov<-function(fracs=c(0.1,0.2,0.3,0.4),prob=c(0.5,0.8,0.9,0.95)){
 
   nareas<-length(fracs)

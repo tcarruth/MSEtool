@@ -54,6 +54,7 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @examples
+#' \dontrun{
 #' #### Observation-error delay difference model
 #' res <- DD_TMB(Data = sim_snapper)
 #'
@@ -64,7 +65,6 @@
 #'
 #' summary(res@@SD) # Look at parameter estimates
 #'
-#' \dontrun{
 #' ### State-space version
 #' res <- DD_SS(Data = sim_snapper)
 #'
@@ -74,7 +74,7 @@
 #' @useDynLib MSEtool
 #' @export
 DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                   fix_U_equilibrium = TRUE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6), ...) {
+                   fix_U_equilibrium = TRUE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -191,7 +191,7 @@ class(DD_TMB) <- "Assess"
 #' @export
 DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
                   fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-                  integrate = FALSE, silent = TRUE, control = list(iter.max = 1e6, eval.max = 1e6),
+                  integrate = FALSE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4),
                   inner.control = list(), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"

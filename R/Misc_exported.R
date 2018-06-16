@@ -9,9 +9,11 @@
 #' @param classy A class of object (character string, e.g. 'Fleet')
 #' @author Q. Huynh
 #' @examples
+#' \dontrun{
 #' avail("Assess")
 #' avail("HCR")
 #' avail("Stock")
+#' }
 #' @export
 avail <- function(classy) {
   temp <- try(class(classy), silent = TRUE)

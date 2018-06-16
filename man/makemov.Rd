@@ -16,7 +16,9 @@ A function for calculating a movement matrix from user specified unfished stock 
 Used by \link{simmov} to generate movement matrices for a DLMtool operating model.
 }
 \examples{
+\dontrun{
 makemov(fracs=c(0.1,0.5,0.2,0.2),prob=c(0.9,0.5,0.3,0.8))
+}
 }
 \seealso{
 \link{simmov}

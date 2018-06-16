@@ -131,10 +131,12 @@ for the assessment.}
 }}
 
 \examples{
+\dontrun{
 data(sim_snapper)
 output <- DD_TMB(1, sim_snapper)
 class(output)
 str(output)
+}
 }
 \author{
 Q. Huynh

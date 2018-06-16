@@ -7,13 +7,13 @@
 \usage{
 DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_U_equilibrium = TRUE, silent = TRUE,
-  control = list(iter.max = 1e+06, eval.max = 1e+06), ...)
+  control = list(iter.max = 5000, eval.max = 10000), ...)
 
 DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
   fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(iter.max = 1e+06, eval.max = 1e+06),
-  inner.control = list(), ...)
+  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
+  ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -86,6 +86,7 @@ Unsurprisingly the extent to which these assumptions are
 violated tends to be the biggest driver of performance for this method.
 }
 \examples{
+\dontrun{
 #### Observation-error delay difference model
 res <- DD_TMB(Data = sim_snapper)
 
@@ -96,7 +97,6 @@ res <- DD_TMB(Data = sim_snapper, start = start)
 
 summary(res@SD) # Look at parameter estimates
 
-\dontrun{
 ### State-space version
 res <- DD_SS(Data = sim_snapper)
 

@@ -25,10 +25,11 @@ class \code{HCR} to create a management procedure (MP). The resulting function
 can then be tested in closed-loop simulation via \code{\link[DLMtool]{runMSE}}.
 }
 \examples{
+\dontrun{
 # A delay-difference model with a 40-10 control rule
 DD_40_10 <- make_MP(DD_TMB, HCR40_10)
 
-\dontrun{
+
 DD_40_10 <- make_MP(DD_TMB, HCR40_10, diagnostic = TRUE)
 myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
 

@@ -11,23 +11,24 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   rescale = "mean1", start = NULL, fix_h = FALSE,
   fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
   common_dev = "comp50", integrate = FALSE, silent = TRUE,
-  control = list(iter.max = 1e+06, eval.max = 1e+06),
-  inner.control = list(), ...)
+  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
+  ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
   rescale = "mean1", start = NULL, fix_U_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  control = list(iter.max = 1e+06, eval.max = 1e+06),
-  inner.control = list(), ...)
+  fix_sigma = FALSE, fix_tau = TRUE, early_dev = c("comp_onegen", "comp",
+  "all"), late_dev = "comp50", integrate = FALSE, silent = TRUE,
+  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
+  ...)
 
 SCA3(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
   rescale = "mean1", start = NULL, fix_h = FALSE,
   fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
   early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50",
-  integrate = FALSE, silent = TRUE, control = list(iter.max = 1e+06,
-  eval.max = 1e+06), inner.control = list(), ...)
+  integrate = FALSE, silent = TRUE, control = list(iter.max = 5000,
+  eval.max = 10000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}
@@ -82,12 +83,12 @@ is passed on to \code{\link[TMB]{newton}}.}
 
 \item{...}{Other arguments to be passed.}
 
-\item{early_dev}{Character string describing the years for which recruitment deviations are estimated in \code{SCA3}. By default, \code{"comp_onegen"}
+\item{early_dev}{Character string describing the years for which recruitment deviations are estimated in \code{SCA2} and \code{SCA3}. By default, \code{"comp_onegen"}
 rec devs are estimated one full generation prior to the first year when catch-at-age (CAA) data are available. With \code{"comp"}, rec devs are
 estimated starting in the first year with CAA. With \code{"all"}, rec devs start at the beginning of the model.}
 
 \item{late_dev}{Typically, a numeric for the number of most recent years in which recruitment deviations will
-not be estimated in \code{SCA3} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).
+not be estimated in \code{SCA2} and \code{SCA3} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).
 By default, \code{"comp50"} uses the number of ages (smaller than the mode)
 for which the catch-at-age matrix has less than half the abundance than that at the mode.}
 }
@@ -147,19 +148,20 @@ For \code{start}, a named list of starting values of estimates for:
 \section{Functions}{
 \itemize{
 \item \code{SCA}: The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
-(as penalized parameters similar to Cadigan 2016). This generally runs quickly. MSY reference points are estimated after the
+(as penalized parameters similar to Cadigan 2016). This generally runs quickly. Virgin and MSY reference points are estimated after the
 assessment run.
 
 \item \code{SCA2}: The parameterization by Forrest et al. (2008) is used where UMSY and MSY are leading parameters.
-Recruitment deviations are only estimated beginning in the year when age composition are available.
+This model should be functionally equivalent to \code{SCA3}.
 
 \item \code{SCA3}: The parameterization with R0 and steepness as leading parameters.
 }}
 
 \examples{
+\dontrun{
 res <- SCA(Data = DLMtool::SimulatedData)
-
-res <- SCA2(Data = DLMtool::Simulation_1)
+res2 <- SCA2(Data = DLMtool::Simulation_1)
+}
 }
 \references{
 Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and

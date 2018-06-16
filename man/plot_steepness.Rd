@@ -34,9 +34,11 @@ that are converted from the mean and standard deviation. Then, the distribution 
 transformed from 0 - 1 to 0.2 - 1.
 }
 \examples{
+\dontrun{
 mu <- DLMtool::Simulation_1@steep
 stddev <- DLMtool::Simulation_1@steep * DLMtool::Simulation_1@CV_steep
 plot_steepness(mu, stddev)
+}
 }
 \seealso{
 \code{\link{plot_lognormalvar}} \code{\link{plot_betavar}}

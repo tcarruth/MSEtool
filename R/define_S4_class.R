@@ -79,10 +79,12 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot dependencies A character string of data types used for the assessment.
 #' @slot Data An object of class \linkS4class{Data} that was used to perform the assessment.
 #' @examples
+#' \dontrun{
 #' data(sim_snapper)
 #' output <- DD_TMB(1, sim_snapper)
 #' class(output)
 #' str(output)
+#' }
 #' @author Q. Huynh
 #' @export
 #' @exportClass Assessment
@@ -113,8 +115,10 @@ Assessment <- setClass("Assessment",
 #' @param object An object of class \linkS4class{Assessment}
 #' @return A list of parameters
 #' @examples
+#' \dontrun{
 #' output <- DD_TMB(Data = DLMtool::Simulation_1)
 #' summary(output)
+#' }
 #' @exportMethod summary
 setMethod("summary", signature(object = "Assessment"), function(object) {
   if(is.character(object@opt) || is.character(object@SD)) warning("Did model converge? Check slots obj, opt, and SD.")

@@ -17,6 +17,8 @@ A list of parameters
 Summary of Assessment object
 }
 \examples{
+\dontrun{
 output <- DD_TMB(Data = DLMtool::Simulation_1)
 summary(output)
+}
 }

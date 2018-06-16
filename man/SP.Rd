@@ -6,13 +6,13 @@
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, silent = TRUE, control = list(iter.max = 1e+06, eval.max =
-  1e+06), ...)
+  fix_n = TRUE, silent = TRUE, control = list(iter.max = 5000, eval.max =
+  10000), ...)
 
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
-  silent = TRUE, control = list(iter.max = 1e+06, eval.max = 1e+06),
-  inner.control = list(), ...)
+  fix_n = TRUE, fix_sigma = FALSE, fix_tau = TRUE, early_dev = c("all",
+  "index"), integrate = FALSE, silent = TRUE, control = list(iter.max =
+  5000, eval.max = 10000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -47,6 +47,10 @@ sigma is fixed to value provided in \code{start} (if provided), otherwise, value
 
 \item{fix_tau}{Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
+
+\item{early_dev}{Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
+By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
+once index data are available (\code{"index"}).}
 
 \item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
 of the biomass deviations (thus, treating it as a state-space variable).}
@@ -85,6 +89,7 @@ leading parameters. The default conditions assume virgin conditions in the first
 and a symmetric production function.
 }
 \examples{
+\dontrun{
 data(swordfish)
 
 #### Observation-error surplus production model
@@ -96,8 +101,9 @@ start <- list(UMSY = 0.1, MSY = 1e5, dep = 0.95, n = 2)
 res <- SP(Data = swordfish, start = start)
 
 #### State-space version
-res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.1))
-
+res <- SP_SS(Data = swordfish, start = list(dep = 0.95, sigma = 0.1, tau = 0.1),
+fix_sigma = TRUE)
+}
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system.

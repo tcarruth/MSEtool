@@ -29,6 +29,7 @@ Plots the probability distribution function of a lognormal variable from the
 mean and standard deviation in either transformed (normal) or untransformed space.
 }
 \examples{
+\dontrun{
 mu <- 0.5
 stddev <- 0.1
 plot_lognormalvar(mu, stddev) # mean of plot should be 0.5
@@ -37,6 +38,7 @@ plot_lognormalvar(mu, stddev) # mean of plot should be 0.5
 mu <- 0
 stddev <- 0.1
 plot_lognormalvar(mu, stddev, logtransform = TRUE) # mean of plot should be 1
+}
 }
 \seealso{
 \code{\link{plot_betavar}} \code{\link{plot_steepness}}

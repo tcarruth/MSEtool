@@ -18,9 +18,11 @@ MSEtool and DLMtool packages. This function is an addendum to the \code{\link[DL
 function in DLMtool.
 }
 \examples{
+\dontrun{
 avail("Assess")
 avail("HCR")
 avail("Stock")
+}
 }
 \author{
 Q. Huynh

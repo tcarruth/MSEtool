@@ -34,9 +34,10 @@ Calculates a movement matrix from user-specified unfished stock biomass fraction
 Although, the \code{mov} is age-specific, but the movement is independent of age.
 }
 \examples{
+\dontrun{
 movOM_5areas<-simmov(testOM,dist=c(0.01,0.1,0.2,0.3,0.39),prob=c(0.1,0.6,0.6,0.7,0.9))
 movOM_5areas@cpars$mov[1,1,,] # sim 1, age 1, movement from areas to areas
-
+}
 }
 \author{
 T. Carruthers

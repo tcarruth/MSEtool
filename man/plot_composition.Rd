@@ -4,10 +4,10 @@
 \alias{plot_composition}
 \title{Plot composition data}
 \usage{
-plot_composition(Year, obs, fit = NULL, plot_type = c("annual",
-  "bubble_data", "bubble_residuals", "mean"), data_type = c(NULL, "length",
-  "age"), N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
-  bubble_adj = 5, fit_linewidth = 3, fit_color = "red")
+plot_composition(Year = 1:nrow(obs), obs, fit = NULL,
+  plot_type = c("annual", "bubble_data", "bubble_residuals", "mean"),
+  N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs), bubble_adj = 5,
+  fit_linewidth = 3, fit_color = "red", ...)
 }
 \arguments{
 \item{Year}{A vector of years.}
@@ -22,8 +22,6 @@ Same dimensions as obs.}
 \item{plot_type}{Indicates which plots to create. Options include annual distributions,
 bubble plot of the data, and bubble plot of the residuals, and annual means.}
 
-\item{data_type}{Indicates whether length or age data are being used.}
-
 \item{N}{Annual sample sizes. Vector of length \code{nrow(obs)}.}
 
 \item{CAL_bins}{A vector of lengths corresponding to the columns in \code{obs}.
@@ -37,12 +35,24 @@ and \code{fit}. Ignored for age data.}
 \item{fit_linewidth}{Argument \code{lwd} for fitted line.}
 
 \item{fit_color}{Color of fitted line.}
+
+\item{...}{Other arguments}
 }
 \value{
 Plots depending on \code{plot_type}.
 }
 \description{
 Plots annual length or age composition data.
+}
+\examples{
+\dontrun{
+data(Red_snapper)
+plot_composition(obs = Red_snapper@CAA[1, , ], plot_type = "annual")
+plot_composition(obs = Red_snapper@CAA[1, , ], plot_type = "bubble_data")
+
+plot_composition(obs = Red_snapper@CAL[1, , ], plot_type = "annual", Red_snapper@CAL_bins[1:43])
+plot_composition(obs = Red_snapper@CAL[1, , ], plot_type = "bubble_data", CAL_bins = Red_snapper@CAL_bins[1:43])
+}
 }
 \author{
 Q. Huynh
