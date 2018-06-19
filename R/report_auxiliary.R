@@ -566,7 +566,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   if('annual' %in% plot_type) {
 
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
-    ylim <- c(0, 1.1 * max(obs_prob, fit_prob))
+    ylim <- c(0, 1.1 * max(obs_prob, fit_prob, na.rm = TRUE))
     yaxp <- c(0, 1, 4)
     las <- 1
     type <- 'o'

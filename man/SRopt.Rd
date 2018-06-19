@@ -4,7 +4,7 @@
 \alias{SRopt}
 \title{Function that returns a stochastic estimate of steepness given observed stock recruitment data}
 \usage{
-SRopt(nsim, SSB, rec, SSBpR, plot = FALSE, type = "BH")
+SRopt(nsim, SSB, rec, SSBpR, plot = FALSE, type = c("BH", "Ricker"))
 }
 \arguments{
 \item{nsim}{number of samples of steepness to generate}
@@ -17,7 +17,10 @@ SRopt(nsim, SSB, rec, SSBpR, plot = FALSE, type = "BH")
 
 \item{plot}{should plots of model fit be produced?}
 
-\item{type}{what type of stock recruitment curve is being fitted BH = Beverton-Holt}
+\item{type}{what type of stock recruitment curve is being fitted ("BH" = Beverton-Holt or "Ricker")}
+}
+\value{
+Vector of length nsim with steepness values.
 }
 \description{
 Function that returns a stochastic estimate of steepness given observed stock recruitment data
