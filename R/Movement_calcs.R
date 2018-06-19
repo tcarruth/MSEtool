@@ -13,7 +13,8 @@
 #' @param figure Logical to indicate if the movement matrix will be plotted (mean values and range across \code{OM@@nsim} simulations.)
 #' @return The operating model \code{OM} with movement parameters in slot \code{cpars}.
 #' The \code{mov} array is of dimension \code{nsim}, \code{maxage}, \code{nareas}, \code{nareas}.
-#' @note Although, the \code{mov} is age-specific, but the movement is independent of age.
+#' @note Array \code{mov} is age-specific, but currently the movement is independent of age.
+#' This function precludes the need to specify slots \code{Frac_area_1} and \code{Prob_staying} in the OM object.
 #' @author T. Carruthers
 #' @export
 #' @import TMB
@@ -144,16 +145,16 @@ validateTMB<-function(obj){
 
 plot_mov <- function(mov, age = 1) {
   nsim <- dim(mov)[1]
-  mov <- mov[ , 1, , , drop = FALSE] # mov is of dimension nsim, narea, narea
-  mov2 <- apply(mov, c(2, 3), mean)
-  nareas <- nrow(mov2)
+  mov_at_age <- mov[ , age, , ] # dimension nsim, narea, narea
+  mean_mov <- apply(mov_at_age, c(2, 3), mean)
+  nareas <- nrow(mean_mov)
 
   plot(NULL, NULL, xlab = "Area (to)", ylab = "Area (from)", xaxs = "i", yaxs = "i",
        xlim = c(0.5, nareas + 0.5), ylim = c(0.5, nareas + 0.5))
   abline(h = 1.5:(nareas - 0.5), v = 1.5:(nareas - 0.5))
   for(i in 1:nareas) {
     for(j in 1:nareas) {
-      text(j, i, labels = paste0(signif(mov2[i, j], 2), "\n(", signif(min(mov[, age, i, j]), 2), "-", signif(max(mov[, age, i, j]), 2), ")"))
+      text(j, i, labels = paste0(signif(mean_mov[i, j], 2), "\n(", signif(min(mov_at_age[, i, j]), 2), "-", signif(max(mov_at_age[, i, j]), 2), ")"))
     }
   }
   title(paste("Movement matrix (mean and range across", nsim, "simulations)"))

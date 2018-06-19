@@ -31,7 +31,8 @@ A wrapper function for \link{makemov} used to generate movement matrices for a D
 Calculates a movement matrix from user-specified unfished stock biomass fraction in each area and probability of staying in the area in each time step.
 }
 \note{
-Although, the \code{mov} is age-specific, but the movement is independent of age.
+Array \code{mov} is age-specific, but currently the movement is independent of age.
+This function precludes the need to specify slots \code{Frac_area_1} and \code{Prob_staying} in the OM object.
 }
 \examples{
 \dontrun{
