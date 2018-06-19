@@ -2,20 +2,28 @@
 % Please edit documentation in R/SS2OM.R
 \name{SS2OM}
 \alias{SS2OM}
-\title{Reads MLE estimates from Stock Synthesis file structure into an operating model using package r4ss}
+\title{Reads MLE estimates from Stock Synthesis file structure into an operating model using package r4ss.}
 \usage{
-SS2OM(SSdir, nsim = 48, proyears = 50, length_timestep = NA,
-  Name = NULL, Source = "No source provided",
-  Author = "No author provided", printstats = FALSE, verbose = TRUE)
+SS2OM(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
+  Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp, Name = NULL,
+  Source = "No source provided", Author = "No author provided", ...)
 }
 \arguments{
 \item{SSdir}{A folder with Stock Synthesis input and output files in it}
 
-\item{nsim}{The number of simulations to take for parameters with uncertainty (for OM@cpars custom parameters)}
+\item{nsim}{The number of simulations to take for parameters with uncertainty (for OM@cpars custom parameters).}
 
 \item{proyears}{The number of projection years for MSE}
 
-\item{length_timestep}{The duration (in years) of each timestep in the model (if an quarterly model is used this is 0.25)}
+\item{reps}{The number of stochastic replicates within each simulation in the operating model.}
+
+\item{maxF}{The maximum allowable F in the operating model.}
+
+\item{seed}{The random seed for the operating model.}
+
+\item{Obs}{The observation model (class Obs).}
+
+\item{Imp}{The implementation model (class Imp).}
 
 \item{Name}{The name of the operating model}
 
@@ -23,12 +31,19 @@ SS2OM(SSdir, nsim = 48, proyears = 50, length_timestep = NA,
 
 \item{Author}{Who did the assessment}
 
-\item{printstats}{Should the r4ss function SS_output return info on data that was read in?}
-
-\item{verbose}{Should the r4ss function SS_ouput return detailed messages?}
+\item{...}{Arguments to pass to \link[r4ss]{SS_output}.}
 }
 \description{
-A function that uses the file location of a fitted SS3 model including input files to population the various slots of an operating model with MLE parameter estimates
+A function that uses the file location of a fitted SS3 model including input files to population the
+various slots of an operating model with MLE parameter estimates. The function mainly populates the Stock and Fleet portions
+of the operating model; the user still needs to parameterize most of the observation and implementation portions of the operating model.
+}
+\details{
+Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
+Steepness values for the operating model are obtained by bootstrapping from spawning biomass and recruitment estimates in the assessment.
+}
+\note{
+Currently supports the latest version of r4ss on CRAN (v.1.24). Function may be incompoatible with newer versions of r4ss on Github.
 }
 \author{
 T. Carruthers
