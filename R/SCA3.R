@@ -121,7 +121,12 @@ SCA3 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
     params$log_sigma <- log(sigmaI)
   }
-  if(is.null(params$log_tau)) params$log_tau <- log(1)
+  if(is.null(params$log_tau)) {
+    is_OM <- !is.null(Data@OM$procsd[x])
+    if(is_OM) {
+      params$log_tau <- log(Data@OM$procsd[x])
+    } else params$log_tau <- log(1)
+  }
   params$log_early_rec_dev <- rep(0, max_age - 1)
   params$log_rec_dev <- rep(0, n_y)
 
