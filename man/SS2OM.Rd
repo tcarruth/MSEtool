@@ -33,6 +33,9 @@ SS2OM(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
 \item{...}{Arguments to pass to \link[r4ss]{SS_output}.}
 }
+\value{
+An object of class OM.
+}
 \description{
 A function that uses the file location of a fitted SS3 model including input files to population the
 various slots of an operating model with MLE parameter estimates. The function mainly populates the Stock and Fleet portions
@@ -43,7 +46,10 @@ Currently, the function uses values from the terminal year of the assessment for
 Steepness values for the operating model are obtained by bootstrapping from spawning biomass and recruitment estimates in the assessment.
 }
 \note{
-Currently supports the latest version of r4ss on CRAN (v.1.24). Function may be incompoatible with newer versions of r4ss on Github.
+Currently supports the latest version of r4ss on CRAN (v.1.24). Function may be incompatible with newer versions of r4ss on Github.
+}
+\seealso{
+\link{SS2Data}
 }
 \author{
 T. Carruthers

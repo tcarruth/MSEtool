@@ -18,12 +18,13 @@
 #' @param Source Reference to assessment documentation e.g. a url
 #' @param Author Who did the assessment
 #' @param ... Arguments to pass to \link[r4ss]{SS_output}.
-#' @note Currently supports the latest version of r4ss on CRAN (v.1.24). Function may be incompoatible with newer versions of r4ss on Github.
+#' @note Currently supports the latest version of r4ss on CRAN (v.1.24). Function may be incompatible with newer versions of r4ss on Github.
 #' @details Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
 #' Steepness values for the operating model are obtained by bootstrapping from spawning biomass and recruitment estimates in the assessment.
-#'
+#' @return An object of class OM.
 #' @author T. Carruthers
-#' @export SS2OM
+#' @export
+#' @seealso \link{SS2Data}
 #' @importFrom stats acf
 #' @importFrom r4ss SS_output
 SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1, Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp,
@@ -37,7 +38,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   if(!any(names(dots) == "verbose")) dots$verbose <- FALSE
   if(!any(names(dots) == "warn")) dots$warn <- FALSE
 
-  message("-- Using function SS_output of package r4ss to extract data from SS file structure --")
+  message(paste("-- Using function SS_output of package r4ss version", packageVersion("r4ss"), "to extract data from SS file structure --"))
   replist <- do.call(SS_output, dots)
   message("-- End of r4ss operations --")
 
@@ -107,6 +108,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
   muLinf <- GP$Linf[1]
   cvLinf <- GP$CVmax[1]
+  if(cvLinf > 1) cvLinf <- cvLinf/muLinf
   t0 <- GP$A_a_L0[1]
   t0[t0 > 1] <- 0
   muK <- GP$K[1]
@@ -243,13 +245,14 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     }
   }
 
-  Perr <- cbind(Perr_hist, Perr_proj)
+  Perr_y <- cbind(Perr_hist, Perr_proj)
 
-  OM@cpars$Perr <- exp(Perr)
+  OM@cpars$Perr_y <- exp(Perr_y)
   OM@Perr <- rep(procsd, 2) # uniform range is a point estimate from assessment MLE
   OM@AC <- rep(AC, 2)
 
   # Movement modelling ----------------------------
+  OM@Frac_area_1 <- OM@Size_area_1 <- OM@Prob_staying <- rep(0.5, 2)
   if(nrow(replist$movement) > 0){
     #mov <- movdistil(replist$movement)
     #vec <- rep(1/2,2)
@@ -275,11 +278,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     if(season_as_years) mov <- mov[, seas1_aind, , , drop = FALSE]
 
     OM@cpars$mov <- mov
-
-  } else {
-    OM@Frac_area_1 <- OM@Size_area_1 <- OM@Prob_staying <- rep(0.5, 2)
   }
-
 
   # Fleet parameters ============================================================================================================
 
@@ -289,6 +288,12 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   rows <- replist$Z_at_age$Gender == 1 & replist$Z_at_age$Bio_Pattern == 1
   F_at_age <- t(replist$Z_at_age[rows, cols] - replist$M_at_age[rows, cols])
   F_at_age[nrow(F_at_age), ] <- F_at_age[nrow(F_at_age) - 1, ] # assume F at maxage = F at maxage-1
+
+  if(ncol(F_at_age) < nyears) { # Typically because forecast is off
+    F_at_age_terminal <- F_at_age[, ncol(F_at_age)]
+    F_at_age <- cbind(F_at_age, F_at_age_terminal)
+  }
+
   F_at_age[F_at_age < 1e-8] <- 1e-8
 
   if(season_as_years) {
