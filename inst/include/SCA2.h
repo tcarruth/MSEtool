@@ -159,7 +159,7 @@
     }
 
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
     }
     N(y+1,0) = R(y+1);
 
