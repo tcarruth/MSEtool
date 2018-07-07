@@ -118,13 +118,13 @@ makemov<-function(fracs=c(0.1,0.2,0.3,0.4),prob=c(0.5,0.8,0.9,0.95)){
 
 }
 
-#' Checks the TMB equations again estimated movement matrices and also checks fit
-#'
-#' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
-#' @param obj A list object arising from MakeADFun from either grav.h or grav_Pbyarea.h
-#' @author T. Carruthers
-#' @export validateTMB
-#' @import TMB
+# #' Checks the TMB equations again estimated movement matrices and also checks fit
+# #'
+# #' @description A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area
+# #' @param obj A list object arising from MakeADFun from either grav.h or grav_Pbyarea.h
+# #' @author T. Carruthers
+# #' @export validateTMB
+# #' @import TMB
 validateTMB<-function(obj){
 
   log_grav<-obj$report()$log_grav
