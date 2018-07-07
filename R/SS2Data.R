@@ -1,27 +1,37 @@
 
-#' Reads data Stock Synthesis file structure into an data object using package r4ss
+#' Reads data Stock Synthesis file structure into a Data object using package r4ss
 #'
 #' @description A function that uses the file location of a fitted SS3 model including input files to population
 #' the various slots of an Data object.
 #' @param SSdir A folder with Stock Synthesis input and output files in it
-#' @param Source Reference to assessment documentation e.g. a url
 #' @param Name The name for the Data object
-#' @param Author Who did the assessment
-#' @param comp_fleet A vector of indices over which to aggregate the composition (catch-at-length and catch-at-age) data.
-#' \code{"all"} will aggregate across all fleets.
-#' @param comp_partition Integer for selecting length/age observations that are retained, discarded, or both.
-#' @param comp_gender Integer for selecting length/age observations that are female, male, or both.
-#' @param index_fleet Integer for selecting the fleet of the index to put in the Data object.
-#' @param depletion_basis Whether empirical or assessment based.
+#' @param Common_Name Character string for the common name of the stock.
+#' @param Species Scientific name of the species
+#' @param Region Geographic region of the stock or fishery.
+#' @param min_age_M Currently, the Data object supports a single value of M for all ages. The argument selects the
+#' minimum age for calculating the mean of age-dependent M from the SS assessment.
+#' @param comp_fleet A vector of indices corresponding to fleets in the assessment over which to aggregate the composition
+#' (catch-at-length and catch-at-age) data. By default, characer string \code{"all"} will aggregate across all fleets.
+#' @param comp_season Integer, for seasonal models, the season for which the value of the index will be used. By default, \code{"mean"}
+#' will take the average across seasons.
+#' @param comp_partition Integer vector for selecting length/age observations that are retained (2), discarded (1), or both (0). By default, \code{"all"}
+#' sums over all available partitions.
+#' @param comp_gender Integer vector for selecting length/age observations that are female (1), male (2), or both (0), or both scaled to sum to one (3).
+#' By default, \code{"all"} sums over all gender codes.
+#' @param index_fleet Integer for selecting the fleet of the index to put in the Data object. By default, \code{"SSB"}
+#' will use the relative trend in spawning stock biomass as estimated in the model as the index.
+#' @param index_season Integer, for seasonal models, the season for which the value of the index will be used. By default, \code{"mean"}
+#' will take the average across seasons.
 #' @param ... Arguments to pass to \link[r4ss]{SS_output}
 #' @return An object of class Data.
+#' @note Currently supports the latest version of r4ss on CRAN (v.1.24). Function may be incompatible with newer versions of r4ss on Github.
 #' @author T. Carruthers
 #' @export
 #' @seealso \link{SS2OM}
 #' @importFrom r4ss SS_output
-SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "No author provided",
-                    comp_fleet = "all", comp_partition = "all", comp_gender = "all", index_fleet = 1,
-                    depletion_basis = c("empirical", "assess"), ...) {
+SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region = "",
+                    min_age_M = 1, comp_fleet = "all", comp_season = "sum", comp_partition = "all", comp_gender = "all",
+                    index_fleet = "SSB", index_season = "mean", ...) {
 
   dots <- list(dir = SSdir, ...)
   if(!any(names(dots) == "covar")) dots$covar <- FALSE
@@ -32,6 +42,7 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
   if(!any(names(dots) == "warn")) dots$warn <- FALSE
 
   message(paste("-- Using function SS_output of package r4ss version", packageVersion("r4ss"), "to extract data from SS file structure --"))
+  message(paste("Reading directory:", SSdir))
   replist <- do.call(SS_output, dots)
   message("-- End of r4ss operations --")
 
@@ -50,17 +61,31 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
 
   # Create Data object
   Data <- new("Data", stock = "MSE")
+  Data@Common_Name <- Common_Name
+  Data@Species <- Species
+  Data@Region <- Region
+
+  Data@MPs <- NA
+  Data@TAC <- array(NA, dim = c(1, 1, 1))
   if(is.null(Name)) {
     Data@Name <- SSdir
   } else Data@Name <- Name
+  Data@MPeff <- 1
 
   mainyrs <- replist$startyr:replist$endyr
   if(season_as_years) {
     nyears <- ceiling(length(mainyrs)/nseas)
     Data@Year <- 1:nyears
+
+    seas1_yind_full <- expand.grid(nseas = 1:nseas, nyears = 1:nyears)
+    seas1_yind <- which(seas1_yind_full$nseas == 1)
   } else {
+    nyears <- length(mainyrs)
     Data@Year <- mainyrs
   }
+  Data@LHYear <- Data@Year[length(Data@Year)]
+  message(paste("Detected", nyears, "years in the assessment model."))
+  message(paste0("First year: ", Data@Year[1], ", Last year: ", Data@Year[length(Data@Year)]))
 
   ##### Life history
   #### Growth --------------------------------------
@@ -80,19 +105,25 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
   }
 
   #### Length at age --------------------------------------
+  Len_age <- growdat$Len_Mid
+
   Data@vbLinf <- GP$Linf[1]
-  Data@CV_vbLinf <- GP$CVmax[1]
   t0 <- GP$A_a_L0[1]
   #t0[t0 > 1] <- 0
   Data@vbt0 <- t0
   muK <- GP$K[1]
   if(muK <= 0) { #Estimate K from Len_age if K < 0 (e.g., age-varying K with negative deviations in K).
+    message("Negative K value was detected. Attempting to re-estimate K based on mean length-at-age...")
     get_K <- function(K, Lens, Linf, t0, ages) sum((Lens - (Linf * (1 - exp(-K * (ages - t0)))))^2)
-    muK <- optimize(get_K, c(0, 2), Lens = Len_age, Linf = muLinf, t0 = t0, ages = 1:maxage)$minimum
+    muK <- optimize(get_K, c(0, 2), Lens = Len_age, Linf = GP$Linf[1], t0 = t0, ages = 1:maxage)$minimum
   }
   Data@vbK <- muK
 
   message(paste0("Von Bertalanffy parameters: Linf = ", Data@vbLinf, ", K = ", muK, ", t0 = ", t0))
+
+  LenCV <- GP$CVmax[1]
+  if(LenCV > 1) LenCV <- LenCV/Data@vbLinf
+  message(paste0("Data@LenCV = ", Data@LenCV))
 
   #### Weight
   Data@wla <- GP$WtLen1[1]
@@ -109,76 +140,179 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
   if(season_as_years) Mat <- Mat[seas1_aind]
 
   # Currently using linear interpolation of mat vs len, is robust and very close to true logistic model predictions
-  Len_age <- growdat$Len_Mid
   Data@L50 <- LinInterp(Mat, Len_age, 0.5+1e-6)
   Data@L95 <- LinInterp(Mat, Len_age, 0.95)
 
   message(paste0("Lengths at 50% and 95% maturity: ", paste(Data@L50, Data@L95, collapse = " ")))
 
-
   #### M --------------------------------------
   M <- growdat$M
-  if(season_as_years) M <- M[seas1_aind]
 
-  Data@Mort <- mean(M)
   if(length(unique(M)) > 1) {
-    message(paste0("Age-varying M detected:\n", paste(M, collapse = " "), "."))
-    message(paste0("Currently, DLMtool only supports a single value of M. Using mean to set Data@Mort = ", Data@Mort, "."))
+    if(season_as_years) {
+      seasonal_min_age <- min_age_M * nseas
+      Data@Mort <- mean(M[growdat$Age >= seasonal_min_age])
+    } else {
+      Data@Mort <- mean(M[growdat$Age >= min_age_M])
+    }
+    message("Age-dependent natural mortality detected, but only a single value of M is currently supported for the Data object.")
+    message(paste0("Using mean from ages >= ", min_age_M, " to set Data@Mort = ", Data@Mort, "."))
   } else {
-    message(paste0("Natural mortality M = ", Data@Mort))
+    Data@Mort <- unique(M)
+    message(paste0("Natural mortality Data@Mort = ", Data@Mort))
   }
 
   #### Composition data -------------------------
-  # (function argument to select comp or aggregate across all fleets/surveys)
-  get_composition <- function(dbase) {
-    dbase_ind <- match(dbase$Yr, mainyrs)
+  ## Internal function -- don't move --
+  get_comps <- function(dbase, comp_fleet, type = c("length", "age")) {
+    type <- match.arg(type)
+    dbase_ind <- match(dbase$Yr, mainyrs) # Match years
     dbase <- dbase[!is.na(dbase_ind), ]
-    dbase$Obs2 <- dbase$Obs * dbase$N
+    dbase$Obs2 <- dbase$Obs * dbase$N # Expand comp proportions to numbers
 
-    comp_list <- split(dbase, dbase$Fleet)
-    comp_mat <- lapply(comp_list, acast, formula = list("Yr", "Bin"), fun.aggregate = sum, value.var = "Obs2", fill = 0)
+    comp_list <- split(dbase, dbase$Fleet) # List by fleet
+    comp_mat <- lapply(comp_list, acast, formula = list("Yr", "Bin"), fun.aggregate = sum, value.var = "Obs2", fill = 0) # Convert to matrix
 
     comp_ind <- match(comp_fleet, as.numeric(names(comp_mat)))
-    comp_mat <- comp_mat[comp_ind]
+    comp_mat <- comp_mat[comp_ind] # Subset fleets
     expand_matrix <- function(x) {
-      res <- matrix(NA, nrow = length(mainyrs), ncol = maxage)
-      res_ind <- match(as.numeric(rownames(x)), mainyrs)
-      res[res_ind, ] <- x
+      if(type == "length") {
+        ncol_dim <- length(replist$lbins)
+        res <- matrix(NA, nrow = length(mainyrs), ncol = ncol_dim)
+        res_ind <- match(as.numeric(rownames(x)), mainyrs)
+        res_ind2 <- match(as.numeric(colnames(x)), replist$lbins)
+      }
+      if(type == "age") {
+        ncol_dim <- maxage
+        res <- matrix(NA, nrow = length(mainyrs), ncol = ncol_dim)
+        res_ind <- match(as.numeric(rownames(x)), mainyrs)
+        res_ind2 <- 1:ncol(x)
+      }
+      res[res_ind, res_ind2] <- x
       return(res)
     }
-    comp_mat2 <- lapply(comp_mat, expand_matrix)
+    comp_mat2 <- lapply(comp_mat, expand_matrix) # Expand matrices to full years (by mainyrs)
     comp_all <- do.call(rbind, comp_mat2)
 
-    comp_res <- aggregate(comp_all, list(Yr = rep(1:length(mainyrs), length(comp_fleet))), sum, na.rm = TRUE)
-    comp_res[comp_res == 0] <- NA
+    comp_res <- aggregate(comp_all, list(Yr = rep(1:length(mainyrs), length(comp_fleet))), sum, na.rm = TRUE) # Sum across fleets
 
+    if(season_as_years) {
+      if(is.numeric(comp_season) && comp_season <= nseas) {
+        comp_res <- comp_res[seas1_yind_full$nseas == comp_season, ]
+        message(paste("Using season", comp_season, "for", type, "comps."))
+      }
+      if(is.character(comp_season) && comp_season == "sum") {
+        comp_res_list <- split(comp_res, seas1_yind_full$nyears)
+        comp_res_list <- lapply(comp_res_list, colSums, na.rm = TRUE)
+        comp_res <- do.call(rbind, comp_res_list)
+      }
+      message(paste(type, "comps summed across seasons."))
+    }
+
+    comp_res[comp_res == 0] <- NA
     return(comp_res[, -1])
   }
 
-  # CAA
-  if(nrow(agedbase) > 0) {
-    if(is.character(comp_fleet) && comp_fleet == "all") comp_fleet <- unique(replist$agedbase$Fleet)
-    if(any(!is.na(match(replist$agedbase$Fleet, comp_fleet)))) {
-      CAA <- get_composition(replist$agedbase)
-      Data@CAA <- array(as.matrix(CAA), c(1, nyears, maxage))
+  #### CAA
+  if(nrow(replist$agedbase) > 0) {
+    if(is.character(comp_fleet) && comp_fleet == "all") {
+      comp_fleet_age <- unique(replist$agedbase$Fleet)
     } else {
-      message(paste0("Could not find any age composition from Fleets: ", paste0(comp_fleet, collapse = " ")))
+      comp_fleet_age <- comp_fleet
     }
-    message(paste0("Collected age composition from Fleets: ", paste0(comp_fleet, collapse = " ")))
+
+    if(comp_partition != "all") {
+      part_subset <- replist$agedbase$Part %in% comp_partition
+    } else part_subset <- rep(TRUE, nrow(replist$agedbase))
+    if(comp_gender != "all") {
+      gender_subset <- replist$agedbase$Gender %in% comp_gender
+    } else gender_subset <- rep(TRUE, nrow(replist$agedbase))
+
+    agedbase <- replist$agedbase[part_subset & gender_subset, ]
+    if(!season_as_years && nseas > 1) {
+      if(is.numeric(comp_season) && comp_season <= nseas) {
+        agedbase <- agedbase[agedbase$Seas == comp_season, ]
+        message(paste("Using season", comp_season, "for", type, "comps."))
+      }
+    }
+    message(paste0("Using age comps partition codes: ", paste(unique(agedbase$Part), collapse = " ")))
+    message(paste0("Using age comps gender codes: ", paste(unique(agedbase$Gender), collapse = " ")))
+
+    if(any(!is.na(match(agedbase$Fleet, comp_fleet_age)))) {
+      CAA <- get_comps(agedbase, comp_fleet = comp_fleet_age, type = "age")
+      Data@CAA <- array(as.matrix(CAA), c(1, nyears, maxage))
+      message(paste0("Collected age comps from Fleets: \n",
+                     paste0(paste(comp_fleet_age, replist$FleetNames[comp_fleet_age], collapse = "\n"))))
+    } else {
+      message(paste0("Could not find any age comps from Fleets: \n",
+                     paste0(paste(comp_fleet_age, replist$FleetNames[comp_fleet_age], collapse = "\n"))))
+    }
+  } else {
+    message("No age comps found in SS assessment.")
   }
 
-  # CAL
-  #if(nrow(lendbase) > 0) {
-  #  if(is.character(comp_fleet) && comp_fleet == "all") comp_fleet <- unique(replist$lendbase$Fleet)
-  #  if(any(!is.na(match(replist$lendbase$Fleet, comp_fleet)))) {
-  #    CAL <- get_composition(replist$lendbase)
-  #    Data@CAL <- array(as.matrix(CAL), c(1, nyears, ncol(CAL)))
-  #    Data@CAL_bins <- replist$lbins # add one more length bin
-  #  } else {
-  #    message(paste0("Could not find any age composition from Fleets: ", paste0(comp_fleet, collapse = " ")))
-  #  }
-  #  message(paste0("Collected age composition from Fleets: ", paste0(comp_fleet, collapse = " ")))
-  #}
+  #### CAL
+  if(nrow(replist$lendbase) > 0) {
+    if(is.character(comp_fleet) && comp_fleet == "all") {
+      comp_fleet_length <- unique(replist$lendbase$Fleet)
+    } else {
+      comp_fleet_length <- comp_fleet
+    }
+
+    if(comp_partition != "all") {
+      part_subset <- replist$lendbase$Part %in% comp_partition
+    } else part_subset <- rep(TRUE, nrow(replist$lendbase))
+    if(comp_gender != "all") {
+      gender_subset <- replist$lendbase$Gender %in% comp_gender
+    } else gender_subset <- rep(TRUE, nrow(replist$lendbase))
+
+    lendbase <- replist$lendbase[part_subset & gender_subset, ]
+    if(!season_as_years && nseas > 1) {
+      if(is.numeric(comp_season) && comp_season <= nseas) {
+        lendbase <- lendbase[lendbase$Seas == comp_season, ]
+        message(paste("Using season", comp_season, "for", type, "comps."))
+      }
+    }
+    message(paste0("Using length comps partition codes: ", paste(unique(lendbase$Part), collapse = " ")))
+    message(paste0("Using length comps gender codes: ", paste(unique(lendbase$Gender), collapse = " ")))
+
+    if(any(!is.na(match(lendbase$Fleet, comp_fleet_length)))) {
+      CAL <- get_comps(lendbase, comp_fleet_length, type = "length")
+      CAL <- as.matrix(CAL)
+      Data@CAL <- array(CAL, c(1, nyears, ncol(CAL)))
+
+      message(paste0("Collected length comps from Fleets: \n",
+                     paste0(paste(comp_fleet_length, replist$FleetNames[comp_fleet_length], collapse = "\n"))))
+
+      CAL_bins <- replist$lbins # add one more length bin
+      width_bin <- CAL_bins[length(CAL_bins)] - CAL_bins[length(CAL_bins)-1]
+      plus_one <- CAL_bins[length(CAL_bins)] + width_bin
+
+      Data@CAL_bins <- c(CAL_bins, plus_one)
+
+      ML <- rowSums(CAL * rep(CAL_bins, each = nyears))/rowSums(CAL)
+      ML[ML <= 0] <- NA
+      Data@ML <- matrix(ML, nrow = 1)
+
+      lcpos <- apply(CAL, 1, function(x) if(all(is.na(x))) return(NA) else which.max(x))
+      Data@Lc <- matrix(CAL_bins[lcpos], nrow = 1)
+      Data@Lc[Data@Lc <= 0] <- NA
+
+      Data@Lbar <- matrix(NA, nrow = 1, ncol = ncol(Data@Lc))
+      for(i in 1:ncol(Data@Lbar)) {
+        if(!is.na(lcpos[i])) {
+          Data@Lbar[1, i] <- weighted.mean(x = CAL_bins[lcpos[i]:length(replist$lbins)],
+                                           w = CAL[i, lcpos[i]:length(replist$lbins)])
+        }
+      }
+
+    } else {
+      message(paste0("Could not find any length comps from Fleets: \n",
+                     paste0(paste(comp_fleet_length, replist$FleetNames[comp_fleet_length], collapse = "\n"))))
+    }
+  } else {
+    message("No length comps found in SS assessment.")
+  }
 
   #### Catch -------------------------
   message("Adding total catch in weight across all fleets...")
@@ -194,7 +328,7 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
   cat_numbers <- cat[, !is_weight]
   if(ncol(cat_numbers) > 0) {
     fleet_in_numbers <- which(replist$catch_units == 2)
-    message(paste0("Catch in numbers was detected for Fleets: ", paste0(fleet_in_numbers, collapse = " ")))
+    message(paste0("Catch in numbers was detected for Fleets: \n", paste(paste(fleet_in_numbers, replist$FleetNames[fleet_in_numbers]), collapse = "\n")))
     message("Will use estimated assessment output for catch in weight (dead biomass) for these Fleets.")
 
     cat_col2 <- grepl("dead\\(B", colnames(ts))
@@ -204,89 +338,145 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
   total_catch <- aggregate(rowSums(cbind(cat_weight, cat_numbers)), list(Yr = ts$Yr), sum, na.rm = TRUE)
 
   tc_ind <- match(total_catch$Yr, mainyrs)
-  total_catch_vec <- structure(total_catch$x[tc_ind], names = mainyrs)
-
+  total_catch_vec <- total_catch$x[tc_ind]
+  if(season_as_years) {
+    total_catch2 <- aggregate(total_catch_vec, list(Yr = seas1_yind_full$nyears), sum, na.rm = TRUE)
+    total_catch_vec <- total_catch2$x
+    message("Summing catch across seasons.")
+  }
   Data@Cat <- matrix(total_catch_vec, nrow = 1)
-  message(paste0(sum(!is.na(tc_ind)), " years of catch in Data object."))
-  message(paste0("Default CV of Catch = ", Data@CV_Cat))
+  message(paste0(sum(!is.na(Data@Cat[1, ])), " years of catch in Data object."))
+  message(paste0("Default CV of Catch, Data@CV_Cat = ", Data@CV_Cat))
 
-  Data@AvC <- mean(total_catch)
-  message(paste0("Mean catch Data@AvC = ", Data@AvC))
+  Data@AvC <- mean(total_catch_vec)
+  message(paste0("Mean catch, Data@AvC = ", round(Data@AvC, 2)))
 
   #### Index -------------------------
   # (function argument to select index)
-  cpue <- split(replist$cpue, replist$cpue$Fleet)
-  cpue_ind <- match(index_fleet, as.numeric(names(cpue)))
+  if(is.numeric(index_fleet) && index_fleet %in% unique(replist$cpue$Fleet)) {
+    cpue <- split(replist$cpue, replist$cpue$Fleet)
+    cpue_ind <- match(index_fleet, as.numeric(names(cpue)))
 
-  cpue_subset <- cpue[[cpue_ind]]
+    cpue_subset <- cpue[[cpue_ind]]
 
-  cpue_ind2 <- match(cpue_subset$Yr, mainyrs)
-  Ind <- structure(cpue_subset$Obs[cpue_ind2], names = mainyrs)
-  if(is.na(Ind[length(Ind)])) warning("No index value in most recent year.")
-  message(paste0(sum(!is.na(Ind)), " years of index values from Fleet ", index_fleet, " (", unique(cpue_subset$Fleet), ") in Data object."))
-  Data@Ind <- matrix(Ind, nrow = 1)
+    if(!season_as_years && nseas > 1 && !is.null(cpue_subset)) {
+      if(is.numeric(index_season) && index_season <= nseas) {
+        cpue_subset <- cpue_subset[cpue_subset$Seas == index_season, ]
+        message(paste("Using season", index_season, "for index."))
+      }
+      if(is.character(index_season) && index_season == "mean") {
+        cpue_subset <- aggregate(cpue_subset$Obs, by = list(Yr = cpue_subset$Yr), mean, na.rm = TRUE)
+        names(cpue_subset) <- c("Yr", "Obs")
+        message("Taking mean of index across seasons.")
+      }
+    }
 
-  Data@CV_Ind <- mean(cpue_subset$SE/cpue_subset$Obs)
-  message(paste0("CV of Index (as mean of the ratios of SE and observed values) = ", Data@CV_Ind))
+    cpue_ind2 <- match(mainyrs, cpue_subset$Yr)
+    Ind <- cpue_subset$Obs[cpue_ind2]
 
-  Data@Source <- paste0(Source,". Author: ", Author, ".")
-
-
-
-  yind<-(1:nyears)*nseas
-  yind2<-rep(1:nyears,each=nseas)
-
-
-
-  cat<-rep(0,length(replist$timeseries$"obs_cat:_1"))
-  for(i in 1:length(replist$timeseries)){
-    if(grepl("obs_cat",names(replist$timeseries)[i]))cat<-cat+replist$timeseries[[i]]
-
+    Data@CV_Ind <- mean(cpue_subset$SE/cpue_subset$Obs)
+    message(paste0("CV of Index (as mean of the ratios of SE and observed values), Data@CV_Ind = ", round(Data@CV_Ind, 2)))
   }
-  if(nseas>1){
+  if(is.character(index_fleet) && index_fleet == "SSB") {
+    SR_ind <- match(mainyrs, replist$recruit$year)
+    SSB <- replist$recruit$spawn_bio[SR_ind]
+    Ind <- SSB/mean(SSB)
 
-    ind<-rep(1:(length(cat)/nseas),nseas)
-    cat2<-aggregate(cat,by=list(ind),sum)
-    cat3<-cat2[1:length(yind2),2]
-    cat4<-aggregate(cat3,by=list(yind2),sum)
+    message(paste0("Default CV of Index, Data@CV_Ind = ", round(Data@CV_Ind, 2)))
   }
 
+  if(exists("Ind")) {
+    if(season_as_years) {
+      if(is.character(index_season) && index_season == "mean") {
+        Ind2 <- aggregate(Ind, by = list(Yr = seas1_yind_full$nyears), mean, na.rm = TRUE)$x
+        Ind2[is.nan(Ind2)] <- NA
+        message("Taking mean of index across seasons.")
+      }
+      if(is.numeric(index_season) && index_season <= nseas) {
+        Ind2 <- Ind[seas1_yind_full$nseas == index_season]
+        message(paste("Using season", index_season, "for index."))
+      }
+      Ind <- Ind2
+    }
 
-  Ind<-SSB
-  Ind<-Ind/mean(Ind)
-  Data@Ind <- matrix(Ind,nrow=1)
-  rec<-replist$recruit$pred_recr
-  rec<-rec[1:(nyears*nseas)]
-  Recind<- aggregate(rec,by=list(yind2),mean)[,2]
-  Recind<-Recind/mean(Recind)
+    if(is.na(Ind[length(Ind)])) warning("No index value for most recent year.")
+    message(paste0(sum(!is.na(Ind)), " years of index values from Fleet ", index_fleet, " (", replist$FleetNames[index_fleet], ") in Data object."))
+    Data@Ind <- matrix(Ind, nrow = 1)
 
+  } else {
+    message(paste("No index found for Fleet", index_fleet, replist$FleetNames[index_fleet]))
+    Data@Ind <- matrix(NA, ncol = nyears, nrow = 1)
+  }
+
+
+  #### Recruitment
   rec_ind <- match(mainyrs, replist$recruit$year)
-  rec <- replist$recruit$pred_recr
-  Data@Rec <- matrix(rec/mean(rec), nrow = 1)
+  rec <- replist$recruit$pred_recr[rec_ind]
 
-  message("Relative recruitment strength (Data@Rec) obtained from assessment output.")
-
-  Data@t <- nyears
-
-  if(depletion == "assessment") {
-    Data@Dep <- replist$current_depletion
-    message(paste0("Based on assessment, depletion Data@Dep = ", Data@Dep))
+  if(season_as_years) {
+    rec2 <- aggregate(rec, by = list(Yr = seas1_yind_full$nyears), mean, na.rm = TRUE)$x
+    rec <- rec2
+    message("Summing recruitment across seasons.")
   }
-  Data@Dt<-Data@Dep<-Ind[nyears]/Ind[1]
 
+  Data@Rec <- matrix(rec/mean(rec), nrow = 1)
+  message("Relative recruitment strength to Data@Rec obtained from assessment.")
+
+  #### Depletion
+  SSB <- replist$recruit$spawn_bio[rec_ind]
+  Data@Dt <- SSB[length(SSB)]/SSB[1]
+  message(paste("Depletion since year", mainyrs[1], "(Data@Dt) =", round(Data@Dt, 2)))
+
+  Data@Dep <- replist$current_depletion
+  message(paste("Depletion from unfished conditions (Data@Dep) =", round(Data@Dep, 2)))
+
+  Data@t <- length(Data@Year)
 
   #### Reference points ----------------------
-  Data@Cref <- replist$derived_quants$Value[replist$derived_quants$LABEL == "TotYield_MSY"]
+  Data@Cref <- replist$derived_quants$Value[replist$derived_quants$LABEL == "TotYield_MSY"] * ifelse(season_as_years, nseas, 1)
+  message(paste("Reference catch set to MSY, Data@Cref =", Data@Cref))
 
-  FMSY <- replist$derived_quants$Value[replist$derived_quants$LABEL == "Fstd_MSY"]
+  FMSY <- replist$derived_quants$Value[replist$derived_quants$LABEL == "Fstd_MSY"] * ifelse(season_as_years, nseas, 1)
   Data@FMSY_M <- FMSY/Data@Mort
+  message(paste0("FMSY = ", FMSY, ", Data@FMSY_M = ", Data@FMSY_M))
 
   Data@Bref <- replist$derived_quants$Value[replist$derived_quants$LABEL == "SSB_MSY"]
+  message(paste("Reference biomass set to SSB at MSY, Data@Bref =", Data@Bref))
+
   SSB0 <- replist$derived_quants$Value[replist$derived_quants$LABEL == "SSB_Unfished"]
   Data@BMSY_B0 <- Data@Bref/SSB0
+  message(paste("Data@BMSY_B0 =", Data@BMSY_B0))
 
-  Data@Iref<-Data@Ind[1]*Data@Bref/SSB[1]
+  if(index_fleet == "SSB") {
+    Data@Iref <- Data@Ind[1] * Data@Bref/SSB[1]
+    message(paste("Data@Iref =", Data@Iref))
+  }
 
+  Data@Units <- ""
+  OFLs <- replist$derived_quants[grepl("OFLCatch", replist$derived_quants$LABEL), ]
+  if(season_as_years) {
+    OFL_terminal <- sum(OFLs$Value[1:nseas])
+  } else OFL_terminal <- OFLs$Value[1]
+
+  if(is.na(OFL_terminal)) {
+    Data@Ref <- Data@Cat[1, ncol(Data@Cat)]
+    Data@Ref_type <- paste("Catch in Year", Data@Year[length(Data@Year)])
+    message("No OFL detected from SS Assessment.")
+  } else {
+    Data@Ref <- OFL_terminal
+    if(season_as_years) {
+      Yr_OFL <- vapply(OFLs$LABEL[1:nseas], function(x) strsplit(x, "_")[[1]][2], character(1))
+    } else {
+      Yr_OFL <- strsplit(OFLs$LABEL[1], "_")[[1]][2]
+    }
+    if(length(Yr_OFL) == 1){
+      Data@Ref_type <- paste("OFL in Year", Yr_OFL, "from SS Assessment")
+    } else {
+      Data@Ref_type <- paste("OFL in Years", Yr_OFL[1], "-", Yr_OFL[length(Yr_OFL)] , "from SS Assessment")
+    }
+  }
+
+  message(paste0("Data@Ref = ", Data@Ref, " (", Data@Ref_type, ")"))
 
   #### Steepness --------------------------------------
   steep <- replist$parameters[grepl("steep", rownames(replist$parameters)), ]
@@ -312,121 +502,54 @@ SS2Data <- function(SSdir, Source = "No source provided", Name = "", Author = "N
     if(replist$SRRtype == 2) SR <- "Ricker"
     Data@steep <- mean(SRopt(100, SSB, rec, SpR0, plot = FALSE, type = SR), na.rm = TRUE)
   }
-  message(paste0("Stepness = ", Data@steep))
+  message(paste0("Steepness = ", Data@steep))
 
   SpAbun_ind <- match(replist$endyr+1, replist$recruit$year)
   Data@SpAbun <- replist$recruit$spawn_bio[SpAbun_ind]
 
-  # Vulnerable biomass
-  ts <- replist$timeseries[replist$timeseries$Yr == replist$endyr + 1, ]
-  vb_ind <- grepl("sel\\(B", colnames(ts))
+  #### Selectivity
+  # Get F-at-age in terminal year, then obtain LFC and LFS
+  ages <- growdat$Age
+  cols <- match(ages, names(replist$Z_at_age))
+  rows <- match(mainyrs, replist$Z_at_age$Year)
 
-  vb <- ts[, vb_ind]
-  Data@Abun <- sum(vb)
+  Z_at_age <- replist$Z_at_age[rows, ]
+  M_at_age <- replist$M_at_age[rows, ]
 
+  rows2 <- Z_at_age$Gender == 1 & Z_at_age$Bio_Pattern == 1
+  F_at_age <- t(Z_at_age[rows2, cols] - M_at_age[rows2, cols])
+  F_at_age[nrow(F_at_age), ] <- F_at_age[nrow(F_at_age) - 1, ] # assume F at maxage = F at maxage-1
 
-  ages<-growdat$Age
-  cols<-match(ages,names(replist$Z_at_age))
-  F_at_age=t(replist$Z_at_age[,cols]-replist$M_at_age[,cols])
-  F_at_age[nrow(F_at_age),]<-F_at_age[nrow(F_at_age)-1,]# ad-hoc mirroring to deal with SS missing predicitons of F in terminal age
-  Ftab<-cbind(expand.grid(1:dim(F_at_age)[1],1:dim(F_at_age)[2]),as.vector(F_at_age))
-
-  if(nseas>1){
-    sumF<-aggregate(Ftab[,3],by=list(aind[Ftab[,1]],Ftab[,2]),mean,na.rm=T)
-    sumF<-aggregate(sumF[,3],by=list(sumF[,1],yind2[sumF[,2]]),sum,na.rm=T)
-  }else{
-    sumF<-Ftab
+  if(ncol(F_at_age) == nyears - 1) { # Typically because forecast is off
+    F_at_age_terminal <- F_at_age[, ncol(F_at_age)]
+    F_at_age <- cbind(F_at_age, F_at_age_terminal)
+  }
+  if(ncol(F_at_age) == nyears && all(is.na(F_at_age[, ncol(F_at_age)]))) {
+    F_at_age[, ncol(F_at_age)] <- F_at_age[, ncol(F_at_age)-1]
   }
 
-  sumF<-sumF[sumF[,2]<nyears,] # generic solution: delete partial observation of final F predictions in seasonal model (last season of last year is NA)
-  V <- array(0, dim = c(maxage, nyears))
-  V[,1:(nyears-1)]<-sumF[,3] # for some reason SS doesn't predict F in final year
+  F_at_age[F_at_age < 1e-8] <- 1e-8
 
+  if(season_as_years) {
+    Ftab <- expand.grid(Age = 1:dim(F_at_age)[1], Yr = 1:dim(F_at_age)[2])
+    Ftab$F_at_age <- as.vector(F_at_age)
 
-  Find<-apply(V,2,max,na.rm=T) # get apical F
+    # Mean F across aggregated age (groups of nseas), then sum F across aggregated years (groups of nseas)
+    sumF <- aggregate(Ftab[, 3], list(Age = seas1_aind_full[1:nrow(F_at_age), 2][Ftab[, 1]], Yr = Ftab[, 2]), mean, na.rm = TRUE)
+    sumF <- aggregate(sumF[, 3], list(Age = sumF[, 1], Yr = rep(seas1_yind_full[1:ncol(F_at_age), 2], each = maxage)), sum, na.rm = TRUE)
 
-  ind<-as.matrix(expand.grid(1:maxage,1:nyears))
-  V[ind]<-V[ind]/Find[ind[,2]]
-
-  # guess at length parameters # this is over ridden anyway
-  ind<-((nyears-3)*nseas)+(0:((nseas*3)-1))
-  muFage<-as.vector(apply(F_at_age[,ind],1,mean))
-  Vuln<-muFage/max(muFage,na.rm=T)
-
-  Data@LFC<-LinInterp(Vuln,Len_age,0.05,ascending=T,zeroint=T)                            # not used if V is in cpars
-  Data@LFS<-Len_age[which.min((exp(Vuln)-exp(1.05))^2 * 1:length(Vuln))]  # not used if V is in cpars
-
-  ages<-growdat$Age
-  cols<-match(ages,names(replist$Z_at_age))
-
-
-  cols<-match(ages,names(replist$catage))
-  CAA=as.matrix(replist$catage[,cols])
-  yr<-rep(replist$catage$Yr,dim(CAA)[2])
-  age<-rep(ages,each=dim(CAA)[1])
-  CAAagg<-aggregate(as.vector(CAA),by=list(yr,age),sum)
-  CAAagg<-CAAagg[CAAagg[,2]!=0,]
-  CAAagg<-CAAagg[CAAagg[,1]<=(nyears*nseas),]
-  CAAagg<-CAAagg[CAAagg[,2]<=length(aind),]
-
-  yind3<-yind2[CAAagg[,1]]
-  aind3<-aind[CAAagg[,2]]
-
-  CAA2<-aggregate(CAAagg[,3],by=list(yind3,aind3),sum)
-  Data@CAA<-array(0,c(1,nyears,maxage))
-  Data@CAA[as.matrix(cbind(rep(1,nrow(CAA2)),CAA2[,1:2]))]<-CAA2[,3]
-
-
-
-  # CAL data
-  Data@CAL_bins<-c(0,replist$lbins)
-
-  Binno<-match(replist$lendbase$Bin,Data@CAL_bins)
-  Yrno<-yind2[replist$lendbase$Yr]
-  CALagg<-aggregate(replist$lendbase$Obs*replist$lendbase$N,by=list(Yrno,Binno),sum)
-  Data@CAL<-array(0,c(1,nyears,length(Data@CAL_bins)))
-  Data@CAL[as.matrix(cbind(rep(1,nrow(CALagg)),CALagg[,1:2]))]<-CALagg[,3]
-  Data@CAL<-ceiling(Data@CAL)
-
-  Data@ML<-matrix(apply(Data@CAL[1,,]*rep(Data@CAL_bins,each=nyears),1,mean),nrow=1)
-  Data@ML[Data@ML==0]<-NA
-  lcpos<-apply(Data@CAL[1,,],1,which.max)
-  Data@Lc<-matrix(Data@CAL_bins[lcpos],nrow=1)
-  Data@Lc[Data@Lc==0]<-NA
-
-  Data@Lbar<-matrix(rep(NA,nyears),nrow=1)
-
-  for(i in 1:nyears){
-    if(!is.na(Data@Lc[i])){
-      ind<-Data@CAL_bins>Data@Lc[i]
-      Data@Lbar[1,i]<-mean(Data@CAL[1,i,ind]*Data@CAL_bins[ind])
-    }
+    F_at_age <- matrix(sumF[, 3], nrow = maxage)
   }
 
-  Data@Abun<-Data@SpAbun<-SSB[nyears]
+  V_terminal <- F_at_age[, ncol(F_at_age)]/max(F_at_age[, ncol(F_at_age)])
+  Data@LFC <- LinInterp(V_terminal, Len_age, 0.05, ascending = TRUE, zeroint = TRUE)
+  Data@LFS <- Len_age[which.min((exp(V_terminal)-exp(1.05))^2 * 1:length(V_terminal))]
+  message(paste0("Data@LFC = ", Data@LFC, ", Data@LFS = ", Data@LFS))
 
-  Data@vbLinf=GP$Linf[1]
-  Data@CV_vbLinf=GP$CVmax[1]
-  Data@vbK=GP$K[1]*nseas
-  Data@vbt0=GP$A_a_L0
-  Data@wla=GP$WtLen1[1]
-  Data@wlb=GP$WtLen2[1]
-  SSBpR<-SSB[1]/rec[1]
-  hs<-mean(SRopt(100,SSB,rec,SSBpR,plot=F,type="BH"))
-  Data@steep<-hs
+  Data@Log <- Data@Misc <- list(note = paste("This Data object was created by the SS2Data function from MSEtool version", packageVersion("MSEtool")))
 
-  Data@Units<-""
-  Data@Ref<-mean(replist$derived_quants[grepl("OFLCatch",replist$derived_quants$LABEL),2])
-  Data@Ref_type = "OFL"
-  Data@LHYear<-nyears
-  Data@MPeff<-1
-  Data@Log<-list(warning="This data was created by an alpha version of SS2Data and should not be trusted!")
-  Data@Misc<-list(warning="This data was created by an alpha version of SS2Data and should not be trusted!")
-  Data@Name<-"This data was created by an alpha version of SS2Data and should not be trusted!"
+  message("\nImport was successful.\n")
 
-  Data@MPrec<-Data@Ref<-Data@Cat[1,nyears]
-  #Data@Ref<-mean(replist$derived_quants[grepl("OFLCatch",replist$derived_quants$LABEL),2])
-  Data@Ref_type = "Most recent annual catch"
   Data
 
 }
