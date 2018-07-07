@@ -39,6 +39,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   if(!any(names(dots) == "warn")) dots$warn <- FALSE
 
   message(paste("-- Using function SS_output of package r4ss version", packageVersion("r4ss"), "to extract data from SS file structure --"))
+  message(paste("Reading directory:", SSdir))
   replist <- do.call(SS_output, dots)
   message("-- End of r4ss operations --")
 
@@ -254,12 +255,6 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # Movement modelling ----------------------------
   OM@Frac_area_1 <- OM@Size_area_1 <- OM@Prob_staying <- rep(0.5, 2)
   if(nrow(replist$movement) > 0){
-    #mov <- movdistil(replist$movement)
-    #vec <- rep(1/2,2)
-    #for(i in 1:200) vec <- vec %*% mov
-    #OM@Frac_area_1 <- OM@Size_area_1 <- rep(vec[1], 2)
-    #OM@Prob_staying <- rep(mean(mov[cbind(1:2, 1:2)]), 2)
-
     movement <- replist$movement[replist$movement$Seas == 1 & replist$movement$Gpattern == 1, ]
     nareas <- length(unique(movement$Source_area))
 
@@ -285,13 +280,21 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # Vulnerability --------------------------------------------
   ages <- growdat$Age
   cols <- match(ages, names(replist$Z_at_age))
-  rows <- replist$Z_at_age$Gender == 1 & replist$Z_at_age$Bio_Pattern == 1
-  F_at_age <- t(replist$Z_at_age[rows, cols] - replist$M_at_age[rows, cols])
+  rows <- match(mainyrs, replist$Z_at_age$Year)
+
+  Z_at_age <- replist$Z_at_age[rows, ]
+  M_at_age <- replist$M_at_age[rows, ]
+
+  rows2 <- Z_at_age$Gender == 1 & Z_at_age$Bio_Pattern == 1
+  F_at_age <- t(Z_at_age[rows2, cols] - M_at_age[rows2, cols])
   F_at_age[nrow(F_at_age), ] <- F_at_age[nrow(F_at_age) - 1, ] # assume F at maxage = F at maxage-1
 
   if(ncol(F_at_age) < nyears) { # Typically because forecast is off
     F_at_age_terminal <- F_at_age[, ncol(F_at_age)]
     F_at_age <- cbind(F_at_age, F_at_age_terminal)
+  }
+  if(ncol(F_at_age) == nyears && all(is.na(F_at_age[, ncol(F_at_age)]))) {
+    F_at_age[, ncol(F_at_age)] <- F_at_age[, ncol(F_at_age)-1]
   }
 
   F_at_age[F_at_age < 1e-8] <- 1e-8
