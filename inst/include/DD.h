@@ -119,7 +119,9 @@
   // Objective function
   //creates storage for jnll and sets value to 0
   Type nll = 0.;
-  for(int tt=0; tt<ny; tt++) nll -= dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+  for(int tt=0; tt<ny; tt++) {
+    if(C_hist(tt) > 0) nll -= dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+  }
 
   //Summing individual jnll and penalties
   nll += penalty;

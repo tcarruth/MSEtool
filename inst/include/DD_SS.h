@@ -133,7 +133,7 @@
   jnll_comp.setZero();
 
   for(int tt=0; tt<ny; tt++){
-    jnll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+    if(C_hist(tt) > 0) jnll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
     if(tt+k<ny) jnll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
   }
 
