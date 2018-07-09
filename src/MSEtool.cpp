@@ -30,10 +30,7 @@ template<class Type>
               } else
                 if(model == "SCA2") {
                   #include "../inst/include/SCA2.h"
-                } else
-                  if(model == "SCA3"){
-                    #include "../inst/include/SCA3.h"
-                  } else {
+                } else {
                     error("No model found.");
                   }
   

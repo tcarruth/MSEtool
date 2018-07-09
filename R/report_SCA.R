@@ -15,26 +15,27 @@ summary_SCA <- function(Assessment) {
   A95 <- info$LH$A95
   Winf <- info$LH$a * Linf ^ info$LH$b
 
-  Value <- c(M, maxage, Linf, K, t0, Winf, A50, A95)
-  Description = c("Natural mortality", "Maximum age (plus-group)", "Asymptotic length", "Growth coefficient",
+  Value <- c(h, M, maxage, Linf, K, t0, Winf, A50, A95)
+  Description = c("Stock-recruit steepness", "Natural mortality", "Maximum age (plus-group)", "Asymptotic length", "Growth coefficient",
                   "Age at length-zero", "Asymptotic weight", "Age of 50% maturity", "Age of 95% maturity")
-  rownam <- c("M", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
+  rownam <- c("h", "M", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
+  if(!"transformed_h" %in% names(obj$env$map)) input_parameters <- input_parameters[-1, ]
 
-  Value = c(h, R0, VB0, SSB0, MSY, UMSY, VBMSY, SSBMSY)
-  Description = c("Stock-recruit steepness", "Virgin recruitment", "Virgin vulnerable biomass",
+  Value = c(VB0, SSB0, MSY, UMSY, VBMSY, SSBMSY)
+  Description = c("Virgin vulnerable biomass",
                   "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
                   "Vulnerable biomass at MSY", "SSB at MSY")
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
-  rownames(derived) <- c("h", "R0", "VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY")
+  rownames(derived) <- c("VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY")
 
   model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
   dev_estimates <- cbind(Dev, SE_Dev)
   rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
 
-  output <- list(model = "Statistical Catch-at-Age",
+  output <- list(model = "Statistical Catch-at-Age (SCA)",
                  current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
                  model_estimates = rbind(model_estimates, dev_estimates))
@@ -49,7 +50,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
   if(save_figure) {
     prepare_to_save_figure()
     index.report <- summary(Assessment)
-    html_report(plot.dir, model = "Statistical Catch-at-Age",
+    html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
                 current_status = index.report$current_status,
                 input_parameters = index.report$input_parameters,
                 model_estimates = index.report$model_estimates,
@@ -173,8 +174,31 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
   }
 
   if(save_figure) {
-    html_report(plot.dir, model = "Statistical Catch-at-Age",
+    html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
                 captions = data.file.caption, name = Data@Name, report_type = "Data")
+  }
+
+  ind <- names(SD$par.fixed) == "log_R0"
+  plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_R0.png"))
+    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
+    dev.off()
+    assess.file.caption <- c("assessment_R0.png", "Estimate of R0, distribution based on
+                             normal approximation of estimated covariance matrix.")
+  }
+
+  if(!"transformed_h" %in% names(obj$env$map)) {
+    ind <- names(SD$par.fixed) == "transformed_h"
+    plot_steepness(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), is_transform = TRUE, SR = info$data$SR_type)
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_h.png"))
+      plot_steepness(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), is_transform = TRUE, SR = info$data$SR_type)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_h.png", "Estimate of steepness, distribution based on normal
+                                     approximation of estimated covariance matrix."))
+    }
   }
 
   plot_ogive(age, Selectivity[nrow(Selectivity), ])
@@ -182,7 +206,8 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
     create_png(filename = file.path(plot.dir, "assessment_selectivity.png"))
     plot_ogive(age, Selectivity[nrow(Selectivity), ])
     dev.off()
-    assess.file.caption <- c("assessment_selectivity.png", "Estimated selectivity at age.")
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_selectivity.png", "Estimated selectivity at age."))
   }
 
 
@@ -254,8 +279,8 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
   Arec <- TMB_report$Arec
   Brec <- TMB_report$Brec
   SSB_plot <- SSB[1:(length(SSB)-1)]
-  if(info$SR == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
-  if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
+  if(info$data$SR == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
+  if(info$data$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
   estR <- R[as.numeric(names(R)) > Year[1]]
 
   plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
@@ -327,23 +352,32 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
                                  c("assessment_recruitment.png", "Time series of recruitment (recruitment prior to the first year of the model in blue)."))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
+  if(as.numeric(names(Dev))[1] < Year[1]) {
+    obs_ind_blue <- as.numeric(names(Dev)) < Year[1]
+    msg <- c("Time series of recruitment deviations  (deviations prior to the first year of the model in blue).",
+             "Time series of recruitment deviations with 95% confidence intervals (deviations prior to the first year of the model in blue).")
+
+  } else {
+    obs_ind_blue <- NULL
+    msg <- c("Time series of recruitment deviations.",
+             "Time series of recruitment deviations with 95% confidence intervals.")
+  }
+  plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs.png"))
-    plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_rec_devs.png", "Time series of recruitment deviations from mean recruitment (deviations prior to the first year of the model in blue)."))
+                                 c("assessment_rec_devs.png", msg[1]))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
+  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_rec_devs_with_CI.png"))
-    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
+    plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = obs_ind_blue, label = Dev_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_rec_devs_with_CI.png", "Time series of recruitment deviations (from mean recruitment)
-                                   with 95% confidence intervals (deviations prior to the first year of the model in blue)."))
+                                 c("assessment_rec_devs_with_CI.png", msg[2]))
   }
 
   plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
@@ -384,19 +418,19 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
                                  c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
   }
 
-  plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$SR)
+  plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$data$SR_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
-    plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$SR)
+    plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$data$SR_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
   }
 
-  plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$SR)
+  plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$data$SR_type)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_yield_curve_SSB_SSB0.png"))
-    plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$SR)
+    plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$data$SR_type)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_yield_curve_SSB_SSB0.png", "Yield plot relative to spawning depletion."))
@@ -412,7 +446,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
   }
 
   if(save_figure) {
-    html_report(plot.dir, model = "Statistical Catch-at-Age",
+    html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
                 captions = assess.file.caption, name = Data@Name, report_type = "Assessment")
     browseURL(file.path(plot.dir, "Assessment.html"))
   }
@@ -421,66 +455,91 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
 
 
 #' @importFrom reshape2 acast
-profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE,
-                                   save_dir = getwd(), ...) {
+profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = getwd(), ...) {
   dots <- list(...)
-  if(!"meanR" %in% names(dots)) stop("Sequence of meanR was not found. See help file.")
-  meanR <- dots$meanR
+  if(!"R0" %in% names(dots)) stop("Sequence of R0 was not found. See help file.")
+  if(!"transformed_h" %in% names(Assessment@obj$env$map) && !"h" %in% names(dots)) {
+    stop("Sequence of h was not found. See help file.")
+  }
+  R0 <- dots$R0
+  if(!"transformed_h" %in% names(Assessment@obj$env$map)) h <- dots$h else h <- Assessment@h
 
-  nll <- rep(NA, length(meanR))
-  # MSY <- UMSY <- nll
+  profile.grid <- expand.grid(R0 = R0, h = h)
+  nll <- rep(NA, nrow(profile.grid))
   params <- Assessment@info$params
   random <- Assessment@obj$env$random
   map <- Assessment@obj$env$map
-  map$log_meanR <- factor(NA)
-  for(i in 1:length(meanR)) {
-    params$log_meanR <- log(meanR[i] * Assessment@info$rescale)
-    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
-                      map = map, random = random, inner.control = Assessment@info$inner.control,
-                      DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
-
-    if(!is.character(opt2)) {
-      #report <- obj$report(obj$env$last.par.best)
-      #refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
-      #                    SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = obj$env$data$weight,
-      #                    mat = obj$env$data$mat, M = obj$env$data$M, vul = report$vul, SR = Assessment@info$SR,
-      #                    fix_h = fix_h, h = info$h)
-      #report <- c(report, refpt)
-      nll[i] <- opt2$objective
-      #UMSY[i]  <- report$UMSY
-      #MSY[i] <- report$MSY
-    }
+  map$log_R0 <- map$transformed_h <- factor(NA)
+  if(Assessment@info$data$SR_type == "BH") {
+    transformed_h <- logit((profile.grid$h - 0.2)/0.8)
+  } else {
+    transformed_h <- log(profile.grid$h - 0.2)
   }
-  profile.grid <- data.frame(meanR = meanR, #UMSY = UMSY, MSY = MSY/Assessment@info$rescale,
-                             nll = nll - Assessment@opt$objective)
+  for(i in 1:nrow(profile.grid)) {
+    params$log_R0 <- log(profile.grid$R0[i] * Assessment@info$rescale)
+    params$transformed_h <- transformed_h[i]
+    obj <- MakeADFun(data = Assessment@info$data, parameters = params,
+                     map = map, random = random, inner.control = Assessment@info$inner.control,
+                     DLL = "MSEtool", silent = TRUE)
+    opt <- optimize_TMB_model(obj, Assessment@info$control)[[1]]
+
+    if(!is.character(opt)) nll[i] <- opt$objective
+  }
+  profile.grid$nll <- nll - Assessment@opt$objective
   if(figure) {
-    plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
-    abline(v = names(Assessment@SD$value) == "meanR", lty = 2)
+    if(length(h) > 1) {
+      z.mat <- acast(profile.grid, h ~ R0, value.var = "nll")
+      contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
+              nlevels = 20)
 
-    if(save_figure) {
-      Model <- Assessment@Model
-      prepare_to_save_figure()
+      h.MLE <- Assessment@h
+      R0.MLE <- Assessment@R0
+      points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
+      if(save_figure) {
+        Model <- Assessment@Model
+        prepare_to_save_figure()
 
-      create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
-      abline(v = names(Assessment@SD$value) == "meanR", lty = 2)
-      dev.off()
-      profile.file.caption <- c("profile_likelihood.png",
-                                "Profile likelihood of mean recruitment. Vertical, dashed line indicates maximum likelihood estimate.")
-      html_report(plot.dir, model = "Statistical Catch-at-Age",
-                  captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Data@Name, report_type = "Profile_Likelihood")
-      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
+        create_png(file.path(plot.dir, "profile_likelihood.png"))
+        contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
+                nlevels = 20)
+        points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
+        dev.off()
+        profile.file.caption <- c("profile_likelihood.png",
+                                  "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
+        html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
+                    captions = matrix(profile.file.caption, nrow = 1),
+                    name = Assessment@Data@Name, report_type = "Profile_Likelihood")
+        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
+      }
+    } else {
+      plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
+      abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
+
+      if(save_figure) {
+        Model <- Assessment@Model
+        prepare_to_save_figure()
+
+        create_png(file.path(plot.dir, "profile_likelihood.png"))
+        plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
+        abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
+        dev.off()
+        profile.file.caption <- c("profile_likelihood.png",
+                                  "Profile likelihood of R0. Vertical, dashed line indicates maximum likelihood estimate.")
+        html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
+                    captions = matrix(profile.file.caption, nrow = 1),
+                    name = Assessment@Data@Name, report_type = "Profile_Likelihood")
+        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
+      }
+
     }
+
   }
   return(profile.grid)
 }
 
 
 #' @importFrom gplots rich.colors
-retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
-                              save_figure = FALSE, save_dir = getwd()) {
+retrospective_SCA <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = getwd()) {
   assign_Assessment_slots()
   data <- info$data
   n_y <- data$n_y
@@ -490,6 +549,7 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
   I_hist <- data$I_hist
   CAA_hist <- data$CAA_hist
   CAA_n <- data$CAA_n
+  est_rec_dev <- data$est_rec_dev
   params <- info$params
 
   # Array dimension: Retroyr, Year, ts
@@ -500,7 +560,6 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
 
   SD <- NULL
   rescale <- info$rescale
-  fix_h <- ifelse(is.na(info$h), FALSE, TRUE)
 
   for(i in 0:nyr) {
     n_y_ret <- n_y - i
@@ -509,11 +568,14 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
     data$I_hist <- I_hist[1:n_y_ret]
     data$CAA_hist <- CAA_hist[1:n_y_ret, ]
     data$CAA_n <- CAA_n[1:n_y_ret]
+    data$est_rec_dev <- est_rec_dev[1:n_y_ret]
     params$log_rec_dev <- rep(0, n_y_ret)
 
     map <- obj$env$map
-    new_map <- as.numeric(map$log_rec_dev) - i
-    map$log_rec_dev <- factor(new_map[new_map > 0])
+    if(any(names(map) == "log_rec_dev")) {
+      new_map <- as.numeric(map$log_rec_dev) - i
+      map$log_rec_dev <- factor(new_map[new_map > 0])
+    }
 
     obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
@@ -523,16 +585,15 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
-      refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
-                          SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = data$weight, mat = data$mat,
-                          M = data$M, vul = report$vul, SR = info$SR, fix_h = fix_h, h = info$h)
-      report <- c(report, refpt)
+      ref_pt <- get_MSY(Arec = report$Arec, Brec = report$Brec, M = data$M, weight = data$weight, mat = data$mat,
+                        vul = report$vul, SR = data$SR_type)
+      report <- c(report, ref_pt)
       if(info$rescale != 1) {
         vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB",
                       "R", "MSY", "VBMSY", "RMSY", "BMSY", "EMSY", "VB0", "R0",
                       "B0", "E0", "N0")
         vars_mult <- "Brec"
-        var_trans <- c("meanR", "q")
+        var_trans <- c("R0", "q")
         fun_trans <- c("/", "*")
         fun_fixed <- c("log", NA)
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
@@ -555,8 +616,9 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
     }
   }
   if(figure) {
+    fix_h <- "transformed_h" %in% names(obj$env$map)
     plot_retro_SCA(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
-                   nyr_label = 0:nyr, color = rich.colors(nyr+1))
+                   nyr_label = 0:nyr, color = rich.colors(nyr+1), fix_h, SR = data$SR_type)
   }
   # Need to write legend?
   legend <- NULL
@@ -565,7 +627,7 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE,
 
 
 plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
-                           save_dir = getwd(), nyr_label, color) {
+                           save_dir = getwd(), nyr_label, color, fix_h, SR) {
   n_tsplots <- dim(retro_ts)[3] - 1
   ts_label <- c("Spawning Stock Biomass", expression(SSB/SSB[MSY]), expression(SSB/SSB[0]), "Recruitment",
                 "Population Abundance (N)", "Exploitation rate (U)",
@@ -609,13 +671,45 @@ plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
     }
   }
 
+  plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
+                    logtransform = TRUE, color = color)
+  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
+         title = "Years removed:")
   if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:n_tsplots), ".png"),
+    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
+    plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
+                      logtransform = TRUE, color = color)
+    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
+           title = "Years removed:")
+    dev.off()
+  }
+
+  if(!fix_h) {
+    plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
+    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
+           title = "Years removed:")
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
+      plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
+      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
+             title = "Years removed:")
+      dev.off()
+    }
+  }
+
+  if(save_figure) {
+    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+1)), ".png"),
                                    x2 = paste0("Retrospective pattern in ",
                                                c("spawning stock biomass", "SSB/SSBMSY", "spawning depletion", "recruitment",
-                                                 "abundance", "exploitation", "U/UMSY", "recruitment deviations"), "."))
+                                                 "abundance", "exploitation", "U/UMSY", "recruitment deviations",
+                                                 "R0 estimate"), "."), stringsAsFactors = FALSE)
+    if(!fix_h) {
+      ret.file.caption <- rbind(ret.file.caption,
+                                c(paste0("retrospective_", n_tsplots+2, ".png"), "Retrospective pattern in steepness estimate."))
+    }
+
     Assessment <- get("Assessment", envir = parent.frame())
-    html_report(plot.dir, model = "Statistical Catch-at-Age", captions = ret.file.caption,
+    html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)", captions = ret.file.caption,
                 name = Assessment@Data@Name, report_type = "Retrospective")
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }
@@ -623,69 +717,4 @@ plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
   invisible()
 }
 
-
-plot_yield_SCA <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01), SR,
-                           xaxis = c("U", "Biomass", "Depletion")) {
-  xaxis <- match.arg(xaxis)
-
-  M <- data$M
-  mat <- data$mat
-  weight <- data$weight
-  maxage <- data$max_age
-  vul <- report$vul
-
-  BMSY <- report$EMSY
-  B0 <- report$E0
-
-  Arec <- report$Arec
-  Brec <- report$Brec
-
-  EPR <- Req <- NA
-  solveMSY <- function(logit_U, SR) {
-    U <- ilogit(logit_U)
-    surv <- exp(-M) * (1 - vul * U)
-    NPR <- c(1, cumprod(surv[1:(maxage-1)]))
-    NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])
-    EPR <<- sum(NPR * mat * weight)
-    if(SR == "BH") Req <<- (Arec * EPR - 1)/(Brec * EPR)
-    if(SR == "Ricker") Req <<- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * U * NPR
-    Yield <- Req * sum(CPR * weight)
-    return(-1 * Yield)
-  }
-
-  Biomass <- Yield <- R <- rep(NA, length(u.vector))
-  for(i in 1:length(u.vector)) {
-    Yield[i] <- -1 * solveMSY(log(u.vector[i]/(1 - u.vector[i])), SR = SR)
-    R[i] <- Req
-    Biomass[i] <- EPR * Req
-  }
-
-  ind <- R >= 0
-
-  if(xaxis == "U") {
-    plot(u.vector[ind], Yield[ind], typ = 'l', xlab = "Exploitation rate (U)",
-         ylab = "Equilibrium yield")
-    segments(x0 = umsy, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = umsy, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-
-  if(xaxis == "Biomass") {
-    plot(Biomass[ind], Yield[ind], typ = 'l', xlab = "Spawning Stock Biomass",
-         ylab = "Equilibrium yield")
-    segments(x0 = BMSY, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-
-  if(xaxis == "Depletion") {
-    plot(Biomass[ind]/B0, Yield[ind], typ = 'l',
-         xlab = expression(SSB/SSB[0]), ylab = "Equilibrium yield")
-    segments(x0 = BMSY/B0, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY/report$B0, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-  invisible()
-}
 

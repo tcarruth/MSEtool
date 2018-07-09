@@ -1,5 +1,5 @@
 //template<class Type>
-//Type objective_function<Type>::operator() ()
+  //Type objective_function<Type>::operator() ()
 //{
 
   DATA_VECTOR(C_hist);    // Total catch
@@ -13,10 +13,12 @@
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
   DATA_STRING(I_type);    // String whether index surveys B, VB, or SSB
+  DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_VECTOR(est_early_rec_dev);
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
-  PARAMETER(log_meanR);
+  PARAMETER(log_R0);
+  PARAMETER(transformed_h);
   PARAMETER(U_equilibrium);
   PARAMETER_VECTOR(vul_par);
 
@@ -25,7 +27,14 @@
   PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
 
-  Type meanR = exp(log_meanR);
+  Type R0 = exp(log_R0);
+  Type h;
+  if(SR_type == "BH") {
+    h = 0.8 * ilogit(transformed_h);
+  } else {
+    h = exp(transformed_h);
+  }
+  h += 0.2;
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
 
@@ -39,6 +48,35 @@
     vul = calc_dome_vul(vul_par, max_age);
   }
 
+  ////// Equilibrium reference points and per-recruit quantities
+  vector<Type> NPR_virgin(max_age);
+  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
+
+  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
+
+  Type B0 = R0 * sum_BPR(NPR_virgin, weight);
+  Type N0 = R0 * NPR_virgin.sum();
+  Type E0 = R0 * EPR0;
+  Type VB0 = R0 * sum_VBPR(NPR_virgin, weight, vul);
+
+  Type Arec;
+  Type Brec;
+
+  if(SR_type == "BH") {
+    Arec = 4 *h;
+    Arec /= 1-h;
+    Arec /= EPR0;
+    Brec = 5*h - 1;
+    Brec /= (1-h) * E0;
+  } else {
+    Arec = pow(5*h, 1.25);
+    Arec /= EPR0;
+    Brec = 1.25;
+    Brec *= log(5*h);
+    Brec /= E0;
+  }
+  Type CR = Arec * EPR0;
+
   ////// During time series year = 1, 2, ..., n_y
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
   matrix<Type> CAApred(n_y, max_age);   // Catch (in numbers) at year and age at the mid-point of the season
@@ -46,7 +84,7 @@
   vector<Type> U(n_y);              // Harvest rate at year
   vector<Type> Ipred(n_y);          // Predicted index at year
   vector<Type> R(n_y+1);            // Recruitment at year
-  vector<Type> R_early(max_age-1);  // Early recruitment (boundary conditions)
+  vector<Type> R_early(max_age-1);
   vector<Type> VB(n_y+1);           // Vulnerable biomass at year
   vector<Type> B(n_y+1);            // Total biomass at year
   vector<Type> E(n_y+1);            // Spawning biomass at year
@@ -57,22 +95,28 @@
   E.setZero();
 
   // Equilibrium quantities (leading into first year of model)
-  vector<Type> NPR_virgin(max_age);
-  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);
-  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
-
   vector<Type> NPR_equilibrium(max_age);
   NPR_equilibrium = calc_NPR(U_equilibrium, vul, M, max_age);
 
-  R(0) = meanR;
+  Type EPR_eq = sum_EPR(NPR_equilibrium, weight, mat);
+  Type R_eq;
+
+  if(SR_type == "BH") {
+    R_eq = Arec * EPR_eq - 1;
+  } else {
+    R_eq = log(Arec * EPR_eq);
+  }
+  R_eq /= Brec * EPR_eq;
+
+  R(0) = R_eq;
   if(!R_IsNA(asDouble(est_rec_dev(0)))) {
     R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
   }
   for(int a=0;a<max_age;a++) {
-    if(a==0) {
+    if(a == 0) {
       N(0,a) = R(0) * NPR_equilibrium(a);
     } else {
-      R_early(a-1) = meanR;
+      R_early(a-1) = R_eq;
       if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) {
         R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * pow(tau, 2));
       }
@@ -85,24 +129,28 @@
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
-    if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) = meanR * exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
-      else R(y+1) = meanR;
+    if(SR_type == "BH") {
+      R(y+1) = BH_SR(E(y), h, R0, E0);
+    } else {
+      R(y+1) = Ricker_SR(E(y), h, R0, E0);
     }
-    if(y==n_y-1) R(y+1) = R(y);
+
+    if(y<n_y-1) {
+      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+    }
     N(y+1,0) = R(y+1);
 
     U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
-      1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
+                            1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
     for(int a=0;a<max_age;a++) {
       CAApred(y,a) = vul(a) * U(y) * N(y,a);
       CN(y) += CAApred(y,a);
       if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
       if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
-	    B(y+1) += N(y+1,a) * weight(a);
-	    VB(y+1) += N(y+1,a) * weight(a) * vul(a);
-	    E(y+1) += N(y+1,a) * weight(a) * mat(a);
-	  }
+      B(y+1) += N(y+1,a) * weight(a);
+      VB(y+1) += N(y+1,a) * weight(a) * vul(a);
+      E(y+1) += N(y+1,a) * weight(a) * mat(a);
+    }
   }
 
   // Calculate nuisance parameters and likelihood
@@ -124,13 +172,13 @@
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
 
     vector<Type> loglike_CAAobs(max_age);
-	  vector<Type> loglike_CAApred(max_age);
-	  for(int a=0;a<max_age;a++) {
-	    loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
-	    loglike_CAApred(a) = CAApred(y,a)/CN(y);
-	  }
-	  if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
-	  if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
+    vector<Type> loglike_CAApred(max_age);
+    for(int a=0;a<max_age;a++) {
+      loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
+      loglike_CAApred(a) = CAApred(y,a)/CN(y);
+    }
+    if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
+	if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
     if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
@@ -138,12 +186,23 @@
 
   Type nll = nll_comp.sum() + penalty;
 
-  ADREPORT(meanR);
+  ADREPORT(R0);
+  ADREPORT(h);
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
 
-  REPORT(meanR);
+  REPORT(NPR_virgin);
+  REPORT(Arec);
+  REPORT(Brec);
+  REPORT(EPR0);
+  REPORT(CR);
+  REPORT(h);
+  REPORT(R0);
+  REPORT(B0);
+  REPORT(N0);
+  REPORT(E0);
+  REPORT(VB0);
 
   REPORT(vul_par);
   REPORT(vul);
@@ -154,13 +213,10 @@
   REPORT(U);
   REPORT(Ipred);
   REPORT(R);
+  REPORT(R_early);
   REPORT(VB);
   REPORT(B);
   REPORT(E);
-  REPORT(R_early);
-
-  REPORT(NPR_virgin);
-  REPORT(EPR0);
 
   REPORT(log_early_rec_dev);
   REPORT(log_rec_dev);
@@ -168,7 +224,8 @@
   REPORT(nll);
   REPORT(penalty);
 
+
   return nll;
-//}
+  //}
 
 
