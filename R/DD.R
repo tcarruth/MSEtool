@@ -245,7 +245,10 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
     sigmaC <- max(0.05, sdconv(1, Data@CV_Cat[x]))
     params$log_sigma <- log(sigmaC)
   }
-  if(is.null(params$log_tau)) params$log_tau <- log(1)
+  if(is.null(params$log_tau)) {
+    tau_start <- ifelse(is.na(Data@sigmaR[x]), 0.6, Data@sigmaR[x])
+    params$log_tau <- log(tau_start)
+  }
   params$log_rec_dev = rep(0, ny - k)
 
   info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH,
