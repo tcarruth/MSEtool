@@ -76,7 +76,7 @@ getinds<-function(PPD,styr,res=6, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("s
 #' @author T. Carruthers
 #' @references Carruthers and Hordyk 2018
 #' @export
-CC<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","MLS"),res=1){
+plot_crosscorr<-function(indPPD,indData,pp=1,dnam=c("CS","CV","CM","IS","MLS"),res=1){
 
   if(pp>1)namst<-paste(rep(dnam,pp),rep((1:pp)*res,each=length(dnam)))
   if(pp==1)namst=dnam
@@ -228,7 +228,7 @@ PRBcalc=function(MSE_null,MSE_alt,
     indData<-getinds(Data,styr=styr,res=res,tsd=tsd,stat=stat)
 
 
-    if(plotCC)CC(indPPD,indData,pp=2,res=res)
+    if(plotCC) plot_crosscorr(indPPD,indData,pp=2,res=res)
 
     out<-Probs(indPPD,indData,alpha=alpha,removedat=removedat,removethresh=removethresh)
 
