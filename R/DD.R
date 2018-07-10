@@ -73,7 +73,7 @@
 #' }
 #' @useDynLib MSEtool
 #' @export
-DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
+DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = FALSE,
                    fix_U_equilibrium = TRUE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
@@ -106,18 +106,29 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
 
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- logit(start$UMSY[1])
-    if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
+    if(!is.null(start$R0) && is.numeric(start$R0)) params$log_R0 <- log(start$R0[1] * rescale)
+    if(!is.null(start$h) && is.numeric(start$h)) {
+      if(SR == "BH") {
+        h_start <- (start$h[1] - 0.2)/0.8
+        params$transformed_h <- logit(h_start)
+      } else {
+        params$transformed_h <- log(start$h[1] - 0.2)
+      }
+    }
     if(!is.null(start$q) && is.numeric(start$q)) params$log_q <- log(start$q[1])
     if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equililbrium
   }
-  if(is.null(params$logit_UMSY)) {
-    UMSY_start <- 1 - exp(-Data@Mort[x] * 0.5)
-    params$logit_UMSY <- logit(UMSY_start)
+  if(is.null(params$log_R0)) {
+    params$log_R0 <- log(mean(data$C_hist)) + 4
   }
-  if(is.null(params$log_MSY)) {
-    AvC <- mean(C_hist * rescale)
-    params$log_MSY <- log(3 * AvC)
+  if(is.null(params$transformed_h)) {
+    h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
+    if(SR == "BH") {
+      h_start <- (h_start - 0.2)/0.8
+      params$transformed_h <- logit(h_start)
+    } else {
+      params$transformed_h <- log(h_start - 0.2)
+    }
   }
   if(is.null(params$log_q)) params$log_q <- log(1)
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
@@ -125,6 +136,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH, rescale = rescale, control = control)
 
   map <- list()
+  if(fix_h) map$transformed_h <- factor(NA)
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
@@ -139,6 +151,9 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   } else {
+
+    ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
+    report <- c(report, ref_pt)
 
     if(rescale != 1) {
       vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
@@ -172,14 +187,15 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
                       Obs_Catch = structure(C_hist, names = Year),
                       Catch = structure(report$Cpred, names = Year),
                       NLL = structure(c(opt$objective, report$nll), names = c("Total", "Catch")),
-                      SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
-                      SE_U_UMSY_final = SD$sd[names(SD$value) == "U_UMSY_final"],
-                      SE_B_BMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_B_B0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      SE_SSB_SSBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_SSB_SSB0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_VB_VB0_final = SD$sd[names(SD$value) == "B_B0_final"], info = info, obj = obj, opt = opt,
+                      #SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
+                      #SE_U_UMSY_final = SD$sd[names(SD$value) == "U_UMSY_final"],
+                      #SE_B_BMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
+                      #SE_B_B0_final = SD$sd[names(SD$value) == "B_B0_final"],
+                      #SE_SSB_SSBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
+                      #SE_SSB_SSB0_final = SD$sd[names(SD$value) == "B_B0_final"],
+                      #SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
+                      #SE_VB_VB0_final = SD$sd[names(SD$value) == "B_B0_final"],
+                      info = info, obj = obj, opt = opt,
                       SD = SD, TMB_report = report, dependencies = dependencies, Data = Data)
   }
   return(Assessment)
@@ -337,3 +353,27 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
 class(DD_SS) <- "Assess"
 
 
+get_MSY_DD <- function(TMB_data, Arec, Brec) {
+  S0 <- TMB_data$S0
+  Alpha <- TMB_data$Alpha
+  Rho <- TMB_data$Rho
+  wk <- TMB_data$wk
+  SR <- TMB_data$SR
+
+  solveMSY <- function(x) {
+    U <- ilogit(x)
+    SS <- S0 * (1 - U)
+    Spr <- (SS * Alpha/(1 - SS) + wk)/(1 - Rho * SS)
+    if(SR == "BH") Req <- (Arec * Spr - 1)/(Brec * Spr)
+    if(SR == "Ricker") Req <- log(Arec * Spr)/(Brec * Spr)
+    Beq <- Spr * Req
+    Yield <- U * Beq
+    return(-1 * Yield)
+  }
+
+  opt2 <- optimize(solveMSY, interval = c(-6, 6))
+  UMSY <- ilogit(opt2$minimum)
+  MSY <- -1 * opt2$objective
+  BMSY <- MSY/UMSY
+  return(list(UMSY = UMSY, MSY = MSY, BMSY = BMSY))
+}
