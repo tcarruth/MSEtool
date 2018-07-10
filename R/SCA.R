@@ -170,6 +170,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     late_dev <- ifelse(is.na(comp50_ind), 0, comp50_ind)
   }
   if(is.numeric(late_dev) && late_dev > 0) {
+    if(late_dev > length(est_rec_dev)) late_dev <- 2
     ind_late <- (length(est_rec_dev) - late_dev + 1):length(est_rec_dev)
     est_rec_dev[ind_late] <- NA
   }
