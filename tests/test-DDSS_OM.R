@@ -13,9 +13,9 @@ OMs <- avail("OM")
 #save(Data_from_Hist, file = "tests_results/Data_from_Hist.RData")
 
 # Run test
-context("Run DD from Hist object")
+context("Run DD_SS from Hist object")
 
-DD_MP <- make_MP(DD_TMB, HCR_MSY, fix_h = TRUE)
+DDSS_MP <- make_MP(DD_SS, HCR_MSY)
 load("tests_results/Data_from_Hist.RData")
 
 out_csv <- list()
@@ -28,7 +28,7 @@ for(i in 1:length(OMs)) {
 
     Data <- Data_from_Hist[[i]]
 
-    res <- lapply(1:my_OM@nsim, DD_MP, Data = Data)
+    res <- lapply(1:my_OM@nsim, DDSS_MP, Data = Data)
     #res2 <- lapply(1:my_OM@nsim, DD_TMB, Data = Data)
     expect_true(all(vapply(res, inherits, logical(1), "Rec")))
 
@@ -48,4 +48,4 @@ for(i in 1:length(OMs)) {
 
 names(out_csv) <- OMs
 
-save(out_csv, file = "tests_results/DD_OM.RData")
+save(out_csv, file = "tests_results/DDSS_OM.RData")
