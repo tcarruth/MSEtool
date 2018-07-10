@@ -158,7 +158,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
     if(rescale != 1) {
       vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
       vars_mult <- c("Brec")
-      var_trans <- c("MSY")
+      var_trans <- c("R0")
       fun_trans <- c("/")
       fun_fixed <- c("log")
       rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
@@ -206,7 +206,7 @@ class(DD_TMB) <- "Assess"
 #' @describeIn DD_TMB State-Space version of Delay-Difference model
 #' @export
 DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                  fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+                  fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                   integrate = FALSE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4),
                   inner.control = list(), ...) {
   SR <- match.arg(SR)
@@ -240,20 +240,31 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
 
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$UMSY) && is.numeric(start$UMSY)) params$logit_UMSY <- logit(start$UMSY[1])
-    if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
+    if(!is.null(start$R0) && is.numeric(start$R0)) params$log_R0 <- log(start$R0[1] * rescale)
+    if(!is.null(start$h) && is.numeric(start$h)) {
+      if(SR == "BH") {
+        h_start <- (start$h[1] - 0.2)/0.8
+        params$transformed_h <- logit(h_start)
+      } else {
+        params$transformed_h <- log(start$h[1] - 0.2)
+      }
+    }
     if(!is.null(start$q) && is.numeric(start$q)) params$log_q <- log(start$q[1])
     if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equililbrium
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma[1])
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
-  if(is.null(params$logit_UMSY)) {
-    UMSY_start <- 1 - exp(-Data@Mort[x] * 0.5)
-    params$logit_UMSY <- logit(UMSY_start)
+  if(is.null(params$log_R0)) {
+    params$log_R0 <- log(mean(data$C_hist)) + 4
   }
-  if(is.null(params$log_MSY)) {
-    AvC <- mean(C_hist * rescale)
-    params$log_MSY <- log(3 * AvC)
+  if(is.null(params$transformed_h)) {
+    h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
+    if(SR == "BH") {
+      h_start <- (h_start - 0.2)/0.8
+      params$transformed_h <- logit(h_start)
+    } else {
+      params$transformed_h <- log(h_start - 0.2)
+    }
   }
   if(is.null(params$log_q)) params$log_q <- log(1)
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
@@ -271,6 +282,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
                rescale = rescale, control = control, inner.control = inner.control)
 
   map <- list()
+  if(fix_h) map$transformed_h <- factor(NA)
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
@@ -291,11 +303,13 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
                       info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                       dependencies = dependencies, Data = Data)
   } else {
+    ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
+    report <- c(report, ref_pt)
 
     if(rescale != 1) {
       vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
       vars_mult <- c("Brec")
-      var_trans <- c("MSY")
+      var_trans <- c("R0")
       fun_trans <- c("/")
       fun_fixed <- c("log")
       rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
