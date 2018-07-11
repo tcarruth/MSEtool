@@ -26,9 +26,9 @@ SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
 
 \item{Data}{An object of class Data}
 
-\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).}
+\item{SR}{Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).}
 
-\item{vulnerability}{Whether estimated vulnerability is logistic or dome (double-normal).
+\item{vulnerability}{Whether estimated vulnerability is \code{"logistic"} or \code{"dome"} (double-normal).
 See details for parameterization.}
 
 \item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix. See details.}
@@ -49,7 +49,7 @@ calculation of reference points for \code{SCA2}.}
 is estimated. If \code{TRUE}, \code{U_equilibrium} is fixed to value provided in \code{start} (if provided),
 otherwise, equal to zero (assumes virgin conditions).}
 
-\item{fix_sigma}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+\item{fix_sigma}{Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
 
 \item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},

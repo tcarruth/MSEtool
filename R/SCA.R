@@ -7,8 +7,8 @@
 #'
 #' @param x A position in the Data object (by default, equal to one for assessments).
 #' @param Data An object of class Data
-#' @param SR Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).
-#' @param vulnerability Whether estimated vulnerability is logistic or dome (double-normal).
+#' @param SR Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).
+#' @param vulnerability Whether estimated vulnerability is \code{"logistic"} or \code{"dome"} (double-normal).
 #' See details for parameterization.
 #' @param CAA_multiplier Numeric for data weighting of catch-at-age matrix. See details.
 #' @param I_type Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
@@ -22,7 +22,7 @@
 #' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model
 #' is estimated. If \code{TRUE}, \code{U_equilibrium} is fixed to value provided in \code{start} (if provided),
 #' otherwise, equal to zero (assumes virgin conditions).
-#' @param fix_sigma Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+#' @param fix_sigma Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Ind}.
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@sigmaR}.
