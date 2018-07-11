@@ -6,19 +6,19 @@ summary_DD_TMB <- function(Assessment) {
                                          B_B0[length(B_B0)]))
   rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
-  input_parameters <- data.frame(Value = as.numeric(unlist(info$data[c(2,3,4,6,7)])),
-                                 Description = c("Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
+  input_parameters <- data.frame(Value = as.numeric(c(h, unlist(info$data[c(2,3,4,6,7)]))),
+                                 Description = c("Stock-recruit steepness", "Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
                                                  "rho = (W_k+2 - Winf)/(W_k+1 - Winf)", "Age of knife-edge selectivity",
                                                  "Weight at age k"),
                                  stringsAsFactors = FALSE)
-  rownames(input_parameters) <- c("S0", "alpha", "rho", "k", "w_k")
+  rownames(input_parameters) <- c("h", "S0", "alpha", "rho", "k", "w_k")
+  if(!"transformed_h" %in% names(obj$env$map)) input_parameters <- input_parameters[-1, ]
 
-  derived <- data.frame(Value = c(h, B0, R0, N0, BMSY, TMB_report$Spr0, TMB_report$Spr),
-                        Description = c("Stock-recruit steepness", "Virgin biomass", "Virgin recruitment",
-                                        "Virgin abundance", "Biomass at MSY", "Virgin biomass-per-recruit",
-                                        "Biomass-per-recruit at MSY"),
+  derived <- data.frame(Value = c(B0, N0, MSY, UMSY, BMSY),
+                        Description = c("Virgin biomass", "Virgin abundance", "Maximum sustainable yield (MSY)",
+                                        "Harvest Rate at MSY", "Biomass at MSY"),
                         stringsAsFactors = FALSE)
-  rownames(derived) <- c("h", "B0", "R0", "N0", "BMSY", "BPR0", "BPR_UMSY")
+  rownames(derived) <- c("B0", "N0", "MSY", "UMSY", "BMSY")
 
   model_estimates <- summary(SD)
   model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
@@ -141,65 +141,27 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
                 name = Data@Name, report_type = "Data")
   }
 
-  umsy.ind <- names(SD$par.fixed) == "logit_UMSY"
-  logit.umsy <- SD$par.fixed[umsy.ind]
-  logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[umsy.ind])
-
-  plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
+  ind <- names(SD$par.fixed) == "log_R0"
+  plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_UMSYestimate.png"))
-    plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
+    create_png(filename = file.path(plot.dir, "assessment_R0.png"))
+    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
     dev.off()
-    assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
+    assess.file.caption <- c("assessment_R0.png", "Estimate of R0, distribution based on
+                             normal approximation of estimated covariance matrix.")
   }
 
-  msy.ind <- names(SD$par.fixed) == "log_MSY"
-  log.msy <- SD$par.fixed[msy.ind]
-  log.msy.sd <- sqrt(diag(SD$cov.fixed)[msy.ind])
-
-  plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_MSYestimate.png"))
-    plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
-  }
-
-  Uy <- names(U_UMSY)[length(U_UMSY)]
-  plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
-    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_U_UMSYestimate.png",
-                                   paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
-                                          normal approximation of estimated covariance matrix.")))
-  }
-
-  By <- names(B_BMSY)[length(B_BMSY)]
-  plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(B[.(By)]/B[MSY]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_B_BMSYestimate.png"))
-    plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(widehat(B[.(By)]/B[MSY])))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_B_BMSYestimate.png",
-                                   paste0("Estimate of B/BMSY in ", By, ", distribution based on
-                                          normal approximation of estimated covariance matrix.")))
-  }
-
-  By <- names(B_B0)[length(B_B0)]
-  plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(B[.(By)]/B[0]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_B_B0estimate.png"))
-    plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(widehat(B[.(By)]/B[0])))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_B_B0estimate.png",
-                                   paste0("Estimate of B/B0 in ", By, ", distribution based on
-                                          normal approximation of estimated covariance matrix.")))
+  if(!"transformed_h" %in% names(obj$env$map)) {
+    ind <- names(SD$par.fixed) == "transformed_h"
+    plot_steepness(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), is_transform = TRUE, SR = info$data$SR_type)
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_h.png"))
+      plot_steepness(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), is_transform = TRUE, SR = info$data$SR_type)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_h.png", "Estimate of steepness, distribution based on normal
+                                     approximation of estimated covariance matrix."))
+    }
   }
 
   plot_ogive(age, sel)
@@ -370,80 +332,76 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = ge
 
 
 #' @importFrom reshape2 acast
-profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = TRUE,
-                                      save_dir = getwd(), ...) {
-
+profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = getwd(), ...) {
   dots <- list(...)
-  if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
-  if(!"MSY" %in% names(dots)) stop("Sequence of MSY was not found. See help file.")
-  UMSY <- dots$UMSY
-  MSY <- dots$MSY
+  if(!"R0" %in% names(dots)) stop("Sequence of R0 was not found. See help file.")
+  if(!"transformed_h" %in% names(Assessment@obj$env$map) && !"h" %in% names(dots)) {
+    stop("Sequence of h was not found. See help file.")
+  }
+  R0 <- dots$R0
+  if(!"transformed_h" %in% names(Assessment@obj$env$map)) h <- dots$h else h <- Assessment@h
 
-  profile.grid <- expand.grid(UMSY = UMSY, MSY = MSY)
-  nll <- h <- rep(NA, nrow(profile.grid))
+  profile.grid <- expand.grid(R0 = R0, h = h)
+  nll <- rep(NA, nrow(profile.grid))
   params <- Assessment@info$params
   map <- Assessment@obj$env$map
-  map$logit_UMSY <- map$log_MSY <- factor(NA)
-  for(i in 1:nrow(profile.grid)) {
-    params$logit_UMSY <- logit(profile.grid[i, 1])
-    params$log_MSY <- log(profile.grid[i, 2] * Assessment@info$rescale)
-    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = map, DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
-
-    if(!is.character(opt2)) {
-      nll[i] <- opt2$objective
-      h[i] <- obj2$report(opt2$par)$h
-    }
+  map$log_R0 <- map$transformed_h <- factor(NA)
+  if(Assessment@info$data$SR_type == "BH") {
+    transformed_h <- logit((profile.grid$h - 0.2)/0.8)
+  } else {
+    transformed_h <- log(profile.grid$h - 0.2)
   }
-  profile.grid$h <- h
+  for(i in 1:nrow(profile.grid)) {
+    params$log_R0 <- log(profile.grid$R0[i] * Assessment@info$rescale)
+    params$transformed_h <- transformed_h[i]
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
+                      map = map, DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
+    if(!is.character(opt2)) nll[i] <- opt2$objective
+  }
   profile.grid$nll <- nll - Assessment@opt$objective
+
   if(figure) {
-    if(save_figure) {
-      Model <- Assessment@Model
-      prepare_to_save_figure()
-    }
-    UMSY.MLE <- Assessment@UMSY
-    MSY.MLE <- Assessment@MSY
-
-    z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "nll")
-    contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
-            nlevels = 20)
-    points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
-    if(save_figure) {
-      create_png(file.path(plot.dir, "profile_likelihood.png"))
-      contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
+    if(length(h) > 1) {
+      z.mat <- acast(profile.grid, list("h", "R0"), value.var = "nll")
+      contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
               nlevels = 20)
-      points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
-      dev.off()
-      profile.file.caption <- c("profile_likelihood.png",
-                                "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum.")
 
+      h.MLE <- Assessment@h
+      R0.MLE <- Assessment@R0
+      points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
+      if(save_figure) {
+        Model <- Assessment@Model
+        prepare_to_save_figure()
+
+        create_png(file.path(plot.dir, "profile_likelihood.png"))
+        contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
+                nlevels = 20)
+        points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
+        dev.off()
+        profile.file.caption <- c("profile_likelihood.png",
+                                  "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
+      }
+    } else {
+      plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
+      abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
+
+      if(save_figure) {
+        Model <- Assessment@Model
+        prepare_to_save_figure()
+
+        create_png(file.path(plot.dir, "profile_likelihood.png"))
+        plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
+        abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
+        dev.off()
+        profile.file.caption <- c("profile_likelihood.png",
+                                  "Profile likelihood of R0. Vertical, dashed line indicates maximum likelihood estimate.")
+      }
     }
-
-    z.mat <- acast(profile.grid, UMSY ~ MSY, value.var = "h")
-    contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
-            nlevels = 20)
-    points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
-    if(save_figure) {
-      create_png(file.path(plot.dir, "profile_likelihood_steepness.png"))
-      contour(x = UMSY, y = MSY, z = z.mat, xlab = expression(U[MSY]), ylab = "MSY",
-              nlevels = 20)
-      points(UMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
-      dev.off()
-      profile.file.caption <- rbind(profile.file.caption,
-                                    c("profile_likelihood_steepness.png",
-                                      "Values of steepness (derived) from values of UMSY and MSY. Red point indicates maximum likelihood estimate of UMSY and MSY."))
-
-    }
-
-
-    if(save_figure) {
-      html_report(plot.dir, model = "Delay Difference",
-                  captions = profile.file.caption,
-                  name = Assessment@Data@Name, report_type = "Profile_Likelihood")
-      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
-    }
+    html_report(plot.dir, model = "Delay Difference",
+                captions = matrix(profile.file.caption, nrow = 1),
+                name = Assessment@Data@Name, report_type = "Profile_Likelihood")
+    browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
   }
   return(profile.grid)
 }
@@ -486,11 +444,13 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
+      ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
+      report <- c(report, ref_pt)
 
       if(rescale != 1) {
         vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
         vars_mult <- c("Brec")
-        var_trans <- c("MSY")
+        var_trans <- c("R0")
         fun_trans <- c("/")
         fun_fixed <- c("log")
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
@@ -513,8 +473,9 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
 
   }
   if(figure) {
+    fix_h <- "transformed_h" %in% names(obj$env$map)
     plot_retro_DD_TMB(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
-                      nyr_label = 0:nyr, color = rich.colors(nyr+1))
+                      nyr_label = 0:nyr, color = rich.colors(nyr+1), fix_h, data$SR_type)
   }
   # Need to write legend
   legend <- NULL
@@ -522,7 +483,7 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
 }
 
 plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
-                              save_dir = getwd(), nyr_label, color) {
+                              save_dir = getwd(), nyr_label, color, fix_h, SR) {
   n_tsplots <- dim(retro_ts)[3] - 1
   ts_label <- c("Biomass", expression(B/B[MSY]), expression(B/B[0]), "Recruitment",
                 "Population Abundance (N)", "Exploitation rate (U)",
@@ -561,37 +522,43 @@ plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
     }
   }
 
-  plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], is_logit = TRUE,
-               label = expression(hat(U)[MSY]), color = color)
+  plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
+                    logtransform = TRUE, color = color)
   legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
          title = "Years removed:")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
-    plot_betavar(retro_est[, 1, 1], retro_est[, 1, 2], is_logit = TRUE,
-                 label = expression(hat(U)[MSY]), color = color)
+    plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
+                      logtransform = TRUE, color = color)
     legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
            title = "Years removed:")
     dev.off()
   }
 
-  plot_lognormalvar(retro_est[, 2, 1], retro_est[, 2, 2], logtransform = TRUE,
-                    label = expression(widehat(MSY)), color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-         title = "Years removed:")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
-    plot_lognormalvar(retro_est[, 2, 1], retro_est[, 2, 2], logtransform = TRUE,
-                      label = expression(widehat(MSY)), color = color)
+  if(!fix_h) {
+    plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
     legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
            title = "Years removed:")
-    dev.off()
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
+      plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
+      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
+             title = "Years removed:")
+      dev.off()
+    }
   }
 
   if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+2)), ".png"),
+    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+1)), ".png"),
                                    x2 = paste0("Retrospective pattern in ",
                                                c("biomass", "B/BMSY", "biomass depletion", "recruitment",
-                                                 "abundance", "exploitation", "U/UMSY", "UMSY estimate", "MSY estimate"), "."))
+                                                 "abundance", "exploitation", "U/UMSY", "R0 estimate"), "."),
+                                   stringsAsFactors = FALSE)
+    if(!fix_h) {
+      ret.file.caption <- rbind(ret.file.caption,
+                                c(paste0("retrospective_", n_tsplots+2, ".png"), "Retrospective pattern in steepness estimate."))
+    }
+
     Assessment <- get("Assessment", envir = parent.frame())
     html_report(plot.dir, model = "Delay Difference", captions = ret.file.caption,
                 name = Assessment@Data@Name, report_type = "Retrospective")

@@ -6,12 +6,12 @@
 \title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
 \usage{
 DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
-  start = NULL, fix_U_equilibrium = TRUE, silent = TRUE,
+  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, silent = TRUE,
   control = list(iter.max = 5000, eval.max = 10000), ...)
 
 DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
-  start = NULL, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
   control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
   ...)
 }
@@ -21,7 +21,7 @@ Otherwise, equals to 1 when running an assessment.}
 
 \item{Data}{An object of class \linkS4class{Data}.}
 
-\item{SR}{Stock-recruit function (either \code{BH} for Beverton-Holt or \code{Ricker}).}
+\item{SR}{Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).}
 
 \item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
 can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
@@ -88,17 +88,18 @@ violated tends to be the biggest driver of performance for this method.
 \examples{
 \dontrun{
 #### Observation-error delay difference model
-res <- DD_TMB(Data = sim_snapper)
+res <- DD_TMB(Data = Red_snapper)
 
 
 # Provide starting values
-start <- list(UMSY = 0.05, MSY = 4)
-res <- DD_TMB(Data = sim_snapper, start = start)
+start <- list(R0 = 1, h = 1)
+res <- DD_TMB(Data = Red_snapper, start = start)
 
 summary(res@SD) # Look at parameter estimates
 
 ### State-space version
-res <- DD_SS(Data = sim_snapper)
+### Recruitment variability SD = 0.3
+res <- DD_SS(Data = Red_snapper, start = list(tau = 0.3))
 
 # Plot and save figures
 plot(res)
