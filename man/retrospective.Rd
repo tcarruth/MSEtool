@@ -30,8 +30,7 @@ Perform a retrospective analysis.
 }
 \examples{
 \dontrun{
-data(sim_snapper)
-output <- DD_TMB(Data = sim_snapper)
+output <- DD_TMB(Data = DLMtool::Red_snapper)
 get_retro <- retrospective(output, nyr = 5)
 }
 }

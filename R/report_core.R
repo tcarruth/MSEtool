@@ -16,16 +16,14 @@
 #' a figure of the likelihood surface.
 #' @examples
 #' \dontrun{
-#' data(sim_snapper)
-#' output <- DD_TMB(Data = sim_snapper)
-#' pro <- profile_likelihood(output, UMSY = seq(0.05, 0.15, 0.01), MSY = seq(0.1, 3, 0.01))
-#'
-#' # Ensure your grid is of proper resolution.
-#' # This grid is too coarse.
-#' poor_profile <- profile_likelihood(output, UMSY = seq(0.05, 0.15, 0.1), MSY = seq(0.1, 3, 0.1),
+#' output <- DD_TMB(Data = DLMtool::Red_snapper)
+#' pro <- profile_likelihood(output, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01),
 #' save_figure = FALSE)
+#'
+#' # Ensure your grid is of proper resolution. A grid that is too coarse will distort the shape of
+#' # the likelihood surface.
 #' }
-#' @export profile_likelihood
+#' @export
 profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
                                save_dir = getwd(), ...) {
   if(figure) {
@@ -58,8 +56,7 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
 #' with successive number of years removed. Returns invisibly an array of model output and of model estimates.
 #' @examples
 #' \dontrun{
-#' data(sim_snapper)
-#' output <- DD_TMB(Data = sim_snapper)
+#' output <- DD_TMB(Data = DLMtool::Red_snapper)
 #' get_retro <- retrospective(output, nyr = 5)
 #' }
 #' @export

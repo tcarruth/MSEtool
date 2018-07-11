@@ -3,7 +3,7 @@
 \name{DD_TMB}
 \alias{DD_TMB}
 \alias{DD_SS}
-\title{Delay - Difference Stock Assessment in TMB with UMSY and MSY as leading parameters}
+\title{Delay - Difference Stock Assessment in TMB}
 \usage{
 DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, silent = TRUE,
@@ -58,15 +58,14 @@ An object of \code{\linkS4class{Assessment}} containing objects and output
 from TMB.
 }
 \description{
-A simple delay-difference assessment that estimates the TAC using a
+A simple delay-difference assessment model using a
 time-series of catches and a relative abundance index and coded in TMB. The model
 is conditioned on effort and estimates predicted catch. In the state-space version,
-recruitment deviations from the stock-recruit relationship are estimated as a
-random effect variable.
+recruitment deviations from the stock-recruit relationship are estimated.
 }
 \details{
-To provide starting values for \code{DD_TMB}, a named list can be provided for \code{UMSY},
-\code{MSY}, and \code{q} via the \code{start} argument (see example).
+To provide starting values for \code{DD_TMB}, a named list can be provided for \code{R0} (virgin recruitment),
+\code{h} (steepness), and \code{q} (catchability coefficient) via the \code{start} argument (see example).
 
 For \code{DD_SS}, additional start values can be provided for and \code{sigma} and \code{tau}, the standard
 deviation of the catch and recruitment variability, respectively.
