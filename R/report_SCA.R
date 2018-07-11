@@ -210,7 +210,6 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
                                  c("assessment_selectivity.png", "Estimated selectivity at age."))
   }
 
-
   plot_timeseries(Year, Obs_Index, Index, label = "Index")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index.png"))
@@ -488,7 +487,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
   profile.grid$nll <- nll - Assessment@opt$objective
   if(figure) {
     if(length(h) > 1) {
-      z.mat <- acast(profile.grid, h ~ R0, value.var = "nll")
+      z.mat <- acast(profile.grid, list("h", "R0"), value.var = "nll")
       contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
               nlevels = 20)
 
@@ -506,10 +505,6 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
         dev.off()
         profile.file.caption <- c("profile_likelihood.png",
                                   "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
-        html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
-                    captions = matrix(profile.file.caption, nrow = 1),
-                    name = Assessment@Data@Name, report_type = "Profile_Likelihood")
-        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
       }
     } else {
       plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
@@ -525,14 +520,12 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
         dev.off()
         profile.file.caption <- c("profile_likelihood.png",
                                   "Profile likelihood of R0. Vertical, dashed line indicates maximum likelihood estimate.")
-        html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
-                    captions = matrix(profile.file.caption, nrow = 1),
-                    name = Assessment@Data@Name, report_type = "Profile_Likelihood")
-        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
       }
-
     }
-
+    html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
+                captions = matrix(profile.file.caption, nrow = 1),
+                name = Assessment@Data@Name, report_type = "Profile_Likelihood")
+    browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
   }
   return(profile.grid)
 }
@@ -702,7 +695,8 @@ plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
                                    x2 = paste0("Retrospective pattern in ",
                                                c("spawning stock biomass", "SSB/SSBMSY", "spawning depletion", "recruitment",
                                                  "abundance", "exploitation", "U/UMSY", "recruitment deviations",
-                                                 "R0 estimate"), "."), stringsAsFactors = FALSE)
+                                                 "R0 estimate"), "."),
+                                   stringsAsFactors = FALSE)
     if(!fix_h) {
       ret.file.caption <- rbind(ret.file.caption,
                                 c(paste0("retrospective_", n_tsplots+2, ".png"), "Retrospective pattern in steepness estimate."))
