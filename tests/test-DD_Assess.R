@@ -3,18 +3,18 @@ library(testthat)
 library(MSEtool)
 
 context("Delay-Difference in assessment mode")
+Red_snapper@sigmaR <- 0.3
 
 test_that("DD_TMB assess model", {
-  expect_s4_class(DD_TMB(Data = Simulation_1), "Assessment")
-  expect_s4_class(DD_TMB(Data = Simulation_1, SR = "Ricker"), "Assessment")
+  expect_s4_class(DD_TMB(Data = SimulatedData), "Assessment")
+  expect_s4_class(DD_TMB(Data = SimulatedData, SR = "Ricker"), "Assessment")
 
-  res <- expect_s4_class(DD_TMB(Data = sim_snapper), "Assessment")
-  expect_s4_class(DD_TMB(Data = sim_snapper, SR = "Ricker"), "Assessment")
+  res <- expect_s4_class(DD_TMB(Data = Red_snapper), "Assessment")
+  expect_s4_class(DD_TMB(Data = Red_snapper, SR = "Ricker"), "Assessment")
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  pro <- profile_likelihood(res, UMSY = seq(0.05, 0.15, 0.01),
-                            MSY = seq(1, 3, 0.1), figure = FALSE)
+  pro <- profile_likelihood(res, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 
@@ -23,21 +23,17 @@ test_that("DD_TMB assess model", {
 })
 
 test_that("DD_SS assess model", {
-  res <- expect_s4_class(DD_SS(Data = SimulatedData), "Assessment")
+  res <- expect_s4_class(DD_SS(Data = Red_snapper), "Assessment")
   expect_s4_class(DD_SS(Data = SimulatedData, integrate = TRUE), "Assessment")
   expect_s4_class(DD_SS(Data = SimulatedData, SR = "Ricker"), "Assessment")
 
-  expect_s4_class(DD_SS(Data = Simulation_1, integrate = TRUE), "Assessment")
-  expect_s4_class(DD_SS(Data = Simulation_1, SR = "Ricker"), "Assessment")
-
-  expect_s4_class(DD_SS(Data = sim_snapper), "Assessment")
-  expect_s4_class(DD_SS(Data = sim_snapper, integrate = TRUE), "Assessment")
-  expect_s4_class(DD_SS(Data = sim_snapper, SR = "Ricker"), "Assessment")
+  expect_s4_class(DD_SS(Data = Red_snapper), "Assessment")
+  expect_s4_class(DD_SS(Data = Red_snapper, integrate = TRUE), "Assessment")
+  expect_s4_class(DD_SS(Data = Red_snapper, SR = "Ricker"), "Assessment")
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  pro <- profile_likelihood(res, UMSY = seq(0.05, 0.15, 0.01),
-                            MSY = seq(1, 3, 0.1), figure = FALSE)
+  pro <- profile_likelihood(res, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 
