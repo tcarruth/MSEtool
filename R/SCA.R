@@ -200,7 +200,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
   if(is.null(params$log_R0)) {
-    params$log_R0 <- log(mean(data$C_hist)) + 4
+    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]) | is.na(Data@OM$N0[x]),
+                            log(mean(data$C_hist)) + 4, 1.1 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x])))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
