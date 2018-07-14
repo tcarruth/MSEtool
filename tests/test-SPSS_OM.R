@@ -15,7 +15,7 @@ OMs <- avail("OM")
 # Run test
 context("Run SP from Hist object")
 
-SP_MP <- make_MP(SP_SS, HCR_MSY, start = list(tau = 0.4))
+SP_MP <- make_MP(SP_SS, HCR_MSY, start = list(sigma = 0.1, tau = 0.4), fix_sigma = TRUE)
 load("tests_results/Data_from_Hist.RData")
 
 out_csv <- list()
@@ -37,7 +37,7 @@ for(i in 1:length(OMs)) {
     #hist(TAC, main = OMs[i])
 
     is_na <- sum(is.na(TAC))
-    message(paste0(is_na, " NAs out of ", my_OM@nsim, " (", round(100 * is_na/my_OM@nsim, 1), " %) for ", OMs[i]))
+    message(paste0(is_na, " NAs out of ", my_OM@nsim, " (", round(100 * is_na/my_OM@nsim, 1), " %) for ", OMs[i], "\n"))
 
     out_csv[[i]] <- TAC
 
