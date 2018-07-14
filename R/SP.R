@@ -169,7 +169,7 @@ class(SP) <- "Assess"
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = FALSE,
+SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                   fix_tau = TRUE, early_dev = c("all", "index"), integrate = FALSE, silent = TRUE,
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
@@ -214,7 +214,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
     params$log_sigma <- log(sigmaI)
   }
-  if(is.null(params$log_tau)) params$log_tau <- log(1)
+  if(is.null(params$log_tau)) params$log_tau <- log(0.3)
   params$log_B_dev = rep(0, ny)
 
   map <- list()

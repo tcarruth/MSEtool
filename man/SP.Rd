@@ -10,7 +10,7 @@ SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   10000), ...)
 
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, fix_sigma = FALSE, fix_tau = TRUE, early_dev = c("all",
+  fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE, early_dev = c("all",
   "index"), integrate = FALSE, silent = TRUE, control = list(iter.max =
   5000, eval.max = 10000), inner.control = list(), ...)
 }
