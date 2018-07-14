@@ -200,8 +200,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
   if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]) | is.na(Data@OM$N0[x]),
-                            log(mean(data$C_hist)) + 4, 1.1 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x])))
+    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]), log(mean(data$C_hist)) + 4,
+                            log(1.5 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x]))))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
@@ -282,10 +282,14 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   else {
     ref_pt <- get_MSY(Arec = report$Arec, Brec = report$Brec, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
     report <- c(report, ref_pt)
-    #get_MSY_opt(opt$par[1:2], M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
-    #covar <- SD$cov.fixed[1:2, 1:2]
-    #grad_MSY <- jacobian(get_MSY_opt, x = opt$par[1:2], M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
-    #covar_MSY <- grad_MSY %*% covar %*% t(grad_MSY)
+
+    #SD_ind <- names(SD$par.fixed) == "log_R0" | names(SD$par.fixed) == "transformed_h" | names(SD$par.fixed) == "vul_par"
+    #ref_pt2 <- get_MSY_opt(SD$par.fixed[SD_ind], M = M, weight = Wa, mat = mat_age, SR = SR, vul_type = vulnerability, h = report$h,
+    #                       fix_h = fix_h, est_deriv = FALSE)
+    #MSY_grad <- numDeriv::jacobian(get_MSY_opt, x = SD$par.fixed[SD_ind], M = M, weight = Wa, mat = mat_age, SR = SR,
+    #                               vul_type = vulnerability, h = report$h, fix_h = fix_h, est_deriv = TRUE)
+    #MSY_covar <- MSY_grad %*% SD$cov.fixed[SD_ind, SD_ind] %*% t(MSY_grad)
+
     Yearplusone <- c(Year, max(Year) + 1)
     YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
     YearDev <- c(YearEarly, Year)
@@ -362,28 +366,66 @@ class(SCA) <- "Assess"
 
 
 
-
-get_MSY_opt <- function(x, M, weight, mat, vul, SR = c("BH", "Ricker"), vul_type = NULL) {
+get_MSY <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
   SR <- match.arg(SR)
   maxage <- length(M)
 
-  R0 <- exp(x[1])
+  solveMSY <- function(logit_U) {
+    U <- ilogit(logit_U)
+    surv <- exp(-M) * (1 - vul * U)
+    NPR <- c(1, cumprod(surv[1:(maxage-1)]))
+    NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])
+    EPR <- sum(NPR * mat * weight)
+    if(SR == "BH") Req <- (Arec * EPR - 1)/(Brec * EPR)
+    if(SR == "Ricker") Req <- log(Arec * EPR)/(Brec * EPR)
+    CPR <- vul * U * NPR
+    Yield <- Req * sum(CPR * weight)
+    return(-1 * Yield)
+  }
+
+  opt2 <- optimize(solveMSY, interval = c(-6, 6))
+  UMSY <- 1/(1 + exp(-opt2$minimum))
+  MSY <- -1 * opt2$objective
+  VBMSY <- MSY/UMSY
+
+  surv_UMSY <- exp(-M) * (1 - vul * UMSY)
+  NPR_UMSY <- c(1, cumprod(surv_UMSY[1:(maxage-1)]))
+  NPR_UMSY[maxage] <- NPR_UMSY[maxage]/(1 - surv_UMSY[maxage])
+
+  RMSY <- VBMSY/sum(vul * NPR_UMSY * weight)
+  BMSY <- RMSY * sum(NPR_UMSY * weight)
+  EMSY <- RMSY * sum(NPR_UMSY * weight * mat)
+  return(list(UMSY = UMSY, MSY = MSY, VBMSY = VBMSY, RMSY = RMSY, BMSY = BMSY, EMSY = EMSY))
+}
+
+
+get_MSY_opt <- function(x, M, weight, mat, SR = c("BH", "Ricker"), vul_type = c("logistic", "dome"), h = NULL, fix_h = FALSE,
+                        est_deriv = FALSE) {
+  SR <- match.arg(SR)
+  vul_type <- match.arg(vul_type)
+  maxage <- length(M)
+
+  R0 <- exp(x[names(x) == "log_R0"])
+  vul <- vul_fn(x[names(x) == "vul_par"], maxage, vul_type)
+
   surv0 <- exp(-M)
   NPR0 <- c(1, cumprod(surv0[1:(maxage-1)]))
   NPR0[maxage] <- NPR0[maxage]/(1 - surv0[maxage])
   E0 <- R0 * sum(NPR0 * weight * mat)
   EPR0 <- E0/R0
-  if(SR == "BH") {
-    h <- 0.2 + 0.8/(1 + exp(-x[2]))
-    Arec <- 4*h/(1-h)/EPR0
-    Brec <- (5*h-1)/(1-h)/E0
+
+  if(!fix_h) {
+    if(SR == "BH") {
+      h <- 0.2 + 0.8/(1 + exp(-x[names(x) == "transformed_h"]))
+      Arec <- 4*h/(1-h)/EPR0
+      Brec <- (5*h-1)/(1-h)/E0
+    }
+    if(SR == "Ricker") {
+      h <- 0.2 + exp(x[names(x) == "transformed_h"])
+      Arec <- 1/EPR0 * (5*h)^1.25
+      Brec <- 1.25 * log(5*h) / E0
+    }
   }
-  if(SR == "Ricker") {
-    h <- 0.2 + exp(x[2])
-    Arec <- 1/EPR0 * (5*h)^1.25
-    Brec <- 1.25 * log(5*h) / E0
-  }
-  #vul generate vul parameters here
 
   solveMSY <- function(logit_U) {
     U <- ilogit(logit_U)
@@ -402,21 +444,34 @@ get_MSY_opt <- function(x, M, weight, mat, vul, SR = c("BH", "Ricker"), vul_type
   UMSY <- ilogit(opt2$minimum)
   MSY <- -1 * as.numeric(opt2$objective)
 
-  return(c(UMSY = UMSY, MSY = MSY))
+  res <- c(UMSY = UMSY, MSY = MSY)
+  if(!est_deriv) {
+    VBMSY <- MSY/UMSY
+    surv_UMSY <- exp(-M) * (1 - vul * UMSY)
+    NPR_UMSY <- c(1, cumprod(surv_UMSY[1:(maxage-1)]))
+    NPR_UMSY[maxage] <- NPR_UMSY[maxage]/(1 - surv_UMSY[maxage])
+
+    RMSY <- VBMSY/sum(vul * NPR_UMSY * weight)
+    BMSY <- RMSY * sum(NPR_UMSY * weight)
+    EMSY <- RMSY * sum(NPR_UMSY * weight * mat)
+    res2 <- c(VBMSY = VBMSY, RMSY = RMSY, BMSY = BMSY, EMSY = EMSY)
+  } else res2 <- NULL
+
+  return(c(res, res2))
 }
 
 
-vul_fn <- function(vul_par, maxage, type = c("logistic", "dome")) {
+vul_fn <- function(vul_par, maxage, type) {
   age <- 1:maxage
 
   if(type == "logistic") {
-    a50 <- exp(vul_par[1])
+    a50 <- vul_par[1]
     a95 <- a50 + exp(vul_par[2])
-    vul = 1/(1 + exp(-log(19) * (age - a50)/(a95 - a50)))
+    vul <- 1/(1 + exp(-log(19) * (age - a50)/(a95 - a50)))
   }
   if(type == "dome") {
     sd_asc <- exp(vul_par[1])
-    mu_asc <- exp(vul_par[2])
+    mu_asc <- vul_par[2]
     mu_des <- mu_asc + exp(vul_par[3])
     sd_des <- exp(vul_par[4])
 
