@@ -141,6 +141,7 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age) {
 
 	for(int a=0;a<max_age;a++) {
 	  Type aa = a;
+	  aa += 1;
 	  vul(a) = 1/(1 + exp(-log(19) * (aa - vul_50)/(vul_95 - vul_50)));
   }
 	return vul;
@@ -159,6 +160,7 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age) {
 
   for(int a=0;a<max_age;a++) {
     Type aa = a;
+	aa += 1;
     Type vul_asc = dnorm(aa, vul_mu_asc, vul_sd_asc, false);
     vul_asc /= denom_asc;
     Type vul_des = dnorm(aa, vul_mu_des, vul_sd_des, false);
