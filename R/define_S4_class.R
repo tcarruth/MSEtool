@@ -153,23 +153,14 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
 })
 
 
-# Define global variables for Assessment objects
 if(getRversion() >= "2.15.1") {
-  utils::globalVariables(c("Model", "UMSY", "FMSY", "MSY", "BMSY", "SSBMSY", "VBMSY", "B0",
-                           "R0", "N0", "SSB0", "VB0", "h", "U", "U_UMSY", "FMort", "F_FMSY",
-                           "B", "B_BMSY", "B_B0", "SSB", "SSB_SSBMSY", "SSB_SSB0", "VB",
-                           "VB_VBMSY", "VB_VB0", "R", "N", "N_at_age", "Selectivity", "Obs_Catch",
-                           "Obs_Index", "Obs_C_at_age", "Catch", "Index", "C_at_age", "Dev", "Dev_type",
-                           "NLL", "SE_UMSY", "SE_FMSY", "SE_MSY", "SE_U_UMSY_final", "SE_F_FMSY_final",
-                           "SE_B_BMSY_final", "SE_B_B0_final", "SE_SSB_SSBMSY_final", "SE_SSB_SSB0_final",
-                           "SE_VB_VBMSY_final", "SE_VB_VB0_final", "SE_Dev", "info", "obj", "opt", "SD",
-                           "TMB_report", "dependencies", "Data"))
+  # Define global variables for Assessment objects
+  utils::globalVariables(slotNames("Assessment"))
 
   utils::globalVariables("plot.dir")
 
   # For Awatea2OM - Quang assumes these variables are loaded in from .rda files
   utils::globalVariables(c("Bmcmc", "currentMCMC", "currentRes"))
-
 }
 
 
