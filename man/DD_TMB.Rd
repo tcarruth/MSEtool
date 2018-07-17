@@ -29,6 +29,8 @@ Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. See details.}
 
+\item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the assessment model.}
+
 \item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model is
 estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
 (assumes virgin conditions).}

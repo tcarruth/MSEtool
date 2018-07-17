@@ -383,7 +383,7 @@ get_MSY <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
     return(-1 * Yield)
   }
 
-  opt2 <- optimize(solveMSY, interval = c(-6, 6))
+  opt2 <- optimize(solveMSY, interval = c(-50, 6))
   UMSY <- 1/(1 + exp(-opt2$minimum))
   MSY <- -1 * opt2$objective
   VBMSY <- MSY/UMSY
@@ -440,7 +440,7 @@ get_MSY_opt <- function(x, M, weight, mat, SR = c("BH", "Ricker"), vul_type = c(
     return(-1 * Yield)
   }
 
-  opt2 <- optimize(solveMSY, interval = c(-6, 6))
+  opt2 <- optimize(solveMSY, interval = c(-50, 6))
   UMSY <- ilogit(opt2$minimum)
   MSY <- -1 * as.numeric(opt2$objective)
 
@@ -481,11 +481,11 @@ vul_fn <- function(vul_par, maxage, type) {
     vul <- rep(NA, maxage)
     for(i in age) {
       if(i <= mu_asc) {
-        vul[i] <- dnorm(i, mu_asc, sd_asc)
+        vul[i] <- dnorm(i, mu_asc, sd_asc)/denom_asc
       } else if(i <= mu_des) {
         vul[i] <- 1
       } else {
-        vul[i] <- dnorm(i, mu_des, sd_des)
+        vul[i] <- dnorm(i, mu_des, sd_des)/denom_des
       }
     }
   }

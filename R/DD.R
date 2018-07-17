@@ -13,6 +13,7 @@
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
 #' @param start Optional list of starting values. See details.
+#' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the assessment model.
 #' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model is
 #' estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
 #' (assumes virgin conditions).
@@ -119,7 +120,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
     if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equililbrium
   }
   if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]) | is.na(Data@OM$N0[x]),
+    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]),
                             log(mean(data$C_hist)) + 4, 1.1 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x])))
   }
   if(is.null(params$transformed_h)) {
@@ -256,7 +257,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
   if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]) | is.na(Data@OM$N0[x]),
+    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]),
                             log(mean(data$C_hist)) + 4, 1.1 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x])))
   }
   if(is.null(params$transformed_h)) {
@@ -374,7 +375,7 @@ get_MSY_DD <- function(TMB_data, Arec, Brec) {
   Alpha <- TMB_data$Alpha
   Rho <- TMB_data$Rho
   wk <- TMB_data$wk
-  SR <- TMB_data$SR
+  SR <- TMB_data$SR_type
 
   solveMSY <- function(x) {
     U <- ilogit(x)
@@ -387,7 +388,7 @@ get_MSY_DD <- function(TMB_data, Arec, Brec) {
     return(-1 * Yield)
   }
 
-  opt2 <- optimize(solveMSY, interval = c(-6, 6))
+  opt2 <- optimize(solveMSY, interval = c(-50, 6))
   UMSY <- ilogit(opt2$minimum)
   MSY <- -1 * opt2$objective
   BMSY <- MSY/UMSY
