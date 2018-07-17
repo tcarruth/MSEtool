@@ -89,8 +89,7 @@ N_t &= s_{t-1} N_{t-1} + R_t,
 \end{align}$$
 where $R_t$ is the recruitment (defined in the next section) at age $k$ and $w_k$ is the weight of recruits. Survival $s_t$ is defined as
 $$ s_t = (1 - u_t)\exp(-M), $$
-where $u_t$ is the annual harvest rate and $M$ is the instantaneous natural mortality rate. By conditioning the model on effort $f_t$ (where effort is the ratio 
-of the catch and index), the harvest rate is
+where $u_t$ is the annual harvest rate and $M$ is the instantaneous natural mortality rate. By conditioning the model on effort (as the ratio of the catch and index), the harvest rate is
 $$ u_t = 1 - \exp(-qf_t), $$
 where $q$ is the estimated catchability coefficient and $f_t$ is the effort in year $t$. 
 
@@ -102,48 +101,33 @@ The log-likelihood $L$ of the observed catch $C_t$ over years $t = 1, ..., T$, a
 $$L(C_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(C_t/\hat{C}_t)}{\sigma}\right)^2,$$
 where $\sigma$ is the standard deviation of the lognormal distribution.
 
-## Derivation of stock-recruit parameters from MSY and UMSY estimates
+## Stock-recruit parameters
 
-The model is parameterized such $u_{MSY}$ and $MSY$ are estimated productivity parameters from which the 
-stock-recruit parameters for the model can be derived (Martell et al. 2008).
 
 ### Beverton-Holt relationship
 Assuming a Beverton-Holt stock recruit relationship and spawning occurring after fishing in each annual time step, then recruitment (at age $k$) in year $t$ is:
 $$ R_t = \dfrac{\alpha B_{t-k}(1 - u_{t-k})}{1 + \beta B_{t-k}(1 - u_{t-k})},$$
-where $B_{t-k}(1-u_{t-k})$ is the population biomass after fishing in year $t-k$.
-
-From $u_{MSY}$ and $MSY$, the stock-recruit parameters $\alpha$ and $\beta$ are:
+where $B_{t-k}(1-u_{t-k})$ is the population biomass after fishing in year $t-k$ and
 $$ \begin{align}
-\alpha &= (1 - u_{MSY})^{-2}(u_{MSY} \phi'_{MSY} + \phi_{MSY})^{-1}\\
-\beta &= \dfrac{u_{MSY}}{MSY}\left(\alpha\phi_{MSY} - \dfrac{1}{1 - u_{MSY}}\right),
+\alpha &= \dfrac{4hR_0}{(1-h)B_0}\\
+\beta &= \dfrac{5h-1}{(1-h)B_0},
 \end{align}$$
-where $\phi_{MSY}$ and $\phi'_{MSY}$ are the biomass-per-recruit and derivative of biomass-per-recruit
-with respect to $u$, respectively, evaluated at $u_{MSY}$, defined as:
-$$\phi_{MSY} = \dfrac{\alpha s_{MSY} + w_k(1 - s_{MSY})}{(1 - s_{MSY})^2}$$
-and
-$$
-\phi'_{MSY} = -\exp(-M)\left(\dfrac{\tilde\alpha + \phi_{MSY}(1 + \rho - 2\rho s_{MSY})}{(1 - \rho s_{MSY})(1 - s_{MSY})} +
-\dfrac{\tilde\alpha s_{MSY}}{(1 - \rho s_{MSY})(1 - s_{MSY})^2} - \dfrac{\phi_{MSY}}{1-s_{MSY}}
-\right),
-$$
-where $s_{MSY} = (1 - u_{MSY})\exp(-M)$. To obtain $\phi_{MSY}$, the equilibrium equation for biomass, $B_{MSY} = s_{MSY}(\tilde{\alpha} N_{MSY} + \rho B_{MSY}) + w_k R_{MSY}$, is solved for $B_{MSY}/R_{MSY}$ where $N_{MSY} = R_{MSY}/(1 - s_{MSY})$.
 
-To derive $\alpha$ and $\beta$, define the equilibrium yield $Y$ as
-$$Y = u B = u \phi_u R$$
-where $\phi_u$ and $R$ are the biomass-per-recruit and the equilibrium recruitment as functions of $u$:
-$$ R = \dfrac{\alpha \phi_u(1-u) - 1}{\beta \phi_u(1-u)}$$
-Equation 12 is obtained by setting $\frac{dY}{du} = 0$ and solving for $\alpha$ ($u$ by definition is $u_{MSY}$). Equation 13 is obtained by solving for $\beta$ in equation 16 in the case where $Y = MSY$, $\phi_u = \phi_{MSY}$, $R = R_{MSY}$, and $u = u_{MSY}$.
+Virgin recruitment $R_0$ and steepness $h$ are estimated parameters, with virgin biomass $B_0$ calculated as
+$$B_0 =  R_0 \phi_0.$$
+The virgin biomass per recruit $\phi_0$ is
+$$\phi_0 = \dfrac{\tilde{\alpha} \exp(-M) + w_k (1 - \exp(-M))}{1 - \rho \exp(-M)}$$
+and is obtained by solving the equilibrium equation for biomass, $B_0 = \exp(M)(\tilde{\alpha}N_0 + \rho B_0) + w_k R_0$, is solved for $B_0/R_0$, with $N_0 = R_0/(1−\exp(-M))$.
+
 
 ### Ricker equation
-Assuming a Ricker stock-recruit relationship, then recruitment is:
-$$ R_t = \alpha B_{t-k}(1 - u_{t-k})\exp[-\beta B_{t-k}(1 - u_{t-k})]$$
-From $MSY$ and $u_{MSY}$ estimates, then the stock-recruit parameters $\alpha$ and $\beta$ are:
+Assuming a Ricker stock-recruit relationship, the recruitment is
+$$ R_t = \alpha B_{t-k}(1 - u_{t-k})\exp[-\beta B_{t-k}(1 - u_{t-k})],$$
+where
 $$ \begin{align}
-\alpha &= \dfrac{1}{\phi_{MSY}(1-u_{MSY})}\exp\left(u_{MSY} - \dfrac{u_{MSY}(1-u_{MSY})\phi'_{MSY}}{\phi_{MSY}}\right)\\
-\beta &= \dfrac{u_{MSY}\log[\alpha\phi_{MSY}(1-u_{MSY})]}{MSY(1-u_{MSY})}
+\alpha &= \dfrac{(5h)^{1.25} R_0}{B_0}\\
+\beta &= \dfrac{5}{4B_0}\log(5h),
 \end{align}$$
-Similar to the Beverton-Holt version, $\alpha$ and $\beta$ are derived by solving the equilibrium yield equation $Y = u B = u \phi_u R$ and taking its derivative for $MSY$ based reference points, where
-$$ R= \dfrac{\log(\alpha\phi_u[1-u])}{\beta \phi_u(1-u)}.$$
 
 ## State-space version (DD_SS)
 In the state-space version, annual recruitment deviates from the stock-recruit relationship are estimated. The recruitment in year $t$ is
@@ -152,9 +136,13 @@ or
 $$ R_t = \alpha B_{t-k}\exp(-\beta B_{t-k})\exp(\delta_t - 0.5 \tau^2),$$
 where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations in lognormal space and $\tau$ is the standard deviation of the recruitment deviations.
 
+The log-likelihood of the log-recruitment deviations $\delta_t$ over years $t=k,\ldots...,T$ is
+$$L(\delta_t) \propto -(T-k) \log\tau - 0.5\sum_{t=k}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.$$
+
+
 # Surplus-production (SP) model
 ## Dynamics equations
-The surplus production model uses theFletcher (1978) formulation. The biomass $B_t$ in year $t$ is 
+The surplus production model uses the Fletcher (1978) formulation. The biomass $B_t$ in year $t$ is 
 $$B_t = B_{t-1} + P_{t-1} - C_{t-1},$$
 where $C_t$ is the observed catch and $P_t$ is the surplus production given by:
 $$P_t = \gamma MSY \left(\dfrac{B_t}{K}-\left[\dfrac{B_t}{K}\right]^n\right), $$
@@ -186,7 +174,7 @@ where $\delta_t \sim N(0, \tau^2)$ are biomass deviations in lognormal space and
 
 # Statistical catch-at-age model (SCA and SCA2) 
 ## Dynamics equations
-The statistical catch-at-age model used in MSEtool assumes pulse fishing at the beginning of each annual time-step, following the parameterization of of Forrest et al. (2008). The model uses a time series of total catch (in weight), index, and catch-at-age observations, as well as information on weight, maturity, natural mortality at age.
+The statistical catch-at-age model used in MSEtool assumes pulse fishing at the beginning of each annual time-step, following the parameterization of Forrest et al. (2008). The model uses a time series of total catch (in weight), index, and catch-at-age observations, as well as information on weight, maturity, natural mortality at age.
 
 The population abundance $N_{a,t}$ of age $a$ in year $t$ is
 $$ N_{a,t} = 
@@ -210,7 +198,7 @@ $$ v_a =
       f(a; \mu_{des}, \sigma_{des}) & a \gt \mu_{des}
 \end{cases},
 $$
-where $f(a; \mu, \sigma)$ is the normal probability density function scaled to one at $\mu$. The $\mu$ and $\sigma$ for both the ascending and descending limbs of the double-normal form are estimated parameters.
+where $f(a; \mu, \sigma)$ is the normal probability density function scaled to one at $\mu$. The $\mu$ and $\sigma$ for both the ascending and descending limbs of the double-normal equation are estimated parameters.
 
 The vulnerable biomass $VB_t$ in year $t$ is
 $$ VB_t = \sum_{a=1}^A v_a w_a N_{a,t}, $$
@@ -232,24 +220,20 @@ $$L(C_{a,t})\propto \sum_{t=1}^T \left(N_t \sum_{a=1}^A p_{a,t} \log(\hat{p}_{a,
 where $N_t$ is the sample size of catch-at-age observations in year $t$, $p_{a,t}$ and $\hat{p}_{a,t}$ are the observed and predicted
 proportions of catch-at-age.
 
-The estimated index $\hat{I}_t$ is
-$$ \hat{I}_t = \hat{q} \widehat{VB}_t.$$
+The estimated index $\hat{I}_t$, assuming that it is an index for total biomass, is
+$$ \hat{I}_t = \hat{q} \hat{B}_t,$$
+where $ B_t = \sum_{a=1}^A w_a N_{a,t}$. A function argument allows for the user to specify that the observed index is for vulnerable or spawning biomass. 
+
 The log-likelihood $L$ of the observed index $I_t$ over years $t = 1, ..., T$, assuming a lognormal distribution, is
 $$L(I_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(I_t/\hat{I}_t)}{\sigma}\right)^2.$$
 
 ## Estimation of recruitment and reference points
 
-There are two variants of the statistical catch-at-age model for estimation of recruitment and reference points. In function `SCA`, recruitment is estimated as annual deviations from mean recruitment, similar to Cadigan (2016). MSY reference points are estimated outside the model. In `SCA2`, the parameters of the stock-recruit function, MSY reference points, and recruitment deviations are all estimated internally in the model. `SCA` generally will have a faster runtime than `SCA2`.
+There are two variants of the statistical catch-at-age model for estimation of recruitment and reference points. In function `SCA`, productivity parameters $R_0$ and $h$ are estimated in the assessment model. Annual recruitment is estimated as deviations from the resulting stock-recruitment relationship within the model. MSY reference points are derived from the estimates of $R_0$ and $h$.
 
-### External reference points (SCA)
+In `SCA2`, no stock-recruit relationship is assumed in the assessment model, i.e., annual recruitment is estimated as deviations from the mean recruitment over the observed time series, similar to Cadigan (2016). After the assessment, a stock-recruit function can be fitted to the recruitment and spawning stock biomass estimates from the assessment model to obtain MSY reference points. 
 
-Recruitment $R_t$ in year $t$ is
-$$R_t = \bar{R} \exp(\delta_t - 0.5 \tau^2), $$
-where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations in lognormal space from the estimated mean recruitment $\bar{R}$ and $\tau$ is the standard deviation of the deviations.
-
-### Internal reference points (SCA2)
-
-In `SCA2`, parameters $u_{MSY}$ and $MSY$ are estimated, from which stock-recruit parameters are obtained. The mathematical description of the models are described below, and the full derivation is described in Forrest et al. (2008).
+### Stock-recruit function in assessment model (SCA)
 
 #### Beverton-Holt stock-recruit function
 
@@ -257,57 +241,39 @@ Recruitment $R_t$ in year $t$ is
 $$ R_t = \dfrac{\alpha E_{t-1}}{1 + \beta E_{t-1}} \exp(\delta_t - 0.5 \tau^2),$$
 where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations from the stock-recruit relationship in lognormal space and $\tau$ is the standard deviation of the recruitment deviations. Parameters $\alpha$ and $\beta$ are defined as
 $$ \begin{align}
-\alpha &= \dfrac{1 - \left(\dfrac{\psi'_{MSY}}{\psi_{MSY}} - \dfrac{\phi'_{MSY}}{\phi_{MSY}}\right) u_{MSY}}{\phi_{MSY}\left(1 + \dfrac{\psi'_{MSY}}{\psi_{MSY}}u_{MSY}\right)}\\
-\beta &= \dfrac{\alpha \phi_{MSY} - 1}{R_{MSY} \phi_{MSY}},
+\alpha &= \dfrac{4hR_0}{(1-h)B_0}\\
+\beta &= \dfrac{5h-1}{(1-h)B_0},
 \end{align}$$
-where $\phi_{MSY}$ is the spawning biomass per recruit at $u = u_{MSY}$, 
-
-$$\phi_{MSY} = \sum_{a=1}^A m_a w_a l_a$$
-and
+where $B0 = R_0 \phi_0$. The biomass per recruit $\phi_0$ is calculated as $\phi_0 = \sum_{a=1}^A m_a w_a l_a$, where
 $$
 l_a = 
 \begin{cases} 
       1 & a = 1\\
-      l_{a-1} (1 - v_{a-1} u_{MSY}) \exp(-M_{a-1}) & a = 2, \ldots, A-1\\
-      \dfrac{l_{a-1} (1 - v_{a-1} u_{MSY}) \exp(-M_{a-1})}{1 - (1 - v_a u_{MSY}) \exp(-M_a)} & a = A \\
-\end{cases}; 
+      l_{a-1} \exp(-M_{a-1}) & a = 2, \ldots, A-1\\
+      \dfrac{l_{a-1} \exp(-M_{a-1})}{1 - \exp(-M_a)} & a = A \\
+\end{cases}. 
 $$
-$\phi'_{MSY}$ is the derivative of $\phi$ with respect to $u$ and evaluated at $u_{MSY}$, 
-$$ \phi'_{MSY} = \sum_{a=1}^A m_a w_a l'_a $$
-and
-$$
-l'_a = 
-\begin{cases} 
-      0 & a = 1\\
-      l'_{a-1} (1 - v_{a-1} u_{MSY}) \exp(-M_{a-1}) - l_{a-1} v_{a-1} \exp(-M_{a-1}) & a = 2, \ldots, A-1\\
-      \dfrac{[l'_{a-1} (1 - v_{a-1} u_{MSY}) \exp(-M_{a-1}) - l_{a-1} v_{a-1} \exp(-M_{a-1})](1 - v_a u_{MSY})(1 - \exp(-M_a)) - l_{a-1} (1 - v_{a-1} u_{MSY}) \exp(-M_{a-1}) v_a \exp(-M_a)}
-{[1 - (1- v_a u_{MSY}) \exp(-M_a)]^2} & a = A \\
-\end{cases}; 
-$$
-$\psi_{MSY}$ is the vulnerable biomass per recruit at $MSY$
-$$\psi_{MSY} = \sum_{a=1}^A v_a w_a l_a;$$
-and $\psi'_{MSY}$ is the derivative of vulnerable biomass per recruit evaluated $u_{MSY}$ 
-$$\psi'_{MSY} = \sum_{a=1}^A v_a w_a l'_a.$$
-
-Parameter $\alpha$ is derived from the yield equation
-$$Y = u \psi_u R $$
-where is $\psi_u$ defined by equation 54 for any given $u$ and recruitment $R$ is
-$$ R = \dfrac{\alpha \phi_u - 1}{\beta \phi_u}, $$ 
-by setting $\frac{dY}{du} = 0$ and solving for $\alpha$; all quantities correspond to those at $MSY$. Equation 49 is obtained by solving for $\beta$ in Equation 57 in the $MSY$ scenario where
-
-$$R_{MSY} = \dfrac{VB_{MSY}}{\psi_{MSY}} = \dfrac{MSY}{u_{MSY} \psi_{MSY}}. $$
 
 #### Ricker stock-recruit function
 
 Recruitment $R_t$ in year $t$ is
- 
-$$ R_t = \alpha E_{t-1} \exp(-\beta E_{t-1}) \exp(\delta_t - 0.5 \tau^2).$$
-Using the derivation analogous to that in Forrest et al (2008), parameters $\alpha$ and $\beta$ are solved as functions of $u_{MSY}$ and $MSY$, where
+$$ R_t = \alpha E_{t-1} \exp(-\beta E_{t-1}) \exp(\delta_t - 0.5 \tau^2)$$,
+where
 $$ \begin{align}
-\alpha &= \dfrac{1}{\phi_{MSY}}\exp\left(\dfrac{-u_{MSY} \psi_{MSY} \phi'_{MSY}}
-{\phi_{MSY}[u_{MSY} \psi'_{MSY} + \psi_{MSY}] - u_{MSY} \phi'_{MSY} \psi_{MSY}}\right)\\
-\beta &= \dfrac{\log(\alpha \phi_{MSY})}{R_{MSY} \phi_{MSY}}.
+\alpha &= \dfrac{(5h)^{1.25} R_0}{B_0}\\
+\beta &= \dfrac{5}{4B_0}\log(5h).
 \end{align}$$
+
+
+### No stock-recruit function in assessment model (SCA2)
+
+Recruitment $R_t$ in year $t$ is
+$$R_t = \bar{R} \exp(\delta_t - 0.5 \tau^2), $$
+where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations in lognormal space from the estimated mean recruitment $\bar{R}$ and $\tau$ is the standard deviation of the recruitment deviations.
+
+### Likelihood of recruitment deviations
+The log-likelihood of the log-recruitment deviations $\delta_t$ over years $t=1,\ldots...,T$ is
+$$L(\delta_t) \propto -T \log\tau - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.$$
 
 # References
 

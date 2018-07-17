@@ -14,7 +14,7 @@ test_that("DD_TMB assess model", {
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  pro <- profile_likelihood(res, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01), figure = FALSE)
+  pro <- profile_likelihood(res, R0 = seq(0.75, 1.25, 0.025), h = seq(0.95, 1, 0.0025), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 

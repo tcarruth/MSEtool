@@ -1,6 +1,6 @@
 ---
 title: "User guide to MSEtool"
-subtitle: "Development, Testing and Implementation of Management Procedures for Data-Rich Fisheries (v1.1)"
+subtitle: "Development, Testing and Implementation of Management Procedures for Data-Rich Fisheries"
 author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>) 
          Adrian Hordyk  (<a.hordyk@oceans.ubc.ca>),
          Quang Huynh (<q.huynh@oceans.ubc.ca>)"
@@ -67,7 +67,7 @@ DLMtool development has been funded by the Gordon and Betty Moore Foundation, th
 
 The package is subject to ongoing testing. If you find a bug or a problem please send a report to <t.carruthers@oceans.ubc.ca> so that it can be fixed!  
 
-## New Additions to this Version (v1.1)
+## New additions to this version (1.0.0)
 
 * Assessment models (`Assess` functions)
     * Statistical Catch at Age (SCA and SCA2)
@@ -83,10 +83,10 @@ The package is subject to ongoing testing. If you find a bug or a problem please
 * Other features 
     * Harvest control rules (`HCR` functions)
     * `make_MP` function conveniently combines a __Assess__ and __HCR__ function to create a __MP__ function
-    * Movement matrices for parameterizing OM
+    * `simmov` function creates movement matrices for parameterizing multiple area operating models (age-independent)
     * The MCMC outputs of iSCAM models are now used to characterise operating model uncertainty
-    * iSCAM2OM and iSCAM2Data functions rip from iSCAM assessments
-    * SS2OM and SS2Data functions updated for latest version of r4ss
+    * iSCAM2OM and iSCAM2Data functions import from iSCAM assessments
+    * SS2OM and SS2Data functions import Stock Synthesis assessments using the r4ss version 1.24.0 (latest CRAN version)
 
 
 ## Coming soon 
@@ -97,6 +97,8 @@ The package is subject to ongoing testing. If you find a bug or a problem please
     * Kalman filter assessment approximation
 
 * Stock projections for assessment models
+
+* Age-varying movement matrices for `simmov`
 
 # Introduction
 
@@ -122,18 +124,20 @@ Additionally, __Assess__ functions can be used in an assessment-only context (ex
 
 _Figure 2: Design of MSEtool package for building management procedures from assessment models and harvest control rules for management strategy evaluations with the DLMtool package. Separate functions are also available for standardized reporting of output from assessment models in a stock assessment setting._
 
-MSEtool provides functions for converting the results of assessment models into DLMtool __OM__ and __Data__ objects. The SS2OM and SS2Data functions convert SS (Stock Synthesis) assessments, while iSCAM2OM and iSCAM2Data functions are provided for iSCAM assessments. 
 
-Summary additional features created by Tom... for movement.
+### Additional features
+MSEtool provides functions for converting the results of assessment models into DLMtool __OM__ and __Data__ objects. The `SS2OM` and `SS2Data` functions convert SS (Stock Synthesis) assessments, while `iSCAM2OM` and `iSCAM2Data` functions are provided for iSCAM assessments. 
+
+To support multiple-area operating models, the `simmov` function estimates the movement matrix based on the prescribed number of areas, biomass distribution among areas in unfished conditions, and the probability of staying in each area.
 
 
 # Assessment models
 
 Assessment models in MSEtool are functions of class __Assess__. 
-Currently, six assessment functions are available: __DD_TMB__ (Delay-Difference model and its state-space counterpart, __DD_SS__), __SP__ (Surplus Production model and its state-space counterpart, __SP_SS__), and __SCA__ (Statistical Catch at age model and another variant __SCA2__). These functions take a __Data__ object as an argument and return an object of class __Assessment__, for example,
+Currently, six assessment functions are available: `DD_TMB` (Delay-Difference model and its state-space counterpart, `DD_SS`), `SP` (Surplus Production model and its state-space counterpart, `SP_SS`), and `SCA` (Statistical Catch at age model and another variant `SCA2`). These functions take a __Data__ object as an argument and return an object of class __Assessment__, for example,
 
 ```{r, eval = FALSE}
-DD_result <- DD_TMB(1, sim_snapper, ...)
+DD_result <- DD_TMB(Data = Red_snapper, ...)
 ```
 where `...` are model configuration arguments.
 
@@ -151,27 +155,27 @@ Assessment results and summary, along with diagnostic procedures are available f
 
 ```{r, eval = FALSE}
 summary(DD_result)
-plot(DD_result, save_figure = TRUE, save_dir = getwd()) # By default, also saves figures in the working directory and HTML browser for viewing
+plot(DD_result, save_figure = TRUE, save_dir = getwd()) # By default, also saves figures in the working directory and HTML browser for future viewing
 ```
 
 Two diagnostic functions are available: `retrospective` for retrospective analyses (re-running the model by sequentially removing terminal years of data) and `profile_likelihood` for profiling the likelihood function over a grid of parameters.
 
 ```{r, eval = FALSE}
-retrospective(DD_result, 5) # Retrospective analysis going back 5 years from current year
-profile_likelihood(DD_result, UMSY = seq(0.05, 0.15, 0.01), MSY = seq(1, 3, 0.1)) # Joint profile over grid of UMSY and MSY
+retrospective(DD_result, nyr = 5) # Retrospective analysis going back 5 years from current year
+profile_likelihood(DD_result, R0 = seq(0.75, 1.25, 0.025), h = seq(0.95, 1, 2.5e-3)) # Joint profile over grid of R0 and steepness
 ```
 <img src="DD_profile.png" width=400>
 
-_Figure 3: Joint profile of UMSY and MSY from Delay-Difference assessment model (DD_TMB function). Contours indicate change in likelihood values from minimum (red point)._
+_Figure 3: Joint profile of R0 and steepness from Delay-Difference assessment model (DD_TMB function). Contours indicate change in likelihood values from minimum (red point)._
 
 # Harvest control rules (HCRs)
 
-Harvest control rules in MSEtool are functions of class __HCR__, and are designed to provide different for a given assessment model. __HCR__ functions take an object of class __Assessment__ and return an object of class __Rec__. Currently, three __HCR__ functions are available as output controls (catch limits): HCR_MSY, HCR40_10, and HCR60_20. HCR_MSY prescribes the TAC to be the catch predicted with fishing at the estimated $F_{MSY}$ (the product of $F_{MSY}$ and estimated vulnerable biomass), while HCR40_10 and HCR60_20 are ramped control rules which reduce the $F_{MSY}$ catch limit based on spawning depletion.
+Harvest control rules in MSEtool are functions of class __HCR__, and are designed to provide different for a given assessment model. __HCR__ functions take an object of class __Assessment__ and return an object of class __Rec__. Currently, three __HCR__ functions are available as output controls (catch limits): HCR_MSY, HCR40_10, and HCR60_20. HCR_MSY prescribes the TAC to be the catch predicted with fishing at the estimated $F_{MSY}$, i.e., the product of $F_{MSY}$ and estimated vulnerable biomass, while HCR40_10 and HCR60_20 are ramped control rules which reduce the $F_{MSY}$ catch limit based on spawning depletion $SSB/SSB[0]$.
 
 ```{r, echo = FALSE, fig.width = 5, fig.height = 4}
 par(mar = c(5,5,3,1))
 Brel <- seq(0, 1, length.out = 200)
-plot(Brel, MSEtool::HCRlin(Brel, 0.1, 0.4), xlab = "Estimated SSB/SSB0", ylab = "TAC adjustment factor \n(proportion of FMSY catch)", main = "40-10 harvest control rule", type = "l", col = "blue")
+plot(Brel, MSEtool::HCRlin(Brel, 0.1, 0.4), xlab = expression(Estimated~~SSB/SSB[0]), ylab = "TAC adjustment factor \n(proportion of FMSY catch)", main = "40-10 harvest control rule", type = "l", col = "blue")
 abline(v = c(0.1, 0.4), col = "red", lty = 2)
 ```
 
@@ -192,7 +196,7 @@ Tplot2(myMSE)
 
 _Figure 5. Trade-off plot of the MSE for the MPs that use the Delay-Difference model with two harvest control rules and the FMSY reference MP._
 
-Model configuration arguments can be passed through `...` when the MP is made. For example, the Ricker stock-recruitment relationship can be used in the Delay-Difference model instead of the default Beverton-Holt relationship with argument `SR = "Ricker"`:
+Model configuration arguments can be passed through `...` in `make_MP` when the MP is made. For example, the Ricker stock-recruitment relationship can be used in the Delay-Difference model instead of the default Beverton-Holt relationship with argument `SR = "Ricker"`:
 
 ```{r, eval = FALSE}
 DD_MSY_Ricker <- make_MP(DD_TMB, HCR_MSY, SR = "Ricker")
@@ -235,13 +239,10 @@ _Figure 7. Retrospective analysis of the Delay-Difference model in the DD_MSY MP
 Like all other output MPs, `DLMtool::TAC()` can be used to obtain a catch limit:
 ```{r, eval = FALSE}
 DD_MSY <- make_MP(DD_TMB, HCR_MSY)
-snapper_TAC <- TAC(sim_snapper, MPs = c("DD_MSY", "DD_4010"))
+snapper_TAC <- TAC(Red_snapper, MPs = c("DD_MSY", "DD_4010"))
 plot(snapper_TAC)
 ```
 <img src="DD_TAC.png">
 
-_Figure 8. Stochastic TAC recommendations from the Delay-Difference model with two harvest control rules. DD_4010 prescribes zero catch because the estimated depletion is less than 0.1._
-
-
-
+_Figure 8. Stochastic TAC recommendations from the Delay-Difference model with two harvest control rules. The estimated terminal year biomass of 0.13 results in a large decrease in TAC when the 40-10 control rule is applied._
 
