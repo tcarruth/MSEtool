@@ -232,7 +232,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
     if(!season_as_years && nseas > 1) {
       if(is.numeric(comp_season) && comp_season <= nseas) {
         agedbase <- agedbase[agedbase$Seas == comp_season, ]
-        message(paste("Using season", comp_season, "for", type, "comps."))
+        message(paste("Using season", comp_season, "for age comps."))
       }
     }
     message(paste0("Using age comps partition codes: ", paste(unique(agedbase$Part), collapse = " ")))
@@ -270,7 +270,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
     if(!season_as_years && nseas > 1) {
       if(is.numeric(comp_season) && comp_season <= nseas) {
         lendbase <- lendbase[lendbase$Seas == comp_season, ]
-        message(paste("Using season", comp_season, "for", type, "comps."))
+        message(paste("Using season", comp_season, "for length comps."))
       }
     }
     message(paste0("Using length comps partition codes: ", paste(unique(lendbase$Part), collapse = " ")))
@@ -493,6 +493,8 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
     res2 <- try(R0 <- replist$derived_quants[replist$derived_quants$LABEL == "Recr_Virgin", 2], silent = TRUE)
     if(inherits(res, "try-error")) {
       surv <- c(1, exp(-cumsum(M[1:(maxage-1)])))
+      Wt_age <- growdat$Wt_Mid
+      if(season_as_years) Wt_age <- Wt_age[seas1_aind]
       SpR0 <- sum(Wt_age * Mat * surv)
       R0 <- SSB0/SpR0
     } else {
