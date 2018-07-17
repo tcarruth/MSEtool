@@ -30,7 +30,7 @@
   Type R0 = exp(log_R0);
   Type h;
   if(SR_type == "BH") {
-    h = 0.8 * ilogit(transformed_h);
+    h = 0.8 * invlogit(transformed_h);
   } else {
     h = exp(transformed_h);
   }

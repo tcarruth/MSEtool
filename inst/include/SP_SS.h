@@ -17,7 +17,7 @@
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_B_dev);
 
-  Type UMSY = ilogit(logit_UMSY);
+  Type UMSY = invlogit(logit_UMSY);
   Type MSY = exp(log_MSY);
   Type dep = exp(log_dep);
   Type n = exp(log_n);
