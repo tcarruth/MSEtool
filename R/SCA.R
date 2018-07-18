@@ -318,7 +318,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     SE_Dev[is.na(SE_Dev)] <- 0
 
     first_non_zero <- which(Dev != 0)[1]
-    if(first_non_zero > 1) {
+    if(!is.na(first_non_zero) && first_non_zero > 1) {
       Dev_out <- Dev_out[-c(1:(first_non_zero - 1))]
       SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
     }
