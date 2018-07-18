@@ -346,6 +346,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                       Obs_Catch = structure(C_hist, names = Year),
                       Obs_Index = structure(I_hist, names = Year),
                       Obs_C_at_age = CAA_hist,
+                      Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
                       Index = structure(report$Ipred, names = Year),
                       C_at_age = report$CAApred,
                       Dev = Dev_out,
