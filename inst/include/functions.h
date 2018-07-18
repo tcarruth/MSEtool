@@ -136,7 +136,7 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age) {
 	for(int a=0;a<max_age;a++) {
 	  Type aa = a;
 	  aa += 1;
-	  vul(a) = 1/(1 + exp(-log(19) * (aa - vul_50)/(vul_95 - vul_50)));
+	  vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - vul_50)/(vul_95 - vul_50)), -1);
   }
 	return vul;
 }
