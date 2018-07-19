@@ -381,8 +381,8 @@ get_MSY_DD <- function(TMB_data, Arec, Brec) {
     U <- ilogit(x)
     SS <- S0 * (1 - U)
     Spr <- (SS * Alpha/(1 - SS) + wk)/(1 - Rho * SS)
-    if(SR == "BH") Req <- (Arec * Spr - 1)/(Brec * Spr)
-    if(SR == "Ricker") Req <- log(Arec * Spr)/(Brec * Spr)
+    if(SR == "BH") Req <- (Arec * Spr * (1 - U) - 1)/(Brec * Spr * (1 - U))
+    if(SR == "Ricker") Req <- log(Arec * Spr * (1 - U))/(Brec * Spr * (1 - U))
     Beq <- Spr * Req
     Yield <- U * Beq
     return(-1 * Yield)
