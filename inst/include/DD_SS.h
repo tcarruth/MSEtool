@@ -107,17 +107,17 @@
 
   //--ARGUMENTS FOR NLL
   // Objective function
-  //creates storage for jnll and sets value to 0
-  vector<Type> jnll_comp(2);
-  jnll_comp.setZero();
+  //creates storage for nll and sets value to 0
+  vector<Type> nll_comp(2);
+  nll_comp.setZero();
 
   for(int tt=0; tt<ny; tt++){
-    if(C_hist(tt) > 0) jnll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
-    if(tt+k<ny) jnll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
+    if(C_hist(tt) > 0) nll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+    if(tt + k < ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
   }
 
-  //Summing individual jnll and penalties
-  Type jnll = jnll_comp.sum() + penalty;
+  //Summing individual nll and penalties
+  Type nll = nll_comp.sum() + penalty;
 
   //-------REPORTING-------//
   ADREPORT(R0);
@@ -127,8 +127,8 @@
   ADREPORT(tau);
   REPORT(sigma);
   REPORT(tau);
-  REPORT(jnll_comp);
-  REPORT(jnll);
+  REPORT(nll_comp);
+  REPORT(nll);
   REPORT(Arec);
   REPORT(Brec);
   REPORT(Spr0);
@@ -145,5 +145,5 @@
   REPORT(B0);
   REPORT(penalty);
 
-  return jnll;
+  return nll;
 //}

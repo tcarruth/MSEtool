@@ -59,7 +59,7 @@
     if(!R_IsNA(asDouble(est_B_dev(y)))) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
   }
 
-  Type nll = nll_comp.sum();
+  Type nll = nll_comp.sum() + penalty;
 
   Type U_UMSY_final = U(U.size()-1)/UMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;
