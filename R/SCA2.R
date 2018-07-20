@@ -1,12 +1,13 @@
 #' @describeIn SCA The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
 #' as penalized parameters (similar to Cadigan 2016). This version is generally very fast and robust. Virgin and MSY reference points
 #' are estimated after the assessment run.
+#' @useDynLib MSEtool
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                  CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-                 common_dev = "comp50", integrate = FALSE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4),
-                 inner.control = list(), ...) {
+                 common_dev = "comp50", integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                 control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(),  ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CAA, Data@Mort, Data@wla, Data@wlb, Data@vbLinf, Data@vbK, Data@vbt0, Data@L50, Data@L95, Data@MaxAge"
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
@@ -103,41 +104,78 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  mod <- optimize_TMB_model(obj, control)
+
+  if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    Recruit <- try(Data@Rec[x, ], silent = TRUE)
+    if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
+      log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
+      log_rec_dev[is.infinite(log_rec_dev) | is.na(log_rec_dev)] <- 0
+      info$params$log_rec_dev <- log_rec_dev
+
+      obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
+    }
+    while(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+      obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
+    }
+    obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
+  }
+
+  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
 
   report <- obj$report(obj$env$last.par.best)
-  if(is.character(opt) || is.character(SD)) {
-    Assessment <- new("Assessment", Model = "SCA2", info = info,
-                      obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
-  } else {
+
+  if(rescale != 1) {
+    vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "R_early")
+    vars_mult <- NULL
+    var_trans <- c("meanR", "q")
+    fun_trans <- c("/", "*")
+    fun_fixed <- c("log", NA)
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+  }
+
+  Yearplusone <- c(Year, max(Year) + 1)
+  YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
+  YearDev <- c(YearEarly, Year)
+  YearR <- c(YearDev, max(YearDev) + 1)
+  R <- c(rev(report$R_early), report$R)
+
+  Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
+
+  nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
+  Assessment <- new("Assessment", Model = "SCA2",
+                    U = structure(report$U, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    SSB = structure(report$E, names = Yearplusone),
+                    VB = structure(report$VB, names = Yearplusone),
+                    R = structure(R, names = YearR),
+                    N = structure(rowSums(report$N), names = Yearplusone),
+                    N_at_age = report$N,
+                    Selectivity = matrix(report$vul, nrow = length(Year),
+                                         ncol = max_age, byrow = TRUE),
+                    Obs_Catch = structure(C_hist, names = Year),
+                    Obs_Index = structure(I_hist, names = Year),
+                    Obs_C_at_age = CAA_hist,
+                    Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
+                    Index = structure(report$Ipred, names = Year),
+                    C_at_age = report$CAApred,
+                    Dev = structure(Dev, names = YearDev),
+                    Dev_type = "log-Recruitment deviations",
+                    NLL = structure(c(nll_report, report$nll_comp),
+                                    names = c("Total", "Index", "CAA", "Dev")),
+                    info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
+                    dependencies = dependencies, Data = Data)
+
+
+  if(!is.character(opt) && !is.character(SD)) {
     info$h <- ifelse(fix_h, Data@steep[x], NA)
     refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
                         SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = Wa,
                         mat = mat_age, M = M, vul = report$vul, SR = SR, fix_h = fix_h, h = info$h)
-    #refpt <- get_refpt(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
-    #                   SSB0 = SSB0, R0 = R0, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
+
     report <- c(report, refpt)
-
-    if(rescale != 1) {
-      vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "R_early", "MSY", "VBMSY",
-                    "RMSY", "BMSY", "EMSY", "VB0", "R0", "B0", "E0", "N0")
-      vars_mult <- "Brec"
-      var_trans <- c("meanR", "q")
-      fun_trans <- c("/", "*")
-      fun_fixed <- c("log", NA)
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    }
-
-    Yearplusone <- c(Year, max(Year) + 1)
-    YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
-    YearDev <- c(YearEarly, Year)
-    YearR <- c(YearDev, max(YearDev) + 1)
-    R <- c(rev(report$R_early), report$R)
-
-    Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
     if(integrate) {
       SE_Early <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_early_rec_dev"])
       SE_Main <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_rec_dev"])[map_log_rec_dev]
@@ -146,39 +184,27 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
       SE_Main <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])[map_log_rec_dev]
     }
     SE_Dev <- c(rev(SE_Early), SE_Main)
-    Assessment <- new("Assessment", Model = "SCA2", UMSY = report$UMSY,
-                      MSY = report$MSY, BMSY = report$BMSY, SSBMSY = report$EMSY,
-                      VBMSY = report$VBMSY, B0 = report$B0, R0 = report$R0, N0 = report$N0,
-                      SSB0 = report$E0, VB0 = report$VB0, h = report$h,
-                      U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$U/report$UMSY, names = Year),
-                      B = structure(report$B, names = Yearplusone),
-                      B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      B_B0 = structure(report$B/report$B0, names = Yearplusone),
-                      SSB = structure(report$E, names = Yearplusone),
-                      SSB_SSBMSY = structure(report$E/report$EMSY, names = Yearplusone),
-                      SSB_SSB0 = structure(report$E/report$E0, names = Yearplusone),
-                      VB = structure(report$VB, names = Yearplusone),
-                      VB_VBMSY = structure(report$VB/report$VBMSY, names = Yearplusone),
-                      VB_VB0 = structure(report$VB/report$VB0, names = Yearplusone),
-                      R = structure(R, names = YearR),
-                      N = structure(rowSums(report$N), names = Yearplusone),
-                      N_at_age = report$N,
-                      Selectivity = matrix(report$vul, nrow = length(Year),
-                                           ncol = max_age, byrow = TRUE),
-                      Obs_Catch = structure(C_hist, names = Year),
-                      Obs_Index = structure(I_hist, names = Year),
-                      Obs_C_at_age = CAA_hist,
-                      Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
-                      Index = structure(report$Ipred, names = Year),
-                      C_at_age = report$CAApred,
-                      Dev = structure(Dev, names = YearDev),
-                      Dev_type = "log-Recruitment deviations",
-                      NLL = structure(c(opt$objective, report$nll_comp),
-                                      names = c("Total", "Index", "CAA", "Dev")),
-                      SE_Dev = structure(SE_Dev, names = YearDev),
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
+
+    Assessment@UMSY <- report$UMSY
+    Assessment@MSY = report$MSY
+    Assessment@BMSY <- report$BMSY
+    Assessment@SSBMSY <- report$EMSY
+    Assessment@VBMSY <- report$VBMSY
+    Assessment@B0 <- report$B0
+    Assessment@R0 <- report$R0
+    Assessment@N0 <- report$N0
+    Assessment@SSB0 <- report$E0
+    Assessment@VB0 <- report$VB0
+    Assessment@h <- report$h
+    Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
+    Assessment@B_BMSY <- structure(report$B/report$BMSY, names = Yearplusone)
+    Assessment@B_B0 <- structure(report$B/report$B0, names = Yearplusone)
+    Assessment@SSB_SSBMSY <- structure(report$E/report$EMSY, names = Yearplusone)
+    Assessment@SSB_SSB0 <- structure(report$E/report$E0, names = Yearplusone)
+    Assessment@VB_VBMSY <- structure(report$VB/report$VBMSY, names = Yearplusone)
+    Assessment@VB_VB0 <- structure(report$VB/report$VB0, names = Yearplusone)
+    Assessment@SE_Dev <- structure(SE_Dev, names = YearDev)
+    Assessment@TMB_report <- report
   }
   return(Assessment)
 }

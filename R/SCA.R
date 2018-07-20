@@ -41,6 +41,11 @@
 #' of the recruitment deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
+#' @param opt_hess Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
+#' (this generally reduces the number of iterations to convergence, but is memory and time intensive and does not guarantee an increase
+#' in convergence rate). Ignored if \code{integrate = TRUE}.
+#' @param n_restart The number of restarts (calls to \code{\link[stats]{nlminb}}) in the optimization procedure, so long as the model
+#' hasn't converged. The optimization continues from the parameters from the previous (re)start.
 #' @param control A named list of agruments for optimization to be passed to
 #' \code{\link[stats]{nlminb}}.
 #' @param inner.control A named list of arguments for optimization of the random effects, which
@@ -62,19 +67,20 @@
 #' will be re-scaled by that number. By default, sample sizes are capped at 50.
 #'
 #' Vulnerability can be specified to be either logistic or dome. If logistic, then the model
-#' vector \code{vul_par} is of length 2, containing the ages of 50\% and 95\% vulnerability,
-#' respectively. The age of 95\% vulnerability is an offset, i.e.,
-#' \code{vul_95 = vul_par[1] + exp(vul_par[2])}.
+#' vector \code{vul_par} is of length 2:
+#' \itemize{
+#' \item \code{vul_par[1]}: \code{a50}, the age of 50\% vulnerability.
+#' \item \code{vul_par[2]}: the age of 95\% vulnerability (a95) as an offset, i.e., \code{a95 = a50 + exp(vul_par[2])}.
+#' }
 #'
 #' With dome vulnerability, a double normal parameterization is used, where \code{vul_par}
 #' is an estimated vector of length 4:
 #' \itemize{
-#' \item \code{vulpar[1]}: \code{log(sd_asc)}, where sd_asc of the normal distribution function for the ascending limb
-#' \item \code{vulpar[2]}: \code{mu_asc}, mean of the normal distribution function for the ascending limb
-#' \item \code{vulpar[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb.
-#' This is parameterized as an offset, i.e., \code{mu_desc = mu_asc + exp(vulpar[3])} to ensure
-#' \code{mu_desc > mu_asc}.
-#' \item \code{vulpar[4]}: \code{log(sd_des)}, where sd_des of the normal distribution function for the descending limb.
+#' \item \code{vul_par[1]}: \code{log(sd_asc)}, where sd_asc is the standard deviation of the normal distribution function for the ascending limb
+#' \item \code{vul_par[2]}: \code{mu_asc}, the mean of the normal distribution function for the ascending limb
+#' \item \code{vul_par[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb parameterized as an offset,
+#' i.e., \code{mu_desc = mu_asc + exp(vul_par[3])} to ensure \code{mu_desc > mu_asc}. The vulnerability is 1 for ages between mu_asc and mu_desc.
+#' \item \code{vul_par[4]}: \code{log(sd_des)}, where sd_des is the standard deviation of the normal distribution function for the descending limb.
 #' }
 #'
 #' For \code{start}, a named list of starting values of estimates for:
@@ -102,12 +108,14 @@
 #' res2 <- SCA2(Data = DLMtool::Simulation_1)
 #' }
 #' @describeIn SCA The parameterization with R0 and steepness as leading parameters.
+#' @useDynLib MSEtool
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                 start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
-                silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
+                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = ""
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
@@ -260,7 +268,24 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  mod <- optimize_TMB_model(obj, control)
+
+  if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    Recruit <- try(Data@Rec[x, ], silent = TRUE)
+    if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
+      log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
+      log_rec_dev[is.na(est_rec_dev) | is.na(log_rec_dev) | is.infinite(log_rec_dev)] <- 0
+      info$params$log_rec_dev <- log_rec_dev
+
+      obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
+    }
+    while(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+      obj$par["log_R0"] <- obj$par["log_R0"] + 1
+    }
+    obj$par["log_R0"] <- obj$par["log_R0"] + 1
+  }
+
+  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
@@ -274,30 +299,46 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
 
-  if(is.character(opt) || is.character(SD)) {
-    Assessment <- new("Assessment", Model = "SCA", info = info,
-                      obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
-  }
-  else {
+  Yearplusone <- c(Year, max(Year) + 1)
+  YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
+  YearDev <- c(YearEarly, Year)
+  YearR <- c(YearDev, max(YearDev) + 1)
+  R <- c(rev(report$R_early), report$R)
+
+  Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
+  Dev_out <- structure(Dev, names = YearDev)
+
+  nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
+  Assessment <- new("Assessment", Model = "SCA", B0 = report$B0, R0 = report$R0, N0 = report$N0,
+                    SSB0 = report$E0, VB0 = report$VB0,
+                    h = report$h, U = structure(report$U, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    B_B0 = structure(report$B/report$B0, names = Yearplusone),
+                    SSB = structure(report$E, names = Yearplusone),
+                    SSB_SSB0 = structure(report$E/report$E0, names = Yearplusone),
+                    VB = structure(report$VB, names = Yearplusone),
+                    VB_VB0 = structure(report$VB/report$VB0, names = Yearplusone),
+                    R = structure(R, names = YearR),
+                    N = structure(rowSums(report$N), names = Yearplusone),
+                    N_at_age = report$N,
+                    Selectivity = matrix(report$vul, nrow = length(Year),
+                                         ncol = max_age, byrow = TRUE),
+                    Obs_Catch = structure(C_hist, names = Year),
+                    Obs_Index = structure(I_hist, names = Year),
+                    Obs_C_at_age = CAA_hist,
+                    Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
+                    Index = structure(report$Ipred, names = Year),
+                    C_at_age = report$CAApred,
+                    Dev = Dev_out,
+                    Dev_type = "log-Recruitment deviations",
+                    NLL = structure(c(nll_report, report$nll_comp),
+                                    names = c("Total", "Index", "CAA", "Dev")),
+                    info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
+                    dependencies = dependencies, Data = Data)
+
+  if(!is.character(opt) && !is.character(SD)) {
     ref_pt <- get_MSY(Arec = report$Arec, Brec = report$Brec, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
     report <- c(report, ref_pt)
-
-    #SD_ind <- names(SD$par.fixed) == "log_R0" | names(SD$par.fixed) == "transformed_h" | names(SD$par.fixed) == "vul_par"
-    #ref_pt2 <- get_MSY_opt(SD$par.fixed[SD_ind], M = M, weight = Wa, mat = mat_age, SR = SR, vul_type = vulnerability, h = report$h,
-    #                       fix_h = fix_h, est_deriv = FALSE)
-    #MSY_grad <- numDeriv::jacobian(get_MSY_opt, x = SD$par.fixed[SD_ind], M = M, weight = Wa, mat = mat_age, SR = SR,
-    #                               vul_type = vulnerability, h = report$h, fix_h = fix_h, est_deriv = TRUE)
-    #MSY_covar <- MSY_grad %*% SD$cov.fixed[SD_ind, SD_ind] %*% t(MSY_grad)
-
-    Yearplusone <- c(Year, max(Year) + 1)
-    YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)
-    YearDev <- c(YearEarly, Year)
-    YearR <- c(YearDev, max(YearDev) + 1)
-    R <- c(rev(report$R_early), report$R)
-
-    Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
-    Dev_out <- structure(Dev, names = YearDev)
 
     if(integrate) {
       if(!all(is.na(est_early_rec_dev))) SE_Early <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_early_rec_dev"])
@@ -323,43 +364,17 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
     }
 
-    Assessment <- new("Assessment", Model = "SCA", UMSY = report$UMSY,
-                      MSY = report$MSY, BMSY = report$BMSY, SSBMSY = report$EMSY,
-                      VBMSY = report$VBMSY, B0 = report$B0, R0 = report$R0, N0 = report$N0,
-                      SSB0 = report$E0, VB0 = report$VB0,
-                      h = report$h, U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$U/report$UMSY, names = Year),
-                      B = structure(report$B, names = Yearplusone),
-                      B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      B_B0 = structure(report$B/report$B0, names = Yearplusone),
-                      SSB = structure(report$E, names = Yearplusone),
-                      SSB_SSBMSY = structure(report$E/report$EMSY, names = Yearplusone),
-                      SSB_SSB0 = structure(report$E/report$E0, names = Yearplusone),
-                      VB = structure(report$VB, names = Yearplusone),
-                      VB_VBMSY = structure(report$VB/report$VBMSY, names = Yearplusone),
-                      VB_VB0 = structure(report$VB/report$VB0, names = Yearplusone),
-                      R = structure(R, names = YearR),
-                      N = structure(rowSums(report$N), names = Yearplusone),
-                      N_at_age = report$N,
-                      Selectivity = matrix(report$vul, nrow = length(Year),
-                                           ncol = max_age, byrow = TRUE),
-                      Obs_Catch = structure(C_hist, names = Year),
-                      Obs_Index = structure(I_hist, names = Year),
-                      Obs_C_at_age = CAA_hist,
-                      Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
-                      Index = structure(report$Ipred, names = Year),
-                      C_at_age = report$CAApred,
-                      Dev = Dev_out,
-                      Dev_type = "log-Recruitment deviations",
-                      NLL = structure(c(opt$objective, report$nll_comp),
-                                      names = c("Total", "Index", "CAA", "Dev")),
-                      #SE_UMSY = sqrt(covar_MSY[1,1]), SE_MSY = sqrt(covar_MSY[2,2]), #SE_U_UMSY_final = SD$sd[6],
-                      #SE_B_BMSY_final = SD$sd[7], SE_B_B0_final = SD$sd[8],
-                      #SE_SSB_SSBMSY_final = SD$sd[9], SE_SSB_SSB0_final = SD$sd[10],
-                      #SE_VB_VBMSY_final = SD$sd[11], SE_VB_VB0_final = SD$sd[12],
-                      SE_Dev = SE_Dev,
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
+    Assessment@UMSY <- report$UMSY
+    Assessment@MSY <- report$MSY
+    Assessment@BMSY <- report$BMSY
+    Assessment@SSBMSY <- report$EMSY
+    Assessment@VBMSY <- report$VBMSY
+    Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
+    Assessment@B_BMSY <- structure(report$B/report$BMSY, names = Yearplusone)
+    Assessment@SSB_SSBMSY <- structure(report$E/report$EMSY, names = Yearplusone)
+    Assessment@VB_VBMSY <- structure(report$VB/report$VBMSY, names = Yearplusone)
+    Assessment@SE_Dev <- SE_Dev
+    Assessment@TMB_report <- report
   }
   return(Assessment)
 }
@@ -492,3 +507,11 @@ vul_fn <- function(vul_par, maxage, type) {
   }
   return(vul)
 }
+
+
+#SD_ind <- names(SD$par.fixed) == "log_R0" | names(SD$par.fixed) == "transformed_h" | names(SD$par.fixed) == "vul_par"
+#ref_pt2 <- get_MSY_opt(SD$par.fixed[SD_ind], M = M, weight = Wa, mat = mat_age, SR = SR, vul_type = vulnerability, h = report$h,
+#                       fix_h = fix_h, est_deriv = FALSE)
+#MSY_grad <- numDeriv::jacobian(get_MSY_opt, x = SD$par.fixed[SD_ind], M = M, weight = Wa, mat = mat_age, SR = SR,
+#                               vul_type = vulnerability, h = report$h, fix_h = fix_h, est_deriv = TRUE)
+#MSY_covar <- MSY_grad %*% SD$cov.fixed[SD_ind, SD_ind] %*% t(MSY_grad)

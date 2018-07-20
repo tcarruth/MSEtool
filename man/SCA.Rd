@@ -10,7 +10,8 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   rescale = "mean1", start = NULL, fix_h = FALSE,
   fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
   early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50",
-  integrate = FALSE, silent = TRUE, control = list(iter.max = 5000,
+  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
   eval.max = 10000), inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
@@ -18,6 +19,7 @@ SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   rescale = "mean1", start = NULL, fix_h = FALSE,
   fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
   common_dev = "comp50", integrate = FALSE, silent = TRUE,
+  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
   ...)
 }
@@ -70,6 +72,13 @@ of the recruitment deviations (thus, treating it as a state-space variable).}
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
 
+\item{opt_hess}{Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
+(this generally reduces the number of iterations to convergence, but is memory and time intensive and does not guarantee an increase
+in convergence rate). Ignored if \code{integrate = TRUE}.}
+
+\item{n_restart}{The number of restarts (calls to \code{\link[stats]{nlminb}}) in the optimization procedure, so long as the model
+hasn't converged. The optimization continues from the parameters from the previous (re)start.}
+
 \item{control}{A named list of agruments for optimization to be passed to
 \code{\link[stats]{nlminb}}.}
 
@@ -107,19 +116,20 @@ to that number. If \code{CAA_multiplier <= 1}, then all the annual samples sizes
 will be re-scaled by that number. By default, sample sizes are capped at 50.
 
 Vulnerability can be specified to be either logistic or dome. If logistic, then the model
-vector \code{vul_par} is of length 2, containing the ages of 50\% and 95\% vulnerability,
-respectively. The age of 95\% vulnerability is an offset, i.e.,
-\code{vul_95 = vul_par[1] + exp(vul_par[2])}.
+vector \code{vul_par} is of length 2:
+\itemize{
+\item \code{vul_par[1]}: \code{a50}, the age of 50\% vulnerability.
+\item \code{vul_par[2]}: the age of 95\% vulnerability (a95) as an offset, i.e., \code{a95 = a50 + exp(vul_par[2])}.
+}
 
 With dome vulnerability, a double normal parameterization is used, where \code{vul_par}
 is an estimated vector of length 4:
 \itemize{
-\item \code{vulpar[1]}: \code{log(sd_asc)}, where sd_asc of the normal distribution function for the ascending limb
-\item \code{vulpar[2]}: \code{mu_asc}, mean of the normal distribution function for the ascending limb
-\item \code{vulpar[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb.
-This is parameterized as an offset, i.e., \code{mu_desc = mu_asc + exp(vulpar[3])} to ensure
-\code{mu_desc > mu_asc}.
-\item \code{vulpar[4]}: \code{log(sd_des)}, where sd_des of the normal distribution function for the descending limb.
+\item \code{vul_par[1]}: \code{log(sd_asc)}, where sd_asc is the standard deviation of the normal distribution function for the ascending limb
+\item \code{vul_par[2]}: \code{mu_asc}, the mean of the normal distribution function for the ascending limb
+\item \code{vul_par[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb parameterized as an offset,
+i.e., \code{mu_desc = mu_asc + exp(vul_par[3])} to ensure \code{mu_desc > mu_asc}. The vulnerability is 1 for ages between mu_asc and mu_desc.
+\item \code{vul_par[4]}: \code{log(sd_des)}, where sd_des is the standard deviation of the normal distribution function for the descending limb.
 }
 
 For \code{start}, a named list of starting values of estimates for:
