@@ -8,10 +8,20 @@ context("SCA in assessment mode")
 
 test_that("SCA assess model", {
   res <- expect_s4_class(SCA(Data = Simulation_1), "Assessment")
+  expect_s4_class(SCA(Data = Simulation_1, start = list(R0 = 1)), "Assessment")
   expect_s4_class(SCA(Data = Simulation_1, integrate = TRUE, fix_tau = F), "Assessment")
   expect_s4_class(SCA(Data = Simulation_1, SR = "Ricker"), "Assessment")
   expect_s4_class(SCA(Data = Red_snapper, SR = "Ricker"), "Assessment")
+  expect_s4_class(SCA(Data = Red_snapper, start = list(R0 = 0.25)), "Assessment")
+  expect_s4_class(SCA(Data = Simulation_1, fix_h = TRUE), "Assessment")
 
+  expect_s4_class(SCA(Data = Simulation_1, early_dev = "comp", integrate = TRUE), "Assessment")
+  expect_s4_class(SCA(Data = Simulation_1, early_dev = "comp"), "Assessment")
+
+  expect_s4_class(SCA(Data = Simulation_1, late_dev = 5, integrate = TRUE), "Assessment")
+  expect_s4_class(SCA(Data = Simulation_1, late_dev = 5), "Assessment")
+
+  expect_s4_class(SCA(Data = Simulation_1, CAA_multiplier = 0.4), "Assessment")
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
@@ -45,8 +55,15 @@ test_that("SCA assess model fix_h", {
 
 test_that("SCA2 assess model", {
   expect_s4_class(SCA2(Data = Simulation_1), "Assessment")
+  expect_s4_class(SCA2(Data = Simulation_1, start = list(R0 = 1)), "Assessment")
   expect_s4_class(SCA2(Data = Simulation_1, integrate = TRUE, fix_tau = F), "Assessment")
   expect_s4_class(SCA2(Data = Simulation_1, SR = "Ricker"), "Assessment")
+
+  expect_s4_class(SCA2(Data = Red_snapper, SR = "Ricker"), "Assessment")
+  expect_s4_class(SCA2(Data = Simulation_1, fix_h = TRUE), "Assessment")
+  expect_s4_class(SCA2(Data = Simulation_1, early_dev = "comp"), "Assessment")
+  expect_s4_class(SCA2(Data = Simulation_1, common_dev = 5), "Assessment")
+  expect_s4_class(SCA2(Data = Simulation_1, CAA_multiplier = 0.4), "Assessment")
 
   res <- expect_s4_class(SCA2(Data = Red_snapper), "Assessment")
   expect_s4_class(SCA2(Data = Red_snapper, SR = "Ricker"), "Assessment")
