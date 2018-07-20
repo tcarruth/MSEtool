@@ -7,25 +7,43 @@ ilogit <- function(x) 1/(1 + exp(-x))
 ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 
 
-optimize_TMB_model <- function(obj, control = list()) {
-  # Optimize without hessian
-  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, control = control),
+#optimize_TMB_model <- function(obj, control = list()) {
+#  # Optimize without hessian
+#  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, control = control),
+#                  error = function(e) as.character(e))
+#  SD <- get_sdreport(obj, opt)
+#
+#  # If needed, re-run with hessian for fixed-effects models
+#  if(is.null(obj$env$random) && (is.character(SD) || !SD$pdHess)) {
+#    if(is.character(opt)) par2 <- obj$par else par2 <- opt$par
+#
+#    opt2 <- tryCatch(nlminb(par2, obj$fn, obj$gr, obj$he, control = control),
+#                     error = function(e) as.character(e))
+#    if(is.list(opt2)) opt2$use_hessian <- TRUE
+#    SD2 <- get_sdreport(obj, opt2)
+#    res <- list(opt = opt2, SD = SD2)
+#  } else {
+#    res <- list(opt = opt, SD = SD)
+#  }
+#
+#  return(res)
+#}
+
+
+optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, restart = 1) {
+  restart <- as.integer(restart)
+  if(is.null(obj$env$random) && use_hessian) h <- obj$he else h <- NULL
+  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control),
                   error = function(e) as.character(e))
   SD <- get_sdreport(obj, opt)
 
-  # If needed, re-run with hessian for fixed-effects models
-  if(is.null(obj$env$random) && (is.character(SD) || !SD$pdHess)) {
-    if(is.character(opt)) par2 <- obj$par else par2 <- opt$par
-
-    opt2 <- tryCatch(nlminb(par2, obj$fn, obj$gr, obj$he, control = control),
-                     error = function(e) as.character(e))
-    SD2 <- get_sdreport(obj, opt2)
-    res <- list(opt = opt2, SD = SD2)
+  if((is.character(SD) || !SD$pdHess) && !is.character(opt) && restart > 0) {
+    obj$par <- opt$par
+    Recall(obj, control, restart - 1, use_hessian)
   } else {
     res <- list(opt = opt, SD = SD)
+    return(res)
   }
-
-  return(res)
 }
 
 get_sdreport <- function(obj, opt) {
