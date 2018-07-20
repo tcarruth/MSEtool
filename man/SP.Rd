@@ -6,13 +6,15 @@
 \title{Surplus production model with UMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, silent = TRUE, control = list(iter.max = 5000, eval.max =
-  10000), ...)
+  fix_n = TRUE, silent = TRUE, opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
+  eval.max = 10000), ...)
 
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE, early_dev = c("all",
-  "index"), integrate = FALSE, silent = TRUE, control = list(iter.max =
-  5000, eval.max = 10000), inner.control = list(), ...)
+  "index"), integrate = FALSE, silent = TRUE, opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
+  eval.max = 10000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -36,6 +38,13 @@ is half of carrying capacity.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
+
+\item{opt_hess}{Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
+(this generally reduces the number of iterations to convergence, but is memory and time intensive and does not guarantee an increase
+in convergence rate). Ignored if \code{integrate = TRUE}.}
+
+\item{n_restart}{The number of restarts (calls to \code{\link[stats]{nlminb}}) in the optimization procedure, so long as the model
+hasn't converged. The optimization continues from the parameters from the previous (re)start.}
 
 \item{control}{A named list of parameters regarding optimization to be passed to
 \code{\link[stats]{nlminb}}.}

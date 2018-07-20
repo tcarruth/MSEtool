@@ -25,6 +25,11 @@
 #' of the recruitment deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
+#' @param opt_hess Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
+#' (this generally reduces the number of iterations to convergence, but is memory and time intensive and does not guarantee an increase
+#' in convergence rate). Ignored if \code{integrate = TRUE}.
+#' @param n_restart The number of restarts (calls to \code{\link[stats]{nlminb}}) in the optimization procedure, so long as the model
+#' hasn't converged. The optimization continues from the parameters from the previous (re)start.
 #' @param control A named list of parameters regarding optimization to be passed to
 #' \code{\link[stats]{nlminb}}.
 #' @param inner.control A named list of arguments for optimization of the random effects, which
@@ -75,7 +80,8 @@
 #' @useDynLib MSEtool
 #' @export
 DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = FALSE,
-                   fix_U_equilibrium = TRUE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), ...) {
+                   fix_U_equilibrium = TRUE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                   control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -143,62 +149,60 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
 
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
-  mod <- optimize_TMB_model(obj, control)
+
+  if(obj$report(obj$par)$penalty > 0) {
+    while(obj$report(obj$par)$penalty > 0) {
+      obj$par["log_R0"] <- obj$par["log_R0"] + 1
+    }
+    obj$par["log_R0"] <- obj$par["log_R0"] + 1
+  }
+
+  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  if(is.character(opt) || is.character(SD)) {
-    Assessment <- new("Assessment", Model = "DD_TMB",
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
-  } else {
+  if(rescale != 1) {
+    vars_div <- c("B0", "B", "Cpred", "N0", "N", "R0", "R")
+    vars_mult <- c("Brec")
+    var_trans <- c("R0")
+    fun_trans <- c("/")
+    fun_fixed <- c("log")
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+  }
+  Yearplusone <- c(Year, max(Year) + 1)
+  Yearplusk <- c(Year, max(Year) + 1:k)
 
+  nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
+  Assessment <- new("Assessment", Model = "DD_TMB",
+                    B0 = report$B0, R0 = report$R0, N0 = report$N0,
+                    SSB0 = report$B0, VB0 = report$B0, h = report$h,
+                    U = structure(report$U, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    B_B0 = structure(report$B/report$B0, names = Yearplusone),
+                    SSB = structure(report$B, names = Yearplusone),
+                    SSB_SSB0 = structure(report$B/report$B0, names = Yearplusone),
+                    VB = structure(report$B, names = Yearplusone),
+                    VB_VB0 = structure(report$B/report$B0, names = Yearplusone),
+                    R = structure(report$R, names = Yearplusk),
+                    N = structure(report$N, names = Yearplusone),
+                    Obs_Catch = structure(C_hist, names = Year),
+                    Obs_Index = structure(I_hist, names = Year),
+                    Catch = structure(report$Cpred, names = Year),
+                    Index = structure(report$Cpred/(C_hist/I_hist), names = Year),
+                    NLL = structure(c(nll_report, report$nll - report$penalty), names = c("Total", "Catch")),
+                    info = info, obj = obj, opt = opt,
+                    SD = SD, TMB_report = report, dependencies = dependencies, Data = Data)
+
+  if(!is.character(opt) && !is.character(SD)) {
     ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
     report <- c(report, ref_pt)
 
-    if(rescale != 1) {
-      vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
-      vars_mult <- c("Brec")
-      var_trans <- c("R0")
-      fun_trans <- c("/")
-      fun_fixed <- c("log")
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    }
-    Yearplusone <- c(Year, max(Year) + 1)
-    Yearplusk <- c(Year, max(Year) + 1:k)
-
-    Assessment <- new("Assessment", Model = "DD_TMB",
-                      UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY,
-                      SSBMSY = report$BMSY, VBMSY = report$BMSY,
-                      B0 = report$B0, R0 = report$R0, N0 = report$N0,
-                      SSB0 = report$B0, VB0 = report$B0, h = report$h,
-                      U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$U/report$UMSY, names = Year),
-                      B = structure(report$B, names = Yearplusone),
-                      B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      B_B0 = structure(report$B/report$B0, names = Yearplusone),
-                      SSB = structure(report$B, names = Yearplusone),
-                      SSB_SSBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      SSB_SSB0 = structure(report$B/report$B0, names = Yearplusone),
-                      VB = structure(report$B, names = Yearplusone),
-                      VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      VB_VB0 = structure(report$B/report$B0, names = Yearplusone),
-                      R = structure(report$R, names = Yearplusk),
-                      N = structure(report$N, names = Yearplusone),
-                      Obs_Catch = structure(C_hist, names = Year),
-                      Catch = structure(report$Cpred, names = Year),
-                      NLL = structure(c(opt$objective, report$nll), names = c("Total", "Catch")),
-                      #SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
-                      #SE_U_UMSY_final = SD$sd[names(SD$value) == "U_UMSY_final"],
-                      #SE_B_BMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      #SE_B_B0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      #SE_SSB_SSBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      #SE_SSB_SSB0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      #SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      #SE_VB_VB0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      info = info, obj = obj, opt = opt,
-                      SD = SD, TMB_report = report, dependencies = dependencies, Data = Data)
+    Assessment@UMSY <- report$UMSY
+    Assessment@MSY <- report$MSY
+    Assessment@BMSY <- Assessment@SSBMSY <- Assessment@VBMSY <- report$BMSY
+    Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
+    Assessment@B_BMSY <- Assessment@SSB_SSBMSY <- Assessment@VB_VBMSY <- structure(report$B/report$BMSY, names = Yearplusone)
   }
   return(Assessment)
 }
@@ -206,11 +210,12 @@ class(DD_TMB) <- "Assess"
 
 
 #' @describeIn DD_TMB State-Space version of Delay-Difference model
+#' @useDynLib MSEtool
 #' @export
 DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
                   fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-                  integrate = FALSE, silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4),
-                  inner.control = list(), ...) {
+                  integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                  control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   SR <- match.arg(SR)
   dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -296,74 +301,81 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = random,
                    map = map, checkParameterOrder = FALSE,
                    DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  mod <- optimize_TMB_model(obj, control)
+
+  if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    Recruit <- try(Data@Rec[x, ], silent = TRUE)
+    if(is.numeric(Recruit) && length(Recruit) == ny && any(!is.na(Recruit[(k+1):ny]))) {
+      log_rec_dev <- log(Recruit[(k+1):ny]/mean(Recruit[(k+1):ny], na.rm = TRUE))
+      log_rec_dev[is.na(log_rec_dev) | is.infinite(log_rec_dev)] <- 0
+      info$params$log_rec_dev <- log_rec_dev
+
+      obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
+    }
+    while(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+      obj$par["log_R0"] <- obj$par["log_R0"] + 1
+    }
+    obj$par["log_R0"] <- obj$par["log_R0"] + 1
+  }
+
+  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  if(is.character(opt) || is.character(SD)) {
-    Assessment <- new("Assessment", Model = "DD_SS",
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
-  } else {
+  if(rescale != 1) {
+    vars_div <- c("B0", "B", "Cpred", "N0", "N", "R0", "R")
+    vars_mult <- c("Brec")
+    var_trans <- c("R0")
+    fun_trans <- c("/")
+    fun_fixed <- c("log")
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+  }
+
+  Yearplusone <- c(Year, max(Year) + 1)
+  Yearplusk <- c(Year, max(Year) + 1:k)
+  YearDev <- seq(Year[1] + k, max(Year))
+
+  nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
+  Assessment <- new("Assessment", Model = "DD_SS",
+                    B0 = report$B0, R0 = report$R0, N0 = report$N0,
+                    SSB0 = report$B0, VB0 = report$B0, h = report$h,
+                    U = structure(report$U, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    B_B0 = structure(report$B/report$B0, names = Yearplusone),
+                    SSB = structure(report$B, names = Yearplusone),
+                    SSB_SSB0 = structure(report$B/report$B0, names = Yearplusone),
+                    VB = structure(report$B, names = Yearplusone),
+                    VB_VB0 = structure(report$B/report$B0, names = Yearplusone),
+                    R = structure(report$R, names = Yearplusk),
+                    N = structure(report$N, names = Yearplusone),
+                    Obs_Catch = structure(C_hist, names = Year),
+                    Obs_Index = structure(I_hist, names = Year),
+                    Catch = structure(report$Cpred, names = Year),
+                    Index = structure(report$Cpred/(C_hist/I_hist), names = Year),
+                    Dev = structure(report$log_rec_dev, names = YearDev),
+                    Dev_type = "log-Recruitment deviations",
+                    NLL = structure(c(nll_report, report$nll_comp),
+                                    names = c("Total", "Catch", "Dev")),
+                    info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
+                    dependencies = dependencies, Data = Data)
+
+  if(!is.character(opt) && !is.character(SD)) {
     ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
     report <- c(report, ref_pt)
 
-    if(rescale != 1) {
-      vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
-      vars_mult <- c("Brec")
-      var_trans <- c("R0")
-      fun_trans <- c("/")
-      fun_fixed <- c("log")
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    }
-
-    Yearplusone <- c(Year, max(Year) + 1)
-    Yearplusk <- c(Year, max(Year) + 1:k)
-    YearDev <- seq(Year[1] + k, max(Year))
-
     if(integrate) {
-      Dev <- SD$par.random
       SE_Dev <- sqrt(SD$diag.cov.random)
     } else {
-      Dev <- SD$par.fixed[names(SD$par.fixed) == "log_rec_dev"]
       SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
     }
 
-    Assessment <- new("Assessment", Model = "DD_SS",
-                      UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY,
-                      SSBMSY = report$BMSY, VBMSY = report$BMSY,
-                      B0 = report$B0, R0 = report$R0, N0 = report$N0,
-                      SSB0 = report$B0, VB0 = report$B0, h = report$h,
-                      U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$U/report$UMSY, names = Year),
-                      B = structure(report$B, names = Yearplusone),
-                      B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      B_B0 = structure(report$B/report$B0, names = Yearplusone),
-                      SSB = structure(report$B, names = Yearplusone),
-                      SSB_SSBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      SSB_SSB0 = structure(report$B/report$B0, names = Yearplusone),
-                      VB = structure(report$B, names = Yearplusone),
-                      VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      VB_VB0 = structure(report$B/report$B0, names = Yearplusone),
-                      R = structure(report$R, names = Yearplusk),
-                      N = structure(report$N, names = Yearplusone),
-                      Obs_Catch = structure(C_hist, names = Year),
-                      Catch = structure(report$Cpred, names = Year),
-                      Dev = structure(Dev, names = YearDev),
-                      Dev_type = "log-Recruitment deviations",
-                      NLL = structure(c(opt$objective, report$jnll_comp), names = c("Total", "Catch", "Dev")),
-                      SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
-                      SE_U_UMSY_final = SD$sd[names(SD$value) == "U_UMSY_final"],
-                      SE_B_BMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_B_B0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      SE_SSB_SSBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_SSB_SSB0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_VB_VB0_final = SD$sd[names(SD$value) == "B_B0_final"],
-                      SE_Dev = structure(SE_Dev, names = YearDev),
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
+    Assessment@UMSY <- report$UMSY
+    Assessment@MSY <- report$MSY
+    Assessment@BMSY <- Assessment@SSBMSY <- Assessment@VBMSY <- report$BMSY
+    Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
+    Assessment@B_BMSY <- Assessment@SSB_SSBMSY <- Assessment@VB_VBMSY <- structure(report$B/report$BMSY, names = Yearplusone)
+    Assessment@SE_Dev <- structure(SE_Dev, names = YearDev)
   }
   return(Assessment)
 }

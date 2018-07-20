@@ -7,11 +7,13 @@
 \usage{
 DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, silent = TRUE,
+  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 5000, eval.max = 10000), ...)
 
 DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE,
   fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
+  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
   ...)
 }
@@ -37,6 +39,13 @@ estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provid
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
+
+\item{opt_hess}{Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
+(this generally reduces the number of iterations to convergence, but is memory and time intensive and does not guarantee an increase
+in convergence rate). Ignored if \code{integrate = TRUE}.}
+
+\item{n_restart}{The number of restarts (calls to \code{\link[stats]{nlminb}}) in the optimization procedure, so long as the model
+hasn't converged. The optimization continues from the parameters from the previous (re)start.}
 
 \item{control}{A named list of parameters regarding optimization to be passed to
 \code{\link[stats]{nlminb}}.}

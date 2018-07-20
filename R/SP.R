@@ -29,6 +29,11 @@
 #' of the biomass deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
+#' @param opt_hess Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
+#' (this generally reduces the number of iterations to convergence, but is memory and time intensive and does not guarantee an increase
+#' in convergence rate). Ignored if \code{integrate = TRUE}.
+#' @param n_restart The number of restarts (calls to \code{\link[stats]{nlminb}}) in the optimization procedure, so long as the model
+#' hasn't converged. The optimization continues from the parameters from the previous (re)start.
 #' @param control A named list of parameters regarding optimization to be passed to
 #' \code{\link[stats]{nlminb}}.
 #' @param inner.control A named list of arguments for optimization of the random effects, which
@@ -76,7 +81,8 @@
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
 SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
-               silent = TRUE, control = list(iter.max = 5e3, eval.max = 1e4), ...) {
+               silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+               control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies = "Data@Cat, Data@Ind"
   ystart <- which(!is.na(Data@Cat[x, ]))[1]
   yind <- ystart:length(Data@Cat[x, ])
@@ -115,49 +121,48 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   if(fix_n) map$log_n = factor(NA)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
-  mod <- optimize_TMB_model(obj, control)
+  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  if(is.character(opt) || is.character(SD)) {
-    Assessment <- new("Assessment", Model = "SP",
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
-  } else {
-    if(rescale != 1) {
-      vars_div <- c("B", "BMSY", "SP", "K", "MSY")
-      vars_mult <- NULL
-      var_trans <- c("MSY", "K", "q")
-      fun_trans <- c("/", "/", "*")
-      fun_fixed <- c("log", NA, NA)
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    }
+  if(rescale != 1) {
+    vars_div <- c("B", "BMSY", "SP", "K", "MSY")
+    vars_mult <- NULL
+    var_trans <- c("MSY", "K", "q")
+    fun_trans <- c("/", "/", "*")
+    fun_fixed <- c("log", NA, NA)
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+  }
 
-    Yearplusone <- c(Year, max(Year) + 1)
+  Yearplusone <- c(Year, max(Year) + 1)
 
-    Assessment <- new("Assessment", Model = "SP",
-                      UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
-                      B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$U/report$UMSY, names = Year),
-                      B = structure(report$B, names = Yearplusone),
-                      B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      B_B0 = structure(report$B/report$K, names = Yearplusone),
-                      VB = structure(report$B, names = Yearplusone),
-                      VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      VB_VB0 = structure(report$B/report$K, names = Yearplusone),
-                      Obs_Catch = structure(C_hist, names = Year),
-                      Obs_Index = structure(I_hist, names = Year),
-                      Index = structure(report$Ipred, names = Year),
-                      NLL = structure(c(opt$objective, report$nll), names = c("Total", "Index")),
-                      SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
-                      SE_U_UMSY_final = SD$sd[names(SD$value) == "U_UMSY_final"],
-                      SE_B_BMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_B_B0_final = SD$sd[names(SD$value) == "B_K_final"],
-                      SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_VB_VB0_final = SD$sd[names(SD$value) == "B_K_final"],
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
+  nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
+  Assessment <- new("Assessment", Model = "SP",
+                    UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
+                    B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
+                    U_UMSY = structure(report$U/report$UMSY, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    B_B0 = structure(report$B/report$K, names = Yearplusone),
+                    VB = structure(report$B, names = Yearplusone),
+                    VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    VB_VB0 = structure(report$B/report$K, names = Yearplusone),
+                    Obs_Catch = structure(C_hist, names = Year),
+                    Obs_Index = structure(I_hist, names = Year),
+                    Index = structure(report$Ipred, names = Year),
+                    NLL = structure(c(nll_report, report$nll - report$penalty), names = c("Total", "Index")),
+                    info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
+                    dependencies = dependencies, Data = Data)
+
+  if(!is.character(opt) && !is.character(SD)) {
+    Assessment@SE_UMSY <- SD$sd[names(SD$value) == "UMSY"]
+    Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
+    Assessment@SE_U_UMSY_final <- SD$sd[names(SD$value) == "U_UMSY_final"]
+    Assessment@SE_B_BMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
+    Assessment@SE_B_B0_final <- SD$sd[names(SD$value) == "B_K_final"]
+    Assessment@SE_VB_VBMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
+    Assessment@SE_VB_VB0_final <- SD$sd[names(SD$value) == "B_K_final"]
   }
   return(Assessment)
 }
@@ -171,6 +176,7 @@ class(SP) <- "Assess"
 #' @useDynLib MSEtool
 SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                   fix_tau = TRUE, early_dev = c("all", "index"), integrate = FALSE, silent = TRUE,
+                  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
   early_dev <- match.arg(early_dev)
@@ -236,27 +242,43 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                inner.control = inner.control)
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", silent = silent)
-  mod <- optimize_TMB_model(obj, control)
+  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  if(is.character(opt) || is.character(SD)) {
-    Assessment <- new("Assessment", Model = "SP_SS",
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
-  } else {
-    if(rescale != 1) {
-      vars_div <- c("B", "BMSY", "SP", "K", "MSY")
-      vars_mult <- NULL
-      var_trans <- c("MSY", "K", "q")
-      fun_trans <- c("/", "/", "*")
-      fun_fixed <- c("log", NA, NA)
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    }
+  if(rescale != 1) {
+    vars_div <- c("B", "BMSY", "SP", "K", "MSY")
+    vars_mult <- NULL
+    var_trans <- c("MSY", "K", "q")
+    fun_trans <- c("/", "/", "*")
+    fun_fixed <- c("log", NA, NA)
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+  }
 
-    Yearplusone <- c(Year, max(Year) + 1)
+  Yearplusone <- c(Year, max(Year) + 1)
 
+  nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
+  Assessment <- new("Assessment", Model = "SP_SS",
+                    UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
+                    B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
+                    U_UMSY = structure(report$U/report$UMSY, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    B_B0 = structure(report$B/report$K, names = Yearplusone),
+                    VB = structure(report$B, names = Yearplusone),
+                    VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    VB_VB0 = structure(report$B/report$K, names = Yearplusone),
+                    Obs_Catch = structure(C_hist, names = Year),
+                    Obs_Index = structure(I_hist, names = Year),
+                    Index = structure(report$Ipred, names = Year),
+                    Dev = structure(report$log_B_dev, names = Year),
+                    Dev_type = "log-Biomass deviations",
+                    NLL = structure(c(nll_report, report$nll_comp), names = c("Total", "Index", "Dev")),
+                    info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
+                    dependencies = dependencies, Data = Data)
+
+  if(!is.character(opt) && !is.character(SD)) {
     if(integrate) {
       SE_Dev <- sqrt(SD$diag.cov.random)
     } else {
@@ -266,31 +288,14 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     SE_Dev_out[is.na(SE_Dev_out)] <- 0
     SE_Dev_out[!is.na(SE_Dev_out)] <- SE_Dev
 
-    Assessment <- new("Assessment", Model = "SP_SS",
-                      UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
-                      B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
-                      U_UMSY = structure(report$U/report$UMSY, names = Year),
-                      B = structure(report$B, names = Yearplusone),
-                      B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      B_B0 = structure(report$B/report$K, names = Yearplusone),
-                      VB = structure(report$B, names = Yearplusone),
-                      VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                      VB_VB0 = structure(report$B/report$K, names = Yearplusone),
-                      Obs_Catch = structure(C_hist, names = Year),
-                      Obs_Index = structure(I_hist, names = Year),
-                      Index = structure(report$Ipred, names = Year),
-                      Dev = structure(report$log_B_dev, names = Year),
-                      Dev_type = "log-Biomass deviations",
-                      NLL = structure(c(opt$objective, report$nll_comp), names = c("Total", "Index", "Dev")),
-                      SE_UMSY = SD$sd[names(SD$value) == "UMSY"], SE_MSY = SD$sd[names(SD$value) == "MSY"],
-                      SE_U_UMSY_final = SD$sd[names(SD$value) == "U_UMSY_final"],
-                      SE_B_BMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_B_B0_final = SD$sd[names(SD$value) == "B_K_final"],
-                      SE_VB_VBMSY_final = SD$sd[names(SD$value) == "B_BMSY_final"],
-                      SE_VB_VB0_final = SD$sd[names(SD$value) == "B_K_final"],
-                      SE_Dev = structure(SE_Dev_out, names = Year),
-                      info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                      dependencies = dependencies, Data = Data)
+    Assessment@SE_UMSY <- SD$sd[names(SD$value) == "UMSY"]
+    Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
+    Assessment@SE_U_UMSY_final <- SD$sd[names(SD$value) == "U_UMSY_final"]
+    Assessment@SE_B_BMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
+    Assessment@SE_B_B0_final <- SD$sd[names(SD$value) == "B_K_final"]
+    Assessment@SE_VB_VBMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
+    Assessment@SE_VB_VB0_final <- SD$sd[names(SD$value) == "B_K_final"]
+    Assessment@SE_Dev <- structure(SE_Dev_out, names = Year)
   }
   return(Assessment)
 }
