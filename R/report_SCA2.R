@@ -488,7 +488,7 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE, save_figure = FAL
 
   SD <- NULL
   rescale <- info$rescale
-  fix_h <- ifelse(is.na(info$h), FALSE, TRUE)
+  fix_h <- ifelse(is.null(info$h), FALSE, TRUE)
 
   for(i in 0:nyr) {
     n_y_ret <- n_y - i
@@ -607,71 +607,6 @@ plot_retro_SCA2 <- function(retro_ts, retro_est, save_figure = FALSE, save_dir =
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }
 
-  invisible()
-}
-
-
-plot_yield_SCA <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01), SR, xaxis = c("U", "Biomass", "Depletion")) {
-  xaxis <- match.arg(xaxis)
-
-  M <- data$M
-  mat <- data$mat
-  weight <- data$weight
-  maxage <- data$max_age
-  vul <- report$vul
-
-  BMSY <- report$EMSY
-  B0 <- report$E0
-
-  Arec <- report$Arec
-  Brec <- report$Brec
-
-  EPR <- Req <- NA
-  solveMSY <- function(logit_U, SR) {
-    U <- ilogit(logit_U)
-    surv <- exp(-M) * (1 - vul * U)
-    NPR <- c(1, cumprod(surv[1:(maxage-1)]))
-    NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])
-    EPR <<- sum(NPR * mat * weight)
-    if(SR == "BH") Req <<- (Arec * EPR - 1)/(Brec * EPR)
-    if(SR == "Ricker") Req <<- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * U * NPR
-    Yield <- Req * sum(CPR * weight)
-    return(-1 * Yield)
-  }
-
-  Biomass <- Yield <- R <- rep(NA, length(u.vector))
-  for(i in 1:length(u.vector)) {
-    Yield[i] <- -1 * solveMSY(log(u.vector[i]/(1 - u.vector[i])), SR = SR)
-    R[i] <- Req
-    Biomass[i] <- EPR * Req
-  }
-
-  ind <- R >= 0
-
-  if(xaxis == "U") {
-    plot(u.vector[ind], Yield[ind], typ = 'l', xlab = "Exploitation rate (U)",
-         ylab = "Equilibrium yield")
-    segments(x0 = umsy, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = umsy, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-
-  if(xaxis == "Biomass") {
-    plot(Biomass[ind], Yield[ind], typ = 'l', xlab = "Spawning Stock Biomass",
-         ylab = "Equilibrium yield")
-    segments(x0 = BMSY, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-
-  if(xaxis == "Depletion") {
-    plot(Biomass[ind]/B0, Yield[ind], typ = 'l',
-         xlab = expression(SSB/SSB[0]), ylab = "Equilibrium yield")
-    segments(x0 = BMSY/B0, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY/report$B0, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
   invisible()
 }
 
