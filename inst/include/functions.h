@@ -4,7 +4,7 @@ Type posfun(Type x, Type eps, Type &penalty) {
   Type denom = 2;
   denom -= x/eps;
   Type ans = CppAD::CondExpGe(x, eps, x, eps/denom);
-  penalty += CppAD::CondExpGe(x, eps, Type(0), 100 * pow(x - eps, 2));
+  penalty += CppAD::CondExpGe(x, eps, Type(0), 0.01 * pow(x - eps, 2));
   return ans;
 }
 

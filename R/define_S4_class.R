@@ -121,7 +121,7 @@ Assessment <- setClass("Assessment",
 #' }
 #' @exportMethod summary
 setMethod("summary", signature(object = "Assessment"), function(object) {
-  if(is.character(object@opt) || is.character(object@SD)) warning("Did model converge? Check slots obj, opt, and SD.")
+  if(is.character(object@opt) || is.character(object@SD)) warning("Did model converge?")
   f <- get(paste0("summary_", object@Model))
   f(object)
 })
@@ -141,7 +141,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' }
 #' @exportMethod plot
 setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {
-  if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge? Check slots obj, opt, and SD.")
+  if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge?.")
   old.warning <- options()$warn
   options(warn = -1)
   on.exit(options(warn = old.warning))
