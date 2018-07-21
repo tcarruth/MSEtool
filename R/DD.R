@@ -203,6 +203,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
     Assessment@BMSY <- Assessment@SSBMSY <- Assessment@VBMSY <- report$BMSY
     Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
     Assessment@B_BMSY <- Assessment@SSB_SSBMSY <- Assessment@VB_VBMSY <- structure(report$B/report$BMSY, names = Yearplusone)
+    Assessment@TMB_report <- report
   }
   return(Assessment)
 }
@@ -376,6 +377,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
     Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
     Assessment@B_BMSY <- Assessment@SSB_SSBMSY <- Assessment@VB_VBMSY <- structure(report$B/report$BMSY, names = Yearplusone)
     Assessment@SE_Dev <- structure(SE_Dev, names = YearDev)
+    Assessment@TMB_report <- report
   }
   return(Assessment)
 }
