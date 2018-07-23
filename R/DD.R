@@ -150,13 +150,6 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, DLL = "MSEtool", silent = silent)
 
-  if(obj$report(obj$par)$penalty > 0) {
-    while(obj$report(obj$par)$penalty > 0) {
-      obj$par["log_R0"] <- obj$par["log_R0"] + 1
-    }
-    obj$par["log_R0"] <- obj$par["log_R0"] + 1
-  }
-
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
   SD <- mod[[2]]
@@ -302,22 +295,6 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   obj <- MakeADFun(data = info$data, parameters = info$params, random = random,
                    map = map, checkParameterOrder = FALSE,
                    DLL = "MSEtool", inner.control = inner.control, silent = silent)
-
-  if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
-    Recruit <- try(Data@Rec[x, ], silent = TRUE)
-    if(is.numeric(Recruit) && length(Recruit) == ny && any(!is.na(Recruit[(k+1):ny]))) {
-      log_rec_dev <- log(Recruit[(k+1):ny]/mean(Recruit[(k+1):ny], na.rm = TRUE))
-      log_rec_dev[is.na(log_rec_dev) | is.infinite(log_rec_dev)] <- 0
-      info$params$log_rec_dev <- log_rec_dev
-
-      obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
-                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-    }
-    while(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
-      obj$par["log_R0"] <- obj$par["log_R0"] + 1
-    }
-    obj$par["log_R0"] <- obj$par["log_R0"] + 1
-  }
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]

@@ -43,7 +43,7 @@ for(i in c(1:2, 4, 6, 8:12, 14:18, 20:24)) {
     my_OM <- get(OMs[i])
 
     Data <- Data_from_Hist[[i]]
-    xvec <- 1:my_OM2@nsim
+    xvec <- 1:my_OM@nsim
 
     sfExport(list = c("my_OM", "Data", "xvec"))
     start_time <- proc.time()
