@@ -151,6 +151,11 @@ setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, s
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par), add = TRUE)
 
+  if(save_figure && !file.exists(save_dir)) {
+    dir_test <- try(dir.create(save_dir))
+    if(!dir_test || inherits(dir_test, "try-error")) stop(paste("Could not create directory:", save_dir))
+  }
+
   f <- get(paste0("generate_plots_", x@Model))
   f(x, save_figure = save_figure, save_dir = save_dir)
 })
