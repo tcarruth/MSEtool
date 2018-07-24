@@ -13,6 +13,11 @@ An S4 class that contains assessment output. Created from a function of class \c
 \describe{
 \item{\code{Model}}{Name of the assessment model.}
 
+\item{\code{Name}}{Name of Data object.}
+
+\item{\code{conv}}{Logical. Whether the assessment model converged (defined by whether TMB returned a
+positive-definite covariance matrix for the model).}
+
 \item{\code{UMSY}}{Estimate of exploitation at maximum sustainable yield.}
 
 \item{\code{FMSY}}{Estimate of instantaneous fishing mortality rate at maximum sustainable yield.}
@@ -87,7 +92,8 @@ An S4 class that contains assessment output. Created from a function of class \c
 
 \item{\code{Dev_type}}{A description of the deviation parameters, e.g. "log recruitment deviations".}
 
-\item{\code{NLL}}{Negative log-likelihood (total [integrated across random effects] and components).}
+\item{\code{NLL}}{Negative log-likelihood. A vector for the total likelihood, integrated across random effects if applicable, components,
+and penalty term (applied when \code{U > 0.975} in any year).}
 
 \item{\code{SE_UMSY}}{Standard error of UMSY estimate.}
 
@@ -118,16 +124,14 @@ for the assessment.}
 
 \item{\code{obj}}{A list with components returned from \code{\link[TMB]{MakeADFun}}.}
 
-\item{\code{opt}}{list with components from calling \code{\link[stats]{nlminb}} to \code{obj}.}
+\item{\code{opt}}{A list with components from calling \code{\link[stats]{nlminb}} to \code{obj}.}
 
-\item{\code{SD}}{Parameter estimates and their standard errors, obtained from
+\item{\code{SD}}{A list (class sdreport) with parameter estimates and their standard errors, obtained from
 \code{\link[TMB]{sdreport}}.}
 
-\item{\code{TMB_report}}{A list of model output reported from the TMB executable, i.e. \code{obj$report()}.}
+\item{\code{TMB_report}}{A list of model output reported from the TMB executable, i.e. \code{obj$report()}, and derived quantities (e.g. MSY).}
 
-\item{\code{dependencies}}{A character string of data types used for the assessment.}
-
-\item{\code{Data}}{An object of class \linkS4class{Data} that was used to perform the assessment.}
+\item{\code{dependencies}}{A character string of data types required for the assessment.}
 }}
 
 \examples{

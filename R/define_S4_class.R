@@ -19,6 +19,9 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @docType class
 #'
 #' @slot Model Name of the assessment model.
+#' @slot Name Name of Data object.
+#' @slot conv Logical. Whether the assessment model converged (defined by whether TMB returned a
+#' positive-definite covariance matrix for the model).
 #' @slot UMSY Estimate of exploitation at maximum sustainable yield.
 #' @slot FMSY Estimate of instantaneous fishing mortality rate at maximum sustainable yield.
 #' @slot MSY Estimate of maximum sustainable yield.
@@ -56,7 +59,8 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot C_at_age Predicted catch-at-age matrix.
 #' @slot Dev A vector of estimated deviation parameters.
 #' @slot Dev_type A description of the deviation parameters, e.g. "log recruitment deviations".
-#' @slot NLL Negative log-likelihood (total [integrated across random effects] and components).
+#' @slot NLL Negative log-likelihood. A vector for the total likelihood, integrated across random effects if applicable, components,
+#' and penalty term (applied when \code{U > 0.975} in any year).
 #' @slot SE_UMSY Standard error of UMSY estimate.
 #' @slot SE_FMSY Standard error of FMSY estimate.
 #' @slot SE_MSY Standard error of MSY estimate.
@@ -72,12 +76,11 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot info A list containing the data and starting values of estimated parameters
 #' for the assessment.
 #' @slot obj A list with components returned from \code{\link[TMB]{MakeADFun}}.
-#' @slot opt list with components from calling \code{\link[stats]{nlminb}} to \code{obj}.
-#' @slot SD Parameter estimates and their standard errors, obtained from
+#' @slot opt A list with components from calling \code{\link[stats]{nlminb}} to \code{obj}.
+#' @slot SD A list (class sdreport) with parameter estimates and their standard errors, obtained from
 #' \code{\link[TMB]{sdreport}}.
-#' @slot TMB_report A list of model output reported from the TMB executable, i.e. \code{obj$report()}.
-#' @slot dependencies A character string of data types used for the assessment.
-#' @slot Data An object of class \linkS4class{Data} that was used to perform the assessment.
+#' @slot TMB_report A list of model output reported from the TMB executable, i.e. \code{obj$report()}, and derived quantities (e.g. MSY).
+#' @slot dependencies A character string of data types required for the assessment.
 #' @examples
 #' \dontrun{
 #' data(sim_snapper)
@@ -89,7 +92,7 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @export
 #' @exportClass Assessment
 Assessment <- setClass("Assessment",
- slots = c(Model = "character", UMSY = "numeric", FMSY = "numeric",
+ slots = c(Model = "character", Name = "character", conv = "logical", UMSY = "numeric", FMSY = "numeric",
  MSY = "numeric", BMSY = "numeric", SSBMSY = "numeric", VBMSY = "numeric",
  B0 = "numeric", R0 = "numeric", N0 = "numeric", SSB0 = "numeric", VB0 = "numeric",
  h = "numeric", U = "numeric", U_UMSY = "numeric", FMort = "numeric", F_FMSY  = "numeric",
@@ -106,7 +109,7 @@ Assessment <- setClass("Assessment",
  SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
  SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
  SE_Dev = "numeric", info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
- TMB_report = "list", dependencies = "character", Data = "Data"))
+ TMB_report = "list", dependencies = "character"))
 
 
 #' Summary of Assessment object
