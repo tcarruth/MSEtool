@@ -221,7 +221,7 @@ calculate_TAC <- function(Assessment, reps) {
   if(length(Assessment@FMSY) > 0) has_FMSY <- TRUE
   if(length(Assessment@VB) > 0) has_VB <- TRUE
 
-  if(has_VB && (has_UMSY || has_FMSY)) {
+  if(Assessment@conv && has_VB && (has_UMSY || has_FMSY)) {
     VB_current <- Assessment@VB[length(Assessment@VB)]
     if(has_UMSY) {
       if(length(Assessment@SE_UMSY) > 0) {
@@ -235,7 +235,7 @@ calculate_TAC <- function(Assessment, reps) {
         SE_FMSY <- Assessment@SE_FMSY
       } else SE_FMSY <- 1e-8
       FMSY_vector <- trlnorm(reps, Assessment@FMSY, SE_FMSY)
-      TAC <- FMSY_vector * VB_current
+      TAC <- (1 - exp(-FMSY_vector)) * VB_current
     }
   } else {
     TAC <- rep(NA, reps) # Missing estimates for HCR.
