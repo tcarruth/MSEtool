@@ -97,6 +97,19 @@ The model uses the Fletcher (1978) formulation and is parameterized with UMSY an
 leading parameters. The default conditions assume virgin conditions in the first year of the time series
 and a symmetric production function.
 }
+\section{Required Data}{
+
+\itemize{
+\item \code{SP}: Cat, Ind
+\item \code{SP_SS}: Cat, Ind
+}
+}
+
+\section{Optional Data}{
+
+\code{SP_SS}: CV_Ind
+}
+
 \examples{
 \dontrun{
 data(swordfish)
@@ -110,7 +123,7 @@ start <- list(UMSY = 0.1, MSY = 1e5, dep = 0.95, n = 2)
 res <- SP(Data = swordfish, start = start)
 
 #### State-space version
-res <- SP_SS(Data = swordfish, start = list(dep = 0.95, sigma = 0.1, tau = 0.1),
+res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.3),
 fix_sigma = TRUE)
 }
 }

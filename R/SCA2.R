@@ -8,12 +8,17 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                  common_dev = "comp50", integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                  control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(),  ...) {
-  dependencies = "Data@Cat, Data@Ind, Data@CAA, Data@Mort, Data@wla, Data@wlb, Data@vbLinf, Data@vbK, Data@vbt0, Data@L50, Data@L95, Data@MaxAge"
+  dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
+  dots <- list(...)
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)
-  yind <- which(!is.na(Data@Cat[x, ]))[1]
-  yind <- yind:length(Data@Cat[x, ])
+  if(any(names(dots) == "yind")) {
+    yind <- eval(dots$yind)
+  } else {
+    yind <- which(!is.na(Data@Cat[x, ]))[1]
+    yind <- yind:length(Data@Cat[x, ])
+  }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   if(any(is.na(C_hist) | C_hist < 0)) warning("Error. Catch time series is not complete.")
@@ -70,14 +75,14 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     }
   }
   if(is.null(params$log_sigma)) {
-    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
+    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) params$log_tau <- log(1)
   params$log_early_rec_dev <- rep(0, max_age - 1)
   params$log_rec_dev <- rep(0, n_y)
 
-  info <- list(Year = Data@Year, data = data, params = params, LH = LH, SR = SR, control = control,
+  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, control = control,
                inner.control = inner.control, rescale = rescale)
 
   map <- list()
@@ -105,6 +110,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
 
+  # Add starting values for rec-devs and increase R0 start value if too low
   if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
     Recruit <- try(Data@Rec[x, ], silent = TRUE)
     if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
@@ -145,7 +151,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SCA2",
+  Assessment <- new("Assessment", Model = "SCA2", Name = Data@Name, conv = !is.character(SD),
                     U = structure(report$U, names = Year),
                     B = structure(report$B, names = Yearplusone),
                     SSB = structure(report$E, names = Yearplusone),
@@ -163,10 +169,10 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                     C_at_age = report$CAApred,
                     Dev = structure(Dev, names = YearDev),
                     Dev_type = "log-Recruitment deviations",
-                    NLL = structure(c(nll_report, report$nll_comp),
-                                    names = c("Total", "Index", "CAA", "Dev")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
+                                    names = c("Total", "Index", "CAA", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                    dependencies = dependencies, Data = Data)
+                    dependencies = dependencies)
 
 
   if(!is.character(opt) && !is.character(SD)) {

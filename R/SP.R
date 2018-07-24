@@ -58,6 +58,13 @@
 #'
 #' Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
 #' Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
+#' @section Required Data:
+#' \itemize{
+#' \item \code{SP}: Cat, Ind
+#' \item \code{SP_SS}: Cat, Ind
+#' }
+#' @section Optional Data:
+#' \code{SP_SS}: CV_Ind
 #' @export SP
 #' @seealso \link{SP_production}
 #' @describeIn SP Fixed effects model
@@ -74,7 +81,7 @@
 #' res <- SP(Data = swordfish, start = start)
 #'
 #' #### State-space version
-#' res <- SP_SS(Data = swordfish, start = list(dep = 0.95, sigma = 0.1, tau = 0.1),
+#' res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.3),
 #' fix_sigma = TRUE)
 #' }
 #' @import TMB
@@ -84,8 +91,13 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies = "Data@Cat, Data@Ind"
-  ystart <- which(!is.na(Data@Cat[x, ]))[1]
-  yind <- ystart:length(Data@Cat[x, ])
+  dots <- list(...)
+  if(any(names(dots) == "yind")) {
+    yind <- eval(dots$yind)
+  } else {
+    ystart <- which(!is.na(Data@Cat[x, ]))[1]
+    yind <- ystart:length(Data@Cat[x, ])
+  }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   if(any(is.na(C_hist))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
@@ -138,7 +150,7 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   Yearplusone <- c(Year, max(Year) + 1)
 
   nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
-  Assessment <- new("Assessment", Model = "SP",
+  Assessment <- new("Assessment", Model = "SP", Name = Data@Name, conv = !is.character(SD),
                     UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
                     B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
                     U_UMSY = structure(report$U/report$UMSY, names = Year),
@@ -151,9 +163,10 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
                     Obs_Catch = structure(C_hist, names = Year),
                     Obs_Index = structure(I_hist, names = Year),
                     Index = structure(report$Ipred, names = Year),
-                    NLL = structure(c(nll_report, report$nll - report$penalty), names = c("Total", "Index")),
+                    NLL = structure(c(nll_report, report$nll - report$penalty, report$penalty),
+                                    names = c("Total", "Index", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                    dependencies = dependencies, Data = Data)
+                    dependencies = dependencies)
 
   if(!is.character(opt) && !is.character(SD)) {
     Assessment@SE_UMSY <- SD$sd[names(SD$value) == "UMSY"]
@@ -179,9 +192,14 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
+  dots <- list(...)
   early_dev <- match.arg(early_dev)
-  yind <- which(!is.na(Data@Cat[x, ]))[1]
-  yind <- yind:length(Data@Cat[x, ])
+  if(any(names(dots) == "yind")) {
+    yind <- eval(dots$yind)
+  } else {
+    ystart <- which(!is.na(Data@Cat[x, ]))[1]
+    yind <- ystart:length(Data@Cat[x, ])
+  }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   if(any(is.na(C_hist))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
@@ -217,7 +235,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   if(is.null(params$log_dep)) params$log_dep <- log(1)
   if(is.null(params$log_n)) params$log_n <- log(2)
   if(is.null(params$log_sigma)) {
-    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
+    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) params$log_tau <- log(0.3)
@@ -259,7 +277,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   Yearplusone <- c(Year, max(Year) + 1)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SP_SS",
+  Assessment <- new("Assessment", Model = "SP_SS", Name = Data@Name, conv = !is.character(SD),
                     UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
                     B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
                     U_UMSY = structure(report$U/report$UMSY, names = Year),
@@ -274,9 +292,10 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                     Index = structure(report$Ipred, names = Year),
                     Dev = structure(report$log_B_dev, names = Year),
                     Dev_type = "log-Biomass deviations",
-                    NLL = structure(c(nll_report, report$nll_comp), names = c("Total", "Index", "Dev")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
+                                    names = c("Total", "Index", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                    dependencies = dependencies, Data = Data)
+                    dependencies = dependencies)
 
   if(!is.character(opt) && !is.character(SD)) {
     if(integrate) {

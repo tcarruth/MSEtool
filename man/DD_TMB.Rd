@@ -95,6 +95,22 @@ proportionality between the abundance index and real abundance.
 Unsurprisingly the extent to which these assumptions are
 violated tends to be the biggest driver of performance for this method.
 }
+\section{Required Data}{
+
+\itemize{
+\item \code{DD_TMB}: Cat, Ind, Mort, L50, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+\item \code{DD_SS}: Cat, Ind, Mort, L50, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+}
+}
+
+\section{Optional Data}{
+
+\itemize{
+\item \code{DD_TMB}: steep
+\item \code{DD_SS}: steep, CV_Cat
+}
+}
+
 \examples{
 \dontrun{
 #### Observation-error delay difference model
@@ -102,13 +118,13 @@ res <- DD_TMB(Data = Red_snapper)
 
 
 # Provide starting values
-start <- list(R0 = 1, h = 1)
+start <- list(R0 = 1, h = 0.95)
 res <- DD_TMB(Data = Red_snapper, start = start)
 
-summary(res@SD) # Look at parameter estimates
+summary(res@SD) # Parameter estimates
 
 ### State-space version
-### Recruitment variability SD = 0.3
+### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
 res <- DD_SS(Data = Red_snapper, start = list(tau = 0.3))
 
 # Plot and save figures

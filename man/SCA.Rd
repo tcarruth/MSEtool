@@ -145,12 +145,34 @@ For \code{start}, a named list of starting values of estimates for:
 }
 \section{Functions}{
 \itemize{
-\item \code{SCA}: The parameterization with R0 and steepness as leading parameters.
+\item \code{SCA}: The parameterization with R0 and steepness as leading parameters. Recruitment is estimated
+as deviations from the resulting stock-recruit relationship.
 
 \item \code{SCA2}: The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
 as penalized parameters (similar to Cadigan 2016). This version is generally very fast and robust. Virgin and MSY reference points
 are estimated after the assessment run.
 }}
+
+\note{
+For a given catch history, the starting value of \code{R0} or \code{meanR} may be too low and the population crashes in
+the middle of the time series. If the assessment function detects this pattern is occurring, it will increase \code{R0} or \code{meanR}
+before running the model.
+}
+\section{Required Data}{
+
+\itemize{
+\item \code{SCA}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+\item \code{SCA2}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+}
+}
+
+\section{Optional Data}{
+
+\itemize{
+\item \code{SCA}: Rec, steep, sigmaR, CV_Ind
+\item \code{SC2}: Rec, steep, CV_Ind
+}
+}
 
 \examples{
 \dontrun{

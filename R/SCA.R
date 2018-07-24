@@ -51,7 +51,6 @@
 #' @param inner.control A named list of arguments for optimization of the random effects, which
 #' is passed on to \code{\link[TMB]{newton}}.
 #' @param ... Other arguments to be passed.
-#' @return An object of class \linkS4class{Assessment}.
 #' @details
 #' For the statistical catch-at-age model, the basic data inputs are catch (by weight), index
 #' (by weight/biomass), and catch-at-age matrix (by numbers). Catches are
@@ -93,7 +92,6 @@
 #' \item \code{sigma} Standard deviation of index.
 #' \item \code{tau} Standard deviation of recruitment deviations. If not provided, the value in \code{Data@@sigmaR} is used.
 #' }
-#' @author Q. Huynh
 #' @references
 #' Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and
 #' variable natural mortality rates. Canadian Journal of Fisheries and Aquatic Science 72:296-308.
@@ -107,7 +105,23 @@
 #' res <- SCA(Data = DLMtool::SimulatedData)
 #' res2 <- SCA2(Data = DLMtool::Simulation_1)
 #' }
-#' @describeIn SCA The parameterization with R0 and steepness as leading parameters.
+#' @describeIn SCA The parameterization with R0 and steepness as leading parameters. Recruitment is estimated
+#' as deviations from the resulting stock-recruit relationship.
+#' @section Required Data:
+#' \itemize{
+#' \item \code{SCA}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+#' \item \code{SCA2}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+#' }
+#' @section Optional Data:
+#' \itemize{
+#' \item \code{SCA}: Rec, steep, sigmaR, CV_Ind
+#' \item \code{SC2}: Rec, steep, CV_Ind
+#' }
+#' @note For a given catch history, the starting value of \code{R0} or \code{meanR} may be too low and the population crashes in
+#' the middle of the time series. If the assessment function detects this pattern is occurring, it will increase \code{R0} or \code{meanR}
+#' before running the model.
+#' @author Q. Huynh
+#' @return An object of class \linkS4class{Assessment}.
 #' @useDynLib MSEtool
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
@@ -116,13 +130,18 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
-  dependencies = ""
+  dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
+  dots <- list(...)
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)
   early_dev <- match.arg(early_dev)
-  yind <- which(!is.na(Data@Cat[x, ]))[1]
-  yind <- yind:length(Data@Cat[x, ])
+  if(any(names(dots) == "yind")) {
+    yind <- eval(dots$yind)
+  } else {
+    yind <- which(!is.na(Data@Cat[x, ]))[1]
+    yind <- yind:length(Data@Cat[x, ])
+  }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   if(any(is.na(C_hist) | C_hist < 0)) warning("Error. Catch time series is not complete.")
@@ -231,7 +250,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     }
   }
   if(is.null(params$log_sigma)) {
-    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
+    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) {
@@ -241,7 +260,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   params$log_early_rec_dev <- rep(0, max_age - 1)
   params$log_rec_dev <- rep(0, n_y)
 
-  info <- list(Year = Data@Year, data = data, params = params, LH = LH, control = control,
+  info <- list(Year = Year, data = data, params = params, LH = LH, control = control,
                inner.control = inner.control, rescale = rescale)
 
   map <- list()
@@ -269,6 +288,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
 
+  # Add starting values for rec-devs and increase R0 start value if too low
   if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
     Recruit <- try(Data@Rec[x, ], silent = TRUE)
     if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
@@ -309,7 +329,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   Dev_out <- structure(Dev, names = YearDev)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SCA", B0 = report$B0, R0 = report$R0, N0 = report$N0,
+  Assessment <- new("Assessment", Model = "SCA", Name = Data@Name, conv = !is.character(SD),
+                    B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$E0, VB0 = report$VB0,
                     h = report$h, U = structure(report$U, names = Year),
                     B = structure(report$B, names = Yearplusone),
@@ -331,10 +352,10 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                     C_at_age = report$CAApred,
                     Dev = Dev_out,
                     Dev_type = "log-Recruitment deviations",
-                    NLL = structure(c(nll_report, report$nll_comp),
-                                    names = c("Total", "Index", "CAA", "Dev")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
+                                    names = c("Total", "Index", "CAA", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                    dependencies = dependencies, Data = Data)
+                    dependencies = dependencies)
 
   if(!is.character(opt) && !is.character(SD)) {
     ref_pt <- get_MSY(Arec = report$Arec, Brec = report$Brec, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)

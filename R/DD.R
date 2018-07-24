@@ -56,6 +56,16 @@
 #' Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,
 #' Dynamics and Uncertainty. Chapman and Hall, New York.
 #' @describeIn DD_TMB Observation-error only model
+#' @section Required Data:
+#' \itemize{
+#' \item \code{DD_TMB}: Cat, Ind, Mort, L50, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+#' \item \code{DD_SS}: Cat, Ind, Mort, L50, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+#' }
+#' @section Optional Data:
+#' \itemize{
+#' \item \code{DD_TMB}: steep
+#' \item \code{DD_SS}: steep, CV_Cat
+#' }
 #' @import TMB
 #' @importFrom stats nlminb
 #' @examples
@@ -65,13 +75,13 @@
 #'
 #'
 #' # Provide starting values
-#' start <- list(R0 = 1, h = 1)
+#' start <- list(R0 = 1, h = 0.95)
 #' res <- DD_TMB(Data = Red_snapper, start = start)
 #'
-#' summary(res@@SD) # Look at parameter estimates
+#' summary(res@@SD) # Parameter estimates
 #'
 #' ### State-space version
-#' ### Recruitment variability SD = 0.3
+#' ### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
 #' res <- DD_SS(Data = Red_snapper, start = list(tau = 0.3))
 #'
 #' # Plot and save figures
@@ -82,16 +92,21 @@
 DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = FALSE,
                    fix_U_equilibrium = TRUE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                    control = list(iter.max = 5e3, eval.max = 1e4), ...) {
+  dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
+  dots <- list(...)
   SR <- match.arg(SR)
-  dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@Ind, Data@L50"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
   la <- Data@vbLinf[x] * (1 - exp(-Data@vbK[x] * ((age - Data@vbt0[x]))))
   wa <- Data@wla[x] * la^Data@wlb[x]
-  a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x],  Data@L50[x])
+  a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x], Data@L50[x])
   a50V <- max(a50V, 1)
-  ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x,   ]))[1]
-  yind <- ystart:length(Data@Cat[x, ])
+  if(any(names(dots) == "yind")) {
+    yind <- eval(dots$yind)
+  } else {
+    ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x,   ]))[1]
+    yind <- ystart:length(Data@Cat[x, ])
+  }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   I_hist <- Data@Ind[x, yind]
@@ -167,7 +182,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   Yearplusk <- c(Year, max(Year) + 1:k)
 
   nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
-  Assessment <- new("Assessment", Model = "DD_TMB",
+  Assessment <- new("Assessment", Model = "DD_TMB", Name = Data@Name, conv = !is.character(SD),
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$B0, VB0 = report$B0, h = report$h,
                     U = structure(report$U, names = Year),
@@ -183,9 +198,10 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
                     Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year),
                     Index = structure(report$Cpred/(C_hist/I_hist), names = Year),
-                    NLL = structure(c(nll_report, report$nll - report$penalty), names = c("Total", "Catch")),
+                    NLL = structure(c(nll_report, report$nll - report$penalty, report$penalty),
+                                    names = c("Total", "Catch", "Penalty")),
                     info = info, obj = obj, opt = opt,
-                    SD = SD, TMB_report = report, dependencies = dependencies, Data = Data)
+                    SD = SD, TMB_report = report, dependencies = dependencies)
 
   if(!is.character(opt) && !is.character(SD)) {
     ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
@@ -210,16 +226,21 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
                   fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                   integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
+  dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
+  dots <- list(...)
   SR <- match.arg(SR)
-  dependencies = "Data@vbLinf, Data@vbK, Data@vbt0, Data@Mort, Data@wla, Data@wlb, Data@Cat, Data@CV_Cat, Data@Ind"
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
   la <- Data@vbLinf[x] * (1 - exp(-Data@vbK[x] * ((age - Data@vbt0[x]))))
   wa <- Data@wla[x] * la^Data@wlb[x]
   a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x],  Data@L50[x])
   a50V <- max(a50V, 1)
-  ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x, ]))[1]
-  yind <- ystart:length(Data@Cat[x, ])
+  if(any(names(dots) == "yind")) {
+    yind <- eval(dots$yind)
+  } else {
+    ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x, ]))[1]
+    yind <- ystart:length(Data@Cat[x, ])
+  }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   I_hist <- Data@Ind[x, yind]
@@ -315,7 +336,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   YearDev <- seq(Year[1] + k, max(Year))
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "DD_SS",
+  Assessment <- new("Assessment", Model = "DD_SS", Name = Data@Name, conv = !is.character(SD),
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$B0, VB0 = report$B0, h = report$h,
                     U = structure(report$U, names = Year),
@@ -333,10 +354,10 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
                     Index = structure(report$Cpred/(C_hist/I_hist), names = Year),
                     Dev = structure(report$log_rec_dev, names = YearDev),
                     Dev_type = "log-Recruitment deviations",
-                    NLL = structure(c(nll_report, report$nll_comp),
-                                    names = c("Total", "Catch", "Dev")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
+                                    names = c("Total", "Catch", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                    dependencies = dependencies, Data = Data)
+                    dependencies = dependencies)
 
   if(!is.character(opt) && !is.character(SD)) {
     ref_pt <- get_MSY_DD(info$data, report$Arec, report$Brec)
