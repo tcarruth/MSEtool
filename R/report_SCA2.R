@@ -2,42 +2,41 @@
 summary_SCA2 <- function(Assessment) {
   assign_Assessment_slots()
 
-  current_status <- data.frame(Value = c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)],
-                                         B_B0[length(B_B0)]))
+  if(conv) current_status <- c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)], B_B0[length(B_B0)])
+  else current_status <- rep(NA, 3)
+  current_status <- data.frame(Value = current_status)
   rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
-  M <- info$data$M[1]
-  maxage <- info$data$max_age
-  Linf <- info$LH$Linf
-  K <- info$LH$K
-  t0 <- info$LH$t0
-  A50 <- info$LH$A50
-  A95 <- info$LH$A95
-  Winf <- info$LH$a * Linf ^ info$LH$b
-
-  Value <- c(M, maxage, Linf, K, t0, Winf, A50, A95)
-  Description = c("Natural mortality", "Maximum age (plus-group)", "Asymptotic length", "Growth coefficient",
+  Value <- c(info$data$M[1], info$data$max_age, info$LH$Linf, info$LH$K, info$LH$t0,
+             info$LH$a * info$LH$Linf ^ info$LH$b, info$LH$A50, info$LH$A95)
+  Description <- c("Natural mortality", "Maximum age (plus-group)", "Asymptotic length", "Growth coefficient",
                   "Age at length-zero", "Asymptotic weight", "Age of 50% maturity", "Age of 95% maturity")
   rownam <- c("M", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
 
-  Value = c(h, R0, VB0, SSB0, MSY, UMSY, VBMSY, SSBMSY)
-  Description = c("Stock-recruit steepness", "Virgin recruitment", "Virgin vulnerable biomass",
-                  "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
-                  "Vulnerable biomass at MSY", "SSB at MSY")
+  if(conv) Value <- c(h, R0, VB0, SSB0, MSY, UMSY, VBMSY, SSBMSY)
+  else Value <- rep(NA, 8)
+  Description <- c("Stock-recruit steepness", "Virgin recruitment", "Virgin vulnerable biomass",
+                   "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
+                   "Vulnerable biomass at MSY", "SSB at MSY")
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(derived) <- c("h", "R0", "VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY")
 
-  model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
-  model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
-  dev_estimates <- cbind(Dev, SE_Dev)
-  rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
+  if(conv) {
+    model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
+    model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+    dev_estimates <- cbind(Dev, SE_Dev)
+    rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
+    model_estimates <- rbind(model_estimates, dev_estimates)
+  } else {
+    model_estimates <- SD
+  }
+
 
   output <- list(model = "Statistical Catch-at-Age (SCA2)",
                  current_status = current_status, input_parameters = input_parameters,
-                 derived_quantities = derived,
-                 model_estimates = rbind(model_estimates, dev_estimates))
+                 derived_quantities = derived, model_estimates = model_estimates)
   return(output)
 }
 
@@ -54,7 +53,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                 input_parameters = index.report$input_parameters,
                 model_estimates = index.report$model_estimates,
                 derived_quantities = index.report$derived_quantities,
-                name = Data@Name, report_type = "Index")
+                name = Name, report_type = "Index")
   }
 
   age <- 1:info$data$max_age
@@ -101,7 +100,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
 
   if(save_figure) {
     html_report(plot.dir, model = "Statistical Catch-at-Age (SCA2)",
-                captions = lh.file.caption, name = Data@Name, report_type = "Life_History")
+                captions = lh.file.caption, name = Name, report_type = "Life_History")
   }
 
   Year <- info$Year
@@ -114,16 +113,16 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
-    plot_timeseries(Year, Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
-      dev.off()
-      data.file.caption <- rbind(data.file.caption,
-                                 c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
-    }
-  }
+  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
+  #  plot_timeseries(Year, Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
+  #  if(save_figure) {
+  #    create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
+  #    plot_timeseries(Year, Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
+  #    dev.off()
+  #    data.file.caption <- rbind(data.file.caption,
+  #                               c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
+  #  }
+  #}
 
   plot_timeseries(Year, Obs_Index, label = "Index")
   if(save_figure) {
@@ -134,16 +133,16 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
-    plot_timeseries(Year, Obs_Index, obs_CV = Data@CV_Ind[1], label = "Index")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-      plot_timeseries(Year, Obs_Index, obs_CV = Data@CV_Ind[1], label = "Index")
-      dev.off()
-      data.file.caption <- rbind(data.file.caption,
-                                 c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
-    }
-  }
+  #if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
+  #  plot_timeseries(Year, Obs_Index, obs_CV = Data@CV_Ind[1], label = "Index")
+  #  if(save_figure) {
+  #    create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
+  #    plot_timeseries(Year, Obs_Index, obs_CV = Data@CV_Ind[1], label = "Index")
+  #    dev.off()
+  #    data.file.caption <- rbind(data.file.caption,
+  #                               c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
+  #  }
+  #}
 
   ind_valid <- rowSums(Obs_C_at_age, na.rm = TRUE) > 0
   Year2 <- Year[ind_valid]
@@ -174,7 +173,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
 
   if(save_figure) {
     html_report(plot.dir, model = "Statistical Catch-at-Age (SCA2)",
-                captions = data.file.caption, name = Data@Name, report_type = "Data")
+                captions = data.file.caption, name = Name, report_type = "Data")
   }
 
   plot_ogive(age, Selectivity[nrow(Selectivity), ])
@@ -251,42 +250,43 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                  c("assessment_mean_age.png", "Observed (black) and predicted (red) mean age of the composition data."))
   }
 
-  Arec <- TMB_report$Arec
-  Brec <- TMB_report$Brec
-  SSB_plot <- SSB[1:(length(SSB)-1)]
-  if(info$SR == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
-  if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
-  estR <- R[as.numeric(names(R)) > Year[1]]
+  if(conv) {
+    Arec <- TMB_report$Arec
+    Brec <- TMB_report$Brec
+    SSB_plot <- SSB[1:(length(SSB)-1)]
+    if(info$SR == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
+    if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
+    estR <- R[as.numeric(names(R)) > Year[1]]
 
-  plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
     plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
-  }
-
-  if(max(estR) > 3 * max(expectedR)) {
-    y_zoom <- 3
-    plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom)
     if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_stock_recruit_zoomed.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom)
+      create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
+      plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_stock_recruit_zoomed.png", "Stock-recruitment relationship (zoomed in)."))
+                                   c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
     }
-  } else y_zoom <- NULL
 
-  plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_stock_recruit_trajectory.png"))
+    if(max(estR) > 3 * max(expectedR)) {
+      y_zoom <- 3
+      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom)
+      if(save_figure) {
+        create_png(filename = file.path(plot.dir, "assessment_stock_recruit_zoomed.png"))
+        plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom)
+        dev.off()
+        assess.file.caption <- rbind(assess.file.caption,
+                                     c("assessment_stock_recruit_zoomed.png", "Stock-recruitment relationship (zoomed in)."))
+      }
+    } else y_zoom <- NULL
+
     plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_stock_recruit_trajectory.png", "Stock-recruitment relationship (trajectory plot)."))
-
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_stock_recruit_trajectory.png"))
+      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_stock_recruit_trajectory.png", "Stock-recruitment relationship (trajectory plot)."))
+    }
   }
 
   plot_timeseries(as.numeric(names(SSB)), SSB, label = "Spawning Stock Biomass (SSB)")
@@ -298,24 +298,26 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                  c("assessment_spawning_biomass.png", "Time series of spawning stock biomass."))
   }
 
-  plot_timeseries(as.numeric(names(SSB_SSBMSY)), SSB_SSBMSY, label = expression(SSB/SSB[MSY]))
-  abline(h = 1, lty = 2)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_SSB_SSBMSY.png"))
+  if(conv) {
     plot_timeseries(as.numeric(names(SSB_SSBMSY)), SSB_SSBMSY, label = expression(SSB/SSB[MSY]))
     abline(h = 1, lty = 2)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_SSB_SSBMSY.png", "Time series of SSB/SSBMSY."))
-  }
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_SSB_SSBMSY.png"))
+      plot_timeseries(as.numeric(names(SSB_SSBMSY)), SSB_SSBMSY, label = expression(SSB/SSB[MSY]))
+      abline(h = 1, lty = 2)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_SSB_SSBMSY.png", "Time series of SSB/SSBMSY."))
+    }
 
-  plot_timeseries(as.numeric(names(SSB_SSB0)), SSB_SSB0, label = expression(SSB/SSB[0]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_SSB_SSB0.png"))
     plot_timeseries(as.numeric(names(SSB_SSB0)), SSB_SSB0, label = expression(SSB/SSB[0]))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_SSB_SSB0.png", "Time series of spawning stock biomass depletion."))
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_SSB_SSB0.png"))
+      plot_timeseries(as.numeric(names(SSB_SSB0)), SSB_SSB0, label = expression(SSB/SSB[0]))
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_SSB_SSB0.png", "Time series of spawning stock biomass depletion."))
+    }
   }
 
   plot_timeseries(as.numeric(names(R)), R, obs_ind_blue = as.numeric(names(R)) < Year[1], label = "Recruitment")
@@ -336,14 +338,16 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                  c("assessment_rec_devs.png", "Time series of recruitment deviations from mean recruitment (deviations prior to the first year of the model in blue)."))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_rec_devs_with_CI.png"))
+  if(conv) {
     plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_rec_devs_with_CI.png", "Time series of recruitment deviations (from mean recruitment)
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_rec_devs_with_CI.png"))
+      plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, res_ind_blue = as.numeric(names(Dev)) < Year[1], label = Dev_type)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_rec_devs_with_CI.png", "Time series of recruitment deviations (from mean recruitment)
                                    with 95% confidence intervals (deviations prior to the first year of the model in blue)."))
+    }
   }
 
   plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
@@ -364,48 +368,53 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
                                  c("assessment_exploitation.png", "Time series of exploitation rate."))
   }
 
-  plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-  abline(h = 1, lty = 2)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_U_UMSY.png"))
+  if(conv) {
     plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
     abline(h = 1, lty = 2)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_U_UMSY.png", "Time series of U/UMSY."))
-  }
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_U_UMSY.png"))
+      plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
+      abline(h = 1, lty = 2)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_U_UMSY.png", "Time series of U/UMSY."))
+    }
 
-  plot_Kobe(B_BMSY, U_UMSY)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
     plot_Kobe(B_BMSY, U_UMSY)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
-  }
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
+      plot_Kobe(B_BMSY, U_UMSY)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
+    }
 
-  plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$SR)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
     plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$SR)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
-  }
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
+      plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$SR)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
+    }
 
-  plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$SR)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_yield_curve_SSB_SSB0.png"))
     plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$SR)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_yield_curve_SSB_SSB0.png", "Yield plot relative to spawning depletion."))
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_yield_curve_SSB_SSB0.png"))
+      plot_yield_SCA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$SR)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_yield_curve_SSB_SSB0.png", "Yield plot relative to spawning depletion."))
+    }
+
   }
 
-  plot_surplus_production(B, B0, Obs_Catch)
+  B0con <- NULL
+  if(conv) B0con <- B0
+  plot_surplus_production(B, B0con, Obs_Catch)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-    plot_surplus_production(B, B0, Obs_Catch)
+    plot_surplus_production(B, B0con, Obs_Catch)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_surplus_production.png", "Surplus production relative to depletion (total biomass)."))
@@ -413,7 +422,7 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
 
   if(save_figure) {
     html_report(plot.dir, model = "Statistical Catch-at-Age (SCA2)",
-                captions = assess.file.caption, name = Data@Name, report_type = "Assessment")
+                captions = assess.file.caption, name = Name, report_type = "Assessment")
     browseURL(file.path(plot.dir, "Assessment.html"))
   }
   return(invisible())
@@ -459,7 +468,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
                                 "Profile likelihood of mean recruitment. Vertical, dashed line indicates maximum likelihood estimate.")
       html_report(plot.dir, model = "Statistical Catch-at-Age (SCA2)",
                   captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Data@Name, report_type = "Profile_Likelihood")
+                  name = Assessment@Name, report_type = "Profile_Likelihood")
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
@@ -603,7 +612,7 @@ plot_retro_SCA2 <- function(retro_ts, retro_est, save_figure = FALSE, save_dir =
                                                  "abundance", "exploitation", "U/UMSY", "recruitment deviations"), "."))
     Assessment <- get("Assessment", envir = parent.frame())
     html_report(plot.dir, model = "Statistical Catch-at-Age (SCA2)", captions = ret.file.caption,
-                name = Assessment@Data@Name, report_type = "Retrospective")
+                name = Assessment@Name, report_type = "Retrospective")
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }
 

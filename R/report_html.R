@@ -137,22 +137,26 @@ write_html_head <- function(title, file_name, model, stock, append = FALSE) {
 
 
 write_table <- function(dat, file_name, header_title, append = TRUE) {
-  output <- c('<h3>', header_title, '</h3>',
-              '<table>', '<thead>', '<tr>', '<th>Parameter</th>',
-              paste0('<th>', colnames(dat), '</th>'),
-              '</tr>', '</thead>', '<tbody>')
+  if(is.character(dat)) {
+    output <- c('<h3>', header_title, '</h3>', dat)
+  } else {
+    output <- c('<h3>', header_title, '</h3>',
+                '<table>', '<thead>', '<tr>', '<th>Parameter</th>',
+                paste0('<th>', colnames(dat), '</th>'),
+                '</tr>', '</thead>', '<tbody>')
 
-  for(i in 1:ncol(dat)) {
-    if(is.numeric(dat[, i])) dat[, i] <- ifelse(dat[, i] > 1e3, round(dat[, 1], 0),
-                                                signif(dat[, i], 3))
-  }
+    for(i in 1:ncol(dat)) {
+      if(is.numeric(dat[, i])) dat[, i] <- ifelse(dat[, i] > 1e3, round(dat[, 1], 0),
+                                                  signif(dat[, i], 3))
+    }
 
-  for(i in 1:nrow(dat)) {
-    add <- c('<tr>', paste0('<td>', rownames(dat)[i], '</td>'),
-             paste0('<td>', dat[i, ], '</td>'), '</tr>')
-    output <- c(output, add)
+    for(i in 1:nrow(dat)) {
+      add <- c('<tr>', paste0('<td>', rownames(dat)[i], '</td>'),
+               paste0('<td>', dat[i, ], '</td>'), '</tr>')
+      output <- c(output, add)
+    }
+    output <- c(output, '</tbody>', '</table>')
   }
-  output <- c(output, '</tbody>', '</table>')
 
   write(output, file = file_name, append = append)
   invisible()

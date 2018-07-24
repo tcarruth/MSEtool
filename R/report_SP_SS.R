@@ -39,20 +39,26 @@ summary_SP_SS <- function(Assessment) {
                                         "Biomass at MSY"), stringsAsFactors = FALSE)
   rownames(derived) <- c("r", "K", "BMSY")
 
-  if(is.null(obj$env$random)) {
-    model_estimates <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
-    dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_B_dev", ]
+  if(conv) {
+    if(is.null(obj$env$random)) {
+      model_estimates <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
+      dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_B_dev", ]
+    } else {
+      model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
+      dev_estimates <- summary(SD, "random")
+    }
+
+    model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+    rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev)[Dev != 0])
+    model_estimates <- rbind(model_estimates, dev_estimates)
   } else {
-    model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
-    dev_estimates <- summary(SD, "random")
+    model_estimates <- SD
   }
 
-  model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
-  rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev)[Dev != 0])
   output <- list(model = "Surplus Production (State-Space)",
                  current_status = current_status, input_parameters = input_parameters,
                  derived_quantities = derived,
-                 model_estimates = rbind(model_estimates, dev_estimates))
+                 model_estimates = model_estimates)
   return(output)
 }
 
@@ -68,7 +74,7 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                 current_status = index.report$current_status,
                 derived_quantities = index.report$derived_quantities,
                 model_estimates = index.report$model_estimates,
-                name = Data@Name, report_type = "Index")
+                name = Name, report_type = "Index")
   }
 
   Year <- info$Year
@@ -82,16 +88,16 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
-    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-      plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
-      dev.off()
-      data.file.caption <- rbind(data.file.caption,
-                                 c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
-    }
-  }
+  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
+  #  plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
+  #  if(save_figure) {
+  #    create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
+  #    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
+  #    dev.off()
+  #    data.file.caption <- rbind(data.file.caption,
+  #                               c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
+  #  }
+  #}
 
   I_hist <- info$data$I_hist
 
@@ -104,81 +110,83 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                c("data_index.png", "Index time series."))
   }
 
-  if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
-    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-      plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-      dev.off()
-      data.file.caption <- rbind(data.file.caption,
-                                 c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
-    }
-  }
+  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
+  #  plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
+  #  if(save_figure) {
+  #    create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
+  #    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
+  #    dev.off()
+  #    data.file.caption <- rbind(data.file.caption,
+  #                               c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
+  #  }
+  #}
 
   if(save_figure) {
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                captions = data.file.caption, name = Data@Name, report_type = "Data")
+                captions = data.file.caption, name = Name, report_type = "Data")
   }
 
-  umsy.ind <- names(SD$par.fixed) == "logit_UMSY"
-  logit.umsy <- SD$par.fixed[umsy.ind]
-  logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[umsy.ind])
+  if(conv) {
+    umsy.ind <- names(SD$par.fixed) == "logit_UMSY"
+    logit.umsy <- SD$par.fixed[umsy.ind]
+    logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[umsy.ind])
 
-  plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_UMSYestimate.png"))
     plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
-    dev.off()
-    assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
-  }
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_UMSYestimate.png"))
+      plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
+      dev.off()
+      assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
+    }
 
-  msy.ind <- names(SD$par.fixed) == "log_MSY"
-  log.msy <- SD$par.fixed[msy.ind]
-  log.msy.sd <- sqrt(diag(SD$cov.fixed)[msy.ind])
+    msy.ind <- names(SD$par.fixed) == "log_MSY"
+    log.msy <- SD$par.fixed[msy.ind]
+    log.msy.sd <- sqrt(diag(SD$cov.fixed)[msy.ind])
 
-  plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_MSYestimate.png"))
     plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
-  }
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_MSYestimate.png"))
+      plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
+    }
 
-  Uy <- names(U_UMSY)[length(U_UMSY)]
-  plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
-    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_U_UMSYestimate.png",
-                                   paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
+    Uy <- names(U_UMSY)[length(U_UMSY)]
+    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
+      plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_U_UMSYestimate.png",
+                                     paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
                                           normal approximation of estimated covariance matrix.")))
-  }
+    }
 
-  By <- names(B_BMSY)[length(B_BMSY)]
-  plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(B[.(By)]/B[MSY]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_B_BMSYestimate.png"))
-    plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(widehat(B[.(By)]/B[MSY])))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_B_BMSYestimate.png",
-                                   paste0("Estimate of B/BMSY in ", By, ", distribution based on
+    By <- names(B_BMSY)[length(B_BMSY)]
+    plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(B[.(By)]/B[MSY]))
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_B_BMSYestimate.png"))
+      plot_normalvar(B_BMSY[length(B_BMSY)], SE_B_BMSY_final, label = bquote(widehat(B[.(By)]/B[MSY])))
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_B_BMSYestimate.png",
+                                     paste0("Estimate of B/BMSY in ", By, ", distribution based on
                                           normal approximation of estimated covariance matrix.")))
-  }
+    }
 
-  By <- names(B_B0)[length(B_B0)]
-  plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(B[.(By)]/B[0]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_B_B0estimate.png"))
-    plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(widehat(B[.(By)]/B[0])))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_B_B0estimate.png",
-                                   paste0("Estimate of B/B0 in ", By, ", distribution based on
+    By <- names(B_B0)[length(B_B0)]
+    plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(B[.(By)]/B[0]))
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_B_B0estimate.png"))
+      plot_normalvar(B_B0[length(B_B0)], SE_B_B0_final, label = bquote(widehat(B[.(By)]/B[0])))
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_B_B0estimate.png",
+                                     paste0("Estimate of B/B0 in ", By, ", distribution based on
                                           normal approximation of estimated covariance matrix.")))
+    }
   }
 
   plot_timeseries(Year, I_hist, Index, label = "Index")
@@ -186,8 +194,9 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
     create_png(filename = file.path(plot.dir, "assessment_index.png"))
     plot_timeseries(Year, I_hist, Index, label = "Index")
     dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_index.png", "Observed (black) and predicted (red) index."))
+    if(conv) assess.file.caption <- rbind(assess.file.caption,
+                                          c("assessment_index.png", "Observed (black) and predicted (red) index."))
+    else assess.file.caption <- c("assessment_index.png", "Observed (black) and predicted (red) index.")
   }
 
   plot_residuals(Year, log(I_hist/Index), label = "log(Index) Residual")
@@ -248,14 +257,17 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
                                  c("assessment_Biomass_devs.png", "Time series of biomass deviations."))
   }
 
-  plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_Biomass_devs_with_CI.png"))
+  if(conv) {
     plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_Biomass_devs_with_CI.png", "Time series of biomass deviations with 95% confidence intervals."))
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, "assessment_Biomass_devs_with_CI.png"))
+      plot_residuals(as.numeric(names(Dev)), Dev, SE_Dev, label = Dev_type)
+      dev.off()
+      assess.file.caption <- rbind(assess.file.caption,
+                                   c("assessment_Biomass_devs_with_CI.png", "Time series of biomass deviations with 95% confidence intervals."))
+    }
   }
+
 
   plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
   if(save_figure) {
@@ -315,7 +327,7 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = get
 
   if(save_figure) {
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                captions = assess.file.caption, name = Data@Name, report_type = "Assessment")
+                captions = assess.file.caption, name = Name, report_type = "Assessment")
     browseURL(file.path(plot.dir, "Assessment.html"))
   }
   return(invisible())
@@ -369,7 +381,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
                                 "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
       html_report(plot.dir, model = "Surplus Production (State-Space)",
                   captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Data@Name, report_type = "Profile_Likelihood")
+                  name = Assessment@Name, report_type = "Profile_Likelihood")
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
@@ -534,7 +546,7 @@ plot_retro_SP_SS <- function(retro_ts, retro_est, save_figure = FALSE,
                                                  "UMSY estimate", "MSY estimate"), "."))
     Assessment <- get("Assessment", envir = parent.frame())
     html_report(plot.dir, model = "Surplus Production (State-Space)",
-                captions = ret.file.caption, name = Assessment@Data@Name,
+                captions = ret.file.caption, name = Assessment@Name,
                 report_type = "Retrospective")
     browseURL(file.path(plot.dir, "Retrospective.html"))
   }
