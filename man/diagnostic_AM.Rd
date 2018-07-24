@@ -37,7 +37,7 @@ with argument \code{diagnostic = TRUE}. This function summarizes and plots the d
 }
 \examples{
 \dontrun{
-DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = TRUE) # is FALSE by default
+DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "min")
 show(DD_MSY)
 myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 diagnostic_AM(myMSE)
@@ -48,7 +48,7 @@ diagnostic_AM(MP = "DD_MSY")
 ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
 
 # Save to disk for future use. File may be very large due to size of DLMenv!
-save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
+save(myMSE, DLMenv, file = "DLMenv.RData")
 }
 }
 \seealso{

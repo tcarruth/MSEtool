@@ -1,4 +1,68 @@
 
+#' prelim_AM (preliminary Assessments in MSE)
+#'
+#' Evaluates the likely performance of Assessment models in the operating model. This function will
+#' apply the assessment model for Data generated during the historical period of the MSE, and report
+#' the convergence rate for the model and total time elapsed in running the assessments.
+#'
+#' @param x Either a \code{Hist}, \code{Data} or \code{OM} object.
+#' @param Assess An Assess function of class \code{Assess}.
+#' @param ncpus Numeric, the number of CPUs to run the Assessment model (will run in parallel if greater than 1).
+#' @param ... Arguments to be passed to \code{Assess}, e.g., model configurations.
+#'
+#' @return Returns invisibly a list of \linkS4class{Assessment} objects of length \code{OM@@nsim}. Messages via console.
+#' @author Q. Huynh
+#' @examples
+#' \dontrun{
+#' prelim_AM(DLMtool::testOM, DD_TMB)
+#' }
+#' @export
+prelim_AM <- function(x, Assess, ncpus = 1, ...) {
+
+  # is Hist?
+  if(is.list(x) && any(names(x) == "Data")) {
+    Data <- x$Data
+  } else
+    if(inherits(x, "OM")) {
+      message("Generating Hist object from OM object via runMSE:")
+      runHist <- runMSE(x, Hist = TRUE)
+      Data <- runHist$Data
+    } else
+      if(inherits(x, "Data")) {
+        Data <- x
+      } else {
+        stop("x does not appear to be either a Hist, Data, or OM object.")
+      }
+
+  sfInit(parallel = ncpus > 1, cpus = ncpus)
+  nsim <- nrow(Data@Cat)
+  message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
+  dots <- list(...)
+  if(length(dots) > 0) message(paste0("\nAdditional arguments to be provided to ", deparse(substitute(x)), ":\n", paste(names(dots), collapse = "\n")))
+  Assess <- match.fun(Assess)
+  if(!inherits(Assess, "Assess")) stop(paste(deparse(substitute(x))), "does not appear to be an Assess function.")
+
+  if(sfParallel()) sfExport(list = c("Assess", "Data"))
+  timing <- proc.time()
+  res <- sfLapply(1:nsim, Assess, Data = Data, ...)
+  timing2 <- (proc.time() - timing)[3]
+  message("Assessments complete.")
+
+  sfStop()
+
+  message(paste0("Total time to run ", nsim, " assessments: ", round(timing2, 1), " seconds"))
+
+  nonconv <- !vapply(res, getElement, logical(1), "conv")
+  message(paste0(sum(nonconv), " of ", nsim, " simulations (", round(100 *sum(nonconv)/nsim, 1), "%) did not converge."))
+  if(sum(nonconv > 0)) message(paste("See simulation number:", paste(which(nonconv), collapse = " ")))
+
+  return(invisible(res))
+}
+
+
+
+
+
 #' diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?
 #'
 #' Diagnostic check for convergence of Assess models during MSE.
@@ -23,7 +87,7 @@
 #' @author Q. Huynh
 #' @examples
 #' \dontrun{
-#' DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = TRUE) # is FALSE by default
+#' DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "min")
 #' show(DD_MSY)
 #' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 #' diagnostic_AM(myMSE)
@@ -34,7 +98,7 @@
 #' ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
 #'
 #' # Save to disk for future use. File may be very large due to size of DLMenv!
-#' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
+#' save(myMSE, DLMenv, file = "DLMenv.RData")
 #' }
 #' @importFrom graphics layout
 #' @seealso \link{retrospective_AM}
@@ -61,9 +125,9 @@ diagnostic_AM <- function(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL, gradi
 
   get_code <- function(x, y) vapply(x, getElement, numeric(1), y)
 
-  res_mat <- matrix(NA, ncol = length(MPs), nrow = 6)
+  res_mat <- matrix(NA, ncol = length(MPs), nrow = 5)
 
-  message(paste("Creating plots for MP:", paste(MPs, collapse = " ")))
+  message(paste0("Creating plots for MP:\n", paste(MPs, collapse = "\n")))
   for(i in 1:length(MPs)) {
     objects_vec <- paste0(c("Assessment_report_", "diagnostic_"), MPs[i])
     objects <- mget(objects_vec, envir = DLMenv, ifnotfound = list(NULL))
@@ -73,44 +137,35 @@ diagnostic_AM <- function(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL, gradi
 
     if(!is.null(diagnostic)) {
       convergence_code <- lapply(diagnostic, get_code, y = "conv")
-      convergence_code <- do.call(rbind, convergence_code)
       hessian_code <- lapply(diagnostic, get_code, y = "hess")
-      hessian_code <- do.call(rbind, hessian_code)
       max_gr <- lapply(diagnostic, get_code, y = "maxgrad")
-      max_gr <- do.call(rbind, max_gr)
-      opt_time <- lapply(diagnostic, get_code, y = "timing")
-      opt_time <- do.call(rbind, opt_time)
-
       iter <- lapply(diagnostic, get_code, y = "iter")
-      iter <- do.call(rbind, iter)
-
       fn_eval <- lapply(diagnostic, get_code, y = "fn_eval")
-      fn_eval <- do.call(rbind, fn_eval)
-
-      res_mat[, i] <- c(100 * (1 - sum(convergence_code)/length(convergence_code)),
-                        100 * sum(hessian_code)/length(hessian_code),
-                        100 * sum(abs(max_gr) <= gradient_threshold)/length(max_gr),
-                        median(opt_time), median(iter, na.rm = TRUE), median(fn_eval, na.rm = TRUE))
+      Year <- lapply(diagnostic, get_code, y = "Year")
 
       if(figure) {
         layout(matrix(c(1, 2, 3, 4, 4, 5), ncol = 3, byrow = TRUE))
 
-        plot_convergence(convergence_code, "converge")
-        plot_convergence(hessian_code, "hessian")
-        plot_max_gr(max_gr, gradient_threshold)
-        plot_time(opt_time, "line")
-        plot_time(opt_time, "hist")
-        title(paste(MPs[i], "management procedure"), outer = TRUE)
+        plot_convergence(convergence_code, Year, "converge")
+        plot_convergence(hessian_code, Year, "hessian")
+        plot_max_gr(max_gr, Year, gradient_threshold)
 
-        layout(matrix(c(1, 1, 2, 3, 3, 4), ncol = 3, byrow = TRUE))
+        plot_iter(iter, Year, "line", "Optimization iterations")
+        plot_iter(fn_eval, Year, "hist", "Function evaluations")
 
-        plot_iter(iter, "line", "Optimization iterations")
-        plot_iter(iter, "hist", "Optimization iterations")
-
-        plot_iter(fn_eval, "line", "Function evaluations")
-        plot_iter(fn_eval, "hist", "Function evaluations")
         title(paste(MPs[i], "management procedure"), outer = TRUE)
       }
+
+      convergence_code <- do.call(c, convergence_code)
+      hessian_code <- do.call(c, hessian_code)
+      max_gr <- do.call(c, max_gr)
+      iter <- do.call(c, iter)
+      fn_eval <- do.call(c, fn_eval)
+
+      res_mat[, i] <- c(100 * (1 - sum(convergence_code)/length(convergence_code)),
+                        100 * sum(hessian_code)/length(hessian_code),
+                        100 * sum(abs(max_gr) <= gradient_threshold)/length(max_gr),
+                        median(iter, na.rm = TRUE), median(fn_eval, na.rm = TRUE))
     }
   }
 
@@ -118,16 +173,16 @@ diagnostic_AM <- function(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL, gradi
   colnames(res_mat) <- MPs
   rownames(res_mat) <- c("Percent convergence", "Percent positive-definite Hessian",
                          paste0("Percent max. gradient <= ", gradient_threshold),
-                         "Median runtime (seconds)", "Median iterations", "Median function evaluations")
+                         "Median iterations", "Median function evaluations")
   return(res_mat)
 }
 
-plot_convergence <- function(convergence_code, plot_type = c('converge', 'hessian')) {
-  nsim <- nrow(convergence_code)
-  npro <- ncol(convergence_code)
+plot_convergence <- function(convergence_code, Year, plot_type = c('converge', 'hessian')) {
+  nsim <- length(convergence_code)
+  yr_range <- range(do.call(c, Year))
 
-  plot(x = NULL, y = NULL, xlim = c(0.5, npro+0.5), ylim = c(0.5, nsim+0.5),
-       xlab = "MSE projection forward in time", ylab = "Simulation #", xaxs = "i", yaxs = "i")
+  plot(x = NULL, y = NULL, xlim = c(-0.5, 0.5) + yr_range, ylim = c(0.5, nsim + 0.5),
+       xlab = "MSE year", ylab = "Simulation #", xaxs = "i", yaxs = "i")
   if(plot_type == "converge") {
     mtext('Did nlminb optimizer \n report model convergence? \n (green: yes, red: no)')
   }
@@ -135,10 +190,10 @@ plot_convergence <- function(convergence_code, plot_type = c('converge', 'hessia
     mtext('Is Hessian matrix \n positive definite? \n (green: yes, red: no)')
   }
   for(i in 1:nsim) {
-    for(j in 1:npro) {
-      if(plot_type == "converge") color <- ifelse(convergence_code[i, j] == 0, 'green', 'red')
-      if(plot_type == "hessian") color <- ifelse(convergence_code[i, j], 'green', 'red')
-      xcoord <- rep(c(j - 0.5, j + 0.5), each = 2)
+    for(j in 1:length(convergence_code[[i]])) {
+      if(plot_type == "converge") color <- ifelse(convergence_code[[i]][j] == 0, 'green', 'red')
+      if(plot_type == "hessian") color <- ifelse(convergence_code[[i]][j], 'green', 'red')
+      xcoord <- rep(c(Year[[i]][j] - 0.5, Year[[i]][j] + 0.5), each = 2)
       ycoord <- c(i - 0.5, i + 0.5, i + 0.5, i - 0.5)
       polygon(x = xcoord, y = ycoord, border = 'black', col = color)
     }
@@ -147,82 +202,46 @@ plot_convergence <- function(convergence_code, plot_type = c('converge', 'hessia
 }
 
 
-plot_time <- function(timing, plot_type = c('line', 'hist')) {
-  plot_type <- match.arg(plot_type)
-  time_range <- range(timing)
-  if(max(time_range) > 60) {
-    units <- "minutes"
-    denom <- 60
-  } else {
-    units <- "seconds"
-    denom <- 1
-  }
-
-  if(plot_type == "hist") {
-    res <- timing/denom
-    hist(res, main = "", xlab = paste0("Run time (", units, ")"))
-    mtext(paste("Median:", round(median(res), 2), units))
-  }
-
-  if(plot_type == "line") {
-    nsim <- nrow(timing)
-    npro <- ncol(timing)
-
-    color.vec <- gplots::rich.colors(nsim)
-    plot(x = NULL, y = NULL, xlim = c(1, npro),
-         ylim = c(0.9, 1.1) * time_range/denom,
-         xlab = "MSE projection forward in time", ylab = paste0("Time (", units, ")"))
-    mtext('Model runtime during MSE')
-
-    for(i in 1:nsim) {
-      points(1:npro, timing[i, ]/denom, col = color.vec[i], typ = 'l')
-      text(1:npro, timing[i, ]/denom, labels = i, col = color.vec[i])
-    }
-  }
-
-  return(invisible())
-}
-
-plot_iter <- function(x, plot_type = c('line', 'hist'), lab = c("Optimization iterations", "Function evaluations")) {
+plot_iter <- function(x, Year, plot_type = c('line', 'hist'), lab = c("Optimization iterations", "Function evaluations")) {
   plot_type <- match.arg(plot_type)
   lab <- match.arg(lab)
 
   if(plot_type == "hist") {
-    hist(x, main = "", xlab = lab)
-    mtext(paste("Median:", round(median(x), 2)))
+    hist(do.call(c, x), main = "", xlab = lab)
+    mtext(paste("Median:", round(median(do.call(c, x)), 2)))
   }
 
   if(plot_type == "line") {
-    nsim <- nrow(x)
-    npro <- ncol(x)
+    nsim <- length(x)
+    yr_range <- range(do.call(c, Year))
 
     color.vec <- gplots::rich.colors(nsim)
-    plot(x = NULL, y = NULL, xlim = c(1, npro),
-         ylim = c(0.9, 1.1) * range(x, na.rm = TRUE),
-         xlab = "MSE projection forward in time", ylab = lab)
+    plot(x = NULL, y = NULL, xlim = yr_range,
+         ylim = c(0.9, 1.1) * range(do.call(c, x), na.rm = TRUE),
+         xlab = "MSE Year", ylab = lab)
     mtext(lab)
 
     for(i in 1:nsim) {
-      points(1:npro, x[i, ], col = color.vec[i], typ = 'l')
-      text(1:npro, x[i, ], labels = i, col = color.vec[i])
+      points(Year[[i]], x[[i]], col = color.vec[i], typ = 'l')
+      text(Year[[i]], x[[i]], labels = i, col = color.vec[i])
     }
   }
 
   return(invisible())
 }
 
-plot_max_gr <- function(max_gr, threshold = 1) {
-  nsim <- nrow(max_gr)
-  npro <- ncol(max_gr)
+plot_max_gr <- function(max_gr, Year, threshold = 1) {
+  nsim <- length(max_gr)
+  yr_range <- range(do.call(c, Year))
 
-  plot(x = NULL, y = NULL, xlim = c(0.5, npro+0.5), ylim = c(0.5, nsim+0.5),
-       xlab = "MSE projection forward in time", ylab = "Simulation #", xaxs = "i", yaxs = "i")
+  plot(x = NULL, y = NULL, xlim = c(-0.5, 0.5) + yr_range, ylim = c(0.5, nsim + 0.5),
+       xlab = "MSE Year", ylab = "Simulation #", xaxs = "i", yaxs = "i")
   mtext(paste0('Maximum gradient of likelihood \n (green: <= ', threshold, ', red: > ', threshold, ')'))
 
   for(i in 1:nsim) {
-    for(j in 1:npro) {
-      color <- ifelse(max_gr[i, j] < threshold, 'green', 'red')
-      xcoord <- rep(c(j - 0.5, j + 0.5), each = 2)
+    for(j in 1:length(max_gr[[i]])) {
+      color <- ifelse(max_gr[[i]][j] < threshold, 'green', 'red')
+      xcoord <- rep(c(Year[[i]][j] - 0.5, Year[[i]][j] + 0.5), each = 2)
       ycoord <- c(i - 0.5, i + 0.5, i + 0.5, i - 0.5)
       polygon(x = xcoord, y = ycoord, border = 'black', col = color)
     }
@@ -233,24 +252,23 @@ plot_max_gr <- function(max_gr, threshold = 1) {
 
 
 # Prints Assessment during MSE output to DLMtool::DLMenv
-# Call in MP created by make_MP when diagnostic = TRUE
+# Call in MP created by make_MP when diagnostic = "min" or "full"
 Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRUE) {
   # Get Assessment objects
-  report_obj <- mget(c("x", "opt_timing", "do_Assessment"), envir = parent.frame(),
+  report_obj <- mget(c("x", "do_Assessment", "Data"), envir = parent.frame(),
                      ifnotfound = list(NULL))
   x <- report_obj$x
-  opt_timing <- report_obj$opt_timing
   Assessment <- report_obj$do_Assessment
+  Data <- report_obj$Data
 
   # Check if this function is called within an MSE
-  Data <- Assessment@Data
-  if(ncol(Data@OM) == 0) return(invisible()) # exit, not an MSE
   runMSE.called <- any(vapply(sys.calls(), function(x) any(grepl("runMSE", x)), logical(1)))
   if(!runMSE.called) return(invisible()) # exit, no call to runMSE found in sys.calls()
 
   # Assume passed checks
   MP <- eval.parent(expression(MPs[mp]), n = 3)
   nsim <- nrow(Data@OM)
+  Year <- Data@Year[length(Data@Year)]
 
   # Update reporting objects
   if(inherits(Assessment, "Assessment")) {
@@ -260,12 +278,11 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRU
     iter <- ifelse(is.character(Assessment@opt), NA, Assessment@opt$iterations)
     fn_eval <- ifelse(is.character(Assessment@opt), NA, Assessment@opt$evaluations[1])
 
-    dg <- list(conv = conv, hess = hess, maxgrad = maxgrad, iter = iter, fn_eval = fn_eval)
+    dg <- list(conv = conv, hess = hess, maxgrad = maxgrad, iter = iter, fn_eval = fn_eval, Year = Year)
 
   } else {
-    dg <- list(conv = 1L, hess = FALSE, maxgrad = 1e10, iter = NA, fn_eval = NA)
+    dg <- list(conv = 1L, hess = FALSE, maxgrad = 1e10, iter = NA, fn_eval = NA, Year = Year)
   }
-  dg$timing <- ifelse(is.null(opt_timing), NA, as.numeric(opt_timing))
 
   # Assign report objects to DLMenv
   diagnostic <- get0(paste0("diagnostic_", MP), envir = DLMenv,
@@ -276,12 +293,10 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRU
 
   if(include_assessment) {
     # Remove some objects to save memory/disk space
-    #Assessment@obj <- Assessment@info <- Assessment@TMB_report <- list()
     if(inherits(Assessment, "Assessment")) {
       if(dg$hess) Assessment@obj <- list()
       Assessment@info <- Assessment@TMB_report <- list()
       Assessment@SD <- ""
-      Assessment@Data <- new("Data", stock = "MSE")
     }
 
     Assessment_report <- get0(paste0("Assessment_report_", MP), envir = DLMenv,
