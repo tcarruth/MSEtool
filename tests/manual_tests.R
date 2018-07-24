@@ -1,6 +1,9 @@
 library(testthat)
 library(MSEtool)
 
-test_dir("tests/manual")
 
-# test_file("tests/manual/test-Assess.R")
+test_file("test-DD_Assess.R")
+
+test_file("test-SP_Assess.R")
+
+test_file("test-SCA_Assess.R")
