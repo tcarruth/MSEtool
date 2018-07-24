@@ -33,8 +33,15 @@ ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, restart = 1) {
   restart <- as.integer(restart)
   if(is.null(obj$env$random) && use_hessian) h <- obj$he else h <- NULL
-  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control),
-                  error = function(e) as.character(e))
+  if(any(names(obj$par) == "U_equilibrium")) {
+    low <- rep(-Inf, length(obj$par))
+    low[match("U_equilibrium", names(obj$par))] <- 0
+    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control, lower = low),
+                    error = function(e) as.character(e))
+  } else {
+    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control),
+                    error = function(e) as.character(e))
+  }
   SD <- get_sdreport(obj, opt)
 
   if((is.character(SD) || !SD$pdHess) && !is.character(opt) && restart > 0) {
