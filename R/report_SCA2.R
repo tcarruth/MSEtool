@@ -241,6 +241,15 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
     }
   }
 
+  plot_composition(Year, C_at_age, plot_type = 'bubble_data')
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_predicted_catch_at_age_bubble.png"))
+    plot_composition(Year, C_at_age, plot_type = 'bubble_data')
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_predicted_catch_at_age_bubble.png", "Predicted catch at age bubble plot."))
+  }
+
   plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_mean_age.png"))
@@ -357,6 +366,15 @@ generate_plots_SCA2 <- function(Assessment, save_figure = FALSE, save_dir = getw
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_abundance.png", "Time series of abundance."))
+  }
+
+  plot_composition(c(Year, max(Year) + 1), N_at_age, plot_type = 'bubble_data')
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_abundance_at_age_bubble.png"))
+    plot_composition(c(Year, max(Year) + 1), N_at_age, plot_type = 'bubble_data')
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_abundance_at_age_bubble.png", "Abundance at age bubble plot."))
   }
 
   plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
