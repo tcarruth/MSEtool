@@ -5,8 +5,7 @@
 \title{retrospective_AM (retrospective of Assessment model in MSE)}
 \usage{
 retrospective_AM(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP,
-  MSE_Hist = NULL, plot_type = c("SSB", "F", "SSB_SSBMSY", "F_FMSY",
-  "SSB_SSB0", "VB"))
+  MSE_Hist = NULL, plot_legend = FALSE)
 }
 \arguments{
 \item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}.}
@@ -21,10 +20,10 @@ generated during the MSE.}
 \item{MSE_Hist}{Optional. The list containing historical data for the MSE, created by \code{\link[DLMtool]{runMSE}} with argument \code{Hist = TRUE}.
 Currently only used to plot operating model vulnerable biomass in historical period.}
 
-\item{plot_type}{A character vector of the quantitites to be plotted.}
+\item{plot_legend}{Logical. Whether to plot legend to reference year of assessment in the MSE.}
 }
 \value{
-A series of spawning stock biomass
+A series of figures for spawning stock biomass
 (SSB, including absolute magnitude and relative to MSY and virgin), fishing mortality (F, including absolute
 magnitude and relative to MSY), and vulnerable biomass (VB) estimates over the course of the MSE are plotted
 against the operating model (true) values (in black).
@@ -40,10 +39,12 @@ are obtained as F = -log(1 - u).
 \note{
 This function only plots retrospectives from a single simulation in the MSE. Results from one figure
 may not be indicative of general assessment behavior and performance overall.
+
+For \link{SP} and \link{SP_SS} assessment models don't model SSB. Instead, the estimated vulnerable biomass is plotted.
 }
 \examples{
 \dontrun{
-DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = TRUE)
+DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "full")
 myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", MSE_Hist = TRUE)
 myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
