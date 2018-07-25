@@ -35,12 +35,13 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
       }
 
   sfInit(parallel = ncpus > 1, cpus = ncpus)
+  sfLibrary("MSEtool", character.only = TRUE)
   nsim <- nrow(Data@Cat)
   message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
   dots <- list(...)
   if(length(dots) > 0) message(paste0("\nAdditional arguments to be provided to ", deparse(substitute(x)), ":\n", paste(names(dots), collapse = "\n")))
   Assess <- match.fun(Assess)
-  if(!inherits(Assess, "Assess")) stop(paste(deparse(substitute(x))), "does not appear to be an Assess function.")
+  if(!inherits(Assess, "Assess")) stop(paste(deparse(substitute(Assess))), "does not appear to be an Assess function.")
 
   if(sfParallel()) sfExport(list = c("Assess", "Data"))
   timing <- proc.time()
