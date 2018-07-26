@@ -13,8 +13,8 @@ Description: Simulation tools for informing data-rich fisheries, including asses
   harvest control rules to use in management strategy evaluation simulations. 
 License: GPL-3
 Depends:
-  R(>= 3.3.0),
-  DLMtool
+  R (>= 3.3.0),
+  DLMtool (>= 5.2.0)
 Imports:
   MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm, pryr,
   r4ss (<= 1.24.0), reshape2, snowfall, stats, utils
