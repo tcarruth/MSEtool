@@ -1,5 +1,5 @@
 
-#' prelim_AM (preliminary Assessments in MSE)
+#' Preliminary Assessments in MSE
 #'
 #' Evaluates the likely performance of Assessment models in the operating model. This function will
 #' apply the assessment model for Data generated during the historical period of the MSE, and report
@@ -34,8 +34,8 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
         stop("x does not appear to be either a Hist, Data, or OM object.")
       }
 
-  sfInit(parallel = ncpus > 1, cpus = ncpus)
-  sfLibrary("MSEtool", character.only = TRUE)
+  snowfall::sfInit(parallel = ncpus > 1, cpus = ncpus)
+  snowfall::sfLibrary("MSEtool", character.only = TRUE)
   nsim <- nrow(Data@Cat)
   message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
   dots <- list(...)
@@ -43,13 +43,13 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
   Assess <- match.fun(Assess)
   if(!inherits(Assess, "Assess")) stop(paste(deparse(substitute(Assess))), "does not appear to be an Assess function.")
 
-  if(sfParallel()) sfExport(list = c("Assess", "Data"))
+  if(snowfall::sfParallel()) snowfall::sfExport(list = c("Assess", "Data"))
   timing <- proc.time()
-  res <- sfLapply(1:nsim, Assess, Data = Data, ...)
+  res <- snowfall::sfLapply(1:nsim, Assess, Data = Data, ...)
   timing2 <- (proc.time() - timing)[3]
   message("Assessments complete.")
 
-  sfStop()
+  snowfall::sfStop()
 
   message(paste0("Total time to run ", nsim, " assessments: ", round(timing2, 1), " seconds"))
 

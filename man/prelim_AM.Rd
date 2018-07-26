@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnostic_AM.R
 \name{prelim_AM}
 \alias{prelim_AM}
-\title{prelim_AM (preliminary Assessments in MSE)}
+\title{Preliminary Assessments in MSE}
 \usage{
 prelim_AM(x, Assess, ncpus = 1, ...)
 }
