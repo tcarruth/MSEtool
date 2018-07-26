@@ -33,9 +33,6 @@
 #' @seealso \link{diagnostic_AM} \link{retrospective_AM}
 #' @export
 make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
-  if(is.logical(diagnostic)) {
-    if(diagnostic) diagnostic <- "min" else diagnostic <- "none"
-  }
   diagnostic <- match.arg(diagnostic)
   if(is.character(.Assess)) {
     .Assess <- as.symbol(.Assess)
