@@ -191,6 +191,9 @@
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
+  
+  REPORT(sigma);
+  REPORT(tau);
 
   REPORT(NPR_virgin);
   REPORT(Arec);

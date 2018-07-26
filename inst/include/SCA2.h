@@ -142,6 +142,9 @@
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
+  
+  REPORT(sigma);
+  REPORT(tau);
 
   REPORT(meanR);
 
