@@ -33,7 +33,7 @@ Journal of Marine Science. 73: 464-482.
 \author{
 Quang Huynh \email{q.huynh@oceans.ubc.ca}
 
-Tom Carruthers \email{t.carruthers@fisheries.ubc.ca}
+Tom Carruthers \email{t.carruthers@oceans.ubc.ca}
 
 Adrian Hordyk \email{a.hordyk@oceans.ubc.ca}
 }

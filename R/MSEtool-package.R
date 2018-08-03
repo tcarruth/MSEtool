@@ -8,7 +8,7 @@
 #' @aliases MSEtool-package MSEtool
 #' @docType package
 #' @author Quang Huynh \email{q.huynh@@oceans.ubc.ca}
-#' @author Tom Carruthers \email{t.carruthers@@fisheries.ubc.ca}
+#' @author Tom Carruthers \email{t.carruthers@@oceans.ubc.ca}
 #' @author Adrian Hordyk \email{a.hordyk@@oceans.ubc.ca}
 #' @section Additional Information:
 #' See the \href{https://dlmtool.github.io/DLMtool/userguide/introduction.html}{DLMtool User Guide} for
