@@ -27,7 +27,7 @@ Vignettes describing the features of MSEtool can be obtained via:
 browseVignettes("MSEtool")
 ```
 
-A User Guide for the DLMtool package are now available: [https://dlmtool.github.io/DLMtool/userguide/introduction.html](https://dlmtool.github.io/DLMtool/userguide/introduction.html). 
+A User Guide for the DLMtool package is now available: [https://dlmtool.github.io/DLMtool/userguide/introduction.html](https://dlmtool.github.io/DLMtool/userguide/introduction.html). 
 
 ## Bugs and Issues
 Please report any bugs or issues through [GitHub](https://github.com/tcarruth/MSEtool/issues) or the [DLMtool website](https://www.datalimitedtoolkit.org).
