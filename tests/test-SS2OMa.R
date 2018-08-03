@@ -48,6 +48,11 @@ for(i in 1:length(dir_vec)) {
     expect_true(all(dim(res@cpars$Find) == c(res@nsim, res@nyears)))
     expect_true(all(res@cpars$Find >= 0))
 
+    expect_true(length(res@EffYears) == length(res@EffUpper))
+    expect_true(length(res@EffYears) == length(res@EffLower))
+
+    expect_true(length(res@M) == length(res@M2))
+
     expect_equal(DLMtool::cparscheck(res@cpars), res@nsim)
 
 

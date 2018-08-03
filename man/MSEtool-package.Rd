@@ -6,14 +6,15 @@
 \alias{MSEtool}
 \title{Management Strategy Evaluation}
 \description{
-Simulation testing and implementation of data-rich fishery management procedures
+An extension of DLMtool which provides simulation tools for management strategy evaluation
+informing data-rich fisheries. Using the DLMtool operating model, MSEtool provides complementary assessment models of
+varying complexity with standardized reporting, diagnostic tools for evaluating assessment models within closed-loop
+simulation, and helper functions for building more complex operating models and management procedures.
 }
 \section{Additional Information}{
 
-See the \href{https://dlmtool.github.io/DLMtool/userguide/index.html}{DLMtool User Guide} for
+See the \href{https://dlmtool.github.io/DLMtool/userguide/introduction.html}{DLMtool User Guide} for
 a detailed description of how to use the DLMtool package.
-
-The help documentation for the DLMtool package can also be accessed \href{https://dlmtool.github.io/DLMtool/}{here}.
 
 See the \href{http://www.datalimitedtoolkit.org/}{Data-Limited Toolkit Website} for more information on the DLMtool,
 including an interactive demo of the main features of the toolkit, information on case studies where the toolkit has
@@ -28,14 +29,14 @@ catch limits in data-limited fisheries. Fisheries Research. 153: 48-68.
 Carruthers, T.R., Kell, L.T., Butterworth, D.S., Maunder, M.N., Geromont,
 H.F., Walters, C., McAllister, M.K., Hillary, R., Levontin, P., Kitakado,
 T., Davies, C.R. Performance review of simple management procedures. ICES
-Journal of Marine Science.
+Journal of Marine Science. 73: 464-482.
 }
 \author{
+Quang Huynh \email{q.huynh@oceans.ubc.ca}
+
 Tom Carruthers \email{t.carruthers@fisheries.ubc.ca}
 
 Adrian Hordyk \email{a.hordyk@oceans.ubc.ca}
-
-Quang Huynh \email{q.huynh@oceans.ubc.ca}
 }
 \keyword{evaluation}
 \keyword{fisheries}
