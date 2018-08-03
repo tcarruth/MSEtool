@@ -6,10 +6,9 @@
 \alias{MSEtool}
 \title{Management Strategy Evaluation}
 \description{
-An extension of DLMtool which provides simulation tools for management strategy evaluation
-informing data-rich fisheries. Using the DLMtool operating model, MSEtool provides complementary assessment models of
-varying complexity with standardized reporting, diagnostic tools for evaluating assessment models within closed-loop
-simulation, and helper functions for building more complex operating models and management procedures.
+Simulation tools for management strategy evaluation are provided for the DLMtool operating model to inform data-rich fisheries.
+MSEtool provides complementary assessment models of varying complexity with standardized reporting, diagnostic tools for evaluating
+assessment models within closed-loop simulation, and helper functions for building more complex operating models and management procedures.
 }
 \section{Additional Information}{
 

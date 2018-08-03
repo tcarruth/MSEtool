@@ -7,10 +7,9 @@ Authors@R: c(person("Quang","Huynh",,"q.huynh@oceans.ubc.ca",role="aut"),
   person("Adrian","Hordyk",,"a.hordyk@oceans.ubc.ca",role="aut"))
 Date: 2018-06-05
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
-Description: An extension of DLMtool which provides simulation tools for management strategy evaluation
-  informing data-rich fisheries. Using the DLMtool operating model, MSEtool provides complementary assessment models of
-  varying complexity with standardized reporting, diagnostic tools for evaluating assessment models within closed-loop
-  simulation, and helper functions for building more complex operating models and management procedures.
+Description: Simulation tools for management strategy evaluation are provided for the DLMtool operating model to inform data-rich fisheries. 
+  MSEtool provides complementary assessment models of varying complexity with standardized reporting, diagnostic tools for evaluating 
+  assessment models within closed-loop simulation, and helper functions for building more complex operating models and management procedures.
 License: GPL-3
 Depends:
   R (>= 3.3.0),
