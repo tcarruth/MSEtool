@@ -52,14 +52,6 @@ options(width = 650)
 
 <br>
 
-# Foreword
-
-MSEtool development is funded by the Canadian Department of Fisheries and Oceans and benefits from ongoing collaborations with the Natural Resources Defense Council and number of Canadian government scientists including Robyn Forrest, Sean Anderson and Daniel Duplisea. 
-
-The [DLMtool](http://www.datalimitedtoolkit.org) package was developed at the University of British Columbia in collaboration with the Natural Resources Defense Council. DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
-
-<a href="http://www.datalimitedtoolkit.org"><img src="DLMtool_logo.png" width=250></a>
-
 
 # Version Notes
 
@@ -90,15 +82,18 @@ The package is subject to ongoing testing. If you find a bug or a problem please
 
 * More data-rich assessment models
     * Virtual Population Analysis (VPA)
-    * Age-Structure Production Models (ASPM)
     * Kalman filter assessment approximation
 
 * Stock projections for assessment models
 
 * Age-varying movement matrices for `simmov` to condition operating models
 
+* Multi-stock and multi-fleet operating models
+
 # Introduction 
-The MSEtool package is an extension of the DLMtool R package for implementing closed-loop simulation testing of management procedures, a process often referred to as management strategy evaluation (MSE). Whereas DLMtool is primarily designed for testing data-limited management procedures, MSEtool provides an object-oriented framework for creating data-rich management procedures (MPs), which typically involve combining an assessment model with a harvest control rule to provide a fishery management recommendation. MSEtool management procedures are designed to be used with the operating model of DLMtool through the `runMSE` function. The user guide to the DLMtool package is accessible via
+MSEtool is an extension of the DLMtool package for implementing closed-loop simulation testing of management procedures, a process often referred to as management strategy evaluation (MSE). The components of the operating model for conducting MSEs for data-rich stocks is wholly contained within DLMtool, but MSEtool provides the tools for implementing additional features to facilitate such MSEs. Whereas DLMtool is primarily designed for testing data-limited management procedures, MSEtool provides an object-oriented framework for creating data-rich management procedures (MPs), which typically involve combining an assessment model with a harvest control rule to provide a fishery management recommendation. Management procedures created by MSEtool are designed to be used with the operating model of DLMtool through the `runMSE` function. 
+
+The user guide to the DLMtool package is accessible via
 
 ```{r, eval = FALSE}
 DLMtool::userguide()
@@ -112,13 +107,12 @@ _Figure 1: Design of DLMtool package for management strategy evaluations_
 
 ## Overview of MSEtool
 
-To facilitate a standardized design for data-rich MPs, MSEtool builds out the __MP__ class with constituent functions of class __Assess__ and __HCR__. An __MP__ can be made from these functions to be tested in a MSE within the DLMtool framework. 
 
 Additionally, __Assess__ functions can be used in an assessment-only context (external to management strategy evaluations). Output of an __Assess__ function can be used to provide standardized stock assessment reporting and diagnostics, such as Kobe plots, likelihood profiles for parameter estimates, and retrospective analyses of time series estimates of biomass, fishing mortality, recruitment, etc.
 
 <img src="MSEtool_design.png" width=690>
 
-_Figure 2: Design of MSEtool package for building management procedures from assessment models and harvest control rules for management strategy evaluations with the DLMtool package. Separate functions are also available for standardized reporting of output from assessment models in a stock assessment setting._
+_Figure 2: Design of MSEtool package for building management procedures from assessment models and harvest control rules for management strategy evaluations with the DLMtool package. Assess and HCR functions and the Assessment object are unique to MSEtool, but work within the framework of DLMtool objects. Separate functions are also available for standardized reporting of output from assessment models in a stock assessment setting._
 
 
 ### Additional features
@@ -270,3 +264,11 @@ plot(snapper_TAC)
 
 _Figure 8. Stochastic TAC recommendations from the Delay-Difference model with two harvest control rules. When the 40-10 harvest control rule is applied, the prescribed TAC is close to zero because the estimated terminal year biomass is 0.13 in the assessment model._
 
+
+# Acknowledgements
+
+MSEtool development is funded by the Canadian Department of Fisheries and Oceans and benefits from ongoing collaborations with the Natural Resources Defense Council and number of Canadian government scientists including Robyn Forrest, Sean Anderson and Daniel Duplisea. 
+
+The [DLMtool](http://www.datalimitedtoolkit.org) package was developed at the University of British Columbia in collaboration with the Natural Resources Defense Council. DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
+
+<a href="http://www.datalimitedtoolkit.org"><img src="DLMtool_logo.png" width=250></a>
