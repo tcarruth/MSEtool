@@ -1,9 +1,8 @@
 ---
 title: "User guide to MSEtool"
 subtitle: "Development, Testing and Implementation of Management Procedures for Data-Rich Fisheries"
-author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>) 
-         Adrian Hordyk  (<a.hordyk@oceans.ubc.ca>),
-         Quang Huynh (<q.huynh@oceans.ubc.ca>)"
+author: "Quang Huynh (<q.huynh@oceans.ubc.ca>), Tom Carruthers (<t.carruthers@oceans.ubc.ca>), 
+         Adrian Hordyk (<a.hordyk@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
@@ -107,6 +106,7 @@ _Figure 1: Design of DLMtool package for management strategy evaluations_
 
 ## Overview of MSEtool
 
+To facilitate a standardized design for data-rich MPs, MSEtool creates new classes to build out the __MP__ class. MSEtool uses functions of class __Assess__ and __HCR__ for an assessment model and harvest control rule, respectively. An __MP__ class function can be made from these functions to be tested in a MSE within the DLMtool framework. 
 
 Additionally, __Assess__ functions can be used in an assessment-only context (external to management strategy evaluations). Output of an __Assess__ function can be used to provide standardized stock assessment reporting and diagnostics, such as Kobe plots, likelihood profiles for parameter estimates, and retrospective analyses of time series estimates of biomass, fishing mortality, recruitment, etc.
 
