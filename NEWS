@@ -2,4 +2,8 @@
 MSEtool 1.0.0
 ------------------------------------------------------------------------
 
-- Current version in development for initial CRAN release.
+- Initial CRAN release.
+- Assessment models: Delay-Difference (DD_TMB, DD_SS); Surplus Production (SP, SP_SS); Statistical Catch-at-Age (SCA, SCA2)
+- Harvest control rules: HCR_MSY, HCR40_10, HCR60_20
+- simmov function for multiple-area movement models (age-independent)
+- Functions for converting Stock Synthesis and iSCAM assessments to OM and Data objects (classes inherited from DLMtool)
