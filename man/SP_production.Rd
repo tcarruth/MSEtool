@@ -23,6 +23,7 @@ May be useful for parameterizing \code{n} in \link{SP} and \link{SP_SS}.
 }
 \examples{
 SP_production(0.5)
+SP_production(0.5)
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.

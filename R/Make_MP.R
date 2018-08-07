@@ -16,19 +16,22 @@
 #' @return A function of class \code{MP}.
 #'
 #' @examples
-#' \dontrun{
 #' # A delay-difference model with a 40-10 control rule
 #' DD_40_10 <- make_MP(DD_TMB, HCR40_10)
 #'
+#' # A delay difference model that will produce convergence diagnostics
 #' DD_40_10 <- make_MP(DD_TMB, HCR40_10, diagnostic = "min")
+#'
+#' # MP that uses a Delay-Difference which assumes a Ricker stock-recruit function.
+#' DD_Ricker <- make_MP(DD_TMB, HCR_MSY, SR = "Ricker")
+#'
+#' \dontrun{
 #' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_40_10"))
 #'
 #' ls(DLMenv) # Model output during MSE is assigned to this environment.
 #' diagnostic_AM(myMSE)
 #' }
 #'
-#' # MP that uses a Delay-Difference which assumes a Ricker stock-recruit function.
-#' DD_MSY <- make_MP(DD_TMB, HCR_MSY, SR = "Ricker")
 #' @importFrom pryr make_function
 #' @seealso \link{diagnostic_AM} \link{retrospective_AM}
 #' @export

@@ -112,23 +112,19 @@ violated tends to be the biggest driver of performance for this method.
 }
 
 \examples{
-\dontrun{
+\donttest{
 #### Observation-error delay difference model
-res <- DD_TMB(Data = Red_snapper)
-
+res <- DD_TMB(Data = DLMtool::Red_snapper)
 
 # Provide starting values
 start <- list(R0 = 1, h = 0.95)
-res <- DD_TMB(Data = Red_snapper, start = start)
+res <- DD_TMB(Data = DLMtool::Red_snapper, start = start)
 
 summary(res@SD) # Parameter estimates
 
 ### State-space version
 ### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
 res <- DD_SS(Data = Red_snapper, start = list(tau = 0.3))
-
-# Plot and save figures
-plot(res)
 }
 }
 \references{
@@ -137,6 +133,9 @@ fisheries stock status using only fisheries catch data. Fisheries Research 119-1
 
 Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,
 Dynamics and Uncertainty. Chapman and Hall, New York.
+}
+\seealso{
+\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
 }
 \author{
 T. Carruthers & Z. Siders. Zach Siders coded the TMB function.

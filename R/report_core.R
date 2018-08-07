@@ -15,17 +15,17 @@
 #' @return A data frame of negative log-likelihood values from profile and, optionally,
 #' a figure of the likelihood surface.
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' output <- DD_TMB(Data = DLMtool::Red_snapper)
 #' pro <- profile_likelihood(output, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01),
 #' save_figure = FALSE)
+#' }
 #'
 #' # Ensure your grid is of proper resolution. A grid that is too coarse will distort the shape of
 #' # the likelihood surface.
-#' }
 #' @export
 profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
-                               save_dir = getwd(), ...) {
+                               save_dir = tempdir(), ...) {
   if(figure) {
     old.warning <- options()$warn
     options(warn = -1)
@@ -55,13 +55,13 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
 #' @return Figures showing the time series of biomass and exploitation and parameter estimates
 #' with successive number of years removed. Returns invisibly an array of model output and of model estimates.
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' output <- DD_TMB(Data = DLMtool::Red_snapper)
-#' get_retro <- retrospective(output, nyr = 5)
+#' get_retro <- retrospective(output, nyr = 5, figure = FALSE)
 #' }
 #' @export
 retrospective <- function(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
-                          save_dir = getwd()) {
+                          save_dir = tempdir()) {
   if(figure) {
     old.warning <- options()$warn
     options(warn = -1)

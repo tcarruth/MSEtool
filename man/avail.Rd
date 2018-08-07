@@ -18,7 +18,7 @@ MSEtool and DLMtool packages. This function is an addendum to the \code{\link[DL
 function in DLMtool.
 }
 \examples{
-\dontrun{
+\donttest{
 avail("Assess")
 avail("HCR")
 avail("Stock")

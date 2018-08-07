@@ -69,24 +69,21 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' #### Observation-error delay difference model
-#' res <- DD_TMB(Data = Red_snapper)
-#'
+#' res <- DD_TMB(Data = DLMtool::Red_snapper)
 #'
 #' # Provide starting values
 #' start <- list(R0 = 1, h = 0.95)
-#' res <- DD_TMB(Data = Red_snapper, start = start)
+#' res <- DD_TMB(Data = DLMtool::Red_snapper, start = start)
 #'
 #' summary(res@@SD) # Parameter estimates
 #'
 #' ### State-space version
 #' ### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
 #' res <- DD_SS(Data = Red_snapper, start = list(tau = 0.3))
-#'
-#' # Plot and save figures
-#' plot(res)
 #' }
+#' @seealso \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
 DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = FALSE,

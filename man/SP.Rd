@@ -111,7 +111,7 @@ and a symmetric production function.
 }
 
 \examples{
-\dontrun{
+\donttest{
 data(swordfish)
 
 #### Observation-error surplus production model
@@ -136,6 +136,8 @@ Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 }
 \seealso{
 \link{SP_production}
+
+\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
 }
 \author{
 Q. Huynh

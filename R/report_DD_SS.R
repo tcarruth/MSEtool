@@ -485,12 +485,13 @@ profile_likelihood_DD_SS <- function(Assessment, figure = TRUE, save_figure = TR
         dev.off()
         profile.file.caption <- c("profile_likelihood.png",
                                   "Profile likelihood of R0. Vertical, dashed line indicates maximum likelihood estimate.")
+
+        html_report(plot.dir, model = "Delay Difference (State-Space)",
+                    captions = matrix(profile.file.caption, nrow = 1),
+                    name = Assessment@Name, report_type = "Profile_Likelihood")
+        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
       }
     }
-    html_report(plot.dir, model = "Delay Difference",
-                captions = matrix(profile.file.caption, nrow = 1),
-                name = Assessment@Name, report_type = "Profile_Likelihood")
-    browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
   }
   return(profile.grid)
 }

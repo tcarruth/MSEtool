@@ -36,11 +36,9 @@ Plot time series of observed (with lognormally-distributed error bars) vs.
 predicted data.
 }
 \examples{
-\dontrun{
 data(Red_snapper)
 plot_timeseries(Red_snapper@Year, Red_snapper@Cat[1, ],
 obs_CV = Red_snapper@CV_Cat, label = "Catch")
-}
 }
 \seealso{
 \code{\link{plot_residuals}}

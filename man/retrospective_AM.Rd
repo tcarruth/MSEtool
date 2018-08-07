@@ -45,7 +45,7 @@ For \link{SP} and \link{SP_SS} assessment models don't model SSB. Instead, the e
 \examples{
 \dontrun{
 DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "full")
-myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", MSE_Hist = TRUE)
+myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", Hist = TRUE)
 myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
 retrospective_AM(myMSE, sim = 1, MP = "DD_MSY", Hist = myMSE_hist)
@@ -55,7 +55,6 @@ ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
 # Save to disk for future use. File may be very large due to size of DLMenv!
 save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 }
-
 }
 \seealso{
 \link{diagnostic_AM}

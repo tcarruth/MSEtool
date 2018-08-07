@@ -90,7 +90,7 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
 #' \dontrun{
 #' DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "min")
 #' show(DD_MSY)
-#' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
+#' myMSE <- runMSE(DLMtool::testOM, MPs = "DD_MSY")
 #' diagnostic_AM(myMSE)
 #'
 #' # If MSE object is not available (e.g. runMSE crashed), use MP argument instead.

@@ -5,7 +5,7 @@
 \title{Perform retrospective analysis}
 \usage{
 retrospective(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
-  save_dir = getwd())
+  save_dir = tempdir())
 }
 \arguments{
 \item{Assessment}{An S4 object of Assessment output..}
@@ -29,9 +29,9 @@ with successive number of years removed. Returns invisibly an array of model out
 Perform a retrospective analysis.
 }
 \examples{
-\dontrun{
+\donttest{
 output <- DD_TMB(Data = DLMtool::Red_snapper)
-get_retro <- retrospective(output, nyr = 5)
+get_retro <- retrospective(output, nyr = 5, figure = FALSE)
 }
 }
 \author{

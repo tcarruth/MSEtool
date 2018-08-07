@@ -51,7 +51,6 @@ create_png <- function(filename, units = "in", res = 400, height = 4, width = 6,
 #' @export plot_lognormalvar
 #' @seealso \code{\link{plot_betavar}} \code{\link{plot_steepness}}
 #' @examples
-#' \dontrun{
 #' mu <- 0.5
 #' stddev <- 0.1
 #' plot_lognormalvar(mu, stddev) # mean of plot should be 0.5
@@ -60,7 +59,6 @@ create_png <- function(filename, units = "in", res = 400, height = 4, width = 6,
 #' mu <- 0
 #' stddev <- 0.1
 #' plot_lognormalvar(mu, stddev, logtransform = TRUE) # mean of plot should be 1
-#' }
 plot_lognormalvar <- function(m, sd, label = NULL, logtransform = FALSE, color = "black") {
   # plots life history parameters: Linf, K, t0, M, FMSY_M
   ncurve <- length(m)
@@ -187,7 +185,6 @@ plot_normalvar <- function(m, sd, label = NULL, color = "black") {
 #' @export plot_betavar
 #' @seealso \code{\link{plot_lognormalvar}} \code{\link{plot_steepness}}
 #' @examples
-#' \dontrun{
 #' mu <- 0.5
 #' stddev <- 0.1
 #' plot_betavar(mu, stddev) # mean of plot should be 0.5
@@ -196,7 +193,6 @@ plot_normalvar <- function(m, sd, label = NULL, color = "black") {
 #' mu <- 0
 #' stddev <- 0.1
 #' plot_betavar(mu, stddev, is_logit = TRUE) # mean of plot should be 0.5
-#' }
 plot_betavar <- function(m, sd, label = NULL, is_logit = FALSE, color = "black") {
   support <- seq(0.01, 0.99, length.out = 1e3)
   ncurve <- length(m)
@@ -258,11 +254,9 @@ plot_betavar <- function(m, sd, label = NULL, is_logit = FALSE, color = "black")
 #' @export
 #' @seealso \code{\link{plot_lognormalvar}} \code{\link{plot_betavar}}
 #' @examples
-#' \dontrun{
 #' mu <- DLMtool::Simulation_1@@steep
 #' stddev <- DLMtool::Simulation_1@@steep * DLMtool::Simulation_1@@CV_steep
 #' plot_steepness(mu, stddev)
-#' }
 plot_steepness <- function(m, sd, is_transform = FALSE, SR = c("BH", "Ricker"), color = "black") {
   SR <- match.arg(SR)
   ncurve <- length(m)
@@ -377,11 +371,9 @@ plot_steepness <- function(m, sd, is_transform = FALSE, SR = c("BH", "Ricker"), 
 #' @author Q. Huynh
 #' @seealso \code{\link{plot_residuals}}
 #' @examples
-#' \dontrun{
 #' data(Red_snapper)
 #' plot_timeseries(Red_snapper@@Year, Red_snapper@@Cat[1, ],
 #' obs_CV = Red_snapper@@CV_Cat, label = "Catch")
-#' }
 #' @export plot_timeseries
 plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.95,
                             obs_upper = NULL, obs_lower = NULL, obs_ind_blue = NULL, fit_linewidth = 3,
@@ -517,7 +509,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' @author Q. Huynh
 #' @export plot_composition
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(Red_snapper)
 #' plot_composition(obs = Red_snapper@@CAA[1, , ], plot_type = "annual")
 #' plot_composition(obs = Red_snapper@@CAA[1, , ], plot_type = "bubble_data")

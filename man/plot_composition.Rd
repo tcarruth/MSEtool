@@ -43,7 +43,7 @@ Plots depending on \code{plot_type}.
 Plots annual length or age composition data.
 }
 \examples{
-\dontrun{
+\donttest{
 data(Red_snapper)
 plot_composition(obs = Red_snapper@CAA[1, , ], plot_type = "annual")
 plot_composition(obs = Red_snapper@CAA[1, , ], plot_type = "bubble_data")

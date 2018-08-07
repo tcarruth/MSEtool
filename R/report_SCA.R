@@ -546,12 +546,13 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
         dev.off()
         profile.file.caption <- c("profile_likelihood.png",
                                   "Profile likelihood of R0. Vertical, dashed line indicates maximum likelihood estimate.")
+
+        html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
+                    captions = matrix(profile.file.caption, nrow = 1),
+                    name = Assessment@Name, report_type = "Profile_Likelihood")
+        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
       }
     }
-    html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
-                captions = matrix(profile.file.caption, nrow = 1),
-                name = Assessment@Name, report_type = "Profile_Likelihood")
-    browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
   }
   return(profile.grid)
 }

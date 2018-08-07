@@ -25,7 +25,7 @@
 #' @examples
 #' \dontrun{
 #' DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "full")
-#' myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", MSE_Hist = TRUE)
+#' myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", Hist = TRUE)
 #' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
 #' retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
 #' retrospective_AM(myMSE, sim = 1, MP = "DD_MSY", Hist = myMSE_hist)
@@ -35,7 +35,6 @@
 #' # Save to disk for future use. File may be very large due to size of DLMenv!
 #' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 #' }
-#'
 #' @seealso \link{diagnostic_AM}
 #' @export
 retrospective_AM <- function(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP, MSE_Hist = NULL, plot_legend = FALSE) {

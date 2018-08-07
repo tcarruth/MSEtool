@@ -82,11 +82,9 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot TMB_report A list of model output reported from the TMB executable, i.e. \code{obj$report()}, and derived quantities (e.g. MSY).
 #' @slot dependencies A character string of data types required for the assessment.
 #' @examples
-#' \dontrun{
-#' data(sim_snapper)
-#' output <- DD_TMB(1, sim_snapper)
+#' \donttest{
+#' output <- DD_TMB(Data = DLMtool::Red_snapper)
 #' class(output)
-#' str(output)
 #' }
 #' @author Q. Huynh
 #' @export
@@ -118,10 +116,8 @@ Assessment <- setClass("Assessment",
 #' @param object An object of class \linkS4class{Assessment}
 #' @return A list of parameters
 #' @examples
-#' \dontrun{
 #' output <- DD_TMB(Data = DLMtool::Simulation_1)
 #' summary(output)
-#' }
 #' @exportMethod summary
 setMethod("summary", signature(object = "Assessment"), function(object) {
   if(is.character(object@opt) || is.character(object@SD)) warning("Did model converge?")
@@ -138,9 +134,9 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' @param save_dir The directory (by default, the current working directory) in which a
 #' sub-directory will be created to save figures.
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' output <- DD_TMB(Data = Simulation_1)
-#' plot(output, save_figure = FALSE)
+#' plot(output, save_figure = FALSE, save_dir = tempdir())
 #' }
 #' @exportMethod plot
 setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {

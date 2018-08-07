@@ -5,7 +5,7 @@
 \title{Perform profile likelihood}
 \usage{
 profile_likelihood(Assessment, figure = TRUE, save_figure = TRUE,
-  save_dir = getwd(), ...)
+  save_dir = tempdir(), ...)
 }
 \arguments{
 \item{Assessment}{An S4 object of class Assessment.}
@@ -30,14 +30,14 @@ Performs a profile likelihood.
 For \code{DD_TMB}, sequence of values for \code{UMSY} and \code{MSY} are needed.
 }
 \examples{
-\dontrun{
+\donttest{
 output <- DD_TMB(Data = DLMtool::Red_snapper)
 pro <- profile_likelihood(output, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01),
 save_figure = FALSE)
+}
 
 # Ensure your grid is of proper resolution. A grid that is too coarse will distort the shape of
 # the likelihood surface.
-}
 }
 \author{
 Q. Huynh

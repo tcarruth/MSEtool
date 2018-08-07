@@ -15,11 +15,6 @@ makemov(fracs = c(0.1, 0.2, 0.3, 0.4), prob = c(0.5, 0.8, 0.9, 0.95))
 A function for calculating a movement matrix from user specified unfished stock biomass fraction in each area.
 Used by \link{simmov} to generate movement matrices for a DLMtool operating model.
 }
-\examples{
-\dontrun{
-makemov(fracs=c(0.1,0.5,0.2,0.2),prob=c(0.9,0.5,0.3,0.8))
-}
-}
 \seealso{
 \link{simmov}
 }

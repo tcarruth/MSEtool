@@ -9,7 +9,7 @@
 #' @param classy A class of object (character string, e.g. 'Fleet')
 #' @author Q. Huynh
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' avail("Assess")
 #' avail("HCR")
 #' avail("Stock")

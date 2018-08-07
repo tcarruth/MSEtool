@@ -484,6 +484,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
                                 "Profile likelihood of mean recruitment. Vertical, dashed line indicates maximum likelihood estimate.")
+
       html_report(plot.dir, model = "Statistical Catch-at-Age (SCA2)",
                   captions = matrix(profile.file.caption, nrow = 1),
                   name = Assessment@Name, report_type = "Profile_Likelihood")

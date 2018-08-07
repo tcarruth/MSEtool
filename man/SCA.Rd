@@ -175,7 +175,7 @@ before running the model.
 }
 
 \examples{
-\dontrun{
+\donttest{
 res <- SCA(Data = DLMtool::SimulatedData)
 res2 <- SCA2(Data = DLMtool::Simulation_1)
 }
@@ -188,6 +188,9 @@ Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008.
 An age-structured model with leading management parameters, incorporating
 age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
 Science 65:286-296.
+}
+\seealso{
+\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
 }
 \author{
 Q. Huynh

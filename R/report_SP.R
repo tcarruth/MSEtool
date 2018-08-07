@@ -344,6 +344,7 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
                                 "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
+
       html_report(plot.dir, model = "Surplus Production",
                   captions = matrix(profile.file.caption, nrow = 1),
                   name = Assessment@Name, report_type = "Profile_Likelihood")
@@ -559,6 +560,8 @@ plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
 #' @examples SP_production(0.5)
 #' @return The production function exponent n (numeric).
 #' @importFrom stats uniroot
+#' @examples
+#' SP_production(0.5)
 #' @seealso \link{SP} \link{SP_SS}
 #' @export SP_production
 SP_production <- function(depletion, figure = TRUE) {

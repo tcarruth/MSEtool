@@ -101,7 +101,7 @@
 #' age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
 #' Science 65:286-296.
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' res <- SCA(Data = DLMtool::SimulatedData)
 #' res2 <- SCA2(Data = DLMtool::Simulation_1)
 #' }
@@ -122,6 +122,7 @@
 #' before running the model.
 #' @author Q. Huynh
 #' @return An object of class \linkS4class{Assessment}.
+#' @seealso \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),

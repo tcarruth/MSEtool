@@ -379,6 +379,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
                                 "Joint profile likelihood of UMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
+
       html_report(plot.dir, model = "Surplus Production (State-Space)",
                   captions = matrix(profile.file.caption, nrow = 1),
                   name = Assessment@Name, report_type = "Profile_Likelihood")

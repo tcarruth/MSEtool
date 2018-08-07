@@ -20,8 +20,8 @@ sub-directory will be created to save figures.}
 Plot Assessment object
 }
 \examples{
-\dontrun{
+\donttest{
 output <- DD_TMB(Data = Simulation_1)
-plot(output, save_figure = FALSE)
+plot(output, save_figure = FALSE, save_dir = tempdir())
 }
 }
