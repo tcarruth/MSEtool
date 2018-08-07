@@ -122,14 +122,15 @@
   nll_comp.setZero();
   for(int y=0;y<n_y;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
-
-    vector<Type> loglike_CAAobs(max_age);
-	  vector<Type> loglike_CAApred(max_age);
-	  for(int a=0;a<max_age;a++) {
-	    loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
-	    loglike_CAApred(a) = CAApred(y,a)/CN(y);
-	  }
-	  if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
+    if(C_hist(y) > 0) {
+      vector<Type> loglike_CAAobs(max_age);
+      vector<Type> loglike_CAApred(max_age);
+      for(int a=0;a<max_age;a++) {
+        loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
+        loglike_CAApred(a) = CAApred(y,a)/CN(y);
+      }
+      if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
+    }
 	  if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
@@ -142,7 +143,7 @@
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
-  
+
   REPORT(sigma);
   REPORT(tau);
 
