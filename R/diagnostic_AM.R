@@ -54,7 +54,7 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
   message(paste0("Total time to run ", nsim, " assessments: ", round(timing2, 1), " seconds"))
 
   nonconv <- !vapply(res, getElement, logical(1), "conv")
-  message(paste0(sum(nonconv), " of ", nsim, " simulations (", round(100 *sum(nonconv)/nsim, 1), "%) did not converge."))
+  message(paste0(sum(nonconv), " of ", nsim, " simulations (", round(100 *sum(nonconv)/nsim, 1), "%) failed to converge."))
   if(sum(nonconv > 0)) message(paste("See simulation number:", paste(which(nonconv), collapse = " ")))
 
   return(invisible(res))

@@ -98,7 +98,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
   seas1_aind <- which(seas1_aind_full$nseas == 1)
 
   GP <- replist$Growth_Parameters   # Some growth parameters (presumably in endyr)
-  if(nrow(GP)>1){
+  if(nrow(GP)>1) {
     message(paste(nrow(GP),"different rows of growth parameters were reported by r4ss:"))
     print(GP)
     message("Only the first row of values will be used.\n")
@@ -320,7 +320,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
   ts <- replist$timeseries[cat_yr_ind, ]
 
   cat_col <- grepl("obs_cat", colnames(ts))
-  cat <- ts[, cat_col]
+  cat <- ts[, cat_col, drop = FALSE]
 
   is_weight <- replist$catch_units[replist$IsFishFleet] == 1
 
