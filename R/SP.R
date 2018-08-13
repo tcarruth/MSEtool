@@ -84,7 +84,7 @@
 #' res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.3),
 #' fix_sigma = TRUE)
 #' }
-#' @seealso \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
+#' @seealso \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool

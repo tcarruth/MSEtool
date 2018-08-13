@@ -190,7 +190,7 @@ age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
 Science 65:286-296.
 }
 \seealso{
-\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
+\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 }
 \author{
 Q. Huynh

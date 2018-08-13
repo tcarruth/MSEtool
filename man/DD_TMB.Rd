@@ -135,7 +135,7 @@ Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Cho
 Dynamics and Uncertainty. Chapman and Hall, New York.
 }
 \seealso{
-\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{make_MP}
+\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 }
 \author{
 T. Carruthers & Z. Siders. Zach Siders coded the TMB function.
