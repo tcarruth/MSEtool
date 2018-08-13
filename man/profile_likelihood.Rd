@@ -2,13 +2,13 @@
 % Please edit documentation in R/report_core.R
 \name{profile_likelihood}
 \alias{profile_likelihood}
-\title{Perform profile likelihood}
+\title{Profile likelihood of assessment models}
 \usage{
 profile_likelihood(Assessment, figure = TRUE, save_figure = TRUE,
   save_dir = tempdir(), ...)
 }
 \arguments{
-\item{Assessment}{An S4 object of class Assessment.}
+\item{Assessment}{An S4 object of class \linkS4class{Assessment}.}
 
 \item{figure}{Indicates whether a figure will be plotted.}
 
@@ -20,24 +20,30 @@ profile_likelihood(Assessment, figure = TRUE, save_figure = TRUE,
 See details for name of arguments to be passed on.}
 }
 \value{
-A data frame of negative log-likelihood values from profile and, optionally,
+A data frame of negative log-likelihood values from the profile and, optionally,
 a figure of the likelihood surface.
 }
 \description{
-Performs a profile likelihood.
+Profile the likelihood for leading parameters of assessment models.
 }
 \details{
-For \code{DD_TMB}, sequence of values for \code{UMSY} and \code{MSY} are needed.
+For the following assessment models, the required sequence of values are:
+\itemize{
+\item \code{DD_TMB} and \code{DD_SS}: \code{R0} and \code{h}
+\item \code{SP} and \code{SP_SS}: \code{UMSY} and \code{MSY}
+\item \code{SCA}: \code{R0} and \code{h}
+\item \code{SCA2}: \code{meanR}
+}
 }
 \examples{
 \donttest{
 output <- DD_TMB(Data = DLMtool::Red_snapper)
 pro <- profile_likelihood(output, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01),
 save_figure = FALSE)
-}
 
 # Ensure your grid is of proper resolution. A grid that is too coarse will distort the shape of
 # the likelihood surface.
+}
 }
 \author{
 Q. Huynh
