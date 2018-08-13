@@ -44,7 +44,7 @@ summary_SCA <- function(Assessment) {
 
 #' @import grDevices
 #' @importFrom stats qqnorm qqline
-generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd()) {
+generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = tempdir()) {
   assign_Assessment_slots()
 
   if(save_figure) {
@@ -480,7 +480,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = getwd
 
 
 #' @importFrom reshape2 acast
-profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = getwd(), ...) {
+profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
   dots <- list(...)
   if(!"R0" %in% names(dots)) stop("Sequence of R0 was not found. See help file.")
   if(!"transformed_h" %in% names(Assessment@obj$env$map) && !"h" %in% names(dots)) {
@@ -559,7 +559,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
 
 
 #' @importFrom gplots rich.colors
-retrospective_SCA <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = getwd()) {
+retrospective_SCA <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = tempdir()) {
   assign_Assessment_slots()
   data <- info$data
   n_y <- data$n_y
@@ -647,7 +647,7 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
 
 
 plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
-                           save_dir = getwd(), nyr_label, color, fix_h, SR) {
+                           save_dir = tempdir(), nyr_label, color, fix_h, SR) {
   n_tsplots <- dim(retro_ts)[3] - 1
   ts_label <- c("Spawning Stock Biomass", expression(SSB/SSB[MSY]), expression(SSB/SSB[0]), "Recruitment",
                 "Population Abundance (N)", "Exploitation rate (U)",

@@ -46,7 +46,7 @@ summary_SP <- function(Assessment) {
 
 #' @import grDevices
 #' @importFrom stats qqnorm qqline
-generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd()) {
+generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdir()) {
   assign_Assessment_slots()
 
   if(save_figure) {
@@ -297,7 +297,7 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = getwd(
 
 #' @importFrom reshape2 acast
 profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE,
-                                  save_dir = getwd(), ...) {
+                                  save_dir = tempdir(), ...) {
   dots <- list(...)
   if(!"UMSY" %in% names(dots)) stop("Sequence of UMSY was not found. See help file.")
   if(!"MSY" %in% names(dots)) stop("Sequence of MSY was not found. See help file.")
@@ -359,7 +359,7 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
 
 #' @importFrom gplots rich.colors
 retrospective_SP <- function(Assessment, nyr, figure = TRUE,
-                             save_figure = FALSE, save_dir = getwd()) {
+                             save_figure = FALSE, save_dir = tempdir()) {
   assign_Assessment_slots()
 
   data <- info$data
@@ -427,7 +427,7 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE,
 }
 
 plot_retro_SP <- function(retro_ts, retro_est, save_figure = FALSE,
-                          save_dir = getwd(), nyr_label, color) {
+                          save_dir = tempdir(), nyr_label, color) {
   n_tsplots <- dim(retro_ts)[3] - 1
   ts_label <- c("Biomass", expression(B/B[MSY]), expression(B/B[0]),
                 "Exploitation rate (U)", expression(U/U[MSY]))
