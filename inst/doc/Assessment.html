@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Tom Carruthers (t.carruthers@oceans.ubc.ca) Adrian Hordyk (a.hordyk@oceans.ubc.ca), Quang Huynh (q.huynh@oceans.ubc.ca)" />
+
+<meta name="date" content="2018-08-13" />
+
+<title>Appendix: Description of the Assessment Models in MSEtool</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Appendix: Description of the Assessment Models in MSEtool</h1>
+<h4 class="author"><em>Tom Carruthers (<a href="mailto:t.carruthers@oceans.ubc.ca">t.carruthers@oceans.ubc.ca</a>) Adrian Hordyk (<a href="mailto:a.hordyk@oceans.ubc.ca">a.hordyk@oceans.ubc.ca</a>), Quang Huynh (<a href="mailto:q.huynh@oceans.ubc.ca">q.huynh@oceans.ubc.ca</a>)</em></h4>
+<h4 class="date"><em>2018-08-13</em></h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction"><span class="toc-section-number">1</span> Introduction</a><ul>
+<li><a href="#note"><span class="toc-section-number">1.1</span> Note</a></li>
+</ul></li>
+<li><a href="#delay-difference-dd_tmb-model"><span class="toc-section-number">2</span> Delay Difference (DD_TMB) Model</a><ul>
+<li><a href="#growth"><span class="toc-section-number">2.1</span> Growth</a></li>
+<li><a href="#dynamics-equations"><span class="toc-section-number">2.2</span> Dynamics equations</a></li>
+<li><a href="#stock-recruit-parameters"><span class="toc-section-number">2.3</span> Stock-recruit parameters</a><ul>
+<li><a href="#beverton-holt-relationship"><span class="toc-section-number">2.3.1</span> Beverton-Holt relationship</a></li>
+<li><a href="#ricker-equation"><span class="toc-section-number">2.3.2</span> Ricker equation</a></li>
+</ul></li>
+<li><a href="#state-space-version-dd_ss"><span class="toc-section-number">2.4</span> State-space version (DD_SS)</a></li>
+</ul></li>
+<li><a href="#surplus-production-sp-model"><span class="toc-section-number">3</span> Surplus-production (SP) model</a><ul>
+<li><a href="#dynamics-equations-1"><span class="toc-section-number">3.1</span> Dynamics equations</a></li>
+<li><a href="#derivation-of-sp-model-parameters-from-msy-and-umsy-estimates"><span class="toc-section-number">3.2</span> Derivation of SP model parameters from MSY and UMSY estimates</a></li>
+<li><a href="#state-space-version-sp_ss"><span class="toc-section-number">3.3</span> State-space version (SP_SS)</a></li>
+<li><a href="#estimation-of-recruitment-and-reference-points"><span class="toc-section-number">3.4</span> Estimation of recruitment and reference points</a><ul>
+<li><a href="#stock-recruit-function-in-assessment-model-sca"><span class="toc-section-number">3.4.1</span> Stock-recruit function in assessment model (SCA)</a></li>
+<li><a href="#no-stock-recruit-function-in-assessment-model-sca2"><span class="toc-section-number">3.4.2</span> No stock-recruit function in assessment model (SCA2)</a></li>
+<li><a href="#likelihood-of-recruitment-deviations"><span class="toc-section-number">3.4.3</span> Likelihood of recruitment deviations</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#references"><span class="toc-section-number">4</span> References</a></li>
+</ul>
+</div>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "all"} } });
+</script>
+<style type="text/css">
+
+body{ /* Normal  */
+   font-size: 12px;
+}
+td {  /* Table  */
+   font-size: 8px;
+}
+h1 { /* Header 1 */
+ font-size: 18px;
+ color: DarkBlue;
+}
+h2 { /* Header 2 */
+ font-size: 15px;
+ color: DarkBlue;
+}
+h3 { /* Header 3 */
+ font-size: 14px;
+ color: DarkBlue;
+}
+code.r{ /* Code block */
+  font-size: 10px;
+}
+pre { /* Code block */
+  font-size: 10px
+}
+</style>
+<p><br></p>
+<div id="introduction" class="section level1">
+<h1><span class="header-section-number">1</span> Introduction</h1>
+<p>In MSEtool, assessment models are of class <code>Assess</code>. This appendix provides a brief description and references for the <code>Assess</code> objects. Further details regarding parameterization, e.g., fixing parameters, and tuning, e.g., adjusting start parameters, are provided in the function documentation.</p>
+<div id="note" class="section level2">
+<h2><span class="header-section-number">1.1</span> Note</h2>
+<p>For LaTeX equation rendering, it is recommended that this vignette be viewed in a HTML browser. This can be done with the <code>browseVignettes</code> function in R:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">browseVignettes</span>(<span class="st">&quot;MSEtool&quot;</span>)</code></pre></div>
+</div>
+</div>
+<div id="delay-difference-dd_tmb-model" class="section level1">
+<h1><span class="header-section-number">2</span> Delay Difference (DD_TMB) Model</h1>
+<p>There has been a rich history of development for the delay difference model for catch and index data. For the formulation used in MSEtool, the most relevant citations are Chapter 9 of Hilborn and Walters (1992) and Carruthers et al. (2012).</p>
+<div id="growth" class="section level2">
+<h2><span class="header-section-number">2.1</span> Growth</h2>
+<p>Growth in weight-at-age <span class="math inline">\(w_a\)</span> follows the recursive Ford-Brody equation: <span class="math display">\[w_a = \rho + \tilde\alpha w_{a-1}.\]</span> We can obtain <span class="math inline">\(\tilde\alpha\)</span> and <span class="math inline">\(\rho\)</span> for the delay difference model if weight is also described by the equation <span class="math display">\[w_a = W_{\infty}(1 - \exp[K\{a-a_0\}])^b.\]</span> Parameter <span class="math inline">\(\tilde\alpha\)</span> is solved in the limiting case where <span class="math inline">\(w_a = w_{a-1} = W_{\infty}\)</span> as <span class="math inline">\(t \rightarrow \infty\)</span>, <span class="math display">\[\tilde\alpha = W_{\infty}(1 - \rho). \]</span> Substitution of equation 3 into equation 1 solves for <span class="math inline">\(\rho\)</span>, <span class="math display">\[\rho = \dfrac{w_a - W_{\infty}}{w_{a-1} - W_{\infty}}.\]</span> In MSEtool, <span class="math inline">\(a = k+2\)</span> is arbitrarily chosen to calculate <span class="math inline">\(\rho\)</span>, where <span class="math inline">\(k\)</span> is the age of knife-edge selectivity. From catch and effort data alone, the age corresponding to the length of 50% maturity is chosen for <span class="math inline">\(k\)</span>.</p>
+</div>
+<div id="dynamics-equations" class="section level2">
+<h2><span class="header-section-number">2.2</span> Dynamics equations</h2>
+<p>The population biomass <span class="math inline">\(B_t\)</span> and abundance <span class="math inline">\(N_t\)</span> in year <span class="math inline">\(t\)</span> is given by <span class="math display">\[ \begin{align}
+B_t &amp;= s_{t-1}(\tilde{\alpha} N_{t-1} + \rho B_{t-1}) + w_k R_t\\
+N_t &amp;= s_{t-1} N_{t-1} + R_t,
+\end{align}\]</span> where <span class="math inline">\(R_t\)</span> is the recruitment (defined in the next section) at age <span class="math inline">\(k\)</span> and <span class="math inline">\(w_k\)</span> is the weight of recruits. Survival <span class="math inline">\(s_t\)</span> is defined as <span class="math display">\[ s_t = (1 - u_t)\exp(-M), \]</span> where <span class="math inline">\(u_t\)</span> is the annual harvest rate and <span class="math inline">\(M\)</span> is the instantaneous natural mortality rate. By conditioning the model on effort (as the ratio of the catch and index), the harvest rate is <span class="math display">\[ u_t = 1 - \exp(-qf_t), \]</span> where <span class="math inline">\(q\)</span> is the estimated catchability coefficient and <span class="math inline">\(f_t\)</span> is the effort in year <span class="math inline">\(t\)</span>.</p>
+<p>The predicted catch is <span class="math display">\[\hat{C}_t = \hat{u}_t \hat{B}_t ,\]</span> where the circumflex <span class="math inline">\(^\)</span> denotes the model estimate.</p>
+<p>The log-likelihood <span class="math inline">\(L\)</span> of the observed catch <span class="math inline">\(C_t\)</span> over years <span class="math inline">\(t = 1, ..., T\)</span>, assuming a lognormal distribution, is <span class="math display">\[L(C_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(C_t/\hat{C}_t)}{\sigma}\right)^2,\]</span> where <span class="math inline">\(\sigma\)</span> is the standard deviation of the lognormal distribution.</p>
+</div>
+<div id="stock-recruit-parameters" class="section level2">
+<h2><span class="header-section-number">2.3</span> Stock-recruit parameters</h2>
+<div id="beverton-holt-relationship" class="section level3">
+<h3><span class="header-section-number">2.3.1</span> Beverton-Holt relationship</h3>
+<p>Assuming a Beverton-Holt stock recruit relationship and spawning occurring after fishing in each annual time step, then recruitment (at age <span class="math inline">\(k\)</span>) in year <span class="math inline">\(t\)</span> is: <span class="math display">\[ R_t = \dfrac{\alpha B_{t-k}(1 - u_{t-k})}{1 + \beta B_{t-k}(1 - u_{t-k})},\]</span> where <span class="math inline">\(B_{t-k}(1-u_{t-k})\)</span> is the population biomass after fishing in year <span class="math inline">\(t-k\)</span> and <span class="math display">\[ \begin{align}
+\alpha &amp;= \dfrac{4hR_0}{(1-h)B_0}\\
+\beta &amp;= \dfrac{5h-1}{(1-h)B_0},
+\end{align}\]</span></p>
+<p>Virgin recruitment <span class="math inline">\(R_0\)</span> and steepness <span class="math inline">\(h\)</span> are estimated parameters, with virgin biomass <span class="math inline">\(B_0\)</span> calculated as <span class="math display">\[B_0 =  R_0 \phi_0.\]</span> The virgin biomass per recruit <span class="math inline">\(\phi_0\)</span> is <span class="math display">\[\phi_0 = \dfrac{\tilde{\alpha} \exp(-M) + w_k (1 - \exp(-M))}{1 - \rho \exp(-M)}\]</span> and is obtained by solving the equilibrium equation for biomass, <span class="math inline">\(B_0 = \exp(M)(\tilde{\alpha}N_0 + \rho B_0) + w_k R_0\)</span>, is solved for <span class="math inline">\(B_0/R_0\)</span>, with <span class="math inline">\(N_0 = R_0/(1−\exp(-M))\)</span>.</p>
+</div>
+<div id="ricker-equation" class="section level3">
+<h3><span class="header-section-number">2.3.2</span> Ricker equation</h3>
+<p>Assuming a Ricker stock-recruit relationship, the recruitment is <span class="math display">\[ R_t = \alpha B_{t-k}(1 - u_{t-k})\exp[-\beta B_{t-k}(1 - u_{t-k})],\]</span> where <span class="math display">\[ \begin{align}
+\alpha &amp;= \dfrac{(5h)^{1.25} R_0}{B_0}\\
+\beta &amp;= \dfrac{5}{4B_0}\log(5h),
+\end{align}\]</span></p>
+<p>and <span class="math inline">\(B_0\)</span> is calculated as in equation 14.</p>
+</div>
+</div>
+<div id="state-space-version-dd_ss" class="section level2">
+<h2><span class="header-section-number">2.4</span> State-space version (DD_SS)</h2>
+<p>In the state-space version, annual recruitment deviates from the stock-recruit relationship are estimated. The recruitment in year <span class="math inline">\(t\)</span> is <span class="math display">\[ R_t = \dfrac{\alpha B_{t-k}}{1 + \beta B_{t-k}} \exp(\delta_t - 0.5 \tau^2)\]</span> or <span class="math display">\[ R_t = \alpha B_{t-k}\exp(-\beta B_{t-k})\exp(\delta_t - 0.5 \tau^2),\]</span> where <span class="math inline">\(\delta_t \sim N(0, \tau^2)\)</span> are recruitment deviations in lognormal space and <span class="math inline">\(\tau\)</span> is the standard deviation of the recruitment deviations.</p>
+<p>The log-likelihood of the log-recruitment deviations <span class="math inline">\(\delta_t\)</span> over years <span class="math inline">\(t=k,\ldots...,T\)</span> is <span class="math display">\[L(\delta_t) \propto -(T-k) \log\tau - 0.5\sum_{t=k}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.\]</span></p>
+</div>
+</div>
+<div id="surplus-production-sp-model" class="section level1">
+<h1><span class="header-section-number">3</span> Surplus-production (SP) model</h1>
+<div id="dynamics-equations-1" class="section level2">
+<h2><span class="header-section-number">3.1</span> Dynamics equations</h2>
+<p>The surplus production model uses the Fletcher (1978) formulation. The biomass <span class="math inline">\(B_t\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[B_t = B_{t-1} + P_{t-1} - C_{t-1},\]</span> where <span class="math inline">\(C_t\)</span> is the observed catch and <span class="math inline">\(P_t\)</span> is the surplus production given by: <span class="math display">\[P_t = \gamma MSY \left(\dfrac{B_t}{K}-\left[\dfrac{B_t}{K}\right]^n\right), \]</span> where <span class="math inline">\(K\)</span> is the carrying capacity, <span class="math inline">\(MSY\)</span> is the estimated maximum sustainable yield, and <span class="math inline">\(n\)</span> is the parameter that controls shape of the production curve, and <span class="math inline">\(\gamma\)</span> is <span class="math display">\[\gamma = \dfrac{1}{n-1}n^{n/(n-1)}.\]</span></p>
+<p>By conditioning the model on observed catch, the predicted index <span class="math inline">\(\hat{I}_t\)</span> is <span class="math display">\[\hat{I}_t = \hat{q} \hat{B}_t \]</span> and the harvest rate is <span class="math display">\[\hat{u}_t = \dfrac{C_t}{\hat{B}_t}.\]</span> The log-likelihood <span class="math inline">\(L\)</span> of the observed index <span class="math inline">\(I_t\)</span> over years <span class="math inline">\(t = 1, ..., T\)</span>, assuming a lognormal distribution, is <span class="math display">\[L(I_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(I_t/\hat{I}_t)}{\sigma}\right)^2,\]</span></p>
+</div>
+<div id="derivation-of-sp-model-parameters-from-msy-and-umsy-estimates" class="section level2">
+<h2><span class="header-section-number">3.2</span> Derivation of SP model parameters from MSY and UMSY estimates</h2>
+<p>From estimates of leading parameters <span class="math inline">\(u_{MSY}\)</span> and <span class="math inline">\(MSY\)</span>, the biomass <span class="math inline">\(B_{MSY}\)</span> at <span class="math inline">\(MSY\)</span> is <span class="math display">\[B_{MSY} = \dfrac{MSY}{u_{MSY}},\]</span> the carrying capacity <span class="math inline">\(K\)</span> is <span class="math display">\[K = n^{1/(n-1)} B_{MSY} ,\]</span> and the intrinsic rate of population increase <span class="math inline">\(r\)</span> is <span class="math display">\[ r = n u_{MSY}.\]</span> The production parameter <span class="math inline">\(n\)</span> is typically fixed and the model has a symmetric productive curve (<span class="math inline">\(B_{MSY}/K = 0.5\)</span>) when <span class="math inline">\(n = 2\)</span>.</p>
+</div>
+<div id="state-space-version-sp_ss" class="section level2">
+<h2><span class="header-section-number">3.3</span> State-space version (SP_SS)</h2>
+<p>In the state-state version, annual biomass deviates are estimated as random effects. Similar to Meyer and Millar (1999), the biomass <span class="math inline">\(B_t\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[B_t = (B_{t-1} + P_{t-1} - C_{t-1})\exp(\delta_t - 0.5 \tau^2),\]</span> where <span class="math inline">\(\delta_t \sim N(0, \tau^2)\)</span> are biomass deviations in lognormal space and <span class="math inline">\(\tau\)</span> is the standard deviation of the biomass deviations.</p>
+<p>The log-likelihood of the deviations <span class="math inline">\(\delta_t\)</span> is <span class="math display">\[L(\delta_t) \propto -T \log\tau - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.\]</span> # Statistical catch-at-age model (SCA and SCA2) ## Dynamics equations The statistical catch-at-age model used in MSEtool assumes pulse fishing at the beginning of each annual time-step, following the parameterization of Forrest et al. (2008). The model uses a time series of total catch (in weight), index, and catch-at-age observations, as well as information on weight, maturity, natural mortality at age.</p>
+<p>The population abundance <span class="math inline">\(N_{a,t}\)</span> of age <span class="math inline">\(a\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[ N_{a,t} = 
+\begin{cases} 
+      R_t &amp; a = 1\\
+      N_{a-1,t-1} (1 - v_{a-1} u_{t-1}) \exp(-M_{a-1}) &amp; a = 2, \ldots, A-1\\
+      N_{a-1,t-1} (1 - v_{a-1} u_{t-1}) \exp(-M_{a-1}) + N_{a,t-1} (1 - v_a u_{t-1}) \exp(-M_a) &amp; a = A 
+\end{cases},
+\]</span> where <span class="math inline">\(R_t\)</span> is the recruitment (age-1), <span class="math inline">\(v_a\)</span> is the vulnerability at age <span class="math inline">\(a\)</span>, <span class="math inline">\(u_t\)</span> is the annual harvest rate, <span class="math inline">\(M_a\)</span> is the instantaneous natural mortality rate at age <span class="math inline">\(a\)</span>, and <span class="math inline">\(A\)</span> is the maximum age in the model as a plus-group accumulator age.</p>
+<p>Assuming logistic vulnerability, the vulnerability is: <span class="math display">\[v_a = \left[1 + \exp\left(-\log(19) \dfrac{a - a_{50}}{a_{95} - a_{50}}\right)\right]^{-1}, \]</span> where <span class="math inline">\(a_{50}\)</span> and <span class="math inline">\(a_{95}\)</span> are the estimated ages of 50% and 95% vulnerability, respectively.</p>
+<p>Assuming dome vulnerability, a double-normal formulation is used: <span class="math display">\[ v_a = 
+\begin{cases} 
+      f(a; \mu_{asc}, \sigma_{asc}) &amp; a \le \mu_{asc}\\
+      1 &amp; \mu_{asc} \lt a \le \mu_{des}\\
+      f(a; \mu_{des}, \sigma_{des}) &amp; a \gt \mu_{des}
+\end{cases},
+\]</span> where <span class="math inline">\(f(a; \mu, \sigma)\)</span> is the normal probability density function scaled to one at <span class="math inline">\(\mu\)</span>. The <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> for both the ascending and descending limbs of the double-normal equation are estimated parameters.</p>
+<p>The vulnerable biomass <span class="math inline">\(VB_t\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[VB_t = \sum_{a=1}^A v_a w_a N_{a,t},\]</span> where weight-at-age <span class="math inline">\(w_a\)</span> is given by <span class="math display">\[w_a = W_{\infty}(1 - \exp[K\{a-a_0\}])^b.\]</span></p>
+<p>The mature spawning biomass <span class="math inline">\(E_t\)</span> is given by <span class="math display">\[E_t = \sum_{a=1}^A m_a w_a N_{a,t},\]</span> where maturity at age <span class="math inline">\(m_a\)</span> is <span class="math display">\[m_a = \left[1 + \exp\left(-\log(19) \dfrac{a - \tilde{a}_{50}}{\tilde{a}_{95} - \tilde{a}_{50}}\right)\right]^{-1}, \]</span> where <span class="math inline">\(\tilde{a}_{50}\)</span> and <span class="math inline">\(\tilde{a}_{95}\)</span> are the ages of 50% and 95% maturity, respectively.</p>
+<p>By conditioning the model on catch in weight <span class="math inline">\(Y_t\)</span>, the estimated annual harvest rate <span class="math inline">\(\hat{u}_t\)</span> is <span class="math display">\[\hat{u}_t = Y_t / \widehat{VB}_t .\]</span> The estimated catch at age <span class="math inline">\(\hat{C}_{a,t}\)</span> is <span class="math display">\[\hat{C}_{a,t} = \hat{v}_a \hat{u}_t \hat{N}_{a,t}.\]</span> The log-likelihood <span class="math inline">\(L\)</span> of the observed catch at age <span class="math inline">\(C_{a,t}\)</span> over years <span class="math inline">\(t = 1, ..., T\)</span>, assuming a multinomial distribution, is <span class="math display">\[L(C_{a,t})\propto \sum_{t=1}^T \left(N_t \sum_{a=1}^A p_{a,t} \log(\hat{p}_{a,t}) \right),\]</span> where <span class="math inline">\(N_t\)</span> is the sample size of catch-at-age observations in year <span class="math inline">\(t\)</span>, <span class="math inline">\(p_{a,t}\)</span> and <span class="math inline">\(\hat{p}_{a,t}\)</span> are the observed and predicted proportions of catch-at-age.</p>
+<p>The estimated index <span class="math inline">\(\hat{I}_t\)</span>, assuming that it is an index for total biomass, is <span class="math display">\[ \hat{I}_t = \hat{q} \hat{B}_t,\]</span> where <span class="math inline">\(B_t = \sum_{a=1}^A w_a N_{a,t}\)</span>. A function argument allows for the user to specify that the observed index is for vulnerable or spawning biomass.</p>
+<p>The log-likelihood <span class="math inline">\(L\)</span> of the observed index <span class="math inline">\(I_t\)</span> over years <span class="math inline">\(t = 1, ..., T\)</span>, assuming a lognormal distribution, is <span class="math display">\[L(I_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(I_t/\hat{I}_t)}{\sigma}\right)^2.\]</span></p>
+</div>
+<div id="estimation-of-recruitment-and-reference-points" class="section level2">
+<h2><span class="header-section-number">3.4</span> Estimation of recruitment and reference points</h2>
+<p>There are two variants of the statistical catch-at-age model for estimation of recruitment and reference points. In function <code>SCA</code>, productivity parameters <span class="math inline">\(R_0\)</span> and <span class="math inline">\(h\)</span> are estimated in the assessment model. Annual recruitment is estimated as deviations from the resulting stock-recruitment relationship within the model. MSY reference points are derived from the estimates of <span class="math inline">\(R_0\)</span> and <span class="math inline">\(h\)</span>.</p>
+<p>In <code>SCA2</code>, no stock-recruit relationship is assumed in the assessment model, i.e., annual recruitment is estimated as deviations from the mean recruitment over the observed time series, similar to Cadigan (2016). After the assessment, a stock-recruit function can be fitted post-hoc to the recruitment and spawning stock biomass estimates from the assessment model to obtain MSY reference points.</p>
+<div id="stock-recruit-function-in-assessment-model-sca" class="section level3">
+<h3><span class="header-section-number">3.4.1</span> Stock-recruit function in assessment model (SCA)</h3>
+<div id="beverton-holt-stock-recruit-function" class="section level4">
+<h4><span class="header-section-number">3.4.1.1</span> Beverton-Holt stock-recruit function</h4>
+<p>Recruitment <span class="math inline">\(R_t\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[ R_t = \dfrac{\alpha E_{t-1}}{1 + \beta E_{t-1}} \exp(\delta_t - 0.5 \tau^2),\]</span> where <span class="math inline">\(\delta_t \sim N(0, \tau^2)\)</span> are recruitment deviations from the stock-recruit relationship in lognormal space and <span class="math inline">\(\tau\)</span> is the standard deviation of the recruitment deviations. Parameters <span class="math inline">\(\alpha\)</span> and <span class="math inline">\(\beta\)</span> are defined as <span class="math display">\[ \begin{align}
+\alpha &amp;= \dfrac{4hR_0}{(1-h)B_0}\\
+\beta &amp;= \dfrac{5h-1}{(1-h)B_0},
+\end{align}\]</span> where <span class="math inline">\(B_0 = R_0 \phi_0\)</span>. The biomass per recruit <span class="math inline">\(\phi_0\)</span> is calculated as <span class="math inline">\(\phi_0 = \sum_{a=1}^A m_a w_a l_a\)</span>, where <span class="math display">\[
+l_a = 
+\begin{cases} 
+      1 &amp; a = 1\\
+      l_{a-1} \exp(-M_{a-1}) &amp; a = 2, \ldots, A-1\\
+      \dfrac{l_{a-1} \exp(-M_{a-1})}{1 - \exp(-M_a)} &amp; a = A \\
+\end{cases}. 
+\]</span></p>
+</div>
+<div id="ricker-stock-recruit-function" class="section level4">
+<h4><span class="header-section-number">3.4.1.2</span> Ricker stock-recruit function</h4>
+<p>Recruitment <span class="math inline">\(R_t\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[ R_t = \alpha E_{t-1} \exp(-\beta E_{t-1}) \exp(\delta_t - 0.5 \tau^2),\]</span> where <span class="math display">\[ \begin{align}
+\alpha &amp;= \dfrac{(5h)^{1.25} R_0}{B_0}\\
+\beta &amp;= \dfrac{5}{4B_0}\log(5h).
+\end{align}\]</span></p>
+</div>
+</div>
+<div id="no-stock-recruit-function-in-assessment-model-sca2" class="section level3">
+<h3><span class="header-section-number">3.4.2</span> No stock-recruit function in assessment model (SCA2)</h3>
+<p>Recruitment <span class="math inline">\(R_t\)</span> in year <span class="math inline">\(t\)</span> is <span class="math display">\[R_t = \bar{R} \exp(\delta_t - 0.5 \tau^2), \]</span> where <span class="math inline">\(\delta_t \sim N(0, \tau^2)\)</span> are recruitment deviations in lognormal space from the estimated mean recruitment <span class="math inline">\(\bar{R}\)</span> and <span class="math inline">\(\tau\)</span> is the standard deviation of the recruitment deviations. Typically, <span class="math inline">\(\tau\)</span> is set to 1 so that recruitment is estimated almost as free parameters (Cadigan, 2016).</p>
+</div>
+<div id="likelihood-of-recruitment-deviations" class="section level3">
+<h3><span class="header-section-number">3.4.3</span> Likelihood of recruitment deviations</h3>
+<p>The log-likelihood of the log-recruitment deviations <span class="math inline">\(\delta_t\)</span> over years <span class="math inline">\(t=1,\ldots...,T\)</span> is <span class="math display">\[L(\delta_t) \propto -T \log\tau - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.\]</span></p>
+</div>
+</div>
+</div>
+<div id="references" class="section level1">
+<h1><span class="header-section-number">4</span> References</h1>
+<p>Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and variable natural mortality rates. Canadian Journal of Fisheries and Aquatic Science 72:296-308.</p>
+<p>Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify fisheries stock status using only fisheries catch data. Fisheries Research 119-120:66-79.</p>
+<p>Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.</p>
+<p>Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008. An age-structured model with leading management parameters, incorporating age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic Science 65:286-296.</p>
+<p>Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice, Dynamics and Uncertainty. Chapman and Hall, New York.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
