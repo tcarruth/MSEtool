@@ -7,24 +7,33 @@
 #' function in DLMtool.
 #'
 #' @param classy A class of object (character string, e.g. 'Fleet')
+#' @param all_avail Logical. If TRUE, function will return all objects of class \code{classy} available to user.
+#' If FALSE, returns only those objects included in MSEtool.
 #' @author Q. Huynh
 #' @examples
 #' \donttest{
 #' avail("Assess")
 #' avail("HCR")
 #' avail("Stock")
+#' avail("MP")
+#' avail("MP", all_avail = FALSE)
 #' }
 #' @export
-avail <- function(classy) {
+avail <- function(classy, all_avail = TRUE) {
   temp <- try(class(classy), silent = TRUE)
-  if (class(temp) == "try-error") classy <- deparse(substitute(classy))
-  if (temp == "function") classy <- deparse(substitute(classy))
+  if(class(temp) == "try-error") classy <- deparse(substitute(classy))
+  if(temp == "function") classy <- deparse(substitute(classy))
 
-  temp <- c(ls("package:MSEtool")[vapply(ls("package:MSEtool"), getclass, logical(1), classy = classy)],
-            ls(envir = .GlobalEnv)[vapply(ls(envir = .GlobalEnv), getclass, logical(1), classy = classy)])
-  temp_DLMtool <- try(DLMtool::avail(classy), silent = TRUE)
+  temp <- ls("package:MSEtool")[vapply(ls("package:MSEtool"), getclass, logical(1), classy = classy)]
 
-  if(!inherits(temp_DLMtool, "try-error")) temp <- unique(c(temp, temp_DLMtool))
+  if(all_avail) {
+    temp_globalenv <- ls(envir = .GlobalEnv)[vapply(ls(envir = .GlobalEnv), getclass, logical(1), classy = classy)]
+    temp <- c(temp, temp_globalenv)
+
+    temp_DLMtool <- try(DLMtool::avail(classy), silent = TRUE)
+    if(!inherits(temp_DLMtool, "try-error")) temp <- unique(c(temp, temp_DLMtool))
+  }
+
   if(length(temp) < 1) stop("No objects of class '", classy, "' found", call. = FALSE)
   return(temp)
 }
