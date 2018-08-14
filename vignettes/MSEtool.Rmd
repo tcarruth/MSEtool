@@ -175,9 +175,17 @@ abline(v = c(0.1, 0.4), col = "red", lty = 2)
 
 _Figure 4: The 40-10 harvest control rule prescribes an additional reduction in the TAC based on estimated spawning depletion._
 
-# Creating MPs from assessments and HCRs
+# Data-rich management procedures (MPs)
 
-The `make_MP` function is a convenient way to stitch together a MP from an assessment model and HCR. The resulting function can then be passed to `DLMtool::runMSE()` for a management procedure.
+## Creating MPs from assessment models and HCRs
+
+MSEtool comes with a set of pre-built data-rich MPs:
+```{r}
+avail("MP", all_avail = FALSE)
+```
+These MPs use an assessment model and a harvest control rule to come up with a management recommendation (TAC).
+
+Additionally, the `make_MP` function is a convenient way to stitch together additional MPs from an assessment model and HCR. This is handy if an assessment model with a different configuration than the default is needed or a different harvest control rule is desired. The resulting function can then be passed to `DLMtool::runMSE()` as a management procedure.
 
 ```{r, eval = FALSE}
 DD_MSY <- make_MP(DD_TMB, HCR_MSY, ...)
@@ -249,7 +257,7 @@ _Figure 6. Convergence diagnostics (return by TMB objects and nlminb function) f
 
 _Figure 7. Retrospective analysis of the Delay-Difference model in the DD_MSY MP during the MSE for simulation #1. Operating model (true) values of spawning biomass (SSB), relative spawning biomass (SSB_SSBMSY), spawning biomass depletion (SSB_SSB0), fishing mortality (F), relative F (F_FMSY), and vulnerable bimoass (VB) are in dark black. Colored lines indicate model estimates sequentially over the projection years. Note that this assessment model assumes the vulnerable biomass to be the spawning biomass._
 
-Once it is determined that the MSEtool assessment models are performing adequately (no major convergence issues), then the performance of the MPs that use these models can be evaluated with the DLMtool package.
+Once it is determined that the MSEtool assessment models are performing adequately (no major convergence issues), then the performance of the MPs that use these models can be evaluated within the DLMtool package.
 
 ## Obtaining management recommendations
 
@@ -262,7 +270,7 @@ plot(snapper_TAC)
 ```
 <img src="DD_TAC.png">
 
-_Figure 8. Stochastic TAC recommendations from the Delay-Difference model with two harvest control rules. When the 40-10 harvest control rule is applied, the prescribed TAC is close to zero because the estimated terminal year biomass is 0.13 in the assessment model._
+_Figure 8. Stochastic TAC recommendations from the Delay-Difference model with two harvest control rules. When the 40-10 harvest control rule is applied, the prescribed TAC is close to zero because the assessment model estimated the terminal year biomass depletion to be 0.13 (close to the limit reference point)._
 
 
 # Acknowledgements

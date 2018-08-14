@@ -4,14 +4,15 @@
 \alias{calculate_TAC}
 \title{Calculate TAC from Assessment object}
 \usage{
-calculate_TAC(Assessment, reps)
+calculate_TAC(Assessment, reps, MSY_frac = 1)
 }
 \arguments{
 \item{Assessment}{An Assessment object with estimates of UMSY or FMSY and
 terminal year vulnerable biomass.}
 
-\item{reps}{The number of stochastic draws of UMSY or FMSY (Set equal to one
-for deterministic calculations).}
+\item{reps}{The number of stochastic draws of UMSY or FMSY.}
+
+\item{MSY_frac}{The fraction of FMSY or UMSY for calculating the TAC (e.g. MSY_frac = 0.75 fishes at 75\% of FMSY).}
 }
 \value{
 A vector of length \code{reps} of stochastic samples of TAC recommendation.

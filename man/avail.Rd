@@ -4,10 +4,13 @@
 \alias{avail}
 \title{What objects of this class are available}
 \usage{
-avail(classy)
+avail(classy, all_avail = TRUE)
 }
 \arguments{
 \item{classy}{A class of object (character string, e.g. 'Fleet')}
+
+\item{all_avail}{Logical. If TRUE, function will return all objects of class \code{classy} available to user.
+If FALSE, returns only those objects included in MSEtool.}
 }
 \description{
 Generic class finder
@@ -22,6 +25,8 @@ function in DLMtool.
 avail("Assess")
 avail("HCR")
 avail("Stock")
+avail("MP")
+avail("MP", all_avail = FALSE)
 }
 }
 \author{
