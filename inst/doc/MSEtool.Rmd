@@ -47,6 +47,7 @@ pre { /* Code block */
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 knitr::opts_chunk$set(dpi=85)
 options(width = 650)
+library(MSEtool)
 ```
 
 <br>
