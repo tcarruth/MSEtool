@@ -2,9 +2,9 @@
 % Please edit documentation in R/HCRs.R
 \name{HCR_MSY}
 \alias{HCR_MSY}
-\title{A harvest control rule to fish at maximum sustainable yield.}
+\title{Harvest control rule to fish at some fraction of maximum sustainable yield}
 \usage{
-HCR_MSY(Assessment, reps = 1, ...)
+HCR_MSY(Assessment, reps = 1, MSY_frac = 1, ...)
 }
 \arguments{
 \item{Assessment}{An object of class \linkS4class{Assessment} with estimates of
@@ -12,19 +12,26 @@ FMSY or UMSY and vulnerable biomass in terminal year.}
 
 \item{reps}{The number of stochastic samples of the TAC recommendation.}
 
-\item{...}{Miscellaneous arguments (not currently used).}
+\item{MSY_frac}{The fraction of FMSY or UMSY for calculating the TAC (e.g. MSY_frac = 0.75 fishes at 75\% of FMSY).}
+
+\item{...}{Miscellaneous arguments.}
 }
 \value{
 An object of class \linkS4class{Rec} with the TAC recommendation.
 }
 \description{
 A simple control rule that specifies the total allowable catch (TAC) to be the
-product of current vulnerable biomass (VB_final) and FMSY (or UMSY).
+product of current vulnerable biomass and UMSY.
 }
 \examples{
-# create an MP to run in closed-loop MSE
+# create an MP to run in closed-loop MSE (fishes at UMSY)
 DD_MSY <- make_MP(DD_TMB, HCR_MSY)
 class(DD_MSY)
+
+# The same MP which fishes at 75\% of UMSY
+DD_75MSY <- make_MP(DD_TMB, HCR_MSY, MSY_frac = 0.75)
+class(DD_MSY)
+
 \dontrun{
 myOM <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "DD_MSY"))
 }

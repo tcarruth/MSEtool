@@ -20,7 +20,7 @@ HCR_FB(Brel, Frel, Bpow = 2, Bgrad = 1, Fpow = 1, Fgrad = 1)
 \item{Fgrad}{improper fraction: target Fishing rate relative to FMSY}
 }
 \value{
-a TAC or TAE adjustement factor.
+a TAC or TAE adjustment factor.
 }
 \description{
 A Harvest Control Rule using B/BMSY and F/FMSY to adjust TAC or TAE.
