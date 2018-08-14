@@ -37,6 +37,8 @@ SP_4010(x, Data, reps = 1, ...)
 \item{Data}{An object of class Data}
 
 \item{reps}{Numeric, the number of stochastic replicates for the management advice.}
+
+\item{...}{Additional arguments passed to the Assessment model.}
 }
 \value{
 An object of class Rec which contains the management recommendation.
