@@ -9,6 +9,7 @@
 #' @param x A position in the Data object.
 #' @param Data An object of class Data
 #' @param reps Numeric, the number of stochastic replicates for the management advice.
+#' @param ... Additional arguments passed to the Assessment model.
 #'
 #' @examples
 #' \dontrun{
