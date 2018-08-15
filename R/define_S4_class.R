@@ -140,7 +140,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' plot(output, save_figure = FALSE, save_dir = tempdir())
 #' }
 #' @exportMethod plot
-setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = getwd()) {
+setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = tempdir()) {
   if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge?.")
   old.warning <- options()$warn
   options(warn = -1)
