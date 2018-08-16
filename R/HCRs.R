@@ -129,14 +129,14 @@ class(HCR_ramp) <- "HCR"
 
 #' @describeIn HCR_ramp Common U.S. west coast control rule (LRP and TRP of 0.1 and 0.4 spawning depletion, respectively).
 #' @export
-HCR40_10 <- function(Assessment, reps = 1) HCR_ramp(Assessment, reps, LRP = 0.1, TRP = 0.4)
+HCR40_10 <- function(Assessment, reps = 1, ...) HCR_ramp(Assessment, reps, LRP = 0.1, TRP = 0.4)
 class(HCR40_10) <- "HCR"
 
 
 
 #' @describeIn HCR_ramp More conservative than 40-10, with LRP and TRP of 0.2 and 0.6 spawning depletion, respectively).
 #' @export
-HCR60_20 <- function(Assessment, reps = 1) HCR_ramp(Assessment, reps, LRP = 0.2, TRP = 0.6)
+HCR60_20 <- function(Assessment, reps = 1, ...) HCR_ramp(Assessment, reps, LRP = 0.2, TRP = 0.6)
 class(HCR60_20) <- "HCR"
 
 
