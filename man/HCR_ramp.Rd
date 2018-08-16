@@ -9,9 +9,9 @@
 HCR_ramp(Assessment, reps = 1, LRP, TRP, RP_type = c("SSB_SSB0",
   "SSB_SSBMSY"), ...)
 
-HCR40_10(Assessment, reps = 1)
+HCR40_10(Assessment, reps = 1, ...)
 
-HCR60_20(Assessment, reps = 1)
+HCR60_20(Assessment, reps = 1, ...)
 }
 \arguments{
 \item{Assessment}{An object of class \linkS4class{Assessment} with estimates of
