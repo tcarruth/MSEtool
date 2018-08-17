@@ -1,9 +1,18 @@
 ------------------------------------------------------------------------
+MSEtool 1.0.1
+------------------------------------------------------------------------
+Minor edits, including:
+- A generic function for ramped harvest control rules (`HCR_ramp`) is now included. Users can input the desired limit and target reference points.
+- By default, nine data-rich MPs are now included in the package. See the help documentation: ?`Data-rich-MP`
+- `make_MP` adds dependencies to the MP so that `DLMtool::Required` returns the appropriate dependencies. Dependencies are dynamic based on the configuration of the assessment model. For example, `Data@steep` is a dependency for a SCA-based model only if steepness is fixed.
+
+
+------------------------------------------------------------------------
 MSEtool 1.0.0
 ------------------------------------------------------------------------
 
 - Initial CRAN release.
 - Assessment models: Delay-Difference (DD_TMB, DD_SS); Surplus Production (SP, SP_SS); Statistical Catch-at-Age (SCA, SCA2)
 - Harvest control rules: HCR_MSY, HCR40_10, HCR60_20
-- simmov function for multiple-area movement models (age-independent)
+- `simmov` function for multiple-area movement models (age-independent)
 - Functions for converting Stock Synthesis and iSCAM assessments to OM and Data objects (classes inherited from DLMtool)

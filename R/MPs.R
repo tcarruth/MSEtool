@@ -12,6 +12,8 @@
 #' @param ... Additional arguments passed to the Assessment model.
 #'
 #' @examples
+#' avail("MP", all_avail = FALSE)
+#'
 #' \dontrun{
 #' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "SCA_MSY", "SCA_4010"))
 #' }
