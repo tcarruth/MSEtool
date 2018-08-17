@@ -7,17 +7,20 @@ r:
 sudo: false
 cache: packages
 
-addons:
-  apt:
-    packages:
-      - valgrind
+#addons:
+#  apt:
+#    packages:
+#      - valgrind
 
-#r_build_args: "--no-build-vignettes"
+r_build_args: "--no-build-vignettes --no-manual"
+r_check_args: "--as-cran --no-manual --run-donttest"
+warnings_are_errors: false
+
 #r_check_args: "--as-cran --run-donttest --use-valgrind"
-env:
-  - VALGRIND_OPTS="--leak-check=full --track-origins=yes"
+#env:
+#  - VALGRIND_OPTS="--leak-check=full --track-origins=yes"
 
-script:
-  - |
-    travis_wait 42 R CMD build . --no-build-vignettes
-    travis_wait 59 R CMD check MSEtool*tar.gz --as-cran --use-valgrind
+#script:
+#  - |
+#    travis_wait 42 R CMD build . --no-build-vignettes
+#    travis_wait 59 R CMD check MSEtool*tar.gz --as-cran --use-valgrind
