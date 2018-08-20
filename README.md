@@ -1,3 +1,5 @@
+[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/MSEtool)](https://CRAN.R-project.org/package=MSEtool)
+
 # MSEtool
 
 MSEtool is an extension of the DLMtool R package and provides simulation tools for management strategy evaluation informing data-rich fisheries. 
