@@ -182,23 +182,31 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   } else {
     SpR0 <- SSB0/(R0 * ifelse(season_as_years, nseas, 1))
   }
+
   # In season as year model, R0 is the seasonal rate of recruitment, must adjust for annual model
   OM@R0 <- R0 * ifelse(season_as_years, nseas, 1)
 
+  # Steepness
   if(replist$SRRtype == 3 || replist$SRRtype == 6) { # Beverton-Holt SR
     SR <- "BH"
     OM@SRrel <- 1L
-  }
-  if(replist$SRRtype == 2) {
+    steep <- replist$parameters[grepl("steep", rownames(replist$parameters)), ]
+    hs <- rnorm(nsim, steep$Value, ifelse(is.na(steep$Parm_StDev), 0, steep$Parm_StDev))
+    hs[hs < 0.2] <- 0.2
+    hs[hs > 0.99] <- 0.99
+  } else if(replist$SRRtype == 2) {
     SR <- "Ricker"
     OM@SRrel <- 2L
+    steep <- replist$parameters[grepl("SR_Ricker", rownames(replist$parameters)), ]
+    hs <- rnorm(nsim, steep$Value, ifelse(is.na(steep$Parm_StDev), 0, steep$Parm_StDev))
+    hs[hs < 0.2] <- 0.2
+  } else {
+    message("Steepness value not found. Estimating steepness by re-sampling R and SSB estimates from assessment.")
+    hs <- SRopt(nsim, SSB, rec, SpR0, plot = FALSE, type = SR)
   }
 
-  hs <- SRopt(nsim, SSB, rec, SpR0, plot = FALSE, type = SR)
   OM@cpars$hs <- hs
   OM@h <- quantile(hs, c(0.025, 0.975))
-
-  # Continue here for parameterizing season_as_years
 
   # Recruitment deviations --------------------------------------
 

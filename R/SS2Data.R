@@ -479,8 +479,11 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
   message(paste0("Data@Ref = ", Data@Ref, " (", Data@Ref_type, ")"))
 
   #### Steepness --------------------------------------
-  steep <- replist$parameters[grepl("steep", rownames(replist$parameters)), ]
-  if(nrow(steep) == 1) {
+  if(replist$SRRtype == 3 || replist$SRRtype == 6) { # Beverton-Holt SR
+    steep <- replist$parameters[grepl("steep", rownames(replist$parameters)), ]
+    Data@steep <- steep$Value
+  } else if(replist$SRRtype == 2) { # Ricker
+    steep <- replist$parameters[grepl("SR_Ricker", rownames(replist$parameters)), ]
     Data@steep <- steep$Value
   } else {
     SR_ind <- match(mainyrs, replist$recruit$year)
