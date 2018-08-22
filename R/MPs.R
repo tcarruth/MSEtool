@@ -42,9 +42,13 @@ get_dependencies <- function(Assess, arg = list()) {
 
   dep_match <- pmatch(names(dep_args), names(formals2)) # From formals
   more_deps <- dep_args[do.call(c, formals2[dep_match])]
-  if(Assess == "DD_SS" && any(names(more_deps) == "fix_sigma")) more_deps$fix_sigma <- "Data@CV_Cat"
-  more_deps <- paste(do.call(c, more_deps), collapse = ", ")
-  paste(c(dep, more_deps), collapse = ", ")
+
+  if(length(more_deps) > 0) {
+    if(Assess == "DD_SS" && any(names(more_deps) == "fix_sigma")) more_deps$fix_sigma <- "Data@CV_Cat"
+    more_deps <- paste(do.call(c, more_deps), collapse = ", ")
+    dep <- paste(c(dep, more_deps), collapse = ", ")
+  }
+  return(dep)
 }
 
 dep_args <- list(fix_h = "Data@steep", fix_sigma = "Data@CV_Ind", fix_tau = "Data@sigmaR")
@@ -249,3 +253,5 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
   class(custom_MP) <- "MP"
   return(custom_MP)
 }
+
+
