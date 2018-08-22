@@ -39,7 +39,7 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
   nsim <- nrow(Data@Cat)
   message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
   dots <- list(...)
-  if(length(dots) > 0) message(paste0("\nAdditional arguments to be provided to ", deparse(substitute(x)), ":\n", paste(names(dots), collapse = "\n")))
+  if(length(dots) > 0) message(paste0("\nAdditional arguments to be provided to ", deparse(substitute(Assess)), ":\n", paste(names(dots), collapse = "\n")))
   Assess <- match.fun(Assess)
   if(!inherits(Assess, "Assess")) stop(paste(deparse(substitute(Assess))), "does not appear to be an Assess function.")
 
@@ -313,5 +313,28 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRU
 }
 
 
+# Assign report objects to DLMenv
+#if(!exists(paste0("diagnostic_", MP), envir = DLMenv)) {
+#  assign(paste0("diagnostic_", MP), vector("list", nsim), envir = DLMenv)
+#}
+#dg_exp <- bquote({
+#  len_diag <- length(.(as.symbol(paste0("diagnostic_", MP)))[[.(x)]])
+#  .(as.symbol(paste0("diagnostic_", MP)))[[.(x)]][[len_diag + 1]] <- get("dg", envir = .(sys.frames()[[length(sys.frames())]]))
+#})
+#eval(dg_exp, envir = DLMenv)
+
+#if(!exists(paste0("Assessment_report_", MP), envir = DLMenv)) {
+#  assign(paste0("Assessment_report_", MP), vector("list", nsim), envir = DLMenv)
+#}
+#Assess_exp <- bquote({
+#  len_Assess <- length(.(as.symbol(paste0("Assessment_report_", MP)))[[.(x)]])
+#  if(len_Assess > 0) {
+#    .(as.symbol(paste0("Assessment_report_", MP)))[[.(x)]][[len_diag + 1]] <- get("Assessment", envir = .(sys.frames()[[length(sys.frames())]]))
+#  } else {
+#    .(as.symbol(paste0("Assessment_report_", MP)))[[.(x)]] <- c(.(as.symbol(paste0("Assessment_report_", MP)))[[.(x)]],
+#                                                                get("Assessment", envir = .(sys.frames()[[length(sys.frames())]])))
+#  }
+#})
+#eval(Assess_exp, envir = DLMenv)
 
 
