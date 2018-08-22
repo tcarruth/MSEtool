@@ -191,6 +191,9 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     SR <- "BH"
     OM@SRrel <- 1L
     steep <- replist$parameters[grepl("steep", rownames(replist$parameters)), ]
+
+    set.seed(42)
+
     hs <- rnorm(nsim, steep$Value, ifelse(is.na(steep$Parm_StDev), 0, steep$Parm_StDev))
     hs[hs < 0.2] <- 0.2
     hs[hs > 0.99] <- 0.99
@@ -198,6 +201,9 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     SR <- "Ricker"
     OM@SRrel <- 2L
     steep <- replist$parameters[grepl("SR_Ricker", rownames(replist$parameters)), ]
+
+    set.seed(42)
+
     hs <- rnorm(nsim, steep$Value, ifelse(is.na(steep$Parm_StDev), 0, steep$Parm_StDev))
     hs[hs < 0.2] <- 0.2
   } else {
