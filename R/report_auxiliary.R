@@ -554,64 +554,6 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   if(!is.null(fit)) fit_prob <- fit/rowSums(fit, na.rm = TRUE)
   else fit_prob <- NULL
 
-  # Annual comps (obs vs. fitted if available)
-  if('annual' %in% plot_type) {
-
-    par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
-    ylim <- c(0, 1.1 * max(obs_prob, fit_prob, na.rm = TRUE))
-    yaxp <- c(0, 1, 4)
-    las <- 1
-    type <- 'o'
-    for(i in 1:length(Year)) {
-      obs.vec <- obs_prob[i, ]
-
-      if(i < (length(Year))) {
-        if(i %% 16 %in% c(1:4)) { # First column
-          yaxt <- 's'
-
-          # First three rows
-          if(i %% 4 %in% c(1:3)) {
-            xaxt <- 'n'
-          } else {
-            xaxt <- 's'
-          }
-        } else { # All other columns
-          if(i %% 4 %in% c(1:3)) { # First three rows
-            xaxt <- yaxt <- 'n'
-          } else {
-            xaxt <- 's'
-          }
-        }
-        plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
-             xaxt = xaxt, yaxt = yaxt, las = las)
-        abline(h = 0, col = 'grey')
-        if(!is.null(fit)) {
-          fit.vec <- fit_prob[i, ]
-          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
-        }
-        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
-      }
-
-      if(i == length(Year)) {
-        xaxt <- 's'
-        if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
-        plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
-             xaxt = xaxt, yaxt = yaxt, las = las)
-        abline(h = 0, col = 'grey')
-        if(!is.null(fit)) {
-          fit.vec <- fit_prob[i, ]
-          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
-        }
-        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
-      }
-      if(i %% 16 == 0 || i == length(Year)) {
-        mtext(data_lab, side = 1, line = 3, outer = TRUE)
-        mtext('Frequency', side = 2, line = 3.5, outer = TRUE)
-      }
-    }
-    return(invisible())
-
-  }
   # Bubble plot (obs)
   if('bubble_data' %in% plot_type) {
     range_obs <- pretty(obs, n = 6)
@@ -661,6 +603,65 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     if(!is.null(fit)) lines(Year[ind2], mupred[ind2], lwd = fit_linewidth, col = fit_color)
 
     return(invisible())
+  }
+
+  # Annual comps (obs vs. fitted if available)
+  if('annual' %in% plot_type) {
+
+    par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
+    ylim <- c(0, 1.1 * max(obs_prob, fit_prob, na.rm = TRUE))
+    yaxp <- c(0, 1, 4)
+    las <- 1
+    type <- 'o'
+    for(i in 1:length(Year)) {
+      obs.vec <- obs_prob[i, ]
+
+      if(i < length(Year)) {
+        if(i %% 16 %in% c(1:4)) { # First column
+          yaxt <- 's'
+
+          # First three rows
+          if(i %% 4 %in% c(1:3)) {
+            xaxt <- 'n'
+          } else {
+            xaxt <- 's'
+          }
+        } else { # All other columns
+          if(i %% 4 %in% c(1:3)) { # First three rows
+            xaxt <- yaxt <- 'n'
+          } else {
+            xaxt <- 's'
+          }
+        }
+        plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
+             xaxt = xaxt, yaxt = yaxt, las = las)
+        abline(h = 0, col = 'grey')
+        if(!is.null(fit)) {
+          fit.vec <- fit_prob[i, ]
+          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
+        }
+        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
+      }
+
+      if(i == length(Year)) {
+        xaxt <- 's'
+        if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
+        plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
+             xaxt = xaxt, yaxt = yaxt, las = las)
+        abline(h = 0, col = 'grey')
+        if(!is.null(fit)) {
+          fit.vec <- fit_prob[i, ]
+          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
+        }
+        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
+      }
+      if(i %% 16 == 0 || i == length(Year)) {
+        mtext(data_lab, side = 1, line = 3, outer = TRUE)
+        mtext('Frequency', side = 2, line = 3.5, outer = TRUE)
+      }
+    }
+    return(invisible())
+
   }
 
   invisible()
