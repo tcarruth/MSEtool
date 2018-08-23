@@ -1,7 +1,7 @@
 Package: MSEtool
 Type: Package
 Title: Management Strategy Evaluation Toolkit
-Version: 1.0.1
+Version: 1.1.0
 Authors@R: c(person("Quang", "Huynh", email = "q.huynh@oceans.ubc.ca", role = "aut"), 
   person("Tom", "Carruthers", email = "t.carruthers@oceans.ubc.ca", role = c("aut", "cre")),
   person("Adrian", "Hordyk", email = "a.hordyk@oceans.ubc.ca", role = "aut"),

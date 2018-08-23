@@ -1,6 +1,10 @@
 ------------------------------------------------------------------------
-MSEtool 1.0.1
+MSEtool 1.1.0
 ------------------------------------------------------------------------
+New additions, including:
+- Re-parameterization of dome selectivity in SCA so that parameters are more intuitive.
+- Additional argument in SCA for lognormal distribution for age comps.
+
 Minor edits, including:
 - A generic function for ramped harvest control rules (`HCR_ramp`) is now included. Users can input the desired limit and target reference points.
 - By default, nine data-rich MPs are now included in the package. See the help documentation: ?`Data-rich-MP`
