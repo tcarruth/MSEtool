@@ -543,6 +543,10 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   }
   N <- round(N, 1)
 
+  obs_prob_all <- obs/rowSums(obs, na.rm = TRUE)
+  if(!is.null(fit)) fit_prob_all <- fit/rowSums(fit, na.rm = TRUE)
+  else fit_prob_all <- NULL
+
   # subset
   #ind <- rowSums(obs, na.rm = TRUE) > 0
   Year <- Year[ind]
@@ -609,7 +613,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   if('annual' %in% plot_type) {
 
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
-    ylim <- c(0, 1.1 * max(obs_prob, fit_prob, na.rm = TRUE))
+    ylim <- c(0, 1.1 * max(obs_prob_all, fit_prob_all, na.rm = TRUE))
     yaxp <- c(0, 1, 4)
     las <- 1
     type <- 'o'

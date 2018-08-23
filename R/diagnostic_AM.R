@@ -298,6 +298,7 @@ Assess_diagnostic <- function(DLMenv = DLMtool::DLMenv, include_assessment = TRU
       if(dg$hess) Assessment@obj <- list()
       Assessment@info <- Assessment@TMB_report <- list()
       Assessment@SD <- ""
+      Assessment@N_at_age <- Assessment@C_at_age <- Assessment@Obs_C_at_age <- Assessment@Selectivity <- array(dim = c(0, 0))
     }
 
     Assessment_report <- get0(paste0("Assessment_report_", MP), envir = DLMenv,

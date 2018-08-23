@@ -249,7 +249,7 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = tempd
     plot_composition(Year2, Obs_CAA, Fit_CAA, plot_type = 'bubble_residuals', bubble_adj = 35)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                               c("assess_age_comps_bubble_resids.png", "Age composition bubble plot of residuals (black are negative, white are positive)."))
+                               c("assess_age_comps_bubble_resids.png", "Bubble plot of Pearson residuals for age compositions (black are negative, white are positive)."))
   }
 
   plot_composition(Year2, Obs_CAA, Fit_CAA, N = info$data$CAA_n[ind_valid], plot_type = 'annual')
