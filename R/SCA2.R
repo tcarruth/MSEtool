@@ -66,12 +66,25 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale)) + 2
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
   if(is.null(params$vul_par)) {
-    CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
-    if(vulnerability == "logistic") {
-      params$vul_par <- c(CAA_mode-1, log(1)) # 50 and log(95%-offset) vulnerability respectively
-    }
-    if(vulnerability == "dome") {
-      params$vul_par <- c(log(1), CAA_mode, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+    if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFS[x] > Linf)) {
+      CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
+      if(vulnerability == "logistic") {
+        params$vul_par <- c(CAA_mode-1, log(1)) # 50 and log(95%-offset) vulnerability respectively
+      }
+      if(vulnerability == "dome") {
+        params$vul_par <- c(log(1), CAA_mode, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+      }
+    } else {
+      A5 <- iVB(t0, K, Linf, Data@LFC[x])
+      A95 <- max(A5 + 0.05, iVB(t0, K, Linf, Data@LFS[x]) - 1)
+      A50 <- mean(c(A5, A95))
+
+      if(vulnerability == "logistic") {
+        params$vul_par <- c(A50, log(A95 - A50)) # 50 and log(95%-offset) vulnerability respectively
+      }
+      if(vulnerability == "dome") {
+        params$vul_par <- c(log(1), A95, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+      }
     }
   }
   if(is.null(params$log_sigma)) {
