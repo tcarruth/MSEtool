@@ -13,6 +13,7 @@
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
   DATA_STRING(I_type);    // String whether index surveys B, VB, or SSB
+  DATA_STRING(CAA_dist);  // String indicating whether CAA is multinomial or lognormal
   DATA_VECTOR(est_early_rec_dev);
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
@@ -125,13 +126,18 @@
     if(C_hist(y) > 0) {
       vector<Type> loglike_CAAobs(max_age);
       vector<Type> loglike_CAApred(max_age);
-      for(int a=0;a<max_age;a++) {
-        loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
-        loglike_CAApred(a) = CAApred(y,a)/CN(y);
+      for(int a=0;a<max_age;a++) loglike_CAApred(a) = CAApred(y,a)/CN(y);
+      if(!R_IsNA(asDouble(CAA_n(y)))) {
+        if(CAA_dist == "multinomial") {
+          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
+          nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
+        } else {
+          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CAA_hist(y,a);
+          nll_comp(1) -= dlnorm_comp(loglike_CAAobs, loglike_CAApred);
+        }
       }
-      if(!R_IsNA(asDouble(CAA_n(y)))) nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
     }
-	  if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
+    if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
     if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);

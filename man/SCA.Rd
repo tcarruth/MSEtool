@@ -6,20 +6,21 @@
 \title{Statistical catch-at-age (SCA) model}
 \usage{
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
-  "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", start = NULL, fix_h = FALSE,
-  fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-  early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50",
-  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
-  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
-  eval.max = 10000), inner.control = list(), ...)
+  "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
+  I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL,
+  fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
+  late_dev = "comp50", integrate = FALSE, silent = TRUE,
+  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
+  ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
-  "dome"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", start = NULL, fix_h = FALSE,
-  fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-  common_dev = "comp50", integrate = FALSE, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+  "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
+  I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL,
+  fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, common_dev = "comp50", integrate = FALSE,
+  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
   ...)
 }
@@ -33,7 +34,9 @@ SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
 \item{vulnerability}{Whether estimated vulnerability is \code{"logistic"} or \code{"dome"} (double-normal).
 See details for parameterization.}
 
-\item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix. See details.}
+\item{CAA_dist}{Whether a multinomial or lognormal distribution is used for likelihood of the catch-at-age matrix. See details.}
+
+\item{CAA_multiplier}{Numeric for data weighting of catch-at-age matrix if \code{CAA_hist = "multinomial"}. Otherwise ignored. See details.}
 
 \item{I_type}{Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
 vulnerable biomass (VB), or spawning stock biomass (SSB).}
@@ -115,6 +118,9 @@ If \code{CAA_multiplier > 1}, then this value will cap the annual sample sizes
 to that number. If \code{CAA_multiplier <= 1}, then all the annual samples sizes
 will be re-scaled by that number. By default, sample sizes are capped at 50.
 
+Alternatively, a lognormal distribution with inverse proportion variance can be used for the catch at age (Punt and Kennedy, 1994, as
+cited by Maunder 2011).
+
 Vulnerability can be specified to be either logistic or dome. If logistic, then the model
 vector \code{vul_par} is of length 2:
 \itemize{
@@ -122,15 +128,18 @@ vector \code{vul_par} is of length 2:
 \item \code{vul_par[2]}: the age of 95\% vulnerability (a95) as an offset, i.e., \code{a95 = a50 + exp(vul_par[2])}.
 }
 
-With dome vulnerability, a double normal parameterization is used, where \code{vul_par}
+With dome vulnerability, a double Gaussian parameterization is used, where \code{vul_par}
 is an estimated vector of length 4:
 \itemize{
-\item \code{vul_par[1]}: \code{log(sd_asc)}, where sd_asc is the standard deviation of the normal distribution function for the ascending limb
-\item \code{vul_par[2]}: \code{mu_asc}, the mean of the normal distribution function for the ascending limb
-\item \code{vul_par[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb parameterized as an offset,
-i.e., \code{mu_desc = mu_asc + exp(vul_par[3])} to ensure \code{mu_desc > mu_asc}. The vulnerability is 1 for ages between mu_asc and mu_desc.
-\item \code{vul_par[4]}: \code{log(sd_des)}, where sd_des is the standard deviation of the normal distribution function for the descending limb.
+\item \code{vul_par[1]}: \code{a50}, the age of 50\% vulnerability for the ascending limb.
+\item \code{vul_par[2]}: \code{a_asc}, the first age of full vulnerability for the ascending limb as an offset, i.e.,
+\code{a_asc = a50 + exp(vul_par[2])}.
+\item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) as an offset,
+i.e., \code{a_des = a_asc + exp(vul_par[3])}.
+\item \code{vul_par[4]}: \code{vul_max}, the vulnerability at the maximum age in the model.
 }
+
+The maximum age in the model is a plus-group.
 
 For \code{start}, a named list of starting values of estimates for:
 \itemize{
@@ -188,6 +197,12 @@ Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008.
 An age-structured model with leading management parameters, incorporating
 age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
 Science 65:286-296.
+
+Maunder, M.N. 2011. Review and evaluation of likelihood functions for composition data in
+stock-assessment models: Estimating the effective sample size. Fisheries Research 209:311-319.
+
+Punt, A.E. and Kennedy, R.B. 1997. Population modelling of Tasmanian rock lobster, Jasus edwardsii, resources. Marine and Freshwater
+Research 48:967–980.
 }
 \seealso{
 \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}

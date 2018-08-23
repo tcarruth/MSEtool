@@ -4,13 +4,14 @@
 #' @useDynLib MSEtool
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
+                 CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                  common_dev = "comp50", integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                  control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(),  ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   vulnerability <- match.arg(vulnerability)
+  CAA_dist <- match.arg(CAA_dist)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)
   if(any(names(dots) == "yind")) {
@@ -41,7 +42,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   t0 <- Data@vbt0[x]
   La <- Linf * (1 - exp(-K * (c(1:max_age) - t0)))
   Wa <- a * La ^ b
-  A50 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
+  A0 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
   A95 <- max(A50+0.5, iVB(t0, K, Linf, Data@L95[x]))
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
@@ -51,7 +52,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
-               vul_type = vulnerability, I_type = I_type, est_early_rec_dev = est_early_rec_dev,
+               vul_type = vulnerability, I_type = I_type, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev,
                est_rec_dev = est_rec_dev)
 
   # Starting values
@@ -69,10 +70,10 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFS[x] > Linf)) {
       CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
       if(vulnerability == "logistic") {
-        params$vul_par <- c(CAA_mode-1, log(1)) # 50 and log(95%-offset) vulnerability respectively
+        params$vul_par <- c(CAA_mode-1, log(1))
       }
       if(vulnerability == "dome") {
-        params$vul_par <- c(log(1), CAA_mode, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+        params$vul_par <- c(CAA_mode-1, log(1), log(1), ilogit(0.5))
       }
     } else {
       A5 <- iVB(t0, K, Linf, Data@LFC[x])
@@ -80,10 +81,10 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
       A50 <- mean(c(A5, A95))
 
       if(vulnerability == "logistic") {
-        params$vul_par <- c(A50, log(A95 - A50)) # 50 and log(95%-offset) vulnerability respectively
+        params$vul_par <- c(A50, log(A95 - A50))
       }
       if(vulnerability == "dome") {
-        params$vul_par <- c(log(1), A95, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+        params$vul_par <- c(A50, log(A95+1 - A50), log(1), ilogit(0.5))
       }
     }
   }

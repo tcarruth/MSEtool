@@ -10,7 +10,8 @@
 #' @param SR Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).
 #' @param vulnerability Whether estimated vulnerability is \code{"logistic"} or \code{"dome"} (double-normal).
 #' See details for parameterization.
-#' @param CAA_multiplier Numeric for data weighting of catch-at-age matrix. See details.
+#' @param CAA_dist Whether a multinomial or lognormal distribution is used for likelihood of the catch-at-age matrix. See details.
+#' @param CAA_multiplier Numeric for data weighting of catch-at-age matrix if \code{CAA_hist = "multinomial"}. Otherwise ignored. See details.
 #' @param I_type Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
 #' vulnerable biomass (VB), or spawning stock biomass (SSB).
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
@@ -65,6 +66,9 @@
 #' to that number. If \code{CAA_multiplier <= 1}, then all the annual samples sizes
 #' will be re-scaled by that number. By default, sample sizes are capped at 50.
 #'
+#' Alternatively, a lognormal distribution with inverse proportion variance can be used for the catch at age (Punt and Kennedy, 1994, as
+#' cited by Maunder 2011).
+#'
 #' Vulnerability can be specified to be either logistic or dome. If logistic, then the model
 #' vector \code{vul_par} is of length 2:
 #' \itemize{
@@ -72,15 +76,18 @@
 #' \item \code{vul_par[2]}: the age of 95\% vulnerability (a95) as an offset, i.e., \code{a95 = a50 + exp(vul_par[2])}.
 #' }
 #'
-#' With dome vulnerability, a double normal parameterization is used, where \code{vul_par}
+#' With dome vulnerability, a double Gaussian parameterization is used, where \code{vul_par}
 #' is an estimated vector of length 4:
 #' \itemize{
-#' \item \code{vul_par[1]}: \code{log(sd_asc)}, where sd_asc is the standard deviation of the normal distribution function for the ascending limb
-#' \item \code{vul_par[2]}: \code{mu_asc}, the mean of the normal distribution function for the ascending limb
-#' \item \code{vul_par[3]}: \code{mu_des}, mean of the normal distribution function for the descending limb parameterized as an offset,
-#' i.e., \code{mu_desc = mu_asc + exp(vul_par[3])} to ensure \code{mu_desc > mu_asc}. The vulnerability is 1 for ages between mu_asc and mu_desc.
-#' \item \code{vul_par[4]}: \code{log(sd_des)}, where sd_des is the standard deviation of the normal distribution function for the descending limb.
+#' \item \code{vul_par[1]}: \code{a50}, the age of 50\% vulnerability for the ascending limb.
+#' \item \code{vul_par[2]}: \code{a_asc}, the first age of full vulnerability for the ascending limb as an offset, i.e.,
+#' \code{a_asc = a50 + exp(vul_par[2])}.
+#' \item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) as an offset,
+#' i.e., \code{a_des = a_asc + exp(vul_par[3])}.
+#' \item \code{vul_par[4]}: \code{vul_max}, the vulnerability at the maximum age in the model.
 #' }
+#'
+#' The maximum age in the model is a plus-group.
 #'
 #' For \code{start}, a named list of starting values of estimates for:
 #' \itemize{
@@ -100,6 +107,12 @@
 #' An age-structured model with leading management parameters, incorporating
 #' age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
 #' Science 65:286-296.
+#'
+#' Maunder, M.N. 2011. Review and evaluation of likelihood functions for composition data in
+#' stock-assessment models: Estimating the effective sample size. Fisheries Research 209:311-319.
+#'
+#' Punt, A.E. and Kennedy, R.B. 1997. Population modelling of Tasmanian rock lobster, Jasus edwardsii, resources. Marine and Freshwater
+#' Research 48:967–980.
 #' @examples
 #' \donttest{
 #' res <- SCA(Data = DLMtool::SimulatedData)
@@ -126,7 +139,7 @@
 #' @useDynLib MSEtool
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
+                CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
                 start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
@@ -134,6 +147,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   vulnerability <- match.arg(vulnerability)
+  CAA_dist <- match.arg(CAA_dist)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)
   early_dev <- match.arg(early_dev)
@@ -208,7 +222,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
-               SR_type = SR, est_early_rec_dev = est_early_rec_dev, est_rec_dev = est_rec_dev)
+               SR_type = SR, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev, est_rec_dev = est_rec_dev)
 
   # Starting values
   params <- list()
@@ -245,10 +259,10 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFS[x] > Linf)) {
       CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
       if(vulnerability == "logistic") {
-        params$vul_par <- c(CAA_mode-1, log(1)) # 50 and log(95%-offset) vulnerability respectively
+        params$vul_par <- c(CAA_mode-1, log(1))
       }
       if(vulnerability == "dome") {
-        params$vul_par <- c(log(1), CAA_mode, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+        params$vul_par <- c(CAA_mode-1, log(1), log(1), ilogit(0.5))
       }
     } else {
       A5 <- iVB(t0, K, Linf, Data@LFC[x])
@@ -256,10 +270,10 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       A50 <- mean(c(A5, A95))
 
       if(vulnerability == "logistic") {
-        params$vul_par <- c(A50, log(A95 - A50)) # 50 and log(95%-offset) vulnerability respectively
+        params$vul_par <- c(A50, log(A95 - A50))
       }
       if(vulnerability == "dome") {
-        params$vul_par <- c(log(1), A95, log(0.5), log(5)) # double normal: logsd(ascending), mean(asc), mean(desc)-logoffset, sd(desc)
+        params$vul_par <- c(A50, log(A95+1 - A50), log(1), ilogit(0.5))
       }
     }
   }
@@ -391,12 +405,12 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     SE_Main2[!is.na(SE_Main2)] <- SE_Main
 
     SE_Dev <- structure(c(rev(SE_Early2), SE_Main2), names = YearDev)
-    SE_Dev[is.na(SE_Dev)] <- 0
 
-    first_non_zero <- which(Dev != 0)[1]
+    first_non_zero <- which(!is.na(SE_Dev))[1]
     if(!is.na(first_non_zero) && first_non_zero > 1) {
       Dev_out <- Dev_out[-c(1:(first_non_zero - 1))]
       SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
+      SE_Dev[is.na(SE_Dev)] <- 0
     }
 
     Assessment@UMSY <- report$UMSY
@@ -408,6 +422,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     Assessment@B_BMSY <- structure(report$B/report$BMSY, names = Yearplusone)
     Assessment@SSB_SSBMSY <- structure(report$E/report$EMSY, names = Yearplusone)
     Assessment@VB_VBMSY <- structure(report$VB/report$VBMSY, names = Yearplusone)
+    Assessment@Dev <- Dev_out
     Assessment@SE_Dev <- SE_Dev
     Assessment@TMB_report <- report
   }

@@ -176,6 +176,7 @@ where $\delta_t \sim N(0, \tau^2)$ are biomass deviations in lognormal space and
 
 The log-likelihood of the deviations $\delta_t$ is
 $$L(\delta_t) \propto -T \log\tau - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.$$
+
 # Statistical catch-at-age model (SCA and SCA2) 
 ## Dynamics equations
 The statistical catch-at-age model used in MSEtool assumes pulse fishing at the beginning of each annual time-step, following the parameterization of Forrest et al. (2008). The model uses a time series of total catch (in weight), index, and catch-at-age observations, as well as information on weight, maturity, natural mortality at age.
@@ -194,15 +195,15 @@ Assuming logistic vulnerability, the vulnerability is:
 $$v_a = \left[1 + \exp\left(-\log(19) \dfrac{a - a_{50}}{a_{95} - a_{50}}\right)\right]^{-1}, $$
 where $a_{50}$ and $a_{95}$ are the estimated ages of 50% and 95% vulnerability, respectively.
 
-Assuming dome vulnerability, a double-normal formulation is used:
+Assuming dome vulnerability, a double Gaussian formulation is used:
 $$ v_a = 
 \begin{cases} 
-      f(a; \mu_{asc}, \sigma_{asc}) & a \le \mu_{asc}\\
-      1 & \mu_{asc} \lt a \le \mu_{des}\\
-      f(a; \mu_{des}, \sigma_{des}) & a \gt \mu_{des}
+      f(a; a_{asc}, \sigma_{asc}) & a \le a_{asc}\\
+      1 & a_{asc} \lt a \le a_{des}\\
+      f(a; a_{des}, \sigma_{des}) & a \gt a_{des}
 \end{cases},
 $$
-where $f(a; \mu, \sigma)$ is the normal probability density function scaled to one at $\mu$. The $\mu$ and $\sigma$ for both the ascending and descending limbs of the double-normal equation are estimated parameters.
+where $f(a; \mu, \sigma) = \exp(-0.5 (a - \mu)^2/\sigma^2)$ is the normal probability density function scaled to one at $\mu$. Four parameters are estimated: $a_{50}$ the age of 50% vulnerability (ascending limb), $a_{asc}$ the first age of full vulnerability, $a_{des}$ the last age of full vulnerability, and $v_A$ the vulnerability at the maximum age in the model. The $\mu$ and $\sigma$ for both the ascending and descending limbs of the double-normal equation are estimated parameters. From these four parameters, $\sigma_{asc} = \sqrt{(a_{50} - \mu_{asc})^2/\log(4)}$ and $\sigma_{des} = \sqrt{-0.5(A - \mu_{des})^2/\log(v_A)}$ can be derived.
 
 The vulnerable biomass $VB_t$ in year $t$ is
 $$VB_t = \sum_{a=1}^A v_a w_a N_{a,t},$$
@@ -223,6 +224,9 @@ The log-likelihood $L$ of the observed catch at age $C_{a,t}$ over years $t = 1,
 $$L(C_{a,t})\propto \sum_{t=1}^T \left(N_t \sum_{a=1}^A p_{a,t} \log(\hat{p}_{a,t}) \right),$$
 where $N_t$ is the sample size of catch-at-age observations in year $t$, $p_{a,t}$ and $\hat{p}_{a,t}$ are the observed and predicted
 proportions of catch-at-age.
+
+If a lognormal distribution for the observed catch at age proportions is assumed, then the likelihood is
+$$L(p_{a,t})\propto -\log\left(\sqrt{\dfrac{0.01}{\hat{p}_{a,t}}}\right) -0.5\left(\log(p_{a,t}/\hat{p}_{a,t})/\sqrt{\dfrac{0.01}{\hat{p}_{a,t}}}\right)^2 $$
 
 The estimated index $\hat{I}_t$, assuming that it is an index for total biomass, is
 $$ \hat{I}_t = \hat{q} \hat{B}_t,$$

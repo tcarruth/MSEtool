@@ -130,37 +130,62 @@ Type sum_VBPR(vector<Type> NPR, vector<Type> weight, vector<Type> vul) {
 template<class Type>
 vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age) {
   vector<Type> vul(max_age);
-  Type vul_50 = vul_par(0);
-  Type vul_95 = vul_50 + exp(vul_par(1));
+  Type a_50 = vul_par(0);
+  Type a_95 = a_50 + exp(vul_par(1));
 
 	for(int a=0;a<max_age;a++) {
 	  Type aa = a;
 	  aa += 1;
-	  vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - vul_50)/(vul_95 - vul_50)), -1);
+	  vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - a_50)/(a_95 - a_50)), -1);
   }
 	return vul;
 }
 
 template<class Type>
+Type dnorm_vul(Type x, Type mu, Type sd) {
+  Type res = -0.5;
+  res *= pow(x - mu, 2);
+  res /= pow(sd, 2);
+  return exp(res);
+}
+
+template<class Type>
 vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age) {
   vector<Type> vul(max_age);
-  Type vul_sd_asc = exp(vul_par(0));
-  Type vul_mu_asc = vul_par(1);
-  Type vul_mu_des = vul_mu_asc + exp(vul_par(2));
-  Type vul_sd_des = exp(vul_par(3));
 
-  Type denom_asc = dnorm(vul_mu_asc, vul_mu_asc, vul_sd_asc, false);
-  Type denom_des = dnorm(vul_mu_des, vul_mu_des, vul_sd_des, false);
+  Type a_50 = vul_par(0);
+  Type a_full = a_50 + exp(vul_par(1));
+  Type a_full2 = a_full + exp(vul_par(2));
+  Type vul_max = invlogit(vul_par(3));
+
+  Type var_asc = pow(a_50 - a_full, 2);
+  var_asc /= log(Type(4));
+
+  Type maxage = max_age;
+  Type var_des = pow(maxage - a_full2, 2);
+  var_des /= -2 * log(vul_max);
+
+  Type sd_asc = pow(var_asc, 0.5);
+  Type sd_des = pow(var_des, 0.5);
 
   for(int a=0;a<max_age;a++) {
     Type aa = a;
-	aa += 1;
-    Type vul_asc = dnorm(aa, vul_mu_asc, vul_sd_asc, false);
-    vul_asc /= denom_asc;
-    Type vul_des = dnorm(aa, vul_mu_des, vul_sd_des, false);
-    vul_des /= denom_des;
+    aa += 1;
+    Type vul_asc = dnorm_vul(aa, a_full, sd_asc);
+    Type vul_des = dnorm_vul(aa, a_full2, sd_des);
 
-    vul(a) = CppAD::CondExpLe(aa, vul_mu_asc, vul_asc, CppAD::CondExpLe(aa, vul_mu_des, Type(1), vul_des));
+    vul(a) = CppAD::CondExpLe(aa, a_full, vul_asc, CppAD::CondExpLe(aa, a_full2, Type(1), vul_des));
   }
+
   return vul;
+}
+
+template<class Type>
+Type dlnorm_comp(vector<Type> obs, vector<Type> pred) {
+  Type log_lik = 0.;
+  for(int a=0;a<obs.size();a++) {
+    Type obs2 = CppAD::CondExpLt(obs(a), Type(1e-8), Type(1e-8), obs(a));
+    log_lik += dnorm(log(obs2), log(pred(a)), pow(0.01/pred(a), 0.5), true);
+  }
+  return log_lik;
 }
