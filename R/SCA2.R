@@ -42,7 +42,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   t0 <- Data@vbt0[x]
   La <- Linf * (1 - exp(-K * (c(1:max_age) - t0)))
   Wa <- a * La ^ b
-  A0 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
+  A50 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
   A95 <- max(A50+0.5, iVB(t0, K, Linf, Data@L95[x]))
   mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
