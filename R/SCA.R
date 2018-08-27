@@ -84,7 +84,7 @@
 #' \code{a_asc = a50 + exp(vul_par[2])}.
 #' \item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) as an offset,
 #' i.e., \code{a_des = a_asc + exp(vul_par[3])}.
-#' \item \code{vul_par[4]}: \code{vul_max}, the vulnerability at the maximum age in the model.
+#' \item \code{vul_par[4]}: \code{vul_max}, the vulnerability (in logit space) at the maximum age.
 #' }
 #'
 #' The maximum age in the model is a plus-group.
@@ -94,9 +94,9 @@
 #' \item \code{R0} Virgin recruitment, only for \code{SCA}.
 #' \item \code{h} Steepness, only for \code{SCA}. If not provided, the value in \code{Data@@steep} is used.
 #' \item \code{meanR} Mean recruitment, only for \code{SCA2}.
-#' \item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means virgin conditions.
+#' \item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
 #' \item \code{vul_par} (length 2 vector for logistic or length 4 for dome, see above).
-#' \item \code{sigma} Standard deviation of index.
+#' \item \code{sigma} Standard deviation of index. If not provided, the value based on \code{Data@@CV_Ind} is used.
 #' \item \code{tau} Standard deviation of recruitment deviations. If not provided, the value in \code{Data@@sigmaR} is used.
 #' }
 #' @references
@@ -256,8 +256,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   }
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
   if(is.null(params$vul_par)) {
-    if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFS[x] > Linf)) {
-      CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
+    CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
+    if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFC[x] > Linf) || (Data@LFS[x] > Linf)) {
       if(vulnerability == "logistic") {
         params$vul_par <- c(CAA_mode-1, log(1))
       }
@@ -265,15 +265,16 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
         params$vul_par <- c(CAA_mode-1, log(1), log(1), ilogit(0.5))
       }
     } else {
-      A5 <- iVB(t0, K, Linf, Data@LFC[x])
-      A95 <- max(A5 + 0.05, iVB(t0, K, Linf, Data@LFS[x]) - 1)
-      A50 <- mean(c(A5, A95))
+      A5 <- min(iVB(t0, K, Linf, Data@LFC[x]), CAA_mode-1)
+      Afull <- min(iVB(t0, K, Linf, Data@LFS[x]), 0.5 * max_age)
+      A5 <- min(A5, Afull - 0.5)
+      A50_vul <- mean(c(A5, Afull))
 
       if(vulnerability == "logistic") {
-        params$vul_par <- c(A50, log(A95 - A50))
+        params$vul_par <- c(A50_vul, log(Afull - A50_vul))
       }
       if(vulnerability == "dome") {
-        params$vul_par <- c(A50, log(A95+1 - A50), log(1), ilogit(0.5))
+        params$vul_par <- c(A50_vul, log(A95+1 - A50_vul), log(1), ilogit(0.5))
       }
     }
   }

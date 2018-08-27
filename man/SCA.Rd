@@ -136,7 +136,7 @@ is an estimated vector of length 4:
 \code{a_asc = a50 + exp(vul_par[2])}.
 \item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) as an offset,
 i.e., \code{a_des = a_asc + exp(vul_par[3])}.
-\item \code{vul_par[4]}: \code{vul_max}, the vulnerability at the maximum age in the model.
+\item \code{vul_par[4]}: \code{vul_max}, the vulnerability (in logit space) at the maximum age.
 }
 
 The maximum age in the model is a plus-group.
@@ -146,9 +146,9 @@ For \code{start}, a named list of starting values of estimates for:
 \item \code{R0} Virgin recruitment, only for \code{SCA}.
 \item \code{h} Steepness, only for \code{SCA}. If not provided, the value in \code{Data@steep} is used.
 \item \code{meanR} Mean recruitment, only for \code{SCA2}.
-\item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means virgin conditions.
+\item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
 \item \code{vul_par} (length 2 vector for logistic or length 4 for dome, see above).
-\item \code{sigma} Standard deviation of index.
+\item \code{sigma} Standard deviation of index. If not provided, the value based on \code{Data@CV_Ind} is used.
 \item \code{tau} Standard deviation of recruitment deviations. If not provided, the value in \code{Data@sigmaR} is used.
 }
 }
