@@ -4,15 +4,11 @@
 \alias{diagnostic_AM}
 \title{diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?}
 \usage{
-diagnostic_AM(MSE = NULL, DLMenv = DLMtool::DLMenv, MP = NULL,
-  gradient_threshold = 0.1, figure = TRUE)
+diagnostic_AM(MSE, MP = NULL, gradient_threshold = 0.1, figure = TRUE)
 }
 \arguments{
 \item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}. If no MSE object
 is available, use argument \code{MP} instead.}
-
-\item{DLMenv}{The name of the environment that contains the Assessment output
-generated during the MSE.}
 
 \item{MP}{A character vector of MPs with assessment models.}
 
@@ -37,18 +33,12 @@ with argument \code{diagnostic = TRUE}. This function summarizes and plots the d
 }
 \examples{
 \dontrun{
-DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "min")
+DD_MSY <- make_MP(DD_TMB, HCR_MSY, diagnostic = "min")
 show(DD_MSY)
-myMSE <- runMSE(DLMtool::testOM, MPs = "DD_MSY")
+
+# Set PPD = TRUE in runMSE function
+myMSE <- runMSE(DLMtool::testOM, MPs = "DD_MSY", PPD = TRUE)
 diagnostic_AM(myMSE)
-
-# If MSE object is not available (e.g. runMSE crashed), use MP argument instead.
-diagnostic_AM(MP = "DD_MSY")
-
-ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-
-# Save to disk for future use. File may be very large due to size of DLMenv!
-save(myMSE, DLMenv, file = "DLMenv.RData")
 }
 }
 \seealso{

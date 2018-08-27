@@ -4,14 +4,10 @@
 \alias{retrospective_AM}
 \title{retrospective_AM (retrospective of Assessment model in MSE)}
 \usage{
-retrospective_AM(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP,
-  MSE_Hist = NULL, plot_legend = FALSE)
+retrospective_AM(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FALSE)
 }
 \arguments{
-\item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}.}
-
-\item{DLMenv}{The name of the environment that contains the Assessment output
-generated during the MSE.}
+\item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}} with \code{PPD = TRUE}.}
 
 \item{sim}{Integer between 1 and MSE@nsim. The simulation number for which the retrospectives will be plotted.}
 
@@ -45,15 +41,10 @@ For \link{SP} and \link{SP_SS} assessment models don't model SSB. Instead, the e
 \examples{
 \dontrun{
 DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "full")
-myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", Hist = TRUE)
-myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
+myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, Hist = TRUE)
+myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", PPD = TRUE)
 retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
 retrospective_AM(myMSE, sim = 1, MP = "DD_MSY", Hist = myMSE_hist)
-
-ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-
-# Save to disk for future use. File may be very large due to size of DLMenv!
-save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 }
 }
 \seealso{

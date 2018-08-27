@@ -3,9 +3,7 @@
 #' Plots the true retrospective of an assessment model during the MSE. A series of time series estimates of SSB, F, and VB
 #' are plotted over the course of the MSE are plotted against the operating model (true) values (in black).
 #'
-#' @param MSE An object of class MSE created by \code{\link[DLMtool]{runMSE}}.
-#' @param DLMenv The name of the environment that contains the Assessment output
-#' generated during the MSE.
+#' @param MSE An object of class MSE created by \code{\link[DLMtool]{runMSE}} with \code{PPD = TRUE}.
 #' @param sim Integer between 1 and MSE@@nsim. The simulation number for which the retrospectives will be plotted.
 #' @param MP Character. The name of the management procedure created by \code{\link{make_MP}} containing the asssessment model.
 #' @param MSE_Hist Optional. The list containing historical data for the MSE, created by \code{\link[DLMtool]{runMSE}} with argument \code{Hist = TRUE}.
@@ -25,49 +23,48 @@
 #' @examples
 #' \dontrun{
 #' DD_MSY <- makeMP(DD_TMB, HCR_MSY, diagnostic = "full")
-#' myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", Hist = TRUE)
-#' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY")
+#' myMSE_hist <- DLMtool::runMSE(DLMtool::testOM, Hist = TRUE)
+#' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = "DD_MSY", PPD = TRUE)
 #' retrospective_AM(myMSE, sim = 1, MP = "DD_MSY")
 #' retrospective_AM(myMSE, sim = 1, MP = "DD_MSY", Hist = myMSE_hist)
-#'
-#' ls(DLMtool::DLMenv) # Assessment output and diagnostics are located here
-#'
-#' # Save to disk for future use. File may be very large due to size of DLMenv!
-#' save(myMSE, DLMenv, myMSE_hist, file = "DLMenv.RData")
 #' }
 #' @seealso \link{diagnostic_AM}
 #' @export
-retrospective_AM <- function(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP, MSE_Hist = NULL, plot_legend = FALSE) {
-
-  plot_type = c("SSB", "F", "SSB_SSBMSY", "F_FMSY", "SSB_SSB0", "VB")
-
-  if(length(ls(DLMenv)) == 0) stop(paste0("Nothing found in ", DLMenv))
-
+retrospective_AM <- function(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FALSE) {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
 
-  par(mfcol = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 2.5, 0))
+  if(!inherits(MSE, "MSE")) stop("No object of class MSE was provided.")
+  if(length(MSE@Misc) == 0) stop("Nothing found in MSE@Misc. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
 
-  env_objects <- ls(DLMenv)
   MPs <- MSE@MPs
-  MPs_in_env <- vapply(MPs, function(x) any(grepl(x, env_objects)), logical(1))
-  MPs <- MPs[MPs_in_env]
+  has_diagnostic_fn <- function(x) {
+    Misc <- x@Misc
+    all(vapply(Misc, function(y) any(names(y) == "diagnostic"), logical(1)))
+  }
+  has_diagnostic <- vapply(MSE@Misc, has_diagnostic_fn, logical(1))
+  if(all(!has_diagnostic)) stop("No diagnostic information found in MSE@Misc for any MP. Use an MP created by 'make_MP(diagnostic = 'min')' and set 'runMSE(PPD = TRUE)'.")
+  MPs <- MPs[has_diagnostic]
 
-  if(!MP %in% MSE@MPs || !MP %in% MPs) stop(paste(MP, "was not found in MSE object (MSE@MPs)."))
-  if(!MP %in% MPs) stop(paste(MP, "was not found in DLMenv."))
-  if(length(sim) > 1 || sim > MSE@nsim) stop(paste0(sim, " should be a number between 1 and ", MSE@nsim, "."))
+  match_ind <- pmatch(MP, MPs)
+  if(is.na(match_ind)) stop(paste(MP, "MP was not found in the MSE object. Available options are:", paste(MPs, collapse = " ")))
+  MPs <- MPs[match_ind]
   MPind <- MSE@MPs == MP
   if(sum(MPind) > 1) stop(paste("More than one match to", MP, "was found in MSE object."))
 
-  Assessment_report <- get(paste0("Assessment_report_", MP), envir = DLMenv)[[sim]]
+  if(length(sim) > 1 || sim > MSE@nsim) stop(paste0(sim, " should be a number between 1 and ", MSE@nsim, "."))
+  Assessment_report <- lapply(MSE@Misc[[which(MPind)]]@Misc, getElement, "Assessment_report")[[sim]]
+
   isSP <- grepl("SP", Assessment_report[[1]]@Model)
 
   color.vec <- gplots::rich.colors(length(Assessment_report))
-
   Yr_MSE <- 1:(MSE@nyears + MSE@proyears)
-
   Assess <- lapply(Assessment_report, slot, "VB")
   End_Assess_Yr <- vapply(Assess, function(x) as.numeric(names(x))[length(x)-1], numeric(1))
+
+  plot_type = c("SSB", "F", "SSB_SSBMSY", "F_FMSY", "SSB_SSB0", "VB")
+
+  par(mfcol = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 2.5, 0))
   for(i in 1:length(plot_type)) {
     if(plot_type[i] == "SSB_SSBMSY") {
       Hist <- apply(MSE@SSB_hist, c(1, 3), sum)[sim, ]/MSE@OM$SSBMSY[sim]
@@ -120,7 +117,7 @@ retrospective_AM <- function(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP, MSE_His
         Hist <- MSE_Hist$TSdata$VB[, sim]
       } else {
         Hist <- rep(NA, MSE@nyears)
-        message("Provide Hist object in order to plot simulated vulnerable biomass.")
+        message("Provide Hist object in order to plot the historical vulnerable biomass in the operating model.")
       }
       Proj <- MSE@VB[sim, MPind, ]
       Assess <- lapply(Assessment_report, slot, "VB")
@@ -131,7 +128,7 @@ retrospective_AM <- function(MSE, DLMenv = DLMtool::DLMenv, sim = 1, MP, MSE_His
         Hist <- MSE_Hist$AtAge$Nage[sim, 1, ]
       } else {
         Hist <- rep(NA, MSE@nyears)
-        message("Provide Hist object in order to plot simulated recruitment.")
+        message("Provide Hist object in order to plot simulated recruitment in the operating model.")
       }
       Proj <- rep(NA, MSE@proyears)
       Assess <- lapply(Assessment_report, slot, "R")

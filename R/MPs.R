@@ -243,7 +243,7 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
       dependencies <- .(get_dependencies(Assess_char, list(...)))
       do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
       Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
-      Assess_diagnostic(include_assessment = .(diagnostic == "full"))
+      Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
       return(Rec)
     })
   }
