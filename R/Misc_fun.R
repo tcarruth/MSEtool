@@ -6,6 +6,7 @@ logit <- function(p) log(p/(1 - p))
 ilogit <- function(x) 1/(1 + exp(-x))
 ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 
+#' @importFrom stats nlminb
 optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, restart = 1) {
   restart <- as.integer(restart)
   if(is.null(obj$env$random) && use_hessian) h <- obj$he else h <- NULL
@@ -29,6 +30,7 @@ optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, resta
   }
 }
 
+#' @importFrom stats optimHess
 get_sdreport <- function(obj, opt) {
   if(is.character(opt)) {
     res <- "nlminb() optimization returned an error. Could not run TMB::sdreport()."
@@ -37,7 +39,24 @@ get_sdreport <- function(obj, opt) {
     res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
                              getReportCovariance = FALSE), error = function(e) as.character(e))
   }
-  if(inherits(res, "sdreport") && !res$pdHess) {
+
+  if(inherits(res, "sdreport")) {
+    if(!res$pdHess && is.null(obj$env$random)) {
+      h <- optimHess(opt$par, obj$fn, obj$gr)
+      res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
+                               getReportCovariance = FALSE), error = function(e) as.character(e))
+    }
+    if(inherits(res, "sdreport") && res$pdHess && all(is.nan(res$cov.fixed))) {
+      if(is.null(h)) {
+        h <- optimHess(opt$par, obj$fn, obj$gr)
+        if(!is.character(try(chol(h), silent = TRUE))) {
+          res$cov.fixed <- chol2inv(chol(h))
+        }
+      } else {
+        res$cov.fixed <- chol2inv(chol(h))
+      }
+    }
+  } else {
     res <- "Estimated covariance matrix was not positive definite."
   }
   return(res)
@@ -46,14 +65,14 @@ get_sdreport <- function(obj, opt) {
 
 # Start random effects estimation only after the first year in which
 # data from the criterion_vector (e.g. index, CAA) is available
-random_map <- function(criterion_vector) {
-  ind <- which(!is.na(criterion_vector))[1]
-  map <- ifelse(1:length(criterion_vector) <= ind, NA, 1)
-  nrandom <- sum(!is.na(map))
-  map[!is.na(map)] <- 1:nrandom
-  map <- map[2:length(map)]
-  return(factor(map))
-}
+#random_map <- function(criterion_vector) {
+#  ind <- which(!is.na(criterion_vector))[1]
+#  map <- ifelse(1:length(criterion_vector) <= ind, NA, 1)
+#  nrandom <- sum(!is.na(map))
+#  map[!is.na(map)] <- 1:nrandom
+#  map <- map[2:length(map)]
+#  return(factor(map))
+#}
 
 # If there are fewer years of CAA/CAL than Year, add NAs to matrix
 expand_comp_matrix <- function(Data, comp_type = c("CAA", "CAL")) {
