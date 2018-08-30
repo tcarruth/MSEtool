@@ -151,7 +151,7 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   Yearplusone <- c(Year, max(Year) + 1)
 
   nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
-  Assessment <- new("Assessment", Model = "SP", Name = Data@Name, conv = !is.character(SD),
+  Assessment <- new("Assessment", Model = "SP", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
                     B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
                     U_UMSY = structure(report$U/report$UMSY, names = Year),
@@ -278,7 +278,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   Yearplusone <- c(Year, max(Year) + 1)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SP_SS", Name = Data@Name, conv = !is.character(SD),
+  Assessment <- new("Assessment", Model = "SP_SS", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     UMSY = report$UMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
                     B0 = report$K, VB0 = report$K, U = structure(report$U, names = Year),
                     U_UMSY = structure(report$U/report$UMSY, names = Year),

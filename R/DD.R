@@ -179,7 +179,7 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   Yearplusk <- c(Year, max(Year) + 1:k)
 
   nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
-  Assessment <- new("Assessment", Model = "DD_TMB", Name = Data@Name, conv = !is.character(SD),
+  Assessment <- new("Assessment", Model = "DD_TMB", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$B0, VB0 = report$B0, h = report$h,
                     U = structure(report$U, names = Year),
@@ -333,7 +333,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   YearDev <- seq(Year[1] + k, max(Year))
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "DD_SS", Name = Data@Name, conv = !is.character(SD),
+  Assessment <- new("Assessment", Model = "DD_SS", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$B0, VB0 = report$B0, h = report$h,
                     U = structure(report$U, names = Year),
