@@ -143,7 +143,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                 start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-                control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
+                control = list(iter.max = 1e4, eval.max = 2e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   vulnerability <- match.arg(vulnerability)
@@ -274,7 +274,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
         params$vul_par <- c(A50_vul, log(Afull - A50_vul))
       }
       if(vulnerability == "dome") {
-        params$vul_par <- c(A50_vul, log(A95+1 - A50_vul), log(1), ilogit(0.5))
+        params$vul_par <- c(A50_vul, log(Afull - A50_vul), log(1), logit(0.5))
       }
     }
   }
@@ -358,7 +358,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   Dev_out <- structure(Dev, names = YearDev)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SCA", Name = Data@Name, conv = !is.character(SD),
+  Assessment <- new("Assessment", Model = "SCA", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$E0, VB0 = report$VB0,
                     h = report$h, U = structure(report$U, names = Year),
