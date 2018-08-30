@@ -12,8 +12,8 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
   late_dev = "comp50", integrate = FALSE, silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
-  ...)
+  control = list(iter.max = 10000, eval.max = 20000),
+  inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
@@ -21,8 +21,8 @@ SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
   fix_tau = TRUE, common_dev = "comp50", integrate = FALSE,
   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
-  ...)
+  control = list(iter.max = 10000, eval.max = 20000),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}
