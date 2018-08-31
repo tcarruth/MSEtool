@@ -292,7 +292,6 @@ Assess_diagnostic <- function(x, Data, Assessment, include_assessment = TRUE) {
     if(inherits(Assessment, "Assessment")) {
       if(dg$hess) Assessment@obj <- list()
       Assessment@info <- Assessment@TMB_report <- list()
-      Assessment@SD <- ""
       Assessment@N_at_age <- Assessment@C_at_age <- Assessment@Obs_C_at_age <- Assessment@Selectivity <- array(dim = c(0, 0))
     }
 

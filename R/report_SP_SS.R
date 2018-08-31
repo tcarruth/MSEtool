@@ -28,8 +28,7 @@ summary_SP_SS <- function(Assessment) {
     Description <- c(Description, "log-Biomass deviation SD (log-space)")
     rownam <- c(rownam, "tau")
   }
-  if(length(Value) == 0) input_parameters <- data.frame()
-  else {
+  if(length(Value) == 0) input_parameters <- data.frame() else {
     input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
     rownames(input_parameters) <- rownam
   }
@@ -39,7 +38,7 @@ summary_SP_SS <- function(Assessment) {
                                         "Biomass at MSY"), stringsAsFactors = FALSE)
   rownames(derived) <- c("r", "K", "BMSY")
 
-  if(conv) {
+  if(!is.character(SD)) {
     if(is.null(obj$env$random)) {
       model_estimates <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
       dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_B_dev", ]
@@ -48,8 +47,8 @@ summary_SP_SS <- function(Assessment) {
       dev_estimates <- summary(SD, "random")
     }
 
-    model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
     rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev)[Dev != 0])
+    model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
     model_estimates <- rbind(model_estimates, dev_estimates)
   } else {
     model_estimates <- SD

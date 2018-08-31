@@ -39,7 +39,7 @@ summary_DD_SS <- function(Assessment) {
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("B0", "R0", "MSY", "UMSY", "BMSY")
 
-  if(conv) {
+  if(!is.character(SD)) {
     if(is.null(obj$env$random)) {
       model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
       dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_rec_dev", ]
@@ -47,10 +47,9 @@ summary_DD_SS <- function(Assessment) {
       model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
       dev_estimates <- summary(SD, "random")
     }
-
-    model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
     rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev))
     model_estimates <- rbind(model_estimates, dev_estimates)
+    model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
   } else {
     model_estimates <- SD
   }

@@ -132,7 +132,7 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   map <- list()
   if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n = factor(NA)
-  obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, DLL = "MSEtool", silent = silent)
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
@@ -169,7 +169,7 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
-  if(!is.character(opt) && !is.character(SD)) {
+  if(Assessment@conv) {
     Assessment@SE_UMSY <- SD$sd[names(SD$value) == "UMSY"]
     Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
     Assessment@SE_U_UMSY_final <- SD$sd[names(SD$value) == "U_UMSY_final"]
@@ -259,7 +259,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
 
   info <- list(Year = Year, data = data, params = params, rescale = rescale, control = control,
                inner.control = inner.control)
-  obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, random = random, DLL = "MSEtool", silent = silent)
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
@@ -298,7 +298,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
-  if(!is.character(opt) && !is.character(SD)) {
+  if(Assessment@conv) {
     if(integrate) {
       SE_Dev <- sqrt(SD$diag.cov.random)
     } else {
