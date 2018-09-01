@@ -12,7 +12,7 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
   late_dev = "comp50", integrate = FALSE, silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 10000, eval.max = 20000),
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
   inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
@@ -21,7 +21,7 @@ SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
   fix_tau = TRUE, common_dev = "comp50", integrate = FALSE,
   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 10000, eval.max = 20000),
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
   inner.control = list(), ...)
 }
 \arguments{
@@ -109,6 +109,7 @@ For the statistical catch-at-age model, the basic data inputs are catch (by weig
 (by weight/biomass), and catch-at-age matrix (by numbers). Catches are
 assumed to be known perfectly (the harvest rate in a given year is the ratio of the observed
 catch to the vulnerable biomass at the beginning of the year).
+The maximum age in the model is a plus-group.
 
 The annual sample sizes of the catch-at-age matrix is provided to the model (used in the
 likelihood for catch-at-age, assuming a multinomial distribution),
@@ -121,36 +122,41 @@ will be re-scaled by that number. By default, sample sizes are capped at 50.
 Alternatively, a lognormal distribution with inverse proportion variance can be used for the catch at age (Punt and Kennedy, 1994, as
 cited by Maunder 2011).
 
-Vulnerability can be specified to be either logistic or dome. If logistic, then the model
-vector \code{vul_par} is of length 2:
-\itemize{
-\item \code{vul_par[1]}: \code{a50}, the age of 50\% vulnerability.
-\item \code{vul_par[2]}: the age of 95\% vulnerability (a95) as an offset, i.e., \code{a95 = a50 + exp(vul_par[2])}.
-}
-
-With dome vulnerability, a double Gaussian parameterization is used, where \code{vul_par}
-is an estimated vector of length 4:
-\itemize{
-\item \code{vul_par[1]}: \code{a50}, the age of 50\% vulnerability for the ascending limb.
-\item \code{vul_par[2]}: \code{a_asc}, the first age of full vulnerability for the ascending limb as an offset, i.e.,
-\code{a_asc = a50 + exp(vul_par[2])}.
-\item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) as an offset,
-i.e., \code{a_des = a_asc + exp(vul_par[3])}.
-\item \code{vul_par[4]}: \code{vul_max}, the vulnerability (in logit space) at the maximum age.
-}
-
-The maximum age in the model is a plus-group.
-
-For \code{start}, a named list of starting values of estimates for:
+For \code{start} (optional), a named list of starting values of estimates can be provided for:
 \itemize{
 \item \code{R0} Virgin recruitment, only for \code{SCA}.
 \item \code{h} Steepness, only for \code{SCA}. If not provided, the value in \code{Data@steep} is used.
 \item \code{meanR} Mean recruitment, only for \code{SCA2}.
-\item \code{U_equilibrium}. Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
-\item \code{vul_par} (length 2 vector for logistic or length 4 for dome, see above).
+\item \code{U_equilibrium} Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
+\item \code{vul_par} Vulnerability parameters (length 2 vector for logistic or length 4 for dome, see below). Users should provide
+estimates of the parameters in normal space, e.g. \code{vul_max} between 0-1, and the function will perform the appropriate transformations for the model.
 \item \code{sigma} Standard deviation of index. If not provided, the value based on \code{Data@CV_Ind} is used.
 \item \code{tau} Standard deviation of recruitment deviations. If not provided, the value in \code{Data@sigmaR} is used.
 }
+
+Vulnerability can be specified to be either logistic or dome. If logistic, then the parameter
+vector \code{vul_par} is of length 2:
+\itemize{
+\item \code{vul_par[1]}: \code{a_95}, the age of 95\% vulnerability, via logit transformation to constrain \code{a_95} to less than 75\%
+of the maximum age: \code{a_95 = 0.75 * max_age * plogis(vul_par[1])}.
+\item \code{vul_par[2]}: \code{a_50}, the age of 50\% vulnerability as an offset, i.e., \code{a_50 = a_95 - exp(vul_par[2])}.
+}
+A vague prior for \code{vul_par[2] ~ N(0, sd = 3)} is used to aid convergence, for example, when vulnerability >> 0.5 for the youngest age class.
+
+With dome vulnerability, a double Gaussian parameterization is used, where \code{vul_par}
+is an estimated vector of length 4:
+\itemize{
+\item \code{vul_par[1]}: \code{a_asc}, the first age of full vulnerability for the ascending limb, via logit transformation
+to constrain \code{a_95} to less than 75\% of the maximum age: \code{a_asc = 0.75 * maxage * plogis(vul_par[1])}.
+\item \code{vul_par[2]}: \code{a_50}, the age of 50\% vulnerability for the ascending limb as an offset, i.e.,
+\code{a_50 = a_asc - exp(vul_par[2])}.
+\item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) via logit transformation
+to constrain between \code{a_asc} and \code{max_age},
+i.e., \code{a_des = (max_age - a_asc) * plogis(vul_par[3]) + a_asc}.
+\item \code{vul_par[4]}: \code{vul_max}, the vulnerability (in logit space) at the maximum age.
+}
+Vague priors of \code{vul_par[2] ~ N(0, sd = 3)} and \code{vul_par[3] ~ N(0, 3)} are used to aid convergence,
+for example, when vulnerability >> 0.5 for the youngest age class.
 }
 \section{Functions}{
 \itemize{
