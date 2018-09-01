@@ -19,8 +19,10 @@ testOM@nsim <- 200
 
 for(i in MP_vec) {
   setup(12)
+  tim <- proc.time()
   res <- runMSE(testOM, MPs = i, PPD = TRUE, parallel = TRUE)
-  cat(diagnostic_AM(res, figure = FALSE))
-  save(res, file = paste0("test_results/", i, ".RData"))
+  message(paste0("Run time: ", (proc.time() - tim)[3], " seconds"))
   sfStop()
+  cat(diagnostic_AM(res, figure = FALSE))
+  save(res, file = paste0("tests_results/", i, ".RData"))
 }
