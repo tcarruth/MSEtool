@@ -31,13 +31,14 @@
   Type tau = exp(log_tau);
 
   Type penalty = 0;
+  Type prior = 0.;
 
   // Vulnerability
   vector<Type> vul(max_age);
   if(vul_type == "logistic") {
-    vul = calc_logistic_vul(vul_par, max_age);
+    vul = calc_logistic_vul(vul_par, max_age, prior);
   } else {
-    vul = calc_dome_vul(vul_par, max_age);
+    vul = calc_dome_vul(vul_par, max_age, prior);
   }
 
   ////// During time series year = 1, 2, ..., n_y
@@ -143,7 +144,7 @@
     if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
   }
 
-  Type nll = nll_comp.sum() + penalty;
+  Type nll = nll_comp.sum() + penalty + prior;
 
   ADREPORT(meanR);
   ADREPORT(sigma);
@@ -177,6 +178,7 @@
   REPORT(nll_comp);
   REPORT(nll);
   REPORT(penalty);
+  REPORT(prior);
 
   return nll;
 //}

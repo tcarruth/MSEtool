@@ -30,9 +30,9 @@ summary_SP <- function(Assessment) {
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("r", "K", "BMSY")
 
-  if(conv) {
+  if(!is.character(SD)) {
     model_estimates <- summary(SD)
-    model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
+    model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
   } else {
     model_estimates <- SD
   }

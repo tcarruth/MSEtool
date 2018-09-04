@@ -128,10 +128,13 @@ Type sum_VBPR(vector<Type> NPR, vector<Type> weight, vector<Type> vul) {
 }
 
 template<class Type>
-vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age) {
+vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior) {
   vector<Type> vul(max_age);
-  Type a_50 = vul_par(0);
-  Type a_95 = a_50 + exp(vul_par(1));
+  Type maxage = max_age;
+  Type a_95 = invlogit(vul_par(0)) * 0.75 * maxage;
+  Type a_50 = a_95 - exp(vul_par(1));
+
+  prior -= dnorm(vul_par(1), Type(0), Type(3), true);
 
 	for(int a=0;a<max_age;a++) {
 	  Type aa = a;
@@ -150,18 +153,25 @@ Type dnorm_vul(Type x, Type mu, Type sd) {
 }
 
 template<class Type>
-vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age) {
+vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
   vector<Type> vul(max_age);
 
-  Type a_50 = vul_par(0);
-  Type a_full = a_50 + exp(vul_par(1));
-  Type a_full2 = a_full + exp(vul_par(2));
+  Type maxage = max_age;
+  Type a_full = invlogit(vul_par(0)) * maxage * 0.75;
+  Type a_50 = a_full - exp(vul_par(1));
+  Type a_full2 = invlogit(vul_par(2));
+  a_full2 *= maxage - a_full;
+  a_full2 += a_full;
   Type vul_max = invlogit(vul_par(3));
+
+  //prior -= dnorm(vul_par(0), Type(0), Type(3), true);
+  prior -= dnorm(vul_par(1), Type(0), Type(3), true);
+  prior -= dnorm(vul_par(2), Type(0), Type(3), true);
+  //prior -= dnorm(vul_par(3), Type(0), Type(3), true);
 
   Type var_asc = pow(a_50 - a_full, 2);
   var_asc /= log(Type(4));
 
-  Type maxage = max_age;
   Type var_des = pow(maxage - a_full2, 2);
   var_des /= -2 * log(vul_max);
 
