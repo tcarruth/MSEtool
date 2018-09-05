@@ -193,9 +193,6 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
 template<class Type>
 Type dlnorm_comp(vector<Type> obs, vector<Type> pred) {
   Type log_lik = 0.;
-  for(int a=0;a<obs.size();a++) {
-    Type obs2 = CppAD::CondExpLt(obs(a), Type(1e-8), Type(1e-8), obs(a));
-    log_lik += dnorm(log(obs2), log(pred(a)), pow(0.01/pred(a), 0.5), true);
-  }
+  for(int a=0;a<obs.size();a++) log_lik += dnorm(log(obs(a)), log(pred(a)), pow(0.01/pred(a), 0.5), true);
   return log_lik;
 }

@@ -208,7 +208,7 @@ Maunder, M.N. 2011. Review and evaluation of likelihood functions for compositio
 stock-assessment models: Estimating the effective sample size. Fisheries Research 209:311-319.
 
 Punt, A.E. and Kennedy, R.B. 1997. Population modelling of Tasmanian rock lobster, Jasus edwardsii, resources. Marine and Freshwater
-Research 48:967–980.
+Research 48:967-980.
 }
 \seealso{
 \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}

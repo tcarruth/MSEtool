@@ -130,10 +130,10 @@
       for(int a=0;a<max_age;a++) loglike_CAApred(a) = CAApred(y,a)/CN(y);
       if(!R_IsNA(asDouble(CAA_n(y)))) {
         if(CAA_dist == "multinomial") {
-          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = (CAA_hist(y,a) + 1e-8) * CAA_n(y);
+          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a), Type(1e-8), Type(1e-8), CAA_hist(y,a)) * CAA_n(y);
           nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
         } else {
-          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CAA_hist(y,a);
+          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a), Type(1e-8), Type(1e-8), CAA_hist(y,a));
           nll_comp(1) -= dlnorm_comp(loglike_CAAobs, loglike_CAApred);
         }
       }

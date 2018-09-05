@@ -118,7 +118,7 @@
 #' stock-assessment models: Estimating the effective sample size. Fisheries Research 209:311-319.
 #'
 #' Punt, A.E. and Kennedy, R.B. 1997. Population modelling of Tasmanian rock lobster, Jasus edwardsii, resources. Marine and Freshwater
-#' Research 48:967–980.
+#' Research 48:967-980.
 #' @examples
 #' \donttest{
 #' res <- SCA(Data = DLMtool::SimulatedData)
@@ -339,8 +339,9 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
 
-  # Add starting values for rec-devs and increase R0 start value if too low
-  if(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+  # Add starting values for rec-devs and increase R0 start value if U is too high (> 0.975)
+  high_U <- try(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0, silent = TRUE)
+  if(!is.character(high_U) && high_U) {
     Recruit <- try(Data@Rec[x, ], silent = TRUE)
     if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
       log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
@@ -350,7 +351,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                        map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
     }
-    while(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    while(obj$par["log_R0"] < 30 * rescale && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
       obj$par["log_R0"] <- obj$par["log_R0"] + 1
     }
     obj$par["log_R0"] <- obj$par["log_R0"] + 1
