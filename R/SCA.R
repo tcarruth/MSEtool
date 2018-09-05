@@ -298,6 +298,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       if(vulnerability == "dome") {
         params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(1/(max_age - Afull)), logit(0.5))
       }
+
+      if(vulnerability == "dome" && any(names(dots) == "Vmaxage")) params$vul_par[4] <- logit(dots$Vmaxage)
     }
   }
   if(is.null(params$log_sigma)) {
@@ -332,6 +334,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     est_rec_dev[!is.na(est_rec_dev)] <- 1:n_est
     map$log_rec_dev <- factor(est_rec_dev)
   }
+  if(vulnerability == "dome" && any(names(dots) == "Vmaxage")) map$vul_par <- factor(c(1:3, NA))
 
   random <- NULL
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev")
