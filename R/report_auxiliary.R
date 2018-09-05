@@ -563,6 +563,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     range_obs <- pretty(obs, n = 6)
     n1 <- range_obs[2]
     n2 <- pretty(quantile(obs[obs > 0], na.rm = TRUE, probs = 0.9))[2]
+    if(n2 < n1) n1 <- 0.5 * n2
     diameter_max <- bubble_adj / n2
     plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
          ylim = c(0, max(data_val)), ylab = data_lab)

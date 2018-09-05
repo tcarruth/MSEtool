@@ -28,6 +28,7 @@ summary_SCA <- function(Assessment) {
   if(!is.character(SD)) {
     model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
     model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
+    if(length(SE_Dev) == 0) SE_Dev <- rep(NA, length(Dev))
     dev_estimates <- cbind(Dev, SE_Dev)
     rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
     model_estimates <- rbind(model_estimates, dev_estimates)
