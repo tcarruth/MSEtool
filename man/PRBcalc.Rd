@@ -31,7 +31,7 @@ PRBcalc(MSE_null, MSE_alt, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
 \item{removethresh}{Positive fraction: the cumulative percentage of removed data (removedat=TRUE) that contribute to the mahalanobis distance}
 }
 \value{
-A list object (first hierarcy is by MP, second has two positions one mahalanobis distance, two is a matrix of type 1 error (first row) and statistical power (second row), by time block)
+A list object with two hierarchies of indexing, first by MP, second has two positions: (1) mahalanobis distance, (2) a matrix of type 1 error (first row) and statistical power (second row), by time block.
 }
 \description{
 Calculate mahalanobis distance (null and alternative MSEs) and statistical power for all MPs in an MSE

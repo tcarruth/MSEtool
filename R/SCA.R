@@ -59,6 +59,8 @@
 #' catch to the vulnerable biomass at the beginning of the year).
 #' The maximum age in the model is a plus-group.
 #'
+#' By default, steepness is fixed in the model to the value in \code{Data@@steep}.
+#'
 #' The annual sample sizes of the catch-at-age matrix is provided to the model (used in the
 #' likelihood for catch-at-age, assuming a multinomial distribution),
 #' and is manipulated via argument \code{CAA_multiplier}. This argument is
@@ -146,7 +148,7 @@
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                 CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
-                start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+                start = NULL, fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(), ...) {
@@ -272,7 +274,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                             log(1.5 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x]))))
   }
   if(is.null(params$transformed_h)) {
-    h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
+    h_start <- ifelse(!fix_h && is.na(Data@steep[x]), 0.9, Data@steep[x])
     if(SR == "BH") {
       h_start <- (h_start - 0.2)/0.8
       params$transformed_h <- logit(h_start)

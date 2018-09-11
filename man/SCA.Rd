@@ -8,7 +8,7 @@
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
   I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL,
-  fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
   fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
   late_dev = "comp50", integrate = FALSE, silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
@@ -18,7 +18,7 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
   I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL,
-  fix_h = FALSE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
   fix_tau = TRUE, common_dev = "comp50", integrate = FALSE,
   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 2e+05, eval.max = 4e+05),
@@ -110,6 +110,8 @@ For the statistical catch-at-age model, the basic data inputs are catch (by weig
 assumed to be known perfectly (the harvest rate in a given year is the ratio of the observed
 catch to the vulnerable biomass at the beginning of the year).
 The maximum age in the model is a plus-group.
+
+By default, steepness is fixed in the model to the value in \code{Data@steep}.
 
 The annual sample sizes of the catch-at-age matrix is provided to the model (used in the
 likelihood for catch-at-age, assuming a multinomial distribution),

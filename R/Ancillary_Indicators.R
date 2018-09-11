@@ -205,7 +205,7 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=FALSE,removethresh=0.05){
 #' @param removethresh Positive fraction: the cumulative percentage of removed data (removedat=TRUE) that contribute to the mahalanobis distance
 #' @importFrom MASS cov.mcd
 #' @importFrom corpcor pseudoinverse
-#' @return A list object (first hierarcy is by MP, second has two positions one mahalanobis distance, two is a matrix of type 1 error (first row) and statistical power (second row), by time block)
+#' @return A list object with two hierarchies of indexing, first by MP, second has two positions: (1) mahalanobis distance, (2) a matrix of type 1 error (first row) and statistical power (second row), by time block.
 #' @author T. Carruthers
 #' @references Carruthers and Hordyk 2018
 #' @export
