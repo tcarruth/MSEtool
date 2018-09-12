@@ -350,13 +350,12 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       log_rec_dev[is.na(est_rec_dev) | is.na(log_rec_dev) | is.infinite(log_rec_dev)] <- 0
       info$params$log_rec_dev <- log_rec_dev
 
-      obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+      obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                        map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
     }
     while(obj$par["log_R0"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
       obj$par["log_R0"] <- obj$par["log_R0"] + 1
     }
-    obj$par["log_R0"] <- obj$par["log_R0"] + 1
   }
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)

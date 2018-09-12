@@ -2,12 +2,14 @@
 MSEtool 1.1.0
 ------------------------------------------------------------------------
 New additions, including:
-- Re-parameterization of dome selectivity in SCA so that parameters are more intuitive.
+- Re-parameterization of dome selectivity in SCA so that estimated parameters are age-based after transformation.
 - Additional argument in SCA for lognormal distribution for age comps.
+- A more efficient method is used to report convergence diagnostics of assessment models when running in closed-loop simulation.
 
 Minor edits, including:
-- A generic function for ramped harvest control rules (`HCR_ramp`) is now included. Users can input the desired limit and target reference points.
+- By default, steepness is now fixed in the SCA and SCA2 assessment functions.
 - By default, nine data-rich MPs are now included in the package. See the help documentation: ?`Data-rich-MP`
+- A generic function for ramped harvest control rules (`HCR_ramp`) is now included. Users can input the desired limit and target reference points.
 - `make_MP` adds dependencies to the MP so that `DLMtool::Required` returns the appropriate dependencies. Dependencies are dynamic based on the configuration of the assessment model. For example, `Data@steep` is a dependency for a SCA-based model only if steepness is fixed.
 
 

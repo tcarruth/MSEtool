@@ -157,7 +157,6 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     while(obj$par["log_meanR"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
       obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
     }
-    obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
   }
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
