@@ -356,7 +356,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     while(obj$par["log_R0"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
       obj$par["log_R0"] <- obj$par["log_R0"] + 1
     }
-    obj$par["log_R0"] <- obj$par["log_R0"] + 1
   }
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
