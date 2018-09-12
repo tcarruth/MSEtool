@@ -36,24 +36,20 @@ retrospective_AM <- function(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FA
 
   if(!inherits(MSE, "MSE")) stop("No object of class MSE was provided.")
   if(length(MSE@Misc) == 0) stop("Nothing found in MSE@Misc. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+  if(length(sim) > 1 || sim > MSE@nsim) stop(paste0(sim, " should be a number between 1 and ", MSE@nsim, "."))
 
   MPs <- MSE@MPs
-  has_diagnostic_fn <- function(x) {
-    Misc <- x@Misc
-    all(vapply(Misc, function(y) any(names(y) == "diagnostic"), logical(1)))
-  }
-  has_diagnostic <- vapply(MSE@Misc, has_diagnostic_fn, logical(1))
-  if(all(!has_diagnostic)) stop("No diagnostic information found in MSE@Misc for any MP. Use an MP created by 'make_MP(diagnostic = 'min')' and set 'runMSE(PPD = TRUE)'.")
-  MPs <- MPs[has_diagnostic]
-
-  match_ind <- pmatch(MP, MPs)
+  match_ind <- match(MP, MPs)
   if(is.na(match_ind)) stop(paste(MP, "MP was not found in the MSE object. Available options are:", paste(MPs, collapse = " ")))
-  MPs <- MPs[match_ind]
-  MPind <- MSE@MPs == MP
-  if(sum(MPind) > 1) stop(paste("More than one match to", MP, "was found in MSE object."))
 
-  if(length(sim) > 1 || sim > MSE@nsim) stop(paste0(sim, " should be a number between 1 and ", MSE@nsim, "."))
-  Assessment_report <- lapply(MSE@Misc[[which(MPind)]]@Misc, getElement, "Assessment_report")[[sim]]
+  has_Assess_fn <- function(Data) {
+    Misc <- Data@Misc
+    all(vapply(Misc, function(y) any(names(y) == "Assessment_report"), logical(1)))
+  }
+  has_Assess <- has_Assess(MSE@Misc[[match_ind]])
+  if(!has_Assess) stop("No Assessment objects were found in MSE@Misc for any MP. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+
+  Assessment_report <- lapply(MSE@Misc[[match_ind]]@Misc, getElement, "Assessment_report")[[sim]]
 
   isSP <- grepl("SP", Assessment_report[[1]]@Model)
 
