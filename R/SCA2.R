@@ -154,7 +154,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
       obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                        map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
     }
-    while(obj$par["log_meanR"] < 30 * rescale && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    while(obj$par["log_meanR"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
       obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
     }
     obj$par["log_meanR"] <- obj$par["log_meanR"] + 1

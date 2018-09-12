@@ -353,7 +353,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
                        map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
     }
-    while(obj$par["log_R0"] < 30 * rescale && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    while(obj$par["log_R0"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
       obj$par["log_R0"] <- obj$par["log_R0"] + 1
     }
     obj$par["log_R0"] <- obj$par["log_R0"] + 1
