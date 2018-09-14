@@ -758,13 +758,14 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE) {
 #' @export plot_SR
 plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FALSE,
                     y_zoom = NULL) {
-  if(is.null(rec_dev)) R.max <- 1.1 * max(expectedR)
-  else {
+  if(is.null(rec_dev)) {
+    R.max <- 1.1 * max(expectedR)
+  } else {
     if(is.null(y_zoom)) R.max <- 1.1 * max(rec_dev)
     else R.max <- y_zoom * max(expectedR)
   }
   S.max <- 1.1 * max(c(Spawners, S0))
-  plot(Spawners, expectedR, typ = 'l', xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
+  plot(Spawners[order(Spawners)], expectedR[order(Spawners)], typ = 'l', xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
        xlab = 'Spawning Stock Biomass (SSB)', ylab = 'Recruitment')
   if(!trajectory) {
     if(is.null(rec_dev)) points(Spawners, expectedR)

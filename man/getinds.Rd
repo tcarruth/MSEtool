@@ -8,7 +8,7 @@ getinds(PPD, styr, res = 6, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
   stat = c("slp", "AAV", "mu", "slp", "slp"))
 }
 \arguments{
-\item{PPD}{An object of class Data stored in the Misc slot of an MSE object following a call of runMSE(PPD=T)}
+\item{PPD}{An object of class Data stored in the Misc slot of an MSE object following a call of \code{runMSE(PPD = TRUE)}.}
 
 \item{styr}{Positive integer, the starting year for calculation of quantities}
 

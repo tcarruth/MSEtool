@@ -756,7 +756,7 @@ plot_yield_SCA <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01), 
   Brec <- report$Brec
 
   EPR <- Req <- NA
-  solveMSY <- function(logit_U, SR) {
+  solveMSY <- function(logit_U) {
     U <- ilogit(logit_U)
     surv <- exp(-M) * (1 - vul * U)
     NPR <- c(1, cumprod(surv[1:(maxage-1)]))
@@ -764,14 +764,14 @@ plot_yield_SCA <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01), 
     EPR <<- sum(NPR * mat * weight)
     if(SR == "BH") Req <<- (Arec * EPR - 1)/(Brec * EPR)
     if(SR == "Ricker") Req <<- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * U * NPR
-    Yield <- Req * sum(CPR * weight)
+    YPR <- vul * U * NPR * weight
+    Yield <- Req * sum(YPR)
     return(-1 * Yield)
   }
 
   Biomass <- Yield <- R <- rep(NA, length(u.vector))
   for(i in 1:length(u.vector)) {
-    Yield[i] <- -1 * solveMSY(log(u.vector[i]/(1 - u.vector[i])), SR = SR)
+    Yield[i] <- -1 * solveMSY(logit(u.vector[i]))
     R[i] <- Req
     Biomass[i] <- EPR * Req
   }

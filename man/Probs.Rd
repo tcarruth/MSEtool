@@ -25,7 +25,7 @@ A list object.
  Position 2 is a matrix (2 rows, ntimeblock columns) which is (row 1) alpha: the rate of false positives, and row 2 the power (1-beta) the rate of true positives
 }
 \description{
-Calculates mahalanobis distance and rejection of the Null operating model
+Calculates mahalanobis distance and rejection of the Null operating model, used by wrapping function \link{PRBcalc}.
 }
 \references{
 Carruthers and Hordyk 2018

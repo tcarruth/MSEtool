@@ -38,13 +38,13 @@ get_sdreport <- function(obj, opt) {
     if(is.null(obj$env$random)) h <- obj$he(opt$par) else h <- NULL
     res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
                              getReportCovariance = FALSE), error = as.character)
-  }
-
-  if(inherits(res, "sdreport") && !res$pdHess && is.null(h)) {
+    if(!is.character(res) && !is.null(h) && !res$pdHess) {
       h <- optimHess(opt$par, obj$fn, obj$gr)
       res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
                                getReportCovariance = FALSE), error = as.character)
+    }
   }
+
   if(inherits(res, "sdreport") && res$pdHess && all(is.nan(res$cov.fixed))) {
     if(is.null(h)) h <- optimHess(opt$par, obj$fn, obj$gr)
     if(!is.character(try(chol(h), silent = TRUE))) res$cov.fixed <- chol2inv(chol(h))

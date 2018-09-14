@@ -469,12 +469,12 @@ get_MSY <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
     EPR <- sum(NPR * mat * weight)
     if(SR == "BH") Req <- (Arec * EPR - 1)/(Brec * EPR)
     if(SR == "Ricker") Req <- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * U * NPR
-    Yield <- Req * sum(CPR * weight)
+    YPR <- vul * U * NPR * weight
+    Yield <- Req * sum(YPR)
     return(-1 * Yield)
   }
 
-  opt2 <- optimize(solveMSY, interval = c(-50, 6))
+  opt2 <- optimize(solveMSY, interval = c(logit(0.01), logit(0.99)))
   UMSY <- 1/(1 + exp(-opt2$minimum))
   MSY <- -1 * opt2$objective
   VBMSY <- MSY/UMSY
@@ -526,12 +526,12 @@ get_MSY_opt <- function(x, M, weight, mat, SR = c("BH", "Ricker"), vul_type = c(
     EPR <- sum(NPR * mat * weight)
     if(SR == "BH") Req <- (Arec * EPR - 1)/(Brec * EPR)
     if(SR == "Ricker") Req <- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * U * NPR
-    Yield <- Req * sum(CPR * weight)
+    YPR <- vul * U * NPR * weight
+    Yield <- Req * sum(YPR)
     return(-1 * Yield)
   }
 
-  opt2 <- optimize(solveMSY, interval = c(-50, 6))
+  opt2 <- optimize(solveMSY, interval = c(logit(0.01), logit(0.99)))
   UMSY <- ilogit(opt2$minimum)
   MSY <- -1 * as.numeric(opt2$objective)
 

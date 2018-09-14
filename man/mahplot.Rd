@@ -7,7 +7,7 @@
 mahplot(outlist, res = 6, maxups = 5, MPs)
 }
 \arguments{
-\item{outlist}{A list object produced by the function PRBcalc(MSEnull,MSEalt)}
+\item{outlist}{A list object produced by the function \link{PRBcalc}}
 
 \item{res}{Integer, the resolution (time blocking) for the calculation of PPD}
 
