@@ -300,10 +300,9 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       if(vulnerability == "dome") {
         params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(1/(max_age - Afull)), logit(0.5))
       }
-
-      if(vulnerability == "dome" && any(names(dots) == "Vmaxage")) params$vul_par[4] <- logit(dots$Vmaxage)
     }
   }
+  if(vulnerability == "dome" && any(names(dots) == "Vmaxage")) params$vul_par[4] <- logit(dots$Vmaxage)
   if(is.null(params$log_sigma)) {
     sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
     params$log_sigma <- log(sigmaI)
