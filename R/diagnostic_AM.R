@@ -34,8 +34,8 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
         stop("x does not appear to be either a Hist, Data, or OM object.")
       }
 
-  snowfall::sfInit(parallel = ncpus > 1, cpus = ncpus)
-  snowfall::sfLibrary("MSEtool", character.only = TRUE)
+  DLMtool::setup(cpus = ifelse(ncpus < parallel::detectCores(), ncpus, parallel::detectCores()))
+  on.exit(sfStop())
   nsim <- nrow(Data@Cat)
   message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
   dots <- list(...)

@@ -550,8 +550,8 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   # subset
   #ind <- rowSums(obs, na.rm = TRUE) > 0
   Year <- Year[ind]
-  obs <- obs[ind, ]
-  if(!is.null(fit)) fit <- fit[ind, ]
+  obs <- obs[ind, , drop = FALSE]
+  if(!is.null(fit)) fit <- fit[ind, , drop = FALSE]
   N <- N[ind]
 
   obs_prob <- obs/rowSums(obs, na.rm = TRUE)
