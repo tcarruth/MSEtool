@@ -141,6 +141,9 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior) {
 	  aa += 1;
 	  vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - a_50)/(a_95 - a_50)), -1);
   }
+	Type interim_vmax = max(vul);
+	for(int a=0;a<max_age;a++) vul(a) /= interim_vmax;
+
 	return vul;
 }
 
@@ -157,7 +160,7 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
   vector<Type> vul(max_age);
 
   Type maxage = max_age;
-  Type a_full = invlogit(vul_par(0)) * maxage * 0.75;
+  Type a_full = invlogit(vul_par(0)) * 0.75 * maxage;
   Type a_50 = a_full - exp(vul_par(1));
   Type a_full2 = invlogit(vul_par(2));
   a_full2 *= maxage - a_full;
@@ -186,6 +189,9 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
 
     vul(a) = CppAD::CondExpLe(aa, a_full, vul_asc, CppAD::CondExpLe(aa, a_full2, Type(1), vul_des));
   }
+  Type interim_vmax = max(vul);
+  for(int a=0;a<max_age;a++) vul(a) /= interim_vmax;
+
 
   return vul;
 }
