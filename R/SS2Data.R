@@ -279,7 +279,9 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
     if(any(!is.na(match(lendbase$Fleet, comp_fleet_length)))) {
       CAL <- get_comps(lendbase, comp_fleet_length, type = "length")
       CAL <- as.matrix(CAL)
-      Data@CAL <- array(CAL, c(1, nyears, ncol(CAL)))
+      CAL0<-CAL
+      CAL0[is.na(CAL)]<-0
+      Data@CAL <- array(CAL0, c(1, nyears, ncol(CAL)))
 
       message(paste0("Collected length comps from Fleets: \n",
                      paste0(paste(comp_fleet_length, replist$FleetNames[comp_fleet_length], collapse = "\n"))))
@@ -290,10 +292,12 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
 
       Data@CAL_bins <- c(CAL_bins, plus_one)
 
-      ML <- rowSums(CAL * rep(CAL_bins, each = nyears))/rowSums(CAL)
-      ML[ML <= 0] <- NA
+      ML <- rowSums(CAL * rep(CAL_bins, each = nyears),na.rm=T)/rowSums(CAL,na.rm=T)
+      ML[ML <= 0 | ML=="NaN"] <- NA
       Data@ML <- matrix(ML, nrow = 1)
 
+      CAL0<-CAL
+      CAL0[is.na(CAL)]<-0
       lcpos <- apply(CAL, 1, function(x) if(all(is.na(x))) return(NA) else which.max(x))
       Data@Lc <- matrix(CAL_bins[lcpos], nrow = 1)
       Data@Lc[Data@Lc <= 0] <- NA
@@ -302,7 +306,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
       for(i in 1:ncol(Data@Lbar)) {
         if(!is.na(lcpos[i])) {
           Data@Lbar[1, i] <- weighted.mean(x = CAL_bins[lcpos[i]:length(replist$lbins)],
-                                           w = CAL[i, lcpos[i]:length(replist$lbins)])
+                                           w = CAL0[i, lcpos[i]:length(replist$lbins)],na.rm=T)
         }
       }
 
@@ -550,7 +554,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
   Data@LFC <- LinInterp(V_terminal, Len_age, 0.05, ascending = TRUE, zeroint = TRUE)
   Data@LFS <- Len_age[which.min((exp(V_terminal)-exp(1.05))^2 * 1:length(V_terminal))]
   message(paste0("Data@LFC = ", Data@LFC, ", Data@LFS = ", Data@LFS))
-
+  if("sigma_R_in"%in% names(replist)) Data@sigmaR<-replist$sigma_R_in
   Data@Log <- Data@Misc <- list(note = paste("This Data object was created by the SS2Data function from MSEtool version", packageVersion("MSEtool")))
 
   message("\nImport was successful.\n")
