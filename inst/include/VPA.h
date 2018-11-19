@@ -69,18 +69,18 @@
     for(int a=1;a<max_age;a++) {
       if(a==max_age-1) {
         F(y-1,a-1) = Newton_VPA_F_plus(F(y,a), F_ratio, M(a-1), M(a), CAA_hist(y-1,a-1), CAA_hist(y-1,a), N(y,a), nitF);
-	  } else {
-		F(y-1,a-1) = Newton_VPA_F(F(y,a), M(a-1), CAA_hist(y-1,a-1), N(y,a), nitF);
-	  }
-	  
-	  N(y-1,a-1) = (F(y-1,a-1) + M(a-1)) * CAA_hist(y-1,a-1);
-	  N(y-1,a-1) /= (1 - exp(-F(y-1,a-1) - M(a-1))) * F(y-1,a-1);
-	  
-	  if(a==max_age-1) {
+      } else {
+        F(y-1,a-1) = Newton_VPA_F(F(y,a), M(a-1), CAA_hist(y-1,a-1), N(y,a), nitF);
+      }
+
+      N(y-1,a-1) = (F(y-1,a-1) + M(a-1)) * CAA_hist(y-1,a-1);
+      N(y-1,a-1) /= (1 - exp(-F(y-1,a-1) - M(a-1))) * F(y-1,a-1);
+
+      if(a==max_age-1) {
         F(y-1,a) = F_ratio * F(y-1,a-1);
         N(y-1,a) = (F(y-1,a) + M(a)) * CAA_hist(y-1,a);
         N(y-1,a) /= (1 - exp(-F(y-1,a) - M(a))) * F(y-1,a);
-	  }
+      }
     }
   }
 
