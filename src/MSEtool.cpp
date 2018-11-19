@@ -6,7 +6,7 @@ template<class Type>
   Type objective_function<Type>::operator() ()
 {
   DATA_STRING(model);
-  
+
   if(model == "DD") {
     #include "../inst/include/DD.h"
   } else
@@ -30,10 +30,13 @@ template<class Type>
               } else
                 if(model == "SCA2") {
                   #include "../inst/include/SCA2.h"
-                } else {
+                } else
+                  if(model == "VPA") {
+                    #include "../inst/include/VPA.h"
+                  } else {
                     error("No model found.");
                   }
-  
+
   return 0;
   }
 

@@ -702,7 +702,7 @@ plot_surplus_production <- function(B, B0 = NULL, C, arrow_size = 0.07) {
 }
 
 
-plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE) {
+plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, ylab = expression(U/U[MSY])) {
   old.warning <- options()$warn
   on.exit(options(warn = old.warning))
   options(warn = -1)
@@ -711,7 +711,7 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE) {
 
   x.max <- max(biomass, 1)
   y.max <- max(exploit, 1)
-  plot(NULL, NULL, typ = 'n', xlab = expression(B/B[MSY]), ylab = expression(U/U[MSY]),
+  plot(NULL, NULL, typ = 'n', xlab = expression(B/B[MSY]), ylab = ylab,
        xlim = c(0, 1.1 * x.max), ylim = c(0, 1.1 * y.max))
   if(color) {
     # Colors from https://www.rapidtables.com/web/color/html-color-codes.html
