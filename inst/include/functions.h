@@ -227,13 +227,12 @@ Type deriv_F_func(Type logF, Type M) {
 // Newton solver for log(F)
 template<class Type>
 Type calc_F(Type F_start, Type M, Type CAA, Type N_next, int nloop) {
-  vector<Type> logF(nloop);
-  logF(0) = log(F_start);
-  for(int i=1;i<nloop;i++) {
-    logF(i) = logF(i-1);
-    logF(i) -= F_func(logF(i-1), M, CAA, N_next)/deriv_F_func(logF(i-1), M);
+  Type logF = log(F_start);
+  for(int i=0;i<nloop;i++) {
+    Type tmp = F_func(logF, M, CAA, N_next)/deriv_F_func(logF, M);
+    logF -= tmp;
   }
-  return exp(logF(nloop-1));
+  return exp(logF);
 }
 
 // Iterative solver for F for A-1 and A (maximum age as a plus-group) in VPA model -
@@ -285,13 +284,11 @@ Type deriv_F_func2(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2) {
 // Newton solver for plus-group F
 template<class Type>
 Type calc_F2(Type F_start, Type phi, Type M1, Type M2, Type CAA1, Type CAA2, Type N_next, int nloop) {
-  vector<Type> logF(nloop);
-  logF(0) = log(F_start);
-  for(int i=1;i<nloop;i++) {
-    logF(i) = logF(i-1);
-    Type tmp = F_func2(logF(i-1), phi, M1, M2, CAA1, CAA2, N_next);
-    tmp /= deriv_F_func2(logF(i-1), phi, M1, M2, CAA1, CAA2);
-    logF(i) -= tmp;
+  Type logF = log(F_start);
+  for(int i=0;i<nloop;i++) {
+    Type tmp = F_func2(logF, phi, M1, M2, CAA1, CAA2, N_next);
+    tmp /= deriv_F_func2(logF, phi, M1, M2, CAA1, CAA2);
+    logF -= tmp;
   }
-  return exp(logF(nloop-1));
+  return exp(logF);
 }
