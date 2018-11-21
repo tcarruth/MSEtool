@@ -57,15 +57,19 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE,
 #' @return A list with an array of model output and of model estimates from
 #' the retrospective analysis.
 #' @param save_figure Indicates whether figures will be saved to directory.
-#' @param save_dir The directory to which figures will be saved. By default: \code{getwd()}
+#' @param save_dir The directory to which figures will be saved.
 #' @author Q. Huynh
 #' @return Figures showing the time series of biomass and exploitation and parameter estimates
-#' with successive number of years removed. Returns invisibly a list of model output and model estimates.
+#' with successive number of years removed. For a variety of time series output (SSB, recruitment, etc.) and
+#' estimates (R0, steepness, etc.), also returns a matrix of Mohn's rho (Mohn 1999).
 #' @examples
 #' \donttest{
 #' output <- DD_TMB(Data = DLMtool::Red_snapper)
 #' get_retro <- retrospective(output, nyr = 5, figure = FALSE)
 #' }
+#' @references
+#' Mohn, R. 1999. The retrospective problem in sequential population analysis: an investigation using cod fishery
+#' and simulated data. ICES Journal of Marine Science 56:473-488.
 #' @export
 retrospective <- function(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
                           save_dir = tempdir()) {

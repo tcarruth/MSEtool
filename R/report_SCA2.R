@@ -570,13 +570,16 @@ retrospective_SCA2 <- function(Assessment, nyr, figure = TRUE, save_figure = FAL
       message(paste("Non-convergence when", i, "years of data were removed."))
     }
   }
+
+  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1],
+                                 ts_lab = c("SSB", "SSB_SSBMSY", "SSB_SSB0", "Recruitment", "Abundance", "U", "U_UMSY", "log_rec_dev"))
+
   if(figure) {
     plot_retro_SCA2(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
                     nyr_label = 0:nyr, color = rich.colors(nyr+1))
   }
-  # Need to write legend?
-  legend <- NULL
-  return(invisible(list(legend = legend, retro_ts = retro_ts, retro_est = retro_est)))
+
+  return(Mohn_rho)
 }
 
 

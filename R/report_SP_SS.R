@@ -461,13 +461,17 @@ retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE,
     }
 
   }
+
+  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1], retro_est[, 3:4, 1],
+                                 ts_lab = c("Biomass", "B_BMSY", "B_B0", "U", "U_UMSY", "Biomass deviations"),
+                                 est_lab = c("UMSY estimate", "MSY estimate"))
+
   if(figure) {
     plot_retro_SP_SS(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
                      nyr_label = 0:nyr, color = rich.colors(nyr+1))
   }
-  # Need to write legend
-  legend <- NULL
-  return(invisible(list(legend = legend, retro_ts = retro_ts, retro_est = retro_est)))
+
+  return(Mohn_rho)
 }
 
 plot_retro_SP_SS <- function(retro_ts, retro_est, save_figure = FALSE,

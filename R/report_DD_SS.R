@@ -564,14 +564,22 @@ retrospective_DD_SS <- function(Assessment, nyr, figure = TRUE, save_figure = FA
       message(paste("Non-convergence when", i, "years of data were removed."))
     }
   }
+
+  fix_h <- "transformed_h" %in% names(obj$env$map)
+  if(fix_h) est_ind <- 5 else est_ind <- 5:6
+  est_lab <- "R0 estimate"
+  if(!fix_h) est_lab <- c(est_lab, "Steepness estimate")
+
+  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1], retro_est[, , 1][, est_ind, drop = FALSE],
+                                 ts_lab = c("Biomass", "B_BMSY", "B_B0", "Recruitment", "Abundance", "U", "U_UMSY", "log_rec_dev"),
+                                 est_lab = est_lab)
+
   if(figure) {
-    fix_h <- "transformed_h" %in% names(obj$env$map)
     plot_retro_DD_SS(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
                       nyr_label = 0:nyr, color = rich.colors(nyr+1), fix_h, data$SR_type)
   }
-  # Need to write legend?
-  legend <- NULL
-  return(invisible(list(legend = legend, retro_ts = retro_ts, retro_est = retro_est)))
+
+  return(Mohn_rho)
 }
 
 
