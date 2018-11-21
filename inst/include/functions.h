@@ -210,14 +210,14 @@ Type dlnorm_comp(vector<Type> obs, vector<Type> pred) {
 // where x = log(F), and:
 // g'(x) = exp(x)/Z - exp(x) exp(Z)/(exp(Z) - 1) - 1
 template<class Type>
-Type F_func(Type logF, Type M, Type CAA, Type N_next) {
+Type VPA_F(Type logF, Type M, Type CAA, Type N_next) {
   Type Z = exp(logF) + M;
   return log(Z) + log(CAA) - log(N_next) - log(exp(Z) - 1) - logF;
 }
 
-// Derivative of F_func
+// Derivative of VPA_F
 template<class Type>
-Type deriv_F_func(Type logF, Type M) {
+Type deriv_VPA_F(Type logF, Type M) {
   Type Z = exp(logF) + M;
   Type ans = exp(logF)/Z;
   ans -= exp(logF) * exp(Z)/(exp(Z) - 1);
@@ -226,10 +226,10 @@ Type deriv_F_func(Type logF, Type M) {
 
 // Newton solver for log(F)
 template<class Type>
-Type calc_F(Type F_start, Type M, Type CAA, Type N_next, int nloop) {
+Type Newton_VPA_F(Type F_start, Type M, Type CAA, Type N_next, int nloop) {
   Type logF = log(F_start);
   for(int i=0;i<nloop;i++) {
-    Type tmp = F_func(logF, M, CAA, N_next)/deriv_F_func(logF, M);
+    Type tmp = VPA_F(logF, M, CAA, N_next)/deriv_VPA_F(logF, M);
     logF -= tmp;
   }
   return exp(logF);
@@ -242,7 +242,7 @@ Type calc_F(Type F_start, Type M, Type CAA, Type N_next, int nloop) {
 // N_y,A-1 = Z_y,A-1 / F_y,A-1 / (1 - exp(-Z_y,A-1)) * C_y,A-1
 // N_y,A = Z_y,A / F_y,A / (1 - exp(-Z_y,A)) * C_y,A where F_y,A = phi * F_y,A-1
 template<class Type>
-Type F_func2(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2, Type N_next) {
+Type VPA_F_plus(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2, Type N_next) {
   Type F1 = exp(logF);
   Type Z1 = F1 + M1;
   Type F2 = phi * F1;
@@ -254,7 +254,7 @@ Type F_func2(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2, Type N_nex
 
 // Derivative of h(x)
 template<class Type>
-Type deriv_F_func2(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2) {
+Type deriv_VPA_F_plus(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2) {
   Type F1 = exp(logF);
   Type Z1 = F1 + M1;
   Type F2 = phi * F1;
@@ -283,11 +283,11 @@ Type deriv_F_func2(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2) {
 
 // Newton solver for plus-group F
 template<class Type>
-Type calc_F2(Type F_start, Type phi, Type M1, Type M2, Type CAA1, Type CAA2, Type N_next, int nloop) {
+Type Newton_VPA_F_plus(Type F_start, Type phi, Type M1, Type M2, Type CAA1, Type CAA2, Type N_next, int nloop) {
   Type logF = log(F_start);
   for(int i=0;i<nloop;i++) {
-    Type tmp = F_func2(logF, phi, M1, M2, CAA1, CAA2, N_next);
-    tmp /= deriv_F_func2(logF, phi, M1, M2, CAA1, CAA2);
+    Type tmp = VPA_F_plus(logF, phi, M1, M2, CAA1, CAA2, N_next);
+    tmp /= deriv_VPA_F_plus(logF, phi, M1, M2, CAA1, CAA2);
     logF -= tmp;
   }
   return exp(logF);

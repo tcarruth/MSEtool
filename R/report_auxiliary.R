@@ -501,6 +501,9 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' @param CAL_bins A vector of lengths corresponding to the columns in \code{obs}.
 #' and \code{fit}. Ignored for age data.
 #' @param ind A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.
+#' @param annual_ylab Character string for y-axis label when \code{plot_type = "annual"}.
+#' @param annual_yscale For annual composition plots (\code{plot_type = "annual"}), whether the raw values
+#' ("raw") or frequencies ("proportions") are plotted.
 #' @param bubble_adj Numeric, for adjusting the relative size of bubbles in bubble plots
 #' (larger number = larger bubbles).
 #' @param fit_linewidth Argument \code{lwd} for fitted line.
@@ -520,16 +523,15 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' }
 plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c('annual', 'bubble_data', 'bubble_residuals', 'mean'),
                              N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+                             annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
                              bubble_adj = 5, fit_linewidth = 3, fit_color = "red") {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
 
   plot_type <- match.arg(plot_type)
+  annual_yscale <- match.arg(annual_yscale)
   if(is.null(CAL_bins)) data_type <- "age" else data_type <- "length"
-  if(is.null(data_type)) stop('Indicate in data_type whether age or length data are being considered.')
-  if(data_type == 'length' & is.null(CAL_bins)) {
-    stop('Need vector of length bins.')
-  }
+
   if(!is.null(fit) && !all(dim(fit) == dim(obs))) stop("Dimensions of 'obs' and 'fit' do not match.")
 
   if(data_type == 'length') {
@@ -543,9 +545,16 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   }
   N <- round(N, 1)
 
-  obs_prob_all <- obs/rowSums(obs, na.rm = TRUE)
-  if(!is.null(fit)) fit_prob_all <- fit/rowSums(fit, na.rm = TRUE)
-  else fit_prob_all <- NULL
+  if(annual_yscale == "proportions") {
+    obs_prob_all <- obs/rowSums(obs, na.rm = TRUE)
+    if(!is.null(fit)) fit_prob_all <- fit/rowSums(fit, na.rm = TRUE)
+    else fit_prob_all <- NULL
+  }
+  if(annual_yscale == "raw") {
+    obs_prob_all <- obs
+    if(!is.null(fit)) fit_prob_all <- fit
+    else fit_prob_all <- NULL
+  }
 
   # subset
   #ind <- rowSums(obs, na.rm = TRUE) > 0
@@ -553,10 +562,6 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   obs <- obs[ind, , drop = FALSE]
   if(!is.null(fit)) fit <- fit[ind, , drop = FALSE]
   N <- N[ind]
-
-  obs_prob <- obs/rowSums(obs, na.rm = TRUE)
-  if(!is.null(fit)) fit_prob <- fit/rowSums(fit, na.rm = TRUE)
-  else fit_prob <- NULL
 
   # Bubble plot (obs)
   if('bubble_data' %in% plot_type) {
@@ -579,6 +584,9 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   # Bubble plot (residuals if applicable)
   if('bubble_residuals' %in% plot_type) {
     if(is.null(fit)) stop("No fitted data available.")
+
+    obs_prob <- obs/rowSums(obs, na.rm = TRUE)
+    fit_prob <- fit/rowSums(fit, na.rm = TRUE)
 
     resid <- N * (obs_prob - fit_prob) / sqrt(N * fit_prob)
     diameter_max <- bubble_adj / pmin(10, max(abs(resid), na.rm = TRUE))
@@ -615,7 +623,20 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
 
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
     ylim <- c(0, 1.1 * max(obs_prob_all, fit_prob_all, na.rm = TRUE))
-    yaxp <- c(0, 1, 4)
+
+    if(annual_yscale == "proportions") {
+      obs_prob <- obs/rowSums(obs, na.rm = TRUE)
+      if(!is.null(fit)) fit_prob <- fit/rowSums(fit, na.rm = TRUE)
+      else fit_prob <- NULL
+    }
+    if(annual_yscale == "raw") {
+      obs_prob <- obs
+      fit_prob <- fit
+    }
+
+    yaxp <- c(0, max(pretty(ylim, n = 4)), 4)
+    if(max(obs_prob_all, fit_prob_all, na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
+
     las <- 1
     type <- 'o'
     for(i in 1:length(Year)) {
@@ -662,7 +683,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
       }
       if(i %% 16 == 0 || i == length(Year)) {
         mtext(data_lab, side = 1, line = 3, outer = TRUE)
-        mtext('Frequency', side = 2, line = 3.5, outer = TRUE)
+        mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)
       }
     }
     return(invisible())

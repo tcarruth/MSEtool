@@ -8,7 +8,7 @@ VPA(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"),
   vulnerability = c("logistic", "dome", "free"), I_type = c("B", "VB",
   "SSB"), rescale = "mean1", start = NULL, fix_h = TRUE,
   fix_sigma = FALSE, fix_Fratio = TRUE, vul_pen = c(3, 0.4),
-  R_pen = c(3, Data@sigmaR[x]), nitF = 6L, silent = TRUE,
+  R_pen = c(3, Data@sigmaR[x]), nitF = 5L, silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 2e+05, eval.max = 4e+05), ...)
 }
@@ -66,17 +66,20 @@ hasn't converged. The optimization continues from the parameters from the previo
 
 \item{...}{Other arguments to be passed.}
 }
+\value{
+An object of class \linkS4class{Assessment}. The F vector is the apical fishing mortality experienced by any
+age class in a given year. The U vector is the ratio of catch (weight) and vulnerable biomass, which may be a better
+description of fishing pressure (and UMSY = 1 - exp(-FMSY)).
+}
 \description{
 A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to a .
-The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2017).
+The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018).
 }
 \details{
 For \code{start} (optional), a named list of starting values of estimates can be provided for:
 \itemize{
 \item \code{F_term} The terminal year fishing mortality.
 \item \code{F_ratio} The ratio of F in the plus-group to the next youngest age. If not provided, a value of 1 is used.
-\item \code{meanR} Mean recruitment, only for \code{SCA2}.
-\item \code{U_equilibrium} Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
 \item \code{vul_par} Vulnerability parameters in the terminal year. This will be of length 2 vector for \code{"logistic"} or length 4 for
 \code{"dome"}, see \link{SCA} for further documentation on parameterization. For option \code{"free"}, this will be a vector of length
 A-2 where A is the number of age classes in the model. To estimate parameters, vulnerability is initially set to one at half the max age
@@ -86,5 +89,5 @@ by the Fratio.
 }
 }
 \references{
-Porch, C.E. 2017. VPA-2BOX 4.01 User Guide. NOAA Tech. Memo. NMFS-SEFSC-708. 74 pp.
+Porch, C.E. 2018. VPA-2BOX 4.01 User Guide. NOAA Tech. Memo. NMFS-SEFSC-726. 67 pp.
 }

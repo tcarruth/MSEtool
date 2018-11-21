@@ -6,8 +6,9 @@
 \usage{
 plot_composition(Year = 1:nrow(obs), obs, fit = NULL,
   plot_type = c("annual", "bubble_data", "bubble_residuals", "mean"),
-  N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs), bubble_adj = 5,
-  fit_linewidth = 3, fit_color = "red")
+  N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+  annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
+  bubble_adj = 5, fit_linewidth = 3, fit_color = "red")
 }
 \arguments{
 \item{Year}{A vector of years.}
@@ -28,6 +29,11 @@ bubble plot of the data, and bubble plot of the residuals, and annual means.}
 and \code{fit}. Ignored for age data.}
 
 \item{ind}{A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.}
+
+\item{annual_ylab}{Character string for y-axis label when \code{plot_type = "annual"}.}
+
+\item{annual_yscale}{For annual composition plots (\code{plot_type = "annual"}), whether the raw values
+("raw") or frequencies ("proportions") are plotted.}
 
 \item{bubble_adj}{Numeric, for adjusting the relative size of bubbles in bubble plots
 (larger number = larger bubbles).}

@@ -1,7 +1,7 @@
 #' Virtual population analysis (VPA)
 #'
 #' A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to a .
-#' The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2017).
+#' The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018).
 #'
 #' @param x A position in the Data object (by default, equal to one for assessments).
 #' @param Data An object of class Data
@@ -42,8 +42,6 @@
 #' \itemize{
 #' \item \code{F_term} The terminal year fishing mortality.
 #' \item \code{F_ratio} The ratio of F in the plus-group to the next youngest age. If not provided, a value of 1 is used.
-#' \item \code{meanR} Mean recruitment, only for \code{SCA2}.
-#' \item \code{U_equilibrium} Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
 #' \item \code{vul_par} Vulnerability parameters in the terminal year. This will be of length 2 vector for \code{"logistic"} or length 4 for
 #' \code{"dome"}, see \link{SCA} for further documentation on parameterization. For option \code{"free"}, this will be a vector of length
 #' A-2 where A is the number of age classes in the model. To estimate parameters, vulnerability is initially set to one at half the max age
@@ -51,12 +49,15 @@
 #' by the Fratio.
 #' \item \code{sigma} Standard deviation of the index. If not provided, the value based on \code{Data@@CV_Ind} is used.
 #' }
+#' @return An object of class \linkS4class{Assessment}. The F vector is the apical fishing mortality experienced by any
+#' age class in a given year. The U vector is the ratio of catch (weight) and vulnerable biomass, which may be a better
+#' description of fishing pressure (and UMSY = 1 - exp(-FMSY)).
 #' @references
-#' Porch, C.E. 2017. VPA-2BOX 4.01 User Guide. NOAA Tech. Memo. NMFS-SEFSC-708. 74 pp.
+#' Porch, C.E. 2018. VPA-2BOX 4.01 User Guide. NOAA Tech. Memo. NMFS-SEFSC-726. 67 pp.
 #' @export
 VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome", "free"),
                 I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL, fix_h = TRUE,
-                fix_sigma = FALSE, fix_Fratio = TRUE, vul_pen = c(3, 0.4), R_pen = c(3, Data@sigmaR[x]), nitF = 6L,
+                fix_sigma = FALSE, fix_Fratio = TRUE, vul_pen = c(3, 0.4), R_pen = c(3, Data@sigmaR[x]), nitF = 5L,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 2e5, eval.max = 4e5), ...) {
   dependencies <- "Data@Cat, Data@CAA, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
@@ -236,7 +237,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   if(Assessment@conv) {
 
     info$h <- ifelse(fix_h, Data@steep[x], NA)
-    info$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 1, mean)
+    info$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 2, mean)
     info$vul_refpt <- info$vul_refpt/max(info$vul_refpt)
     ref_pt <- get_refpt_VPA(report$SSB[1:(length(report$SSB)-1)], report$N[2:length(report$SSB), 1], data$weight, data$mat, data$M,
                           info$vul_refpt, SR, fix_h, info$h)
@@ -244,6 +245,9 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     report <- c(report, ref_pt)
 
     Assessment@FMSY <- report$FMSY
+    Assessment@U <- Assessment@Catch/(Assessment@Catch + Assessment@VB[1:length(Year)])
+    Assessment@UMSY <- 1 - exp(-Assessment@FMSY)
+    Assessment@U_UMSY <- Assessment@U/Assessment@UMSY
     Assessment@MSY <- report$MSY
     Assessment@BMSY <- report$BMSY
     Assessment@SSBMSY <- report$SSBMSY
