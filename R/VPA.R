@@ -39,6 +39,15 @@
 #' \code{\link[stats]{nlminb}}.
 #' @param ... Other arguments to be passed.
 #' @details
+#' The VPA is initialized by estimating the terminal F-at-age. Parameter \code{F_term} is the apical terminal F if
+#' a functional form for vulnerability is used in the terminal year. If the terminal F-at-age are otherwise independent parameters,
+#' \code{F_term} is the F for the reference age which is half the maximum age. Once terminal-year abundance is
+#' estimated, the abundance in historical years can be back-calculated. The oldest age group is a plus-group, and requires
+#' an assumption regarding the ratio of F's between the plus-group and the next youngest age class. The F-ratio can
+#' be fixed (default) or estimated.
+#'
+#'
+#'
 #' For \code{start} (optional), a named list of starting values of estimates can be provided for:
 #' \itemize{
 #' \item \code{F_term} The terminal year fishing mortality.
@@ -108,33 +117,51 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
 
   if(any(names(dots) == "ages")) {
     ages <- dots$ages
+
+    CAA_hist2 <- CAA_hist[, 1:max(ages)]
+    CAA_hist2[, max(ages)] <- rowSums(CAA_hist[, max(ages):max_age, drop = FALSE])
+    if(min(ages) > 1) {
+      CAA_hist2 <- CAA_hist2[, -c(1:(min(ages)-1)), drop = FALSE]
+      CAA_hist2[, 1] <- rowSums(CAA_hist[, 1:min(ages), drop = FALSE])
+    }
+
   } else {
 
-    any_zero <- apply(CAA_hist, 2, function(x) !all(x > 0)) # Reduce max-age until no zero's are observed
-    max_age2 <- max_age
-    if(any(any_zero)) {
-      while(any_zero[max_age2]) max_age2 <- max_age2 - 1
+    max_age2 <- max_age  # Reduce max-age until no zero's are observed
+    CAA_hist2 <- CAA_hist
+    while(any(CAA_hist2[, max_age2] <= 0)) {
+      max_age2 <- max_age2 - 1
+      CAA_hist2 <- CAA_hist[, 1:max_age2]
+      CAA_hist2[, max_age2] <- rowSums(CAA_hist[, max_age2:max_age, drop = FALSE])
     }
 
     min_age <- 1 # Increase min-age until no zero's in terminal year
-    if(!all(CAA_hist[nrow(CAA_hist), ] > 0)) {
-      while(CAA_hist[nrow(CAA_hist), min_age] <= 0) min_age <- min_age + 1
-      min_age <- min_age + 1
+    while(CAA_hist2[nrow(CAA_hist), min_age] <= 0) min_age <- min_age + 1
+    if(colSums(CAA_hist2)[1] < 0.01 * sum(CAA_hist2)) min_age <- min_age + 1
+    if(min_age > 1) {
+      CAA_hist2 <- CAA_hist2[, -c(1:(min_age-1)), drop = FALSE]
+      CAA_hist2 <- rowSums(CAA_hist[, 1:min_age, drop = FALSE])
     }
+    if(ncol(CAA_hist2) == 1) stop("Only one age class left after consolidating plus- and minus- groups to remove zeros.")
+
+    # Any missing zeros
     ages <- min_age:max_age2
+
   }
-  CAA_hist2 <- CAA_hist[, 1:max_age2]
-  CAA_hist2[, max_age2] <- rowSums(CAA_hist[, max_age2:max_age, drop = FALSE])
-  if(min_age > 1) {
-    CAA_hist2 <- CAA_hist2[, -c(1:(min_age-1)), drop = FALSE]
-    CAA_hist2[, 1] <- rowSums(CAA_hist[, 1:min_age, drop = FALSE])
-  }
+
   CAA_hist2[is.na(CAA_hist2) | CAA_hist2 < 1e-8] <- 1e-8
 
-  LH <- list(LAA = La[min_age:max_age2], WAA = Wa[min_age:max_age2], Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
+  Wa2 <- Wa[min_age:max_age2]
+  Wa2[length(Wa2)] <- mean(Wa[max_age2:max_age])
+  La2 <- La[min_age:max_age2]
+  La2[length(Wa2)] <- mean(La[max_age2:max_age])
+  mat_age2 <- mat_age[min_age:max_age2]
+  mat_age2[length(mat_age2)] <- mean(mat_age[max_age2:max_age])
+
+  LH <- list(LAA = La2, WAA = Wa2, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
   data <- list(model = "VPA", I_hist = I_hist, CAA_hist = CAA_hist2 * rescale, n_y = length(Year), max_age = length(ages),
-               M = M[min_age:max_age2], weight = Wa[min_age:max_age2], mat = mat_age[min_age:max_age2], vul_type_term = vulnerability,
+               M = M[min_age:max_age2], weight = Wa2, mat = mat_age2, vul_type_term = vulnerability,
                I_type = I_type, nitF = as.integer(nitF),
                n_vulpen = vul_pen[1], sigma_vulpen = vul_pen[2], n_Rpen = R_pen[1], sigma_Rpen = R_pen[2])
 

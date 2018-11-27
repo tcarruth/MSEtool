@@ -16,7 +16,7 @@ retrospective(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE,
 
 \item{save_figure}{Indicates whether figures will be saved to directory.}
 
-\item{save_dir}{The directory to which figures will be saved. By default: \code{getwd()}}
+\item{save_dir}{The directory to which figures will be saved.}
 }
 \value{
 A list with an array of model output and of model estimates from
@@ -38,7 +38,7 @@ get_retro <- retrospective(output, nyr = 5, figure = FALSE)
 }
 \references{
 Mohn, R. 1999. The retrospective problem in sequential population analysis: an investigation using cod fishery
-and simulated data. ICES Journal of Marine Science 56:473–488.
+and simulated data. ICES Journal of Marine Science 56:473-488.
 }
 \author{
 Q. Huynh

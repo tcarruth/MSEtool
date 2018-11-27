@@ -72,10 +72,20 @@ age class in a given year. The U vector is the ratio of catch (weight) and vulne
 description of fishing pressure (and UMSY = 1 - exp(-FMSY)).
 }
 \description{
-A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to a .
-The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018).
+A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to an index.
+The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). Reference points are then calculated from the
+VPA output.
 }
 \details{
+The VPA is initialized by estimating the terminal F-at-age. Parameter \code{F_term} is the apical terminal F if
+a functional form for vulnerability is used in the terminal year. If the terminal F-at-age are otherwise independent parameters,
+\code{F_term} is the F for the reference age which is half the maximum age. Once terminal-year abundance is
+estimated, the abundance in historical years can be back-calculated. The oldest age group is a plus-group, and requires
+an assumption regarding the ratio of F's between the plus-group and the next youngest age class. The F-ratio can
+be fixed (default) or estimated.
+
+
+
 For \code{start} (optional), a named list of starting values of estimates can be provided for:
 \itemize{
 \item \code{F_term} The terminal year fishing mortality.

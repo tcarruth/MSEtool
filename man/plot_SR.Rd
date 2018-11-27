@@ -5,7 +5,7 @@
 \title{Plot stock-recruitment function}
 \usage{
 plot_SR(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FALSE,
-  y_zoom = NULL)
+  y_zoom = NULL, ylab = "Recruitment")
 }
 \arguments{
 \item{Spawners}{A vector of the number of the spawners (x-axis).}
@@ -25,6 +25,8 @@ spawners and recruitment deviations over time.}
 
 \item{y_zoom}{If recruitment deviations are plotted, the y-axis limit relative to
 maximum expected recruitment \code{expectedR}. If \code{NULL}, all recruitments are plotted.}
+
+\item{ylab}{Character string for label on y-axis.}
 }
 \value{
 A stock-recruit plot
