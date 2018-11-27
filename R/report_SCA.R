@@ -534,7 +534,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
                                   "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
       }
     } else {
-      plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
+      plot(profile.grid$R0, profile.grid$nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
       abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
 
       if(save_figure) {
@@ -542,7 +542,7 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
         prepare_to_save_figure()
 
         create_png(file.path(plot.dir, "profile_likelihood.png"))
-        plot(profile.grid$R0, nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
+        plot(profile.grid$R0, profile.grid$nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
         abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
         dev.off()
         profile.file.caption <- c("profile_likelihood.png",

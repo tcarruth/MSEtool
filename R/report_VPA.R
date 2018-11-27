@@ -7,11 +7,11 @@ summary_VPA <- function(Assessment) {
   current_status <- data.frame(Value = current_status)
   rownames(current_status) <- c("F/FMSY", "B/BMSY", "B/B0")
 
-  Value <- c(h, info$data$M[1], info$data$max_age, info$LH$Linf, info$LH$K, info$LH$t0,
+  Value <- c(h, info$data$M[1], min(info$ages), max(info$ages), info$LH$Linf, info$LH$K, info$LH$t0,
              info$LH$a * info$LH$Linf ^ info$LH$b, info$LH$A50, info$LH$A95)
-  Description = c("Stock-recruit steepness", "Natural mortality", "Maximum age (plus-group)", "Asymptotic length", "Growth coefficient",
-                  "Age at length-zero", "Asymptotic weight", "Age of 50% maturity", "Age of 95% maturity")
-  rownam <- c("h", "M", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
+  Description = c("Stock-recruit steepness", "Natural mortality", "Minimum age (minus-group)", "Maximum age (plus-group)", "Asymptotic length",
+                  "Growth coefficient", "Age at length-zero", "Asymptotic weight", "Age of 50% maturity", "Age of 95% maturity")
+  rownam <- c("h", "M", "minage", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
 
@@ -27,7 +27,7 @@ summary_VPA <- function(Assessment) {
   if(!is.character(SD)) {
     model_estimates <- summary(SD)
     model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
-  }
+  } else model_estimates <- SD
 
   output <- list(model = "Virtual Population Analysis (VPA)",
                  current_status = current_status, input_parameters = input_parameters,
@@ -53,7 +53,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
                 name = Name, report_type = "Index")
   }
 
-  age <- 1:info$data$max_age
+  age <- info$ages
 
   plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
   if(save_figure) {
@@ -119,16 +119,16 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
                                c("data_index.png", "Index time series."))
   }
 
-  plot_composition(Year, Obs_C_at_age, plot_type = 'bubble_data')
+  plot_composition(Year, Obs_C_at_age, ages = age, plot_type = 'bubble_data')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_age_comps_bubble.png"))
-    plot_composition(Year, Obs_C_at_age, plot_type = 'bubble_data')
+    plot_composition(Year, Obs_C_at_age, ages = age, plot_type = 'bubble_data')
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_age_comps_bubble.png", "Catch-at-age bubble plot."))
   }
 
-  plot_composition(Year, Obs_C_at_age, plot_type = 'annual', annual_yscale = "raw", annual_ylab = "Catch-at-age")
+  plot_composition(Year, Obs_C_at_age, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Catch-at-age")
   if(save_figure) {
     nplots <- ceiling(length(Year)/16)
     for(i in 1:nplots) {
@@ -136,7 +136,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
       if(i == nplots) ind <- (16*(i-1)+1):length(Year)
 
       create_png(filename = file.path(plot.dir, paste0("data_age_comps_", i, ".png")))
-      plot_composition(Year, Obs_C_at_age, plot_type = 'annual', annual_yscale = "raw", annual_ylab = "Catch-at-age", ind = ind)
+      plot_composition(Year, Obs_C_at_age, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Catch-at-age", ind = ind)
       dev.off()
       data.file.caption <- rbind(data.file.caption,
                                  c(paste0("data_age_comps_", i, ".png"), paste0("Annual catch-at-age (", i, "/", nplots, ")")))
@@ -157,7 +157,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
     assess.file.caption <- c("assessment_F.png", "Time series of apical fishing mortality.")
   }
 
-  plot_composition(Year, Selectivity, plot_type = 'annual', annual_yscale = "raw", annual_ylab = "Selectivity")
+  plot_composition(Year, Selectivity, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Selectivity")
   if(save_figure) {
     nplots <- ceiling(length(Year)/16)
     for(i in 1:nplots) {
@@ -165,7 +165,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
       if(i == nplots) ind <- (16*(i-1)+1):length(Year)
 
       create_png(filename = file.path(plot.dir, paste0("assessment_selectivity_", i, ".png")))
-      plot_composition(Year, Selectivity, plot_type = 'annual', annual_yscale = "raw", annual_ylab = "Selectivity", ind = ind)
+      plot_composition(Year, Selectivity, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Selectivity", ind = ind)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                  c(paste0("assessment_selectivity_", i, ".png"), paste0("Annual selectivity (", i, "/", nplots, ")")))
@@ -246,7 +246,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
                                  c("assessment_index_qqplot.png", "QQ-plot of index residuals in log-space."))
   }
 
-  plot_composition(Year, Obs_C_at_age, C_at_age, N = rowSums(Obs_C_at_age), plot_type = 'annual')
+  plot_composition(Year, Obs_C_at_age, C_at_age, N = rowSums(Obs_C_at_age), ages = age, plot_type = 'annual')
   if(save_figure) {
     nplots <- ceiling(length(Year)/16)
     for(i in 1:nplots) {
@@ -254,7 +254,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
       if(i == nplots) ind <- (16*(i-1)+1):length(Year)
 
       create_png(filename = file.path(plot.dir, paste0("assess_age_comps_", i, ".png")))
-      plot_composition(Year, Obs_C_at_age, C_at_age, N = rowSums(Obs_C_at_age), plot_type = 'annual', ind = ind)
+      plot_composition(Year, Obs_C_at_age, C_at_age, N = rowSums(Obs_C_at_age), ages = age, plot_type = 'annual', ind = ind)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c(paste0("assess_age_comps_", i, ".png"), paste0("Annual observed (black) and predicted (red) catch-at-age (",
@@ -280,10 +280,10 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
     if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
     estR <- R[as.numeric(names(R)) > Year[1]]
 
-    plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
+    plot_SR(SSB_plot, expectedR, R0, SSB0, estR, ylab = paste0("Recruitment (age-", min(age), ")"))
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR)
+      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, ylab = paste0("Recruitment (age-", min(age), ")"))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
@@ -291,20 +291,20 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
 
     if(max(estR) > 3 * max(expectedR)) {
       y_zoom <- 3
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom)
+      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
       if(save_figure) {
         create_png(filename = file.path(plot.dir, "assessment_stock_recruit_zoomed.png"))
-        plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom)
+        plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
         dev.off()
         assess.file.caption <- rbind(assess.file.caption,
                                      c("assessment_stock_recruit_zoomed.png", "Stock-recruitment relationship (zoomed in)."))
       }
     } else y_zoom <- NULL
 
-    plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom)
+    plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_stock_recruit_trajectory.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom)
+      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c("assessment_stock_recruit_trajectory.png", "Stock-recruitment relationship (trajectory plot)."))
@@ -346,10 +346,10 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
   }
 
 
-  plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
+  plot_timeseries(as.numeric(names(R)), R, label = paste0("Recruitment (age-", min(age), ")"))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_recruitment.png"))
-    plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
+    plot_timeseries(as.numeric(names(R)), R, label = paste0("Recruitment (age-", min(age), ")"))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_recruitment.png", "Time series of recruitment."))
@@ -364,10 +364,10 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
                                  c("assessment_abundance.png", "Time series of abundance."))
   }
 
-  plot_composition(c(Year, max(Year) + 1), N_at_age, plot_type = 'bubble_data')
+  plot_composition(c(Year, max(Year) + 1), N_at_age, ages = age, plot_type = 'bubble_data')
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_abundance_at_age_bubble.png"))
-    plot_composition(c(Year, max(Year) + 1), N_at_age, plot_type = 'bubble_data')
+    plot_composition(c(Year, max(Year) + 1), N_at_age, ages = age, plot_type = 'bubble_data')
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                c("assessment_abundance_at_age_bubble.png", "Abundance at age bubble plot."))
@@ -489,3 +489,162 @@ plot_yield_VPA <- function(data, report, vul, fmsy, msy, f.vector = seq(0, 2, 0.
 }
 
 
+#' @importFrom reshape2 acast
+profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
+  dots <- list(...)
+  if(!"F_term" %in% names(dots)) stop("Sequence of F_term was not found. See help file.")
+  F_term <- dots$F_term
+
+  nll <- rep(NA, length(F_term))
+  params <- Assessment@info$params
+  map <- Assessment@obj$env$map
+  map$logF_term <- factor(NA)
+  for(i in 1:length(F_term)) {
+    params$logF_term <- log(F_term[i])
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
+
+    if(!is.character(opt2)) nll[i] <- opt2$objective
+  }
+  profile.grid <- data.frame(F_term = F_term, nll = nll - Assessment@opt$objective)
+  if(figure) {
+    plot(F_term, profile.grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
+    abline(v = Assessment@SD$value[names(Assessment@SD$value) == "F_term"], lty = 2)
+
+    if(save_figure) {
+      Model <- Assessment@Model
+      prepare_to_save_figure()
+
+      create_png(file.path(plot.dir, "profile_likelihood.png"))
+      plot(F_term, profile.grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
+      abline(v = Assessment@SD$value[names(Assessment@SD$value) == "F_term"], lty = 2)
+      dev.off()
+      profile.file.caption <- c("profile_likelihood.png",
+                                "Profile likelihood of terminal F. Vertical, dashed line indicates maximum likelihood estimate.")
+
+      html_report(plot.dir, model = "Virtual Population Analysis (VPA)",
+                  captions = matrix(profile.file.caption, nrow = 1),
+                  name = Assessment@Name, report_type = "Profile_Likelihood")
+      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
+    }
+  }
+  return(profile.grid)
+}
+
+
+#' @importFrom gplots rich.colors
+retrospective_VPA <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = tempdir()) {
+  assign_Assessment_slots()
+  data <- info$data
+  n_y <- data$n_y
+
+  Year <- c(info$Year, max(info$Year) + 1)
+  I_hist <- data$I_hist
+  CAA_hist <- data$CAA_hist
+  params <- info$params
+
+  # Array dimension: Retroyr, Year, ts
+  # ts includes: Calendar Year, SSB, N, R, U, U_UMSY
+  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 6))
+  retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
+
+  SD <- NULL
+  rescale <- info$rescale
+  fix_h <- ifelse(is.null(info$h), FALSE, TRUE)
+
+  for(i in 0:nyr) {
+    n_y_ret <- n_y - i
+    data$n_y <- n_y_ret
+    data$I_hist <- I_hist[1:n_y_ret]
+    data$CAA_hist <- CAA_hist[1:n_y_ret, ]
+
+    map <- obj$env$map
+
+    obj2 <- MakeADFun(data = data, parameters = params, map = map, DLL = "MSEtool", silent = TRUE)
+    mod <- optimize_TMB_model(obj2, info$control)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
+
+    if(!is.character(opt2) && !is.character(SD)) {
+
+      report <- obj2$report(obj2$env$last.par.best)
+      if(rescale != 1) {
+        vars_div <- c("B", "SSB", "VB", "N", "CAApred")
+        vars_mult <- NULL
+        var_trans <- "q"
+        fun_trans <- "*"
+        fun_fixed <- NA
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+      }
+
+      report <- projection_VPA(report, info, data$n_Rpen)
+
+      SSB <- c(report$SSB, rep(NA, i))
+      R <- c(report$N[, 1], rep(NA, i))
+      N <- c(rowSums(report$N), rep(NA, i))
+      FMort <- c(apply(report$F, 1, max), rep(NA, i + 1))
+      U <- c(colSums(t(report$CAApred) * data$weight)/report$VB[1:(length(report$VB)-1)], rep(NA, i + 1))
+
+      retro_ts[i+1, , ] <- cbind(Year, SSB, R, N, FMort, U)
+      retro_est[i+1, , ] <- summary(SD)
+
+    } else {
+      message(paste("Non-convergence when", i, "years of data were removed."))
+    }
+  }
+
+  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1],
+                                 ts_lab = c("SSB", "Recruitment", "Abundance", "Apical F", "U"))
+
+  if(figure) {
+    plot_retro_VPA(retro_ts, save_figure = save_figure, save_dir = save_dir,
+                   nyr_label = 0:nyr, color = rich.colors(nyr+1))
+  }
+
+  return(Mohn_rho)
+}
+
+
+
+plot_retro_VPA <- function(retro_ts, save_figure = FALSE, save_dir = tempdir(), nyr_label, color) {
+  n_tsplots <- dim(retro_ts)[3] - 1
+  ts_label <- c("Spawning Stock Biomass", "Recruitment",
+                "Population Abundance (N)", "Apical Fishing Mortality (F)", "Exploitation rate (U)")
+  Year <- retro_ts[1, , 1]
+
+  if(save_figure) {
+    Model <- "VPA"
+    prepare_to_save_figure()
+  }
+
+  for(i in 1:n_tsplots) {
+    y.max <- max(abs(retro_ts[, , i+1]), na.rm = TRUE)
+    ylim <- c(0, 1.1 * y.max)
+    plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i], ylim = ylim, col = color[1])
+    for(j in 2:length(nyr_label)) lines(Year, retro_ts[j, , i+1], col = color[j])
+    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
+    abline(h = 0, col = 'grey')
+
+    if(save_figure) {
+      create_png(filename = file.path(plot.dir, paste0("retrospective_", i, ".png")))
+      plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i], ylim = ylim, col = color[1])
+      for(j in 2:length(nyr_label)) lines(Year, retro_ts[j, , i+1], col = color[j])
+      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
+      abline(h = 0, col = 'grey')
+      dev.off()
+    }
+  }
+
+  if(save_figure) {
+    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:n_tsplots), ".png"),
+                                   x2 = paste0("Retrospective pattern in ",
+                                               c("spawning stock biomass", "recruitment",
+                                                 "abundance", "apical fishing mortality", "exploitation"), "."))
+    Assessment <- get("Assessment", envir = parent.frame())
+    html_report(plot.dir, model = "Virtual Population Analysis (VPA)", captions = ret.file.caption,
+                name = Assessment@Name, report_type = "Retrospective")
+    browseURL(file.path(plot.dir, "Retrospective.html"))
+  }
+
+  invisible()
+}

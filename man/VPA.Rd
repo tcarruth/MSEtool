@@ -72,8 +72,9 @@ age class in a given year. The U vector is the ratio of catch (weight) and vulne
 description of fishing pressure (and UMSY = 1 - exp(-FMSY)).
 }
 \description{
-A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to a .
-The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018).
+A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to an index.
+The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). Reference points are then calculated from the
+VPA output.
 }
 \details{
 For \code{start} (optional), a named list of starting values of estimates can be provided for:

@@ -6,7 +6,7 @@
 \usage{
 plot_composition(Year = 1:nrow(obs), obs, fit = NULL,
   plot_type = c("annual", "bubble_data", "bubble_residuals", "mean"),
-  N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+  N = rowSums(obs), CAL_bins = NULL, ages = NULL, ind = 1:nrow(obs),
   annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
   bubble_adj = 5, fit_linewidth = 3, fit_color = "red")
 }
@@ -27,6 +27,8 @@ bubble plot of the data, and bubble plot of the residuals, and annual means.}
 
 \item{CAL_bins}{A vector of lengths corresponding to the columns in \code{obs}.
 and \code{fit}. Ignored for age data.}
+
+\item{ages}{An optional vector of ages corresponding to the columns in \code{obs}.}
 
 \item{ind}{A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.}
 

@@ -471,16 +471,16 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
   }
   profile.grid <- data.frame(meanR = meanR, nll = nll - Assessment@opt$objective)
   if(figure) {
-    plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
-    abline(v = names(Assessment@SD$value) == "meanR", lty = 2)
+    plot(dots$meanR, profile.grid$nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
+    abline(v = Assessment@SD$value[names(Assessment@SD$value) == "meanR"], lty = 2)
 
     if(save_figure) {
       Model <- Assessment@Model
       prepare_to_save_figure()
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(dots$meanR, nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
-      abline(v = names(Assessment@SD$value) == "meanR", lty = 2)
+      plot(dots$meanR, profile.grid$nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
+      abline(v = Assessment@SD$value[names(Assessment@SD$value) == "meanR"], lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
                                 "Profile likelihood of mean recruitment. Vertical, dashed line indicates maximum likelihood estimate.")
