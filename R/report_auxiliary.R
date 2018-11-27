@@ -500,6 +500,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' @param N Annual sample sizes. Vector of length \code{nrow(obs)}.
 #' @param CAL_bins A vector of lengths corresponding to the columns in \code{obs}.
 #' and \code{fit}. Ignored for age data.
+#' @param ages An optional vector of ages corresponding to the columns in \code{obs}.
 #' @param ind A numeric vector for plotting a subset of rows (which indexes year) of \code{obs} and \code{fit}.
 #' @param annual_ylab Character string for y-axis label when \code{plot_type = "annual"}.
 #' @param annual_yscale For annual composition plots (\code{plot_type = "annual"}), whether the raw values
@@ -522,7 +523,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' CAL_bins = Red_snapper@@CAL_bins[1:43])
 #' }
 plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c('annual', 'bubble_data', 'bubble_residuals', 'mean'),
-                             N = rowSums(obs), CAL_bins = NULL, ind = 1:nrow(obs),
+                             N = rowSums(obs), CAL_bins = NULL, ages = NULL, ind = 1:nrow(obs),
                              annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
                              bubble_adj = 5, fit_linewidth = 3, fit_color = "red") {
   old_par <- par(no.readonly = TRUE)
@@ -539,8 +540,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     data_lab <- "Length"
   }
   if(data_type == 'age') {
-    MaxAge <- ncol(obs)
-    data_val <- 1:MaxAge
+    data_val <- if(is.null(ages)) 1:ncol(obs) else ages
     data_lab <- "Age"
   }
   N <- round(N, 1)
@@ -571,7 +571,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     if(n2 < n1) n1 <- 0.5 * n2
     diameter_max <- bubble_adj / n2
     plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
-         ylim = c(0, max(data_val)), ylab = data_lab)
+         ylim = range(data_val), ylab = data_lab)
     for(i in 1:length(Year)) {
       for(j in 1:length(data_val)) {
         points(Year[i], data_val[j], cex = 0.5 * diameter_max * pmin(obs[i, j], n2), pch = 21, bg = "white")
@@ -591,7 +591,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     resid <- N * (obs_prob - fit_prob) / sqrt(N * fit_prob)
     diameter_max <- bubble_adj / pmin(10, max(abs(resid), na.rm = TRUE))
     plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
-         ylim = c(0, max(data_val)), ylab = data_lab)
+         ylim = range(data_val), ylab = data_lab)
 
     Year_mat <- matrix(Year, ncol = ncol(resid), nrow = nrow(resid))
     data_mat <- matrix(data_val, ncol = ncol(resid), nrow = nrow(resid), byrow = TRUE)
@@ -774,11 +774,12 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, ylab = 
 #' spawners and recruitment deviations over time.
 #' @param y_zoom If recruitment deviations are plotted, the y-axis limit relative to
 #' maximum expected recruitment \code{expectedR}. If \code{NULL}, all recruitments are plotted.
+#' @param ylab Character string for label on y-axis.
 #' @author Q. Huynh
 #' @return A stock-recruit plot
 #' @export plot_SR
 plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FALSE,
-                    y_zoom = NULL) {
+                    y_zoom = NULL, ylab = "Recruitment") {
   if(is.null(rec_dev)) {
     R.max <- 1.1 * max(expectedR)
   } else {
@@ -787,7 +788,7 @@ plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FA
   }
   S.max <- 1.1 * max(c(Spawners, S0))
   plot(Spawners[order(Spawners)], expectedR[order(Spawners)], typ = 'l', xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
-       xlab = 'Spawning Stock Biomass (SSB)', ylab = 'Recruitment')
+       xlab = 'Spawning Stock Biomass (SSB)', ylab = ylab)
   if(!trajectory) {
     if(is.null(rec_dev)) points(Spawners, expectedR)
     if(!is.null(rec_dev)) points(Spawners, rec_dev)

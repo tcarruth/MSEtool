@@ -1,7 +1,8 @@
 #' Virtual population analysis (VPA)
 #'
-#' A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to a .
-#' The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018).
+#' A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to an index.
+#' The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). Reference points are then calculated from the
+#' VPA output.
 #'
 #' @param x A position in the Data object (by default, equal to one for assessments).
 #' @param Data An object of class Data
@@ -104,19 +105,38 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   } else {
     if(rescale == "mean1") rescale <- 1/mean(rowSums(CAA_hist))
   }
-  all_zero <- apply(CAA_hist, 2, function(x) all(x > 0))
-  if(any(!all_zero)) {
-    max_age2 <- which(!all_zero)[1] - 1
-  } else max_age2 <- max_age
-  if(any(names(dots) == "max_age")) max_age2 <- dots$max_age
+
+  if(any(names(dots) == "ages")) {
+    ages <- dots$ages
+  } else {
+
+    any_zero <- apply(CAA_hist, 2, function(x) !all(x > 0)) # Reduce max-age until no zero's are observed
+    max_age2 <- max_age
+    if(any(any_zero)) {
+      while(any_zero[max_age2]) max_age2 <- max_age2 - 1
+    }
+
+    min_age <- 1 # Increase min-age until no zero's in terminal year
+    if(!all(CAA_hist[nrow(CAA_hist), ] > 0)) {
+      while(CAA_hist[nrow(CAA_hist), min_age] <= 0) min_age <- min_age + 1
+      min_age <- min_age + 1
+    }
+    ages <- min_age:max_age2
+  }
   CAA_hist2 <- CAA_hist[, 1:max_age2]
   CAA_hist2[, max_age2] <- rowSums(CAA_hist[, max_age2:max_age, drop = FALSE])
+  if(min_age > 1) {
+    CAA_hist2 <- CAA_hist2[, -c(1:(min_age-1)), drop = FALSE]
+    CAA_hist2[, 1] <- rowSums(CAA_hist[, 1:min_age, drop = FALSE])
+  }
+  CAA_hist2[is.na(CAA_hist2) | CAA_hist2 < 1e-8] <- 1e-8
 
-  LH <- list(LAA = La[1:max_age2], WAA = Wa[1:max_age2], Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
+  LH <- list(LAA = La[min_age:max_age2], WAA = Wa[min_age:max_age2], Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
-  data <- list(model = "VPA", I_hist = I_hist, CAA_hist = CAA_hist2 * rescale, n_y = length(Year), n_sep = 1, max_age = max_age2,
-               M = M[1:max_age2], weight = Wa[1:max_age2], mat = mat_age[1:max_age2], vul_type_term = vulnerability, I_type = I_type,
-               nitF = 6L, n_vulpen = vul_pen[1], sigma_vulpen = vul_pen[2], n_Rpen = R_pen[1], sigma_Rpen = R_pen[2])
+  data <- list(model = "VPA", I_hist = I_hist, CAA_hist = CAA_hist2 * rescale, n_y = length(Year), max_age = length(ages),
+               M = M[min_age:max_age2], weight = Wa[min_age:max_age2], mat = mat_age[min_age:max_age2], vul_type_term = vulnerability,
+               I_type = I_type, nitF = as.integer(nitF),
+               n_vulpen = vul_pen[1], sigma_vulpen = vul_pen[2], n_Rpen = R_pen[1], sigma_Rpen = R_pen[2])
 
   # Starting values
   params <- list()
@@ -125,14 +145,14 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     if(!is.null(start$F_ratio) && is.numeric(start$F_ratio)) params$logF_ratio <- log(start$F_ratio)
     if(!is.null(start$vul_par) && is.numeric(start$vul_par)) {
       if(vulnerability == "logistic") {
-        if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be greater than 0.75 * Data@MaxAge (see help).")
+        if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be less than 0.75 * Data@MaxAge (see help).")
         if(length(start$vul_par) < 2) stop("Two parameters needed for start$vul_par with logistic vulnerability (see help).")
         if(start$vul_par[1] <= start$vul_par[2]) stop("start$vul_par[1] needs to be greater than start$vul_par[2] (see help).")
 
         params$vul_par_sep <- c(logit(start$vul_par[1]/max_age/0.75), log(start$vul_par[1] - start$vul_par[2]))
       }
       if(vulnerability == "dome") {
-        if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be greater than 0.75 * Data@MaxAge (see help).")
+        if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be less than 0.75 * Data@MaxAge (see help).")
         if(length(start$vul_par) < 4) stop("Four parameters needed for start$vul_par with dome vulnerability (see help).")
         if(start$vul_par[1] <= start$vul_par[2]) stop("start$vul_par[1] needs to be greater than start$vul_par[2] (see help).")
         if(start$vul_par[3] <= start$vul_par[1] || start$vul_par[3] >= max_age) {
@@ -144,8 +164,8 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
                                 logit(1/(max_age - start$vul_par[1])), logit(start$vul_par[4]))
       }
       if(vulnerability == "free") {
-        if(length(start$vul_par) != max_age2) stop("start$vul_par needs to be of length Data@MaxAge - 1 (see help).")
-        params$vul_par_sep <- log(start$vul_par)
+        if(length(start$vul_par) < length(ages)) stop(paste0("start$vul_par needs to be of length", length(ages), "."))
+        params$vul_par_sep <- log(start$vul_par[1:length(ages)])
       }
     }
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
@@ -155,13 +175,14 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   if(is.null(params$logF_ratio)) params$logF_ratio <- log(1)
   if(is.null(params$vul_par)) {
     if(vulnerability == "free") {
-      params$vul_par <- rep(0, max_age2 - 1)
+      params$vul_par <- rep(0, length(ages) - 1)
     } else {
       CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
+      CAA_mode <- ifelse(CAA_mode + 1 > max_age2, max_age2 - 1, CAA_mode)
       if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFC[x] > Linf) || (Data@LFS[x] > Linf)) {
-        if(vulnerability == "logistic") params$vul_par <- c(logit(CAA_mode/max_age2/0.75), log(1))
+        if(vulnerability == "logistic") params$vul_par <- c(logit(CAA_mode/(max_age2 - min_age)/0.75), log(1))
         if(vulnerability == "dome") {
-          params$vul_par <- c(logit(CAA_mode/max_age2/0.75), log(1), logit(1/(max_age2 - CAA_mode)), logit(0.5))
+          params$vul_par <- c(logit(CAA_mode/(max_age2 - min_age)/0.75), log(1), logit(1/(max_age2 - CAA_mode)), logit(0.5))
         }
       } else {
         A5 <- min(iVB(t0, K, Linf, Data@LFC[x]), CAA_mode-1)
@@ -169,7 +190,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
         A5 <- min(A5, Afull - 0.5)
         A50_vul <- mean(c(A5, Afull))
 
-        if(vulnerability == "logistic") params$vul_par <- c(logit(Afull/max_age2/0.75), log(Afull - A50_vul))
+        if(vulnerability == "logistic") params$vul_par <- c(logit(Afull/(max_age2 - min_age)/0.75), log(Afull - A50_vul))
         if(vulnerability == "dome") {
           params$vul_par <- c(logit(Afull/max_age2/0.75), log(Afull - A50_vul), logit(1/(max_age2 - Afull)), logit(0.5))
         }
@@ -181,15 +202,15 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     params$log_sigma <- log(sigmaI)
   }
 
-  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, control = control, rescale = rescale)
+  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, ages = ages, control = control, rescale = rescale)
 
   map <- list()
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(vulnerability == "free") {
-    fixed_ind <- round(0.5 * max_age2)
-    free_vul_par <- rep(log(1), max_age2 - 1)
+    fixed_ind <- round(0.5 * length(ages))
+    free_vul_par <- rep(log(1), length(ages) - 1)
     free_vul_par[fixed_ind] <- NA
-    free_vul_par[!is.na(free_vul_par)] <- 1:(max_age2-2)
+    free_vul_par[!is.na(free_vul_par)] <- 1:(length(ages)-2)
     map$vul_par <- factor(free_vul_par)
   }
   if(fix_Fratio) map$logF_ratio <- factor(NA)
@@ -224,7 +245,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
                     B = structure(report$B, names = Yearplusone), SSB = structure(report$SSB, names = Yearplusone),
                     VB = structure(report$VB, names = Yearplusone),
                     R = structure(report$N[, 1], names = Yearplusone), N = structure(rowSums(report$N), names = Yearplusone),
-                    N_at_age = report$N, Selectivity = report$vul,
+                    N_at_age = report$N, Selectivity = report$vul, h = NaN,
                     Obs_Catch = structure(if(expanded) colSums(t(CAA_hist2) * data$weight) else C_hist, names = Year),
                     Obs_Index = structure(I_hist, names = Year),
                     Obs_C_at_age = CAA_hist2, Catch = colSums(t(report$CAApred) * data$weight),
@@ -239,8 +260,10 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     info$h <- ifelse(fix_h, Data@steep[x], NA)
     info$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 2, mean)
     info$vul_refpt <- info$vul_refpt/max(info$vul_refpt)
-    ref_pt <- get_refpt_VPA(report$SSB[1:(length(report$SSB)-1)], report$N[2:length(report$SSB), 1], data$weight, data$mat, data$M,
-                          info$vul_refpt, SR, fix_h, info$h)
+
+    SSB <- report$SSB[1:(length(report$SSB)-min_age)]
+    R <- report$N[(min_age + 1):length(report$SSB), 1]
+    ref_pt <- get_refpt_VPA(SSB, R, data$weight, data$mat, data$M, info$vul_refpt, SR, fix_h, info$h)
 
     report <- c(report, ref_pt)
 
