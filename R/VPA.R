@@ -254,7 +254,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   report <- obj$report(obj$env$last.par.best)
 
   if(rescale != 1) {
-    vars_div <- c("B", "SSB", "VB", "N", "CAApred")
+    vars_div <- c("B", "E", "VB", "N", "CAApred")
     vars_mult <- NULL
     var_trans <- "q"
     fun_trans <- "*"
@@ -269,7 +269,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   Assessment <- new("Assessment", Model = "VPA",
                     Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     FMort = structure(apply(report$F, 1, max), names = Year),
-                    B = structure(report$B, names = Yearplusone), SSB = structure(report$SSB, names = Yearplusone),
+                    B = structure(report$B, names = Yearplusone), SSB = structure(report$E, names = Yearplusone),
                     VB = structure(report$VB, names = Yearplusone),
                     R = structure(report$N[, 1], names = Yearplusone), N = structure(rowSums(report$N), names = Yearplusone),
                     N_at_age = report$N, Selectivity = report$vul, h = NaN,
@@ -288,31 +288,31 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     info$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 2, mean)
     info$vul_refpt <- info$vul_refpt/max(info$vul_refpt)
 
-    SSB <- report$SSB[1:(length(report$SSB)-min_age)]
+    E <- report$SSB[1:(length(report$SSB)-min_age)]
     R <- report$N[(min_age + 1):length(report$SSB), 1]
-    ref_pt <- get_refpt_VPA(SSB, R, data$weight, data$mat, data$M, info$vul_refpt, SR, fix_h, info$h)
+    ref_pt <- SCA_refpt_calc(E, R, data$weight, data$mat, M, info$vul_refpt, SR, fix_h, info$h)
 
     report <- c(report, ref_pt)
 
     Assessment@FMSY <- report$FMSY
     Assessment@U <- Assessment@Catch/(Assessment@Catch + Assessment@VB[1:length(Year)])
-    Assessment@UMSY <- 1 - exp(-Assessment@FMSY)
+    Assessment@UMSY <- report$MSY/(report$VBMSY + report$MSY)
     Assessment@U_UMSY <- Assessment@U/Assessment@UMSY
     Assessment@MSY <- report$MSY
     Assessment@BMSY <- report$BMSY
-    Assessment@SSBMSY <- report$SSBMSY
+    Assessment@SSBMSY <- report$EMSY
     Assessment@VBMSY <- report$VBMSY
     Assessment@B0 <- report$B0
     Assessment@R0 <- report$R0
     Assessment@N0 <- report$N0
-    Assessment@SSB0 <- report$SSB0
+    Assessment@SSB0 <- report$E0
     Assessment@VB0 <- report$VB0
     Assessment@h <- report$h
     Assessment@F_FMSY <- Assessment@FMort/report$FMSY
     Assessment@B_BMSY <- structure(report$B/report$BMSY, names = Yearplusone)
     Assessment@B_B0 <- structure(report$B/report$B0, names = Yearplusone)
-    Assessment@SSB_SSBMSY <- structure(report$SSB/report$SSBMSY, names = Yearplusone)
-    Assessment@SSB_SSB0 <- structure(report$SSB/report$SSB0, names = Yearplusone)
+    Assessment@SSB_SSBMSY <- structure(report$E/report$EMSY, names = Yearplusone)
+    Assessment@SSB_SSB0 <- structure(report$E/report$E0, names = Yearplusone)
     Assessment@VB_VBMSY <- structure(report$VB/report$VBMSY, names = Yearplusone)
     Assessment@VB_VB0 <- structure(report$VB/report$VB0, names = Yearplusone)
     Assessment@TMB_report <- report
@@ -324,86 +324,6 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
 
 
 
-get_refpt_VPA <- function(SSB, rec, weight, mat, M, vul, SR, fix_h, h) {
-  maxage <- length(M)
-  SSB0 <- recpred <- sigmaR <- NULL
-
-  surv0 <- exp(-M)
-  NPR0 <- c(1, cumprod(surv0[1:(maxage-1)]))
-  NPR0[maxage] <- NPR0[maxage]/(1 - exp(-M[maxage]))
-
-  SSBPR0 <- sum(NPR0 * mat * weight)
-
-  solve_SR_par <- function(x, h = NULL) {
-    R0 <- exp(x[1])
-    SSB0 <<- R0 * SSBPR0
-    if(!fix_h) {
-      if(SR == "BH") h <- 0.2 + 0.8 * ilogit(x[2])
-      if(SR == "Ricker") h <- 0.2 + exp(x[2])
-    }
-
-    if(SR == "BH") recpred <<- (0.8 * R0 * h * SSB)/(0.2 * SSBPR0 * R0 *(1-h)+(h-0.2)*SSB)
-    if(SR == "Ricker") recpred <<- SSB/SSBPR0 * (5*h)^(1.25 * (1 - SSB/SSB0))
-    sigmaR <<- sqrt(sum((log(rec/recpred))^2)/length(recpred))
-    nLL <- -sum(dnorm(log(rec/recpred), 0, sigmaR, log = TRUE))
-    return(nLL)
-  }
-
-  if(fix_h) {
-    opt <- optimize(solve_SR_par, interval = c(-10, 10), h = h)$minimum # steepness
-    R0 <- exp(opt)
-  } else {
-    opt <- nlminb(c(10, 10), solve_SR_par)
-    R0 <- exp(opt$par[1])
-    if(SR == "BH") h <- 0.2 + 0.8 * ilogit(opt$par[2])
-    if(SR == "Ricker") h <- 0.2 + exp(opt$par[2])
-  }
-  if(SR == "BH") {
-    Arec <- 4*h/(1-h)/SSBPR0
-    Brec <- (5*h-1)/(1-h)/SSB0
-  }
-  if(SR == "Ricker") {
-    Arec <- 1/SSBPR0 * (5*h)^1.25
-    Brec <- 1.25 * log(5*h) / SSB0
-  }
-
-  # virgin reference points
-  N0 <- R0 * sum(NPR0)
-  VB0 <- R0 * sum(NPR0 * weight * vul)
-  B0 <- R0 * sum(NPR0 * weight)
-
-  solveMSY <- function(logF) {
-    Fmort <- exp(logF)
-    surv <- exp(-vul * Fmort - M)
-    NPR <- c(1, cumprod(surv[1:(maxage-1)]))
-    NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])
-    EPR <- sum(NPR * mat * weight)
-    if(SR == "BH") Req <- (Arec * EPR - 1)/(Brec * EPR)
-    if(SR == "Ricker") Req <- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * Fmort/(vul * Fmort + M) * NPR * (1 - exp(-vul * Fmort - M))
-    Yield <- Req * sum(CPR * weight)
-    return(-1 * Yield)
-  }
-
-  opt2 <- optimize(solveMSY, interval = c(-6, 6))
-  FMSY <- exp(opt2$minimum)
-  MSY <- -1 * opt2$objective
-
-  surv_MSY <- exp(-vul * FMSY - M)
-  NPR_MSY <- c(1, cumprod(surv_MSY[1:(maxage-1)]))
-  NPR_MSY[maxage] <- NPR_MSY[maxage]/(1 - surv_MSY[maxage])
-
-  SSBPR_MSY <- sum(NPR_MSY * weight * mat)
-  if(SR == "BH") RMSY <- (Arec * SSBPR_MSY - 1)/(Brec * SSBPR_MSY)
-  if(SR == "Ricker") RMSY <- log(Arec * SSBPR_MSY)/(Brec * SSBPR_MSY)
-
-  VBMSY <- RMSY * sum(NPR_MSY * weight * vul)
-  BMSY <- RMSY * sum(NPR_MSY * weight)
-  SSBMSY <- RMSY * SSBPR_MSY
-
-  return(list(h = h, Arec = Arec, Brec = Brec, FMSY = FMSY, MSY = MSY, VBMSY = VBMSY,
-              RMSY = RMSY, BMSY = BMSY, SSBMSY = SSBMSY, VB0 = VB0, R0 = R0, B0 = B0, SSB0 = SSB0, N0 = N0))
-}
 
 projection_VPA <- function(report, info, nR) {
   max_age <- info$data$max_age

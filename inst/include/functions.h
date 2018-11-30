@@ -82,29 +82,14 @@ Type Ricker_SR(Type SSB, Type h, Type R0, Type SSB0) {
 }
 
 template<class Type>
-vector<Type> calc_NPR(Type U, vector<Type> vul, vector<Type> M, int max_age) {
+vector<Type> calc_NPR(Type F, vector<Type> vul, vector<Type> M, int max_age) {
   vector<Type> NPR(max_age);
   NPR(0) = 1.;
-  for(int a=1;a<max_age;a++) {
-    NPR(a) = NPR(a-1) * exp(-M(a-1)) * (1 - vul(a-1) * U);
-  }
-  NPR(max_age-1) /= 1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U); // Plus-group
+  for(int a=1;a<max_age;a++) NPR(a) = NPR(a-1) * exp(-vul(a-1) * F - M(a-1));
+  NPR(max_age-1) /= 1 - exp(-vul(max_age-1) * F - M(max_age-1)); // Plus-group
   return NPR;
 }
 
-template<class Type>
-vector<Type> calc_deriv_NPR(Type U, vector<Type> NPR, vector<Type> vul, vector<Type> M, int max_age) {
-  vector<Type> deriv_NPR(max_age);
-  deriv_NPR(0) = 0.;
-  for(int a=1;a<max_age;a++) {
-    deriv_NPR(a) = deriv_NPR(a-1) * exp(-M(a-1)) * (1 - vul(a-1) * U) - NPR(a-1) * exp(-M(a-1)) * vul(a-1);
-  }
-  // Additional calculation for plus-group
-  deriv_NPR(max_age-1) *= 1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U);
-  deriv_NPR(max_age-1) -= NPR(max_age-2) * exp(-M(max_age-2)) * (1 - vul(max_age-2) * U) * exp(-M(max_age-1)) * vul(max_age-1);
-  deriv_NPR(max_age-1) /= pow(1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U), 2);
-  return deriv_NPR;
-}
 
 template<class Type>
 Type sum_EPR(vector<Type> NPR, vector<Type> weight, vector<Type> mat) {
@@ -136,15 +121,15 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior) {
 
   prior -= dnorm(vul_par(1), Type(0), Type(3), true);
 
-	for(int a=0;a<max_age;a++) {
-	  Type aa = a;
-	  aa += 1;
-	  vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - a_50)/(a_95 - a_50)), -1);
+  for(int a=0;a<max_age;a++) {
+    Type aa = a;
+    aa += 1;
+    vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - a_50)/(a_95 - a_50)), -1);
   }
-	Type interim_vmax = max(vul);
-	for(int a=0;a<max_age;a++) vul(a) /= interim_vmax;
+  Type interim_vmax = max(vul);
+  for(int a=0;a<max_age;a++) vul(a) /= interim_vmax;
 
-	return vul;
+  return vul;
 }
 
 template<class Type>
@@ -292,3 +277,5 @@ Type Newton_VPA_F_plus(Type F_start, Type phi, Type M1, Type M2, Type CAA1, Type
   }
   return exp(logF);
 }
+
+

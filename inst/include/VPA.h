@@ -29,10 +29,10 @@
   vector<Type> Ipred(n_y);
 
   vector<Type> VB(n_y);
-  vector<Type> SSB(n_y);
+  vector<Type> E(n_y);
   vector<Type> B(n_y);
 
-  SSB.setZero();
+  E.setZero();
   VB.setZero();
   B.setZero();
   F.setZero();
@@ -88,7 +88,7 @@
     vector<Type> Fvec(max_age);
     for(int a=0;a<max_age;a++) {
       CAApred(y,a) = N(y,a) * F(y,a) * (1 - exp(-F(y,a) - M(a)))/(F(y,a) + M(a));
-      SSB(y) += N(y,a) * weight(a) * mat(a);
+      E(y) += N(y,a) * weight(a) * mat(a);
       B(y) += N(y,a) * weight(a);
       Fvec(a) = F(y,a);
     }
@@ -107,8 +107,8 @@
     q = calc_q(I_hist, VB);
     for(int y=0;y<n_y;y++) Ipred(y) = q * VB(y);
   } else {
-    q = calc_q(I_hist, SSB);
-    for(int y=0;y<n_y;y++) Ipred(y) = q * SSB(y);
+    q = calc_q(I_hist, E);
+    for(int y=0;y<n_y;y++) Ipred(y) = q * E(y);
   }
   //Type sigma = calc_sigma(I_hist, Ipred);
 
@@ -139,7 +139,7 @@
   REPORT(CAApred);
   REPORT(Ipred);
   REPORT(VB);
-  REPORT(SSB);
+  REPORT(E);
   REPORT(B);
 
   REPORT(q);

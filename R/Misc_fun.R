@@ -10,15 +10,11 @@ ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, restart = 1) {
   restart <- as.integer(restart)
   if(is.null(obj$env$random) && use_hessian) h <- obj$he else h <- NULL
-  if(any(names(obj$par) == "U_equilibrium")) {
-    low <- rep(-Inf, length(obj$par))
-    low[match("U_equilibrium", names(obj$par))] <- 0
-    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control, lower = low),
-                    error = as.character)
-  } else {
-    opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control),
-                    error = as.character)
+  low <- rep(-Inf, length(obj$par))
+  if(any(c("U_equilibrium", "F_equilibrium") %in% names(obj$par))) {
+    low[match(c("U_equilibrium", "F_equilibrium"), names(obj$par))] <- 0
   }
+  opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control), lower = low, error = as.character))
   SD <- get_sdreport(obj, opt)
 
   if((is.character(SD) || !SD$pdHess) && !is.character(opt) && restart > 0) {
@@ -36,12 +32,10 @@ get_sdreport <- function(obj, opt) {
     res <- "nlminb() optimization returned an error. Could not run TMB::sdreport()."
   } else {
     if(is.null(obj$env$random)) h <- obj$he(opt$par) else h <- NULL
-    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
-                             getReportCovariance = FALSE), error = as.character)
+    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h, getReportCovariance = FALSE), error = as.character)
     if(!is.character(res) && !is.null(h) && !res$pdHess) {
       h <- optimHess(opt$par, obj$fn, obj$gr)
-      res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h,
-                               getReportCovariance = FALSE), error = as.character)
+      res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h, getReportCovariance = FALSE), error = as.character)
     }
   }
 

@@ -1,11 +1,11 @@
 #' @describeIn SCA The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
-#' as penalized parameters (similar to Cadigan 2016). This version is generally very fast and robust. Virgin and MSY reference points
-#' are estimated after the assessment run.
+#' as penalized parameters (similar to Cadigan 2016). The standard deviation is set high so that the recruitment is almost like
+#' free parameters. Unfished and MSY reference points are estimated from the assessment output.
 #' @useDynLib MSEtool
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
                  CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
-                 start = NULL, fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+                 start = NULL, fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                  common_dev = "comp50", integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                  control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(),  ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
@@ -60,7 +60,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   params <- list()
   if(!is.null(start)) {
     if(!is.null(start$meanR) && is.numeric(start$meanR)) params$log_meanR <- log(start$meanR)
-    if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equilibrium
+    if(!is.null(start$F_equilibrium) && is.numeric(start$F_equilibrium)) params$F_equilibrium <- start$F_equilibrium
     if(!is.null(start$vul_par) && is.numeric(start$vul_par)) {
       if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be less than 0.75 * Data@MaxAge (see help).")
       if(vulnerability == "logistic") {
@@ -81,12 +81,15 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                             logit(1/(max_age - start$vul_par[1])), logit(start$vul_par[4]))
       }
     }
+    if(!is.null(start$F) && is.numeric(start$F)) params$logF <- log(start$F)
+
+    if(!is.null(start$omega) && is.numeric(start$omega)) params$log_omega <- log(start$omega)
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
 
   if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale)) + 2
-  if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
+  if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
   if(is.null(params$vul_par)) {
     CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
     if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFC[x] > Linf) || (Data@LFS[x] > Linf)) {
@@ -107,6 +110,12 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
       }
     }
   }
+  if(is.null(params$logF)) params$logF <- rep(log(0.1), n_y)
+
+  if(is.null(params$log_omega)) {
+    sigmaC <- max(0.01, sdconv(1, Data@CV_Cat[x]), na.rm = TRUE)
+    params$log_omega <- log(sigmaC)
+  }
   if(is.null(params$log_sigma)) {
     sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
     params$log_sigma <- log(sigmaI)
@@ -119,7 +128,16 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                inner.control = inner.control, rescale = rescale)
 
   map <- list()
-  if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
+  if(any(info$data$C_hist <= 0)) {
+    ind <- info$data$C_hist <= 0
+    info$params$logF[ind] <- -20
+    map_logF <- length(params$logF)
+    map_logF[ind] <- NA
+    map_logF[!ind] <- 1:sum(!ind)
+    map$logF <- factor(map_logF)
+  }
+  if(fix_F_equilibrium) map$F_equilibrium <- factor(NA)
+  if(fix_omega) map$log_omega <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
 
@@ -140,25 +158,24 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   random <- NULL
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev")
 
-  obj <- MakeADFun(data = info$data, parameters = info$params, checkParameterOrder = FALSE,
+  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
 
-  # Add starting values for rec-devs and increase R0 start value if too low
-  high_U <- try(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0, silent = TRUE)
-  if(!is.character(high_U) && high_U) {
-    Recruit <- try(Data@Rec[x, ], silent = TRUE)
-    if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
-      log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
-      log_rec_dev[is.infinite(log_rec_dev) | is.na(log_rec_dev)] <- 0
-      info$params$log_rec_dev <- log_rec_dev
-
-      obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
-                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-    }
-    while(obj$par["log_meanR"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
-      obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
-    }
-  }
+  ## Add starting values for rec-devs and increase R0 start value if too low
+  #high_U <- try(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0, silent = TRUE)
+  #if(!is.character(high_U) && high_U) {
+  #  Recruit <- try(Data@Rec[x, ], silent = TRUE)
+  #  if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
+  #    log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
+  #    log_rec_dev[is.infinite(log_rec_dev) | is.na(log_rec_dev)] <- 0
+  #    info$params$log_rec_dev <- log_rec_dev
+  #    obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
+  #                     map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
+  #  }
+  #  while(obj$par["log_meanR"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+  #    obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
+  #  }
+  #}
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
@@ -167,7 +184,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   report <- obj$report(obj$env$last.par.best)
 
   if(rescale != 1) {
-    vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB", "R", "R_early")
+    vars_div <- c("meanR", "B", "E", "CAApred", "Cpred", "CN", "N", "VB", "R", "R_early")
     vars_mult <- NULL
     var_trans <- c("meanR", "q")
     fun_trans <- c("/", "*")
@@ -185,7 +202,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
   Assessment <- new("Assessment", Model = "SCA2", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
-                    U = structure(report$U, names = Year),
+                    FMort = structure(report$F, names = Year),
                     B = structure(report$B, names = Yearplusone),
                     SSB = structure(report$E, names = Yearplusone),
                     VB = structure(report$VB, names = Yearplusone),
@@ -197,22 +214,21 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                     Obs_Catch = structure(C_hist, names = Year),
                     Obs_Index = structure(I_hist, names = Year),
                     Obs_C_at_age = CAA_hist,
-                    Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
+                    Catch = structure(report$Cpred, names = Year),
                     Index = structure(report$Ipred, names = Year),
                     C_at_age = report$CAApred,
                     Dev = structure(Dev, names = YearDev),
                     Dev_type = "log-Recruitment deviations",
-                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
-                                    names = c("Total", "Index", "CAA", "Dev", "Penalty")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty + report$prior),
+                                    names = c("Total", "Index", "CAA", "Catch", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
 
   if(Assessment@conv) {
     info$h <- ifelse(fix_h, Data@steep[x], NA)
-    refpt <- get_refpt2(SSB = report$E[1:(length(report$E) - 1)], rec = report$R[2:length(report$R)],
-                        SSBPR0 = report$EPR0, NPR0 = report$NPR_virgin, weight = Wa,
-                        mat = mat_age, M = M, vul = report$vul, SR = SR, fix_h = fix_h, h = info$h)
+    refpt <- SCA_refpt_calc(E = report$E[1:(length(report$E) - 1)], R = report$R[2:length(report$R)], weight = Wa,
+                            mat = mat_age, M = M, vul = report$vul, SR = SR, fix_h = fix_h, h = info$h)
 
     report <- c(report, refpt)
     if(integrate) {
@@ -224,8 +240,8 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     }
     SE_Dev <- c(rev(SE_Early), SE_Main)
 
-    Assessment@UMSY <- report$UMSY
-    Assessment@MSY = report$MSY
+    Assessment@FMSY <- report$FMSY
+    Assessment@MSY < report$MSY
     Assessment@BMSY <- report$BMSY
     Assessment@SSBMSY <- report$EMSY
     Assessment@VBMSY <- report$VBMSY
@@ -235,7 +251,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     Assessment@SSB0 <- report$E0
     Assessment@VB0 <- report$VB0
     Assessment@h <- report$h
-    Assessment@U_UMSY <- structure(report$U/report$UMSY, names = Year)
+    Assessment@F_FMSY <- structure(report$F/report$FMSY, names = Year)
     Assessment@B_BMSY <- structure(report$B/report$BMSY, names = Yearplusone)
     Assessment@B_B0 <- structure(report$B/report$B0, names = Yearplusone)
     Assessment@SSB_SSBMSY <- structure(report$E/report$EMSY, names = Yearplusone)
@@ -249,76 +265,3 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
 }
 class(SCA2) <- "Assess"
 
-
-get_refpt2 <- function(SSB, rec, SSBPR0, NPR0, weight, mat, M, vul, SR, fix_h, h) {
-  maxage <- length(M)
-  SSB0 <- recpred <- sigmaR <- NULL
-
-  solve_SR_par <- function(x, h = NULL) {
-    R0 <- exp(x[1])
-    SSB0 <<- R0 * SSBPR0
-    if(!fix_h) {
-      if(SR == "BH") h <- 0.2 + 0.8 * ilogit(x[2])
-      if(SR == "Ricker") h <- 0.2 + exp(x[2])
-    }
-
-    if(SR == "BH") recpred <<- (0.8 * R0 * h * SSB)/(0.2 * SSBPR0 * R0 *(1-h)+(h-0.2)*SSB)
-    if(SR == "Ricker") recpred <<- SSB/SSBPR0 * (5*h)^(1.25 * (1 - SSB/SSB0))
-    sigmaR <<- sqrt(sum((log(rec/recpred))^2)/length(recpred))
-    nLL <- -sum(dnorm(log(rec/recpred), 0, sigmaR, log = TRUE))
-    return(nLL)
-  }
-
-  if(fix_h) {
-    opt <- optimize(solve_SR_par, interval = c(-10, 10), h = h)$minimum # steepness
-    R0 <- exp(opt)
-  } else {
-    opt <- nlminb(c(10, 10), solve_SR_par)
-    R0 <- exp(opt$par[1])
-    if(SR == "BH") h <- 0.2 + 0.8 * ilogit(opt$par[2])
-    if(SR == "Ricker") h <- 0.2 + exp(opt$par[2])
-  }
-  if(SR == "BH") {
-    Arec <- 4*h/(1-h)/SSBPR0
-    Brec <- (5*h-1)/(1-h)/SSB0
-  }
-  if(SR == "Ricker") {
-    Arec <- 1/SSBPR0 * (5*h)^1.25
-    Brec <- 1.25 * log(5*h) / SSB0
-  }
-
-  # virgin reference points
-  N0 <- R0 * sum(NPR0)
-  E0 <- SSB0
-  VB0 <- R0 * sum(NPR0 * weight * vul)
-  B0 <- R0 * sum(NPR0 * weight)
-
-  solveMSY <- function(logit_U) {
-    U <- ilogit(logit_U)
-    surv <- exp(-M) * (1 - vul * U)
-    NPR <- c(1, cumprod(surv[1:(maxage-1)]))
-    NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])
-    EPR <- sum(NPR * mat * weight)
-    if(SR == "BH") Req <- (Arec * EPR - 1)/(Brec * EPR)
-    if(SR == "Ricker") Req <- log(Arec * EPR)/(Brec * EPR)
-    CPR <- vul * U * NPR
-    Yield <- Req * sum(CPR * weight)
-    return(-1 * Yield)
-  }
-
-  opt2 <- optimize(solveMSY, interval = c(-6, 6))
-  UMSY <- ilogit(opt2$minimum)
-  MSY <- -1 * opt2$objective
-  VBMSY <- MSY/UMSY
-
-  surv_UMSY <- exp(-M) * (1 - vul * UMSY)
-  NPR_UMSY <- c(1, cumprod(surv_UMSY[1:(maxage-1)]))
-  NPR_UMSY[maxage] <- NPR_UMSY[maxage]/(1 - surv_UMSY[maxage])
-
-  RMSY <- VBMSY/sum(vul * NPR_UMSY * weight)
-  BMSY <- RMSY * sum(NPR_UMSY * weight)
-  EMSY <- RMSY * sum(NPR_UMSY * weight * mat)
-  return(list(h = h, Arec = Arec, Brec = Brec, UMSY = UMSY, MSY = MSY, VBMSY = VBMSY,
-              RMSY = RMSY, BMSY = BMSY, EMSY = EMSY, VB0 = VB0, R0 = R0, B0 = B0, E0 = E0, N0 = N0))
-
-}

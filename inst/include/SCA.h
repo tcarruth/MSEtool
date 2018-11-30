@@ -20,10 +20,13 @@
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
-  PARAMETER(U_equilibrium);
+  PARAMETER(F_equilibrium);
   PARAMETER_VECTOR(vul_par);
 
+  PARAMETER_VECTOR(logF);
+
   PARAMETER(log_sigma);
+  PARAMETER(log_omega);
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
@@ -36,7 +39,9 @@
     h = exp(transformed_h);
   }
   h += 0.2;
+
   Type sigma = exp(log_sigma);
+  Type omega = exp(log_omega);
   Type tau = exp(log_tau);
 
   Type penalty = 0;
@@ -52,7 +57,7 @@
 
   ////// Equilibrium reference points and per-recruit quantities
   vector<Type> NPR_virgin(max_age);
-  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
+  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);
 
   Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
 
@@ -83,7 +88,8 @@
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
   matrix<Type> CAApred(n_y, max_age);   // Catch (in numbers) at year and age at the mid-point of the season
   vector<Type> CN(n_y);             // Catch in numbers
-  vector<Type> U(n_y);              // Harvest rate at year
+  vector<Type> Cpred(n_y);
+  vector<Type> F(n_y);
   vector<Type> Ipred(n_y);          // Predicted index at year
   vector<Type> R(n_y+1);            // Recruitment at year
   vector<Type> R_early(max_age-1);
@@ -92,13 +98,14 @@
   vector<Type> E(n_y+1);            // Spawning biomass at year
 
   CN.setZero();
+  Cpred.setZero();
   VB.setZero();
   B.setZero();
   E.setZero();
 
   // Equilibrium quantities (leading into first year of model)
   vector<Type> NPR_equilibrium(max_age);
-  NPR_equilibrium = calc_NPR(U_equilibrium, vul, M, max_age);
+  NPR_equilibrium = calc_NPR(F_equilibrium, vul, M, max_age);
 
   Type EPR_eq = sum_EPR(NPR_equilibrium, weight, mat);
   Type R_eq;
@@ -111,17 +118,13 @@
   R_eq /= Brec * EPR_eq;
 
   R(0) = R_eq;
-  if(!R_IsNA(asDouble(est_rec_dev(0)))) {
-    R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
-  }
+  if(!R_IsNA(asDouble(est_rec_dev(0)))) R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
   for(int a=0;a<max_age;a++) {
     if(a == 0) {
       N(0,a) = R(0) * NPR_equilibrium(a);
     } else {
       R_early(a-1) = R_eq;
-      if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) {
-        R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * pow(tau, 2));
-      }
+      if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * pow(tau, 2));
       N(0,a) = R_early(a-1) * NPR_equilibrium(a);
     }
     B(0) += N(0,a) * weight(a);
@@ -142,13 +145,15 @@
     }
     N(y+1,0) = R(y+1);
 
-    U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
-                            1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
+    F(y) = CppAD::CondExpLt(3 - exp(logF(y)), Type(0), 3 - posfun(3 - exp(logF(y)), Type(0), penalty), exp(logF(y)));
+
     for(int a=0;a<max_age;a++) {
-      CAApred(y,a) = vul(a) * U(y) * N(y,a);
+      Type meanN = N(y,a) * (1 - exp(-vul(a) * F(y) - M(a))) / (vul(a) * F(y) + M(a));
+      CAApred(y,a) = vul(a) * F(y) * meanN;
+      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-vul(a) * F(y) - M(a));
+      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-vul(a) * F(y) - M(a));
       CN(y) += CAApred(y,a);
-      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
-      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
+      Cpred(y) += CAApred(y,a) * weight(a);
       B(y+1) += N(y+1,a) * weight(a);
       VB(y+1) += N(y+1,a) * weight(a) * vul(a);
       E(y+1) += N(y+1,a) * weight(a) * mat(a);
@@ -168,7 +173,7 @@
     for(int y=0;y<n_y;y++) Ipred(y) = q * E(y);
   }
 
-  vector<Type> nll_comp(3);
+  vector<Type> nll_comp(4);
   nll_comp.setZero();
   for(int y=0;y<n_y;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
@@ -185,21 +190,24 @@
           nll_comp(1) -= dlnorm_comp(loglike_CAAobs, loglike_CAApred);
         }
       }
+      nll_comp(2) -= dnorm(log(C_hist(y)), log(Cpred(y)), omega, true);
     }
-    if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
+    if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_comp(3) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
-    if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
+    if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_comp(3) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
   }
 
   Type nll = nll_comp.sum() + penalty + prior;
 
   ADREPORT(R0);
   ADREPORT(h);
+  ADREPORT(omega);
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
 
+  REPORT(omega);
   REPORT(sigma);
   REPORT(tau);
 
@@ -218,10 +226,12 @@
   REPORT(vul_par);
   REPORT(vul);
 
+  REPORT(F);
+
   REPORT(N);
   REPORT(CN);
+  REPORT(Cpred);
   REPORT(CAApred);
-  REPORT(U);
   REPORT(Ipred);
   REPORT(R);
   REPORT(R_early);
@@ -235,7 +245,6 @@
   REPORT(nll);
   REPORT(penalty);
   REPORT(prior);
-
 
   return nll;
   //}

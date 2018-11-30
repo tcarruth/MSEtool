@@ -8,9 +8,9 @@
 SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
   I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL,
-  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
-  late_dev = "comp50", integrate = FALSE, silent = TRUE,
+  fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, early_dev = c("comp_onegen", "comp",
+  "all"), late_dev = "comp50", integrate = FALSE, silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 2e+05, eval.max = 4e+05),
   inner.control = list(), ...)
@@ -18,11 +18,11 @@ SCA(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
 SCA2(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic",
   "dome"), CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50,
   I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL,
-  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, common_dev = "comp50", integrate = FALSE,
-  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 2e+05, eval.max = 4e+05),
-  inner.control = list(), ...)
+  fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, common_dev = "comp50",
+  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 2e+05,
+  eval.max = 4e+05), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}
@@ -50,9 +50,12 @@ Output is re-converted back to original units.}
 \item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the model for \code{SCA}. This only affects
 calculation of reference points for \code{SCA2}.}
 
-\item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model
-is estimated. If \code{TRUE}, \code{U_equilibrium} is fixed to value provided in \code{start} (if provided),
-otherwise, equal to zero (assumes virgin conditions).}
+\item{fix_F_equilibrium}{Logical, whether the equilibrium fishing mortality prior to the first year of the model
+is estimated. If \code{TRUE}, \code{F_equilibrium} is fixed to value provided in \code{start} (if provided),
+otherwise, equal to zero (assumes unfished conditions).}
+
+\item{fix_omega}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Cat}.}
 
 \item{fix_sigma}{Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
@@ -100,16 +103,14 @@ An object of class \linkS4class{Assessment}.
 }
 \description{
 A generic statistical catch-at-age model (single fleet, single season) that uses catch, index, and catch-at-age composition
-data. An annual harvest rate is calculated (assuming a pulse fishery) as described in Forrest et al. (2008).
-There are two parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
+data. There are two parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
 and reference points (see functions section below).
 }
 \details{
 For the statistical catch-at-age model, the basic data inputs are catch (by weight), index
-(by weight/biomass), and catch-at-age matrix (by numbers). Catches are
-assumed to be known perfectly (the harvest rate in a given year is the ratio of the observed
-catch to the vulnerable biomass at the beginning of the year).
-The maximum age in the model is a plus-group.
+(by weight/biomass), and catch-at-age matrix (by numbers). The maximum age in the model is a plus-group.
+Annual F's are estimated parameters assuming continuous fishing over the year. Note: prior to version 1.2, catches were assumed to be
+known perfectly with an annual harvest rate in a given year from pulse fishing.
 
 By default, steepness is fixed in the model to the value in \code{Data@steep}.
 
@@ -129,9 +130,11 @@ For \code{start} (optional), a named list of starting values of estimates can be
 \item \code{R0} Virgin recruitment, only for \code{SCA}.
 \item \code{h} Steepness, only for \code{SCA}. If not provided, the value in \code{Data@steep} is used.
 \item \code{meanR} Mean recruitment, only for \code{SCA2}.
-\item \code{U_equilibrium} Harvest rate prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
+\item \code{F_equilibrium} Fishing mortality prior to the first year of model, e.g. zero means unfished conditions. Defaults to zero.
 \item \code{vul_par} Vulnerability parameters (length 2 vector for logistic or length 4 for dome, see below). Users should provide
 estimates of the parameters in normal space, e.g. \code{vul_max} between 0-1, and the function will perform the appropriate transformations for the model.
+\item \code{F} A vector of F's of length nyears, \code{length(Data@Year)}. If not provided, defaults to 0.1.
+\item \code{omega} Standard deviation of catch. If not provided, the value based on \code{Data@CV_Cat} is used.
 \item \code{sigma} Standard deviation of index. If not provided, the value based on \code{Data@CV_Ind} is used.
 \item \code{tau} Standard deviation of recruitment deviations. If not provided, the value in \code{Data@sigmaR} is used.
 }
@@ -166,15 +169,10 @@ for example, when vulnerability >> 0.5 for the youngest age class.
 as deviations from the resulting stock-recruit relationship.
 
 \item \code{SCA2}: The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
-as penalized parameters (similar to Cadigan 2016). This version is generally very fast and robust. Virgin and MSY reference points
-are estimated after the assessment run.
+as penalized parameters (similar to Cadigan 2016). The standard deviation is set high so that the recruitment is almost like
+free parameters. Unfished and MSY reference points are estimated from the assessment output.
 }}
 
-\note{
-For a given catch history, the starting value of \code{R0} or \code{meanR} may be too low and the population crashes in
-the middle of the time series. If the assessment function detects this pattern is occurring, it will increase \code{R0} or \code{meanR}
-before running the model.
-}
 \section{Required Data}{
 
 \itemize{
@@ -186,8 +184,8 @@ before running the model.
 \section{Optional Data}{
 
 \itemize{
-\item \code{SCA}: Rec, steep, sigmaR, CV_Ind
-\item \code{SC2}: Rec, steep, CV_Ind
+\item \code{SCA}: Rec, steep, sigmaR, CV_Ind, CV_Cat
+\item \code{SC2}: Rec, steep, CV_Ind, CV_Cat
 }
 }
 
@@ -200,11 +198,6 @@ res2 <- SCA2(Data = DLMtool::Simulation_1)
 \references{
 Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and
 variable natural mortality rates. Canadian Journal of Fisheries and Aquatic Science 72:296-308.
-
-Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008.
-An age-structured model with leading management parameters, incorporating
-age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic
-Science 65:286-296.
 
 Maunder, M.N. 2011. Review and evaluation of likelihood functions for composition data in
 stock-assessment models: Estimating the effective sample size. Fisheries Research 209:311-319.
