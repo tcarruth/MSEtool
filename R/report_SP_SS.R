@@ -77,48 +77,23 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = tem
   }
 
   Year <- info$Year
-  C_hist <- info$data$C_hist
 
-  plot_timeseries(Year, C_hist, label = "Catch")
+  plot_timeseries(Year, Obs_Catch, label = "Catch")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_catch.png"))
-    plot_timeseries(Year, C_hist, label = "Catch")
+    plot_timeseries(Year, Obs_Catch, label = "Catch")
     dev.off()
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
-  #  plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
-  #  if(save_figure) {
-  #    create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-  #    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
-  #    dev.off()
-  #    data.file.caption <- rbind(data.file.caption,
-  #                               c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
-  #  }
-  #}
-
-  I_hist <- info$data$I_hist
-
-  plot_timeseries(Year, I_hist, label = "Index")
+  plot_timeseries(Year, Obs_Index, label = "Index")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_index.png"))
-    plot_timeseries(Year, I_hist, label = "Index")
+    plot_timeseries(Year, Obs_Index, label = "Index")
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_index.png", "Index time series."))
   }
-
-  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
-  #  plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-  #  if(save_figure) {
-  #    create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-  #    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-  #    dev.off()
-  #    data.file.caption <- rbind(data.file.caption,
-  #                               c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
-  #  }
-  #}
 
   if(save_figure) {
     html_report(plot.dir, model = "Surplus Production (State-Space)",
@@ -188,31 +163,31 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = tem
     }
   }
 
-  plot_timeseries(Year, I_hist, Index, label = "Index")
+  plot_timeseries(Year, Obs_Index, Index, label = "Index")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index.png"))
-    plot_timeseries(Year, I_hist, Index, label = "Index")
+    plot_timeseries(Year, Obs_Index, Index, label = "Index")
     dev.off()
     if(conv) assess.file.caption <- rbind(assess.file.caption,
                                           c("assessment_index.png", "Observed (black) and predicted (red) index."))
     else assess.file.caption <- c("assessment_index.png", "Observed (black) and predicted (red) index.")
   }
 
-  plot_residuals(Year, log(I_hist/Index), label = "log(Index) Residual")
+  plot_residuals(Year, log(Obs_Index/Index), label = "log(Index) Residual")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index_residual.png"))
-    plot_residuals(Year, log(I_hist/Index), label = "log(Index) Residual")
+    plot_residuals(Year, log(Obs_Index/Index), label = "log(Index) Residual")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_index_residual.png", "Index residuals in log-space."))
   }
 
-  qqnorm(log(I_hist/Index), main = "")
-  qqline(log(I_hist/Index))
+  qqnorm(log(Obs_Index/Index), main = "")
+  qqline(log(Obs_Index/Index))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index_qqplot.png"))
-    qqnorm(log(I_hist/Index), main = "")
-    qqline(log(I_hist/Index))
+    qqnorm(log(Obs_Index/Index), main = "")
+    qqline(log(Obs_Index/Index))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_index_qqplot.png", "QQ-plot of index residuals in log-space."))
@@ -315,10 +290,10 @@ generate_plots_SP_SS <- function(Assessment, save_figure = FALSE, save_dir = tem
                                  c("assessment_yield_curve_B_B0.png", "Yield plot relative to depletion."))
   }
 
-  plot_surplus_production(B, B0, C_hist)
+  plot_surplus_production(B, B0, Obs_Catch)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-    plot_surplus_production(B, B0, C_hist)
+    plot_surplus_production(B, B0, Obs_Catch)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_surplus_production.png", "Surplus production relative to depletion."))

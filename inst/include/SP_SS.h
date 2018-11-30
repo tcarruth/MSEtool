@@ -24,10 +24,12 @@
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
 
-  Type gamma = pow(n, n/(n-1))/(n-1);
+  Type n_term = CppAD::CondExpEq(n, Type(1), Type(exp(1)), pow(n, n/(n-1)));
+  Type n_term2 = CppAD::CondExpEq(n, Type(1), Type(1/exp(1)), pow(n, 1/(1-n)));
+
   Type BMSY = MSY/UMSY;
-  Type K = BMSY / pow(n, 1/(1-n));
-  Type r = MSY * pow(n, n/(n-1)) / K;
+  Type K = BMSY / n_term2;
+  Type r = MSY * n_term / K;
 
   vector<Type> B(ny+1);
   vector<Type> SP(ny);
@@ -41,7 +43,8 @@
   for(int y=0;y<ny;y++) {
     U(y) = CppAD::CondExpLt(1 - C_hist(y)/B(y), Type(0.025),
       1 - posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y)/B(y));
-    SP(y) = gamma * MSY * (B(y)/K - pow(B(y)/K, n));
+    SP(y) = CppAD::CondExpEq(n, Type(1), -exp(1) * MSY * B(y)/K * log(B(y)/K),
+       n_term/(n-1) * MSY * (B(y)/K - pow(B(y)/K, n)));
     B(y+1) = B(y) + SP(y) - U(y) * B(y);
 	  if(y<ny-1) {
 	    if(!R_IsNA(asDouble(est_B_dev(y+1)))) B(y+1) *= exp(log_B_dev(y+1) - 0.5 * pow(tau, 2));
@@ -83,7 +86,6 @@
   REPORT(n);
   REPORT(sigma);
   REPORT(tau);
-  REPORT(gamma);
   REPORT(r);
   REPORT(K);
   REPORT(BMSY);

@@ -60,48 +60,23 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
   }
 
   Year <- info$Year
-  C_hist <- info$data$C_hist
 
-  plot_timeseries(Year, C_hist, label = "Catch")
+  plot_timeseries(Year, Obs_Catch, label = "Catch")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_catch.png"))
-    plot_timeseries(Year, C_hist, label = "Catch")
+    plot_timeseries(Year, Obs_Catch, label = "Catch")
     dev.off()
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
-  #  plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
-  #  if(save_figure) {
-  #    create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-  #    plot_timeseries(Year, C_hist, obs_CV = Data@CV_Cat[1], label = "Catch")
-  #    dev.off()
-  #    data.file.caption <- rbind(data.file.caption,
-  #                               c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
-  #  }
-  #}
-
-  I_hist <- info$data$I_hist
-
-  plot_timeseries(Year, I_hist, label = "Index")
+  plot_timeseries(Year, Obs_Index, label = "Index")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_index.png"))
-    plot_timeseries(Year, I_hist, label = "Index")
+    plot_timeseries(Year, Obs_Index, label = "Index")
     dev.off()
     data.file.caption <- rbind(data.file.caption,
                                c("data_index.png", "Index time series."))
   }
-
-  #if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
-  #  plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-  #  if(save_figure) {
-  #    create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-  #    plot_timeseries(Year, I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-  #    dev.off()
-  #    data.file.caption <- rbind(data.file.caption,
-  #                               c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
-  #  }
-  #}
 
   if(save_figure) {
     html_report(plot.dir, model = "Surplus Production",
@@ -171,31 +146,31 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
     }
   }
 
-  plot_timeseries(Year, I_hist, Index, label = "Index")
+  plot_timeseries(Year, Obs_Index, Index, label = "Index")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index.png"))
-    plot_timeseries(Year, I_hist, Index, label = "Index")
+    plot_timeseries(Year, Obs_Index, Index, label = "Index")
     dev.off()
     if(conv) assess.file.caption <- rbind(assess.file.caption,
                                           c("assessment_index.png", "Observed (black) and predicted (red) index."))
     else assess.file.caption <- c("assessment_index.png", "Observed (black) and predicted (red) index.")
   }
 
-  plot_residuals(Year, log(I_hist/Index), label = "log(Index) Residual")
+  plot_residuals(Year, log(Obs_Index/Index), label = "log(Index) Residual")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index_residual.png"))
-    plot_residuals(Year, log(I_hist/Index), label = "log(Index) Residual")
+    plot_residuals(Year, log(Obs_Index/Index), label = "log(Index) Residual")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_index_residual.png", "Index residuals in log-space."))
   }
 
-  qqnorm(log(I_hist/Index), main = "")
-  qqline(log(I_hist/Index))
+  qqnorm(log(Obs_Index/Index), main = "")
+  qqline(log(Obs_Index/Index))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_index_qqplot.png"))
-    qqnorm(log(I_hist/Index), main = "")
-    qqline(log(I_hist/Index))
+    qqnorm(log(Obs_Index/Index), main = "")
+    qqline(log(Obs_Index/Index))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_index_qqplot.png", "QQ-plot of index residuals in log-space."))
@@ -277,10 +252,10 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
                                  c("assessment_yield_curve_B_B0.png", "Yield plot relative to depletion."))
   }
 
-  plot_surplus_production(B, B0, C_hist)
+  plot_surplus_production(B, B0, Obs_Catch)
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-    plot_surplus_production(B, B0, C_hist)
+    plot_surplus_production(B, B0, Obs_Catch)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_surplus_production.png", "Surplus production relative to depletion."))
@@ -514,12 +489,19 @@ plot_retro_SP <- function(retro_ts, retro_est, save_figure = FALSE,
 plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
                           xaxis = c("U", "Biomass", "Depletion"), relative_yaxis = FALSE) {
   K <- report$K
-  gamma.par <- report$gamma
   n <- report$n
   BMSY <- report$BMSY
-  Yield <- gamma.par * msy * (BKratio - BKratio^n)
+
+  if(n == 1) {
+    Yield <- -exp(1) * msy * BKratio * log(BKratio)
+  } else {
+    gamma.par <- n^(n/(n-1))/n-1
+    Yield <- gamma.par * msy * (BKratio - BKratio^n)
+  }
+
   Biomass <- BKratio * K
   u.vector <- Yield/Biomass
+  Yield[Biomass == 0] <- u.vector[Biomass == 0] <- 0
 
   if(relative_yaxis) {
     Yield <- Yield/max(Yield)
@@ -577,7 +559,7 @@ SP_production <- function(depletion, figure = TRUE) {
   if(depletion <= 0 || depletion >= 1) stop(paste("Proposed depletion =", depletion, "but value must be between 0 and 1."))
 
   calc_depletion <- function(n) {
-    depletion_MSY <- n^(1/(1-n))
+    depletion_MSY <- if(n==1) 1/exp(1) else n^(1/(1-n))
     return(depletion_MSY)
   }
   n_solver <- function(x) calc_depletion(x) - depletion
@@ -585,10 +567,10 @@ SP_production <- function(depletion, figure = TRUE) {
   n_answer <- round(get_n$root, 3)
 
   if(figure) {
-    gamm <- n_answer^(n_answer/(n_answer-1))/(n_answer-1)
+    #n_term <- if(n_answer == 1) exp(1) else n_answer^(n_answer/(n_answer-1))
     umsy <- 0.1
     msy <- umsy * depletion
-    plot_yield_SP(report = list(gamma = gamm, n = n_answer, BMSY = depletion, K = 1), umsy = umsy,
+    plot_yield_SP(report = list(n = n_answer, BMSY = depletion, K = 1), umsy = umsy,
                   msy = msy, xaxis = "Depletion", relative_yaxis = TRUE)
     title(paste0("Production exponent n = ", n_answer))
   }
