@@ -493,7 +493,7 @@ plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
   BMSY <- report$BMSY
 
   if(n == 1) {
-    Yield <- -exp(1) * msy * BKratio * log(BKratio)
+    Yield <- ifelse(BKratio == 0, 0, -exp(1) * msy * BKratio * log(BKratio))
   } else {
     gamma.par <- n^(n/(n-1))/n-1
     Yield <- gamma.par * msy * (BKratio - BKratio^n)
@@ -501,7 +501,6 @@ plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
 
   Biomass <- BKratio * K
   u.vector <- Yield/Biomass
-  Yield[Biomass == 0] <- u.vector[Biomass == 0] <- 0
 
   if(relative_yaxis) {
     Yield <- Yield/max(Yield)
