@@ -3,18 +3,18 @@
 \name{SP}
 \alias{SP}
 \alias{SP_SS}
-\title{Surplus production model with UMSY and MSY as leading parameters}
+\title{Surplus production model with FMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, silent = TRUE, opt_hess = FALSE,
-  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
-  eval.max = 10000), ...)
+  fix_n = TRUE, n_seas = 4L, n_itF = 3L, silent = TRUE,
+  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 5000, eval.max = 10000), ...)
 
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE,
-  early_dev = c("all", "index"), integrate = FALSE, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 5000, eval.max = 10000),
+  fix_n = TRUE, fix_sigma = FALSE, fix_omega = TRUE,
+  fix_alpha = TRUE, fix_beta = TRUE, n_seas = 4L, integrate = TRUE,
+  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
+  1), control = list(iter.max = 5000, eval.max = 10000),
   inner.control = list(), ...)
 }
 \arguments{
@@ -55,28 +55,28 @@ hasn't converged. The optimization continues from the parameters from the previo
 \item{fix_sigma}{Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
 
+\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
+of the biomass deviations (thus, treating it as a state-space variable).}
+
+\item{inner.control}{A named list of arguments for optimization of the random effects, which
+is passed on to \link[TMB]{newton} via \code{\link[TMB]{MakeADFun}}.}
+
 \item{fix_tau}{Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
 
 \item{early_dev}{Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
 By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
 once index data are available (\code{"index"}).}
-
-\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
-of the biomass deviations (thus, treating it as a state-space variable).}
-
-\item{inner.control}{A named list of arguments for optimization of the random effects, which
-is passed on to \link[TMB]{newton} via \code{\link[TMB]{MakeADFun}}.}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output
 from TMB.
 }
 \description{
-A surplus production model that estimates the TAC using a
-time-series of catches and a relative abundance index and coded in TMB.
-The model is conditioned on catch and estimates a predicted index. The state-space version
-estimates annual deviates in biomass.
+A surplus production model that uses only a time-series of catches and a relative abundance index
+and coded in TMB. The base model, \code{SP}, is conditioned on catch and estimates a predicted index.
+Continuous surplus production and fishing is modeled with sub-annual time steps which should approximate
+the behavior of ASPIC (Prager 1994). The state-space version, \code{SP_SS} estimates annual deviates in biomass.
 }
 \details{
 To provide starting values for the \code{SP}, a named list can be provided for \code{UMSY},
@@ -86,13 +86,6 @@ For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{
 of the index and log-biomass deviates, respectively. Deviations are estimated beginning in the year when index
 data are available.
 }
-\section{Functions}{
-\itemize{
-\item \code{SP}: Fixed effects model
-
-\item \code{SP_SS}: State-space version
-}}
-
 \note{
 The model uses the Fletcher (1978) formulation and is parameterized with UMSY and MSY as
 leading parameters. The default conditions assume virgin conditions in the first year of the time series
@@ -120,11 +113,11 @@ res <- SP(Data = swordfish)
 
 # Provide starting values, assume B/K = 0.95 in first year of model
 # and symmetrical production curve (n = 2)
-start <- list(UMSY = 0.1, MSY = 1e5, dep = 0.95, n = 2)
+start <- list(dep = 0.875, n = 2)
 res <- SP(Data = swordfish, start = start)
 
 #### State-space version
-res <- SP_SS(Data = swordfish, start = list(dep = 0.95, tau = 0.3),
+res <- SP_SS(Data = swordfish, start = list(dep = 0.875, tau = 0.3),
 fix_sigma = TRUE)
 }
 }
@@ -134,6 +127,9 @@ Fishery Bulletin 76:515:521.
 
 Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model.
 Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
+
+Prager, M. H. 1994. A suite of extensions to a nonequilibrium surplus-production model.
+Fishery Bulletin 92:374-389.
 }
 \seealso{
 \link{SP_production}

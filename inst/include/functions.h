@@ -279,3 +279,32 @@ Type Newton_VPA_F_plus(Type F_start, Type phi, Type M1, Type M2, Type CAA1, Type
 }
 
 
+// Sub-annual time steps for SP and iteratively find the F that predicts the observed catch
+template<class Type>
+Type SP_F(Type U_start, Type C_hist, Type MSY, Type K, Type n, Type nterm, Type dt, int nstep, int nitF,
+                 vector<Type> &Cpred, vector<Type> &B, int y) {
+
+  Type F = -log(1 - U_start);
+  for(int i=0;i<nitF;i++) {
+    Type Catch = 0;
+    Type B_next = B(y);
+
+    for(int seas=0;seas<nstep;seas++) {
+      Type SP = CppAD::CondExpEq(n, Type(1), -exp(1) * MSY * B_next / K * log(B_next/K),
+                                 nterm/(n-1) * MSY * (B_next/K - pow(B_next/K, n))) - F * B_next;
+      SP *= dt;
+      Catch += F * B_next * dt;
+      B_next += SP;
+      if(i==nitF-1) Cpred(y) += F * B_next * dt;
+    }
+
+    F *= C_hist/Catch;
+    if(i==nitF-1) B(y+1) = B_next;
+  }
+  return F;
+}
+
+template<class Type>
+Type SPSS_B(Type B, Type F, Type MSY, Type K, Type n, Type nterm, Type tau_B, Type dt) {
+  return log(B) + (nterm/(n-1) * MSY/ K * (1 - pow(B/K, n-1)) - F - 0.5 * pow(tau_B, 2)) * dt;
+}

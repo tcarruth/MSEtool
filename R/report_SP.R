@@ -1,9 +1,9 @@
 summary_SP <- function(Assessment) {
   assign_Assessment_slots()
 
-  current_status <- data.frame(Value = c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)],
+  current_status <- data.frame(Value = c(F_FMSY[length(F_FMSY)], B_BMSY[length(B_BMSY)],
                                          B_B0[length(B_B0)]))
-  rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
+  rownames(current_status) <- c("F/FMSY", "B/BMSY", "B/B0")
 
   if(length(obj$env$map) == 0) input_parameters <- data.frame()
   else {
@@ -84,16 +84,16 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
   }
 
   if(conv) {
-    umsy.ind <- names(SD$par.fixed) == "logit_UMSY"
-    logit.umsy <- SD$par.fixed[umsy.ind]
-    logit.umsy.sd <- sqrt(diag(SD$cov.fixed)[umsy.ind])
+    Fmsy.ind <- names(SD$par.fixed) == "log_FMSY"
+    log.Fmsy <- SD$par.fixed[Fmsy.ind]
+    log.Fmsy.sd <- sqrt(diag(SD$cov.fixed)[Fmsy.ind])
 
-    plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
+    plot_lognormalvar(log.Fmsy, log.Fmsy.sd, label = expression(hat(F)[MSY]), logtransform = TRUE)
     if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_UMSYestimate.png"))
-      plot_betavar(logit.umsy, logit.umsy.sd, is_logit = TRUE, label = expression(hat(U)[MSY]))
+      create_png(filename = file.path(plot.dir, "assessment_FMSYestimate.png"))
+      plot_lognormalvar(log.Fmsy, log.Fmsy.sd, label = expression(hat(F)[MSY]), logtransform = TRUE)
       dev.off()
-      assess.file.caption <- c("assessment_UMSYestimate.png", "Estimate of UMSY, distribution based on normal approximation of estimated covariance matrix.")
+      assess.file.caption <- c("assessment_FMSYestimate.png", "Estimate of FMSY, distribution based on normal approximation of estimated covariance matrix.")
     }
 
     msy.ind <- names(SD$par.fixed) == "log_MSY"
@@ -109,15 +109,15 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
                                    c("assessment_MSYestimate.png", "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."))
     }
 
-    Uy <- names(U_UMSY)[length(U_UMSY)]
-    plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(U[.(Uy)]/U[MSY]))
+    Fy <- names(F_FMSY)[length(F_FMSY)]
+    plot_normalvar(F_FMSY[length(F_FMSY)], SE_F_FMSY_final, label = bquote(F[.(Fy)]/F[MSY]))
     if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_U_UMSYestimate.png"))
-      plot_normalvar(U_UMSY[length(U_UMSY)], SE_U_UMSY_final, label = bquote(widehat(U[.(Uy)]/U[MSY])))
+      create_png(filename = file.path(plot.dir, "assessment_F_FMSYestimate.png"))
+      plot_normalvar(F_FMSY[length(F_FMSY)], SE_F_FMSY_final, label = bquote(F[.(Fy)]/F[MSY]))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_U_UMSYestimate.png",
-                                     paste0("Estimate of U/UMSY in ", Uy, ", distribution based on
+                                   c("assessment_F_FMSYestimate.png",
+                                     paste0("Estimate of F/FMSY in ", Fy, ", distribution based on
                                             normal approximation of estimated covariance matrix.")))
     }
 
@@ -176,6 +176,15 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
                                  c("assessment_index_qqplot.png", "QQ-plot of index residuals in log-space."))
   }
 
+  plot_timeseries(Year, Obs_Catch, Catch, label = "Catch")
+  if(save_figure) {
+    create_png(filename = file.path(plot.dir, "assessment_catch.png"))
+    plot_timeseries(Year, Obs_Catch, Catch, label = "Catch")
+    dev.off()
+    assess.file.caption <- rbind(assess.file.caption,
+                                 c("assessment_catch.png", "Observed (black) and predicted (red) catch. In this model, predicted catch should match observed catch."))
+  }
+
   plot_timeseries(as.numeric(names(B)), B, label = "Biomass")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_biomass.png"))
@@ -205,48 +214,48 @@ generate_plots_SP <- function(Assessment, save_figure = FALSE, save_dir = tempdi
                                  c("assessment_B_B0.png", "Time series of biomass depletion."))
   }
 
-  plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
+  plot_timeseries(as.numeric(names(FMort)), FMort, label = "Fishing Mortality F")
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_exploitation.png"))
-    plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
+    create_png(filename = file.path(plot.dir, "assessment_F.png"))
+    plot_timeseries(as.numeric(names(FMort)), FMort, label = "Fishing Mortality F")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_exploitation.png", "Time series of exploitation rate."))
+                                 c("assessment_F.png", "Time series of exploitation rate."))
   }
 
-  plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
+  plot_timeseries(as.numeric(names(F_FMSY)), F_FMSY, label = expression(F/F[MSY]))
   abline(h = 1, lty = 2)
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_U_UMSY.png"))
-    plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
+    create_png(filename = file.path(plot.dir, "assessment_F_FMSY.png"))
+    plot_timeseries(as.numeric(names(F_FMSY)), F_FMSY, label = expression(F/F[MSY]))
     abline(h = 1, lty = 2)
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_U_UMSY.png", "Time series of U/UMSY."))
+                                 c("assessment_F_FMSY.png", "Time series of F/FMSY."))
   }
 
-  plot_Kobe(B_BMSY, U_UMSY)
+  plot_Kobe(B_BMSY, F_FMSY, ylab = expression(F/F[MSY]))
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
-    plot_Kobe(B_BMSY, U_UMSY)
+    plot_Kobe(B_BMSY, F_FMSY, ylab = expression(F/F[MSY]))
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
   }
 
-  plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "U")
+  plot_yield_SP(TMB_report, FMSY, MSY, xaxis = "F")
   if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
-    plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "U")
+    create_png(filename = file.path(plot.dir, "assessment_yield_curve_F.png"))
+    plot_yield_SP(TMB_report, FMSY, MSY, xaxis = "F")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
+                                 c("assessment_yield_curve_F.png", "Yield plot relative to exploitation."))
   }
 
-  plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "Depletion")
+  plot_yield_SP(TMB_report, FMSY, MSY, xaxis = "Depletion")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "assessment_yield_curve_B_B0.png"))
-    plot_yield_SP(TMB_report, UMSY, MSY, xaxis = "Depletion")
+    plot_yield_SP(TMB_report, FMSY, MSY, xaxis = "Depletion")
     dev.off()
     assess.file.caption <- rbind(assess.file.caption,
                                  c("assessment_yield_curve_B_B0.png", "Yield plot relative to depletion."))
@@ -486,8 +495,8 @@ plot_retro_SP <- function(retro_ts, retro_est, save_figure = FALSE,
 }
 
 
-plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
-                          xaxis = c("U", "Biomass", "Depletion"), relative_yaxis = FALSE) {
+plot_yield_SP <- function(report, fmsy, msy, BKratio = seq(0, 1, 0.01),
+                          xaxis = c("F", "Biomass", "Depletion"), relative_yaxis = FALSE) {
   K <- report$K
   n <- report$n
   BMSY <- report$BMSY
@@ -495,22 +504,22 @@ plot_yield_SP <- function(report, umsy, msy, BKratio = seq(0, 1, 0.01),
   if(n == 1) {
     Yield <- ifelse(BKratio == 0, 0, -exp(1) * msy * BKratio * log(BKratio))
   } else {
-    gamma.par <- n^(n/(n-1))/n-1
+    gamma.par <- n^(n/(n-1))/(n-1)
     Yield <- gamma.par * msy * (BKratio - BKratio^n)
   }
 
   Biomass <- BKratio * K
-  u.vector <- Yield/Biomass
+  f.vector <- Yield/Biomass
 
   if(relative_yaxis) {
     Yield <- Yield/max(Yield)
     ylab <- "Relative Equilibrium Yield"
   } else ylab <- "Equilibrium Yield"
 
-  if(xaxis == "U") {
-    plot(u.vector, Yield, typ = 'l', xlab = "Exploitation rate (U)", ylab = ylab)
-    segments(x0 = umsy, y0 = 0, y1 = max(Yield), lty = 2)
-    segments(x0 = 0, y0 = max(Yield), x1 = umsy, lty = 2)
+  if(xaxis == "F") {
+    plot(f.vector, Yield, typ = 'l', xlab = "Fishing Mortality F", ylab = ylab)
+    segments(x0 = fmsy, y0 = 0, y1 = max(Yield), lty = 2)
+    segments(x0 = 0, y0 = max(Yield), x1 = fmsy, lty = 2)
     abline(h = 0, col = 'grey')
   }
 
@@ -566,10 +575,9 @@ SP_production <- function(depletion, figure = TRUE) {
   n_answer <- round(get_n$root, 3)
 
   if(figure) {
-    #n_term <- if(n_answer == 1) exp(1) else n_answer^(n_answer/(n_answer-1))
-    umsy <- 0.1
-    msy <- umsy * depletion
-    plot_yield_SP(report = list(n = n_answer, BMSY = depletion, K = 1), umsy = umsy,
+    fmsy <- 0.1
+    msy <- fmsy * depletion
+    plot_yield_SP(report = list(n = n_answer, BMSY = depletion, K = 1), fmsy = fmsy,
                   msy = msy, xaxis = "Depletion", relative_yaxis = TRUE)
     title(paste0("Production exponent n = ", n_answer))
   }
