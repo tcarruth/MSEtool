@@ -37,7 +37,7 @@
 #' @slot Fleets List of Fleet objects
 #' @slot Obs    Hierarchical List of Observation model objects Level 1 is stock, level 2 is fleet
 #' @slot Imps   Hierarchical List of Implementation model objects Level 1 is stock, level 2 is fleet
-#' @slot CatchFrac A list nstock long, of vectors representing the fraction of current catches of the various fleets to each stock (each vector is nfleet long and sums to 1 for each stock)
+#' @slot CatchFrac A list nstock long, of matrices nsim x nfleet representing the fraction of current catches of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock)
 #' @slot Allocation  A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year). Note this
 #' over-ridden if an MP of class 'MP_F" is supplied that is a multi-fleet MP.
 #' @author T. Carruthers and A. Hordyk
@@ -63,7 +63,13 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
     return(.Object)
   }
 
+
+  # Needed:
   # helper function to expand Fleets by stock
+  # helper function to expand CatchFrac by simulation given a vector
+
+  # Known issues:
+  # Check for same nareas in cpars$mov
 
   for(i in 1:length(Stocks))if (class(Stocks[[i]]) != "Stock")  stop(paste("Could not build operating model:", deparse(substitute(Stocks[[i]])), "not of class Stock"))
   for(i in 1:length(Fleets))for(j in 1:length(Fleets[[i]]))if (class(Fleets[[i]][[j]]) != "Fleet")  stop(paste("Could not build operating model:", deparse(substitute(Fleets[[i]][[j]])), "not of class Fleet"))
@@ -72,6 +78,7 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
   .Object@Name <- paste(c("MultiOM:",SIL(Stocks,"Name"),SIL(Fleets,"Name")),collapse=" - ")
 
   if( length(unique(SIL(Fleets,"nyears")))>1)stop("Fleet objects must have the same historical duration (nyears)")
+
 
    # Now copy the values for stock, fleet and observation slots to same
   .Object@Stocks<-Stocks
