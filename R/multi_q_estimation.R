@@ -129,7 +129,7 @@ optQ_multi <- function(par, depc, SSB0c, nareas, maxage, Ncurr, pyears, M_age,
     Vtemp[Vind]<-(Vuln[Vind]*Effdist[Vind[,c(1,3)]])/Efftot[Vind[,3]]
     Vulnf[,1:ny]<-apply(Vtemp,2:3,sum)
     Vulnf[,(ny+1):ay]<-Vulnf[,ny]  # Future vulnerability is the same
-    temp<-nlz(Vulnf,2,"max")       # normalize to max 1
+    Vulnf<-nlz(Vulnf,2,"max")       # normalize to max 1
 
     Rtemp<-Retc[,,1:ny]
     Rtemp[Vind]<-(Retc[Vind]*Effdist[Vind[,c(1,3)]])/Efftot[Vind[,3]]
@@ -143,13 +143,17 @@ optQ_multi <- function(par, depc, SSB0c, nareas, maxage, Ncurr, pyears, M_age,
                         R0c=R0c, SSBpRc=SSBpRc, aRc=aRc, bRc=bRc, Qc=qtot, Fapic=0,
                         maxF=maxF, MPA=MPAf, control=1,  SSB0c=SSB0c)
 
+
+
+
+
     # 1:Narray 2:Barray 3:SSNarra 4:SBarray 5:VBarray 6:FMarray 7:FMretarray 8:Zarray
     ssb <- sum(simpop[[4]][,pyears,])
     BB<- apply(simpop[[2]][,pyears,],1,sum)  # age area
     Cf<-array(rep(BB,each=nf)*Vuln[,,ny]*Effdist[,ny],c(nf,maxage))
     Cpred<-apply(Cf,1,sum)/sum(Cf)
 
-    depOBJ<-5*(log(depc) - log(ssb/SSB0c))^2
+    depOBJ<-50*(log(depc) - log(ssb/SSB0c))^2
     cOBJ<-sum(log(Cpred[2:nf]/CFc[2:nf])^2)
 
     if(mode=='opt'){
