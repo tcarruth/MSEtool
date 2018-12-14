@@ -80,3 +80,9 @@ nlz<-function(arr,dims=NULL,func="max"){
   out[ind]<-out[ind]/agg[ind[,dims]]
   out
 }
+
+
+
+
+
+
