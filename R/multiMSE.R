@@ -558,31 +558,35 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   } # end of stocks
   #} # end of if not unfished
 
-
-  # --- Calculate MSY references ----
   if(!silent) message("Calculating MSY reference points")  # Print a progress update
 
-  MSYrefs <- sapply(1:nsim, optMSY_eq, M_ageArray, Wt_age, Mat_age, V, maxage,
-                    R0, SRrel, hs, yr=nyears)
+  for(p in 1:np){
+  # --- Calculate MSY references ----
 
-  MSY <- MSYrefs[1, ]  # record the MSY results (Vulnerable)
-  FMSY <- MSYrefs[2, ]  # instantaneous FMSY (Vulnerable)
-  SSBMSY <- MSYrefs[3, ]  # Spawning Stock Biomass at MSY
-  SSBMSY_SSB0 <- MSYrefs[4, ] # SSBMSY relative to unfished (SSB)
-  BMSY_B0 <- MSYrefs[5, ] # Biomass relative to unfished (B0)
-  BMSY <- MSYrefs[6,] # total biomass at MSY
-  VBMSY <- (MSY/(1 - exp(-FMSY)))  # Biomass at MSY (Vulnerable)
-  UMSY <- MSY/VBMSY  # exploitation rate [equivalent to 1-exp(-FMSY)]
-  FMSY_M <- FMSY/M  # ratio of true FMSY to natural mortality rate M
+    V<-apply(VF[,p,,,],c(1,3,4),sum) #<-SOL(FleetPars[[p]],"V")
+    V<-nlz(V,c(1,3),"max")
+    MSYrefs <- sapply(1:nsim, optMSY_eq, StockPars[[p]]$M_ageArray, StockPars[[p]]$Wt_age, StockPars[[p]]$Mat_age,
+                      V=V, maxage=maxage,
+                      R0=StockPars[[p]]$R0, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, yr=nyears)
 
-  if (checks) {
-    Btemp <- apply(SSB, c(1,3), sum)
-    x <- Btemp[,nyears]/SSBMSY
-    y <-D/SSBMSY_SSB0
-    plot(x,y, xlim=c(0,max(x)), ylim=c(0,max(y)), xlab="SSB/SSBMSY", ylab="D/SSBMSY_SSB0")
-    lines(c(-10,10),c(-10,10))
-  }
+    StockPars[[p]]$MSY <- MSYrefs[1, ]  # record the MSY results (Vulnerable)
+    StockPars[[p]]$FMSY <- MSYrefs[2, ]  # instantaneous FMSY (Vulnerable)
+    StockPars[[p]]$SSBMSY <- MSYrefs[3, ]  # Spawning Stock Biomass at MSY
+    StockPars[[p]]$SSBMSY_SSB0 <- MSYrefs[4, ] # SSBMSY relative to unfished (SSB)
+    StockPars[[p]]$BMSY_B0 <- MSYrefs[5, ] # Biomass relative to unfished (B0)
+    StockPars[[p]]$BMSY <- MSYrefs[6,] # total biomass at MSY
+    StockPars[[p]]$VBMSY <- (MSYrefs[1, ]/(1 - exp(-MSYrefs[2, ])))  # Biomass at MSY (Vulnerable)
+    StockPars[[p]]$UMSY <- MSYrefs[1, ]/StockPars[[p]]$VBMSY  # exploitation rate [equivalent to 1-exp(-FMSY)]
+    StockPars[[p]]$FMSY_M <- StockPars[[p]]$FMSY/StockPars[[p]]$M  # ratio of true FMSY to natural mortality rate M
 
+    if (checks) {
+      Btemp <- apply(SSB, c(1,3), sum)
+      x <- Btemp[,nyears]/SSBMSY
+      y <-D/SSBMSY_SSB0
+      plot(x,y, xlim=c(0,max(x)), ylim=c(0,max(y)), xlab="SSB/SSBMSY", ylab="D/SSBMSY_SSB0")
+      lines(c(-10,10),c(-10,10))
+    }
+  } # end of stocks
 
   # --- Code for deriving low biomass ----
   # (SSB where it takes MGThorizon x MGT to reach Bfrac of BMSY)
