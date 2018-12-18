@@ -1,6 +1,177 @@
 
 
 
+getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds,Rel){
+
+  x<-1
+  Nx<-N[x,,,,]
+  VFx<-VF[x,,,,]
+  FretAx<-FretA[x,,,,]
+  NIL(StockPars,"K")
+
+  Kx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['K'])),ncol=np)[x,]
+  Linfx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['Linf'])),ncol=np)[x,]
+  t0x<-matrix(unlist(lapply(StockPars,function(dat,x)dat['t0'])),ncol=np)[x,]
+  Mx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['M'])),ncol=np)[x,]
+  R0x<-matrix(unlist(lapply(StockPars,function(dat,x)dat['R0'])),ncol=np)[x,]
+  hsx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['hs'])),ncol=np)[x,]
+  ax<-matrix(unlist(lapply(StockPars,function(dat,x)dat['a'])),ncol=np)[x,]
+  bx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['b'])),ncol=np)[x,]
+
+  M_ageArrayx<-Mat_agex<-array(NA,c(np,maxage,nyears))
+  Effind<-array(NA,c(np,nf,nyears))
+  Spat_targ<-array(NA,c(np,nf))
+
+  for(p in 1:np){
+    Mat_agex[p,,]<-StockPars[[p]]$Mat_age[x,,1:nyears]
+    M_ageArrayx[p,,]<-StockPars[[p]]$M_ageArray[x,,1:nyears]
+    Effind[p,,]<-t(matrix(unlist(lapply(FleetPars[[p]],function(dat,x)dat['Find'][[1]][x,],x=x)),ncol=nf))
+    Spat_targ[p,]<-unlist(lapply(FleetPars[[p]],function(dat,x)dat['Spat_targ'][[1]][x],x=x))
+  }
+
+  CF<-t(matrix(unlist(lapply(CatchFrac,function(dat)dat[x,])),nrow=nf))
+  Fdist<-CF/Effind[,,nyears] # Catch divided by effort (q proxy)
+  Fdist<-Fdist/apply(Fdist,1,sum)    # q ratio proxy (real space)
+  par<-c(rep(-5,np),log(Fdist[,2:nf]/(1-Fdist[,2:nf]))) # low initial F followed by logit guess at fraction based on Fdist according to catch fraction in recent year
+
+  q_estMICe(par,np,nf,nyears,SSBx,Nx,VFx,FretAx,Effind,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,Rel)
+
+  optim(par,qestMICE)
+
+
+
+
+
+  }
+
+
+
+q_estMICe<-function(par,np,nf,nyears,Nx,VFx,FretAx,Effind,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,Rel){
+
+  qs<-exp(par[1:np])
+  qlogit<-array(0,c(np,nf))
+  qlogit[,2:nf]<-par[(np+1):length(par)]
+  qfrac<-exp(qlogit)/apply(exp(qlogit),1,sum)
+  # Effind [np,nf,nyears]
+  # Effdist<-qfrac*Effind
+  # Efftot<-apply(Effdist,2,sum)
+  y<-1
+
+  for(y in 1:nyears){
+
+    Fcur<-apply(Effind[,,y]*qs*qfrac,1,sum)
+    Ncur<-Nx[,,y,]
+    Vcur<-VFx[,,,y]
+    Retcur<-FretAx[,,,y]
+    M_agecur=M_ageArrayx[,,y]
+    Mat_agecur=Mat_agex[,,y]
+
+    NextYrN<-popdynOneMICE(nareas, maxage, Ncur=Nx[,,y,],
+                          Vcur=VFx[,,,y], Retcur=FretAx[,,,y], Fcur=Fcur, PerrYr=Perr_y[x, nyears+maxage-1], hs=hs[x],
+                          R0a=R0a[x,],  mov=mov[x,,,], SRrel=SRrel[x],M_agecur=M_ageArrayx[,,y],Mat_agecur=Mat_agex[,,y],
+                          Kx=Kx,Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,hsx=hsx,ax=ax,bx=bx,Rel=Rel)
+
+    N_P[,,1,] <- aperm(array(unlist(NextYrN), dim=c(maxage, nareas, nsim, 1)), c(3,1,4,2))
+
+  }
+
+
+}
+
+
+popdynOneMICE<-function(nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYr, hs,R0a, mov, SRrel,M_agecur,Mat_agecur,
+                        Kx,Linfx,t0x,Mx,R0x,hsx,ax,b,herm=NULL, Rel){
+
+  # FMarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Vuln.col(0))/Asize_c(A);
+  # FMretarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Retc.col(0))/Asize_c(A);
+
+  Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
+  for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
+
+
+  # R0recalc thus aR bR recalc ---------------
+  #bR <- matrix(log(5 * hs)/(0.8 * SSB0a), nrow=nsim)  # Ricker SR params
+  #aR <- matrix(exp(bR * SSB0a)/SSBpR, nrow=nsim)  # Ricker SR params
+
+  # M and Z recalc--------------------------
+  # Bcalc
+
+  # Bcalc ---------------------------------------------------------------------------
+  Nind<-TEG(dim(Ncur)) # p, age, area
+  Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
+  Wt_age<-ax*Len_age^bx
+  Bcur<-N[Nind]*Wt_age
+
+
+  # Vulnerable biomass calculation --------------------------------------------------
+  VBx<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
+  VBind<-TEG(dim(VBx))
+  VBx[VBind]<-Vcur[VBind[,1:3]]*Bcur[VBind[,c(1,3:4)]]
+  Fdist[VBind]<-VBx[VBind]^Spat_targ[VBind[,1:2]]
+  VBagg<-apply(Fdist,1:3,sum)
+  Fdist[VBind]<-Fdist[VBind]/VBagg[VBind[,1:3]]
+
+  FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1]]*Vcur[VBind[,1:3]]
+  FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1]]*Retcur[VBind[,1:3]]
+  Zx[VBind]<-FMx[VBind]+M_agecur[VBind[,c(1,3)]]
+
+  NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
+                          Zcurr=Z[x,,nyears,], PerrYr=Perr_y[x, nyears+maxage-1], hs=hs[x],
+                          R0a=R0a[x,], SSBpR=SSBpR[x,], aR=aR[x,], bR=bR[x,],
+                          mov=mov[x,,,], SRrel=SRrel[x])
+
+  out<-list(NextYrN,M_agecur,R0a,hs,aR,bR)
+
+
+}
+
+
+
+ResFromRel<-function(Rel,Bcur,SSBcur,Ncur,seed){
+
+  IVnams<-c("B","SSB","N")
+  IVcode<-c("Bcur","SSBcur","Ncur")
+
+  DVnam<-c("M","a", "b", "R0", "hs", "K", "Linf", "t0")
+  modnam<-c("Mx","ax","bx","R0x","hsx","Kx","Linfx","t0x")
+
+  nRel<-length(Rel)
+  out<-array(NA,c(nRel,4))
+
+  for(r in 1:nRel){
+
+    fnams<-names(attr(Rel[[r]]$terms,"dataClasses"))
+    DV<-fnams[1]
+    Dp<-unlist(strsplit(DV,"_"))[2]
+    Dnam<-unlist(strsplit(DV,"_"))[1]
+    IV<-fnams[2:length(fnams)]
+    nIV<-length(IV)
+    IVs<-matrix(unlist(strsplit(IV,"_")),ncol=nIV)
+    newdat<-NULL
+    for(iv in 1:nIV){
+      p<-as.numeric(IVs[2,iv])
+      if(IVs[1,iv]=="B")newdat<-rbind(newdat,sum(Bcur[p,,]))
+      if(IVs[1,iv]=="SSB")newdat<-rbind(newdat,sum(SSBcur[p,,]))
+      if(IVs[1,iv]=="SSB")newdat<-rbind(newdat,sum(Ncur[p,,]))
+    }
+    newdat<-as.data.frame(newdat)
+    names(newdat)<-IV
+    ys<-predict(Rel[[r]],newdat=newdat)
+    templm<-Rel[[r]]
+    templm$fitted.values <- ys
+    out[r,1]<-unlist(simulate(templm, nsim=1, seed=seed))
+    out[r,2]<-DV
+    out[r,3]<-Dp
+    out[r,4]<-modnam[match(Dnam,DVnam)]
+  }
+
+  out
+
+}
+
+
+
+
 #' optimize for catchability (q)
 #'
 #' Function optimizes catchability (q, where F=qE) required to get to user-specified stock
@@ -47,8 +218,10 @@ getq_multi <- function(x, D, SSB0, nareas, maxage, Np, pyears, M_ageArray, Mat_a
   Spat_targc<-unlist(lapply(FleetP,function(dat,x)dat['Spat_targ'][[1]][x],x=x))
 
   for(ff in 1:nf){ # kind of lazy but not THAT slow
+
     Vuln[ff,,]<-FleetP[[ff]]$V[x,,]
     retA[ff,,]<-FleetP[[ff]]$retA[x,,]
+
   }
 
   Fdist<-CFp[x,]/Effind[,ny] # Catch divided by effort (q proxy)
@@ -142,8 +315,6 @@ optQ_multi <- function(par, depc, SSB0c, nareas, maxage, Ncurr, pyears, M_age,
                         MatAge, WtAge, Vuln=Vulnf, Retc=Retf, Prec, movc, SRrelc, Effind=Efftot, Spat_targc=Spat_targf, hc,
                         R0c=R0c, SSBpRc=SSBpRc, aRc=aRc, bRc=bRc, Qc=qtot, Fapic=0,
                         maxF=maxF, MPA=MPAf, control=1,  SSB0c=SSB0c)
-
-
 
 
 

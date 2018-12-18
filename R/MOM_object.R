@@ -38,7 +38,8 @@
 #' @slot Obs    Hierarchical List of Observation model objects Level 1 is stock, level 2 is fleet
 #' @slot Imps   Hierarchical List of Implementation model objects Level 1 is stock, level 2 is fleet
 #' @slot CatchFrac A list nstock long, of matrices nsim x nfleet representing the fraction of current catches of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock)
-#' @slot Allocation  A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year). Note this
+#' @slot Allocation  A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year).
+#' @slot Rel A list of biological / ecological relationships among stocks
 #' over-ridden if an MP of class 'MP_F" is supplied that is a multi-fleet MP.
 #' @author T. Carruthers and A. Hordyk
 #' @export
@@ -50,12 +51,12 @@ setClass("MOM", representation(Name = "character", Agency="character",
                               nsim="numeric", proyears="numeric",
                               interval='numeric', pstar='numeric', maxF='numeric', reps='numeric',
                               cpars="list", seed="numeric", Source="character",Stocks='list',Fleets='list',Obs='list',Imps='list',
-                              CatchFrac='list',Allocation='list'))
+                              CatchFrac='list',Allocation='list',Rel='list'))
 
 
 # initialize MOM
 setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=NULL, Imps=NULL, CatchFrac=NULL, Stocks_cpars=NULL,Fleets_cpars=NULL,
-                                       interval=4, pstar=0.5, maxF=0.8, reps=1, nsim=48, proyears=50, Source=NULL, Allocation=NULL) {
+                                       interval=4, pstar=0.5, maxF=0.8, reps=1, nsim=48, proyears=50, Source=NULL, Allocation=NULL,Rel=NULL) {
 
   if (is.null(Stocks)|is.null(Fleets)|is.null(Obs)|is.null(Imps)|is.null(CatchFrac)) {
     message("A specified list of objects is required for each of the following arguments: Stocks, Fleets, Obs, Imps, CatchFrac. Returning a blank MOM object")
@@ -102,6 +103,7 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
   .Object@Allocation <- new('list')
   .Object@CatchFrac=CatchFrac
   .Object@seed=1
+  .Object@Rel=Rel
   .Object
 
 })
