@@ -183,6 +183,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # 2) currently assume unfished vulnerability is equally weighted among fleets (first V calculation)
   # 3) Historical MPAs are calculated by weighting fleet specific MPA by their historical effort / q (ie apical F) - not exactly ideal as it should be by vulnerable biomass really
   # 4) Spatial targetting is currently calculated as the fleet-specific spatial targetting weighted by total F by fleet - not perfect at all!
+  # 5) MICE mode: MSY calcs are fully dynamic and by year - we do not solve the long-term equilibrium MSY for MICE models
+  # 6) No check for MOM correct object formatting yet
 
   # Needs checking
   # 1) The vulnerability in the fleets does not max to 1
@@ -203,6 +205,12 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   np<-length(Stocks)
   nf<-length(Fleets[[1]])
   maxF<-MOM@maxF
+
+  if(is.null(MOM@Rel)|is.na(MOM@Rel[1])){
+    MICE=FALSE
+  }else{
+    MICE=TRUE
+  }
 
   #MOM <- ChkObj(MOM) # Check that all required slots in OM object contain values
   if (proyears < 2) stop('OM@proyears must be > 1', call.=FALSE)
@@ -373,8 +381,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   } # end of np
 
-  getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, B, SSB, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds,Rel){
-
+  getq_multi_MICE<-function(x=1,StockPars, FleetPars, nsim, np,nf, nareas,maxage, nyears, N, B, SSB, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds,Rel){
 
 
   # --- Optimize catchability (q) to fit depletion ----
@@ -389,27 +396,25 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     bounds <- c(0.0001, 15) # q bounds for optimizer
 
-    out<-lapply(1:nsim,getq_multi_MICE, StockPars, FleetPars, nareas,maxage, pyears, N, maxF=MOM@maxF, MPA, CatchFrac, bounds)
+    if(MICE){
 
+      out<-lapply(1:nsim,getq_multi_MICE, StockPars, FleetPars, nareas,maxage, pyears, N, maxF=MOM@maxF, MPA, CatchFrac, bounds)
 
-
-
-                D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray,
-                  Mat_age=StockPars[[p]]$Mat_age,
-                  Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
-                  FleetP=FleetPars[[p]], # instead of V, retA, Find, Spat_targ,
-                  Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
-                  bounds = bounds, maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
-
-      #test<-getq_multi(x=1, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
-      #            Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
-      #            FleetP=FleetPars[[p]], # instead of V, retA, Find, Spat_targ,
-      #            Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
-      #            bounds = c(1e-05, 15), maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
-
+      #return and reallocate
       qs<-NIL(out,"qtot")
       qfrac<-t(matrix(NIL(out,"qfrac"),nrow=nf))
 
+    }else{
+
+      out<-lapply(1:sim,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
+                      Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
+                      FleetP=FleetPars[[p]], # instead of V, retA, Find, Spat_targ,
+                      Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
+                      bounds = c(1e-05, 15), maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
+
+      qs<-NIL(out,"qtot")
+      qfrac<-t(matrix(NIL(out,"qfrac"),nrow=nf))
+    }
 
 
     # --- Check that q optimizer has converged ----
@@ -487,6 +492,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                        bounds=bounds, MPA=MPA[p,1,,], maxF=MOM@maxF) # find the q that gives current stock depletion
 
           qs[probQ]<-qs2
+          # need a qfract thing in here
+
         }
 
         probQ <- which(qs > max(LimBound) | qs < min(LimBound))
@@ -519,6 +526,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     # Got to here!
     # need retA, Effind, Vuln, Spat_targ
+
+
 
     histYrs <- sapply(1:nsim, HistMulti, FleetP=FleetPars[[p]], StockP=StockPars[[p]],
                       maxage=maxage,allyears=allyears, nyears=nyears, nf=nf,

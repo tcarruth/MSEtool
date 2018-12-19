@@ -1,7 +1,7 @@
 
 
 
-getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds,Rel){
+getq_multi_MICE<-function(x,StockPars, FleetPars, nsim, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds,Rel){
 
   x<-1
   Nx<-N[x,,,,]
@@ -9,14 +9,24 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas,maxage, nyears, 
   FretAx<-FretA[x,,,,]
   NIL(StockPars,"K")
 
-  Kx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['K'])),ncol=np)[x,]
-  Linfx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['Linf'])),ncol=np)[x,]
-  t0x<-matrix(unlist(lapply(StockPars,function(dat,x)dat['t0'])),ncol=np)[x,]
-  Mx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['M'])),ncol=np)[x,]
-  R0x<-matrix(unlist(lapply(StockPars,function(dat,x)dat['R0'])),ncol=np)[x,]
-  hsx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['hs'])),ncol=np)[x,]
-  ax<-matrix(unlist(lapply(StockPars,function(dat,x)dat['a'])),ncol=np)[x,]
-  bx<-matrix(unlist(lapply(StockPars,function(dat,x)dat['b'])),ncol=np)[x,]
+  Kx<-matrix(unlist(lapply(StockPars,function(dat)dat['K'])),ncol=np)[x,]
+  Linfx<-matrix(unlist(lapply(StockPars,function(dat)dat['Linf'])),ncol=np)[x,]
+  t0x<-matrix(unlist(lapply(StockPars,function(dat)dat['t0'])),ncol=np)[x,]
+  Mx<-matrix(unlist(lapply(StockPars,function(dat)dat['M'])),ncol=np)[x,]
+  R0x<-matrix(unlist(lapply(StockPars,function(dat)dat['R0'])),ncol=np)[x,]
+  hsx<-matrix(unlist(lapply(StockPars,function(dat)dat['hs'])),ncol=np)[x,]
+  ax<-matrix(unlist(lapply(StockPars,function(dat)dat['a'])),ncol=np)[x,]
+  bx<-matrix(unlist(lapply(StockPars,function(dat)dat['b'])),ncol=np)[x,]
+  SRrelx<-matrix(unlist(lapply(StockPars,function(dat)dat['SRrel'])),ncol=np)[x,]
+
+  distx<-array(NA,c(np,nareas))
+  Perrx<-array(NA,c(np,nyears+maxage))
+  movx<-array(NA,c(np,maxage,nareas,nareas))
+  for(p in 1:np){
+    distx[p,]<-StockPars[[p]]$R0a[x,]/sum(StockPars[[p]]$R0a[x,])
+    Perrx[p,]<-StockPars[[p]]$Perr_y[x,1:(nyears+maxage)]
+    movx[p,,,]<-StockPars[[p]]$mov[x,,,]
+  }
 
   M_ageArrayx<-Mat_agex<-array(NA,c(np,maxage,nyears))
   Effind<-array(NA,c(np,nf,nyears))
@@ -34,7 +44,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas,maxage, nyears, 
   Fdist<-Fdist/apply(Fdist,1,sum)    # q ratio proxy (real space)
   par<-c(rep(-5,np),log(Fdist[,2:nf]/(1-Fdist[,2:nf]))) # low initial F followed by logit guess at fraction based on Fdist according to catch fraction in recent year
 
-  q_estMICe(par,np,nf,nyears,SSBx,Nx,VFx,FretAx,Effind,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,Rel)
+  q_estMICe(par,np,nf,nyears,SSBx,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,Perrx,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,SRrelx,Rel)
 
   optim(par,qestMICE)
 
@@ -46,7 +56,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas,maxage, nyears, 
 
 
 
-q_estMICe<-function(par,np,nf,nyears,Nx,VFx,FretAx,Effind,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,Rel){
+q_estMICe<-function(par,np,nf,nyears,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,SRrelx,Rel){
 
   qs<-exp(par[1:np])
   qlogit<-array(0,c(np,nf))
@@ -55,53 +65,90 @@ q_estMICe<-function(par,np,nf,nyears,Nx,VFx,FretAx,Effind,Spat_targ,M_ageArrayx,
   # Effind [np,nf,nyears]
   # Effdist<-qfrac*Effind
   # Efftot<-apply(Effdist,2,sum)
-  y<-1
 
-  for(y in 1:nyears){
+  # make all arrays for reallocation here (each year) and make this 'popdyn_MICE'
 
-    Fcur<-apply(Effind[,,y]*qs*qfrac,1,sum)
-    Ncur<-Nx[,,y,]
-    Vcur<-VFx[,,,y]
-    Retcur<-FretAx[,,,y]
-    M_agecur=M_ageArrayx[,,y]
-    Mat_agecur=Mat_agex[,,y]
+  popdynMICE<-function(qs,qfrac,np,nf,nyears,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,hsx,ax,bx,SRrelx,Rel){
 
-    NextYrN<-popdynOneMICE(nareas, maxage, Ncur=Nx[,,y,],
-                          Vcur=VFx[,,,y], Retcur=FretAx[,,,y], Fcur=Fcur, PerrYr=Perr_y[x, nyears+maxage-1], hs=hs[x],
-                          R0a=R0a[x,],  mov=mov[x,,,], SRrel=SRrel[x],M_agecur=M_ageArrayx[,,y],Mat_agecur=Mat_agex[,,y],
-                          Kx=Kx,Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,hsx=hsx,ax=ax,bx=bx,Rel=Rel)
+    Bx<-SSBx<-array(NA,dim(Nx))
+    Wt_agey<-array(NA,c(np,maxage,nyears))
+    Ky<-Linfy<-t0y<-My<-R0y<-hsy<-ay <-by<-array(NA,c(np,nyears))
+    Ky[,1]<-Kx; Linfy[,1]<-Linfx; t0y[,1]<-t0x; My[,1]<-Mx; R0y[,1]<-R0x; hsy[,1]<-hsx; ay[,1]<-ax; by[,1]<-bx
 
-    N_P[,,1,] <- aperm(array(unlist(NextYrN), dim=c(maxage, nareas, nsim, 1)), c(3,1,4,2))
+    Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
+    Wt_agey[,,1]<-ax*Len_age^bx
 
+    for(y in 2:nyears){
+
+      #y<-2; Fcur<-apply(Effind[,,y-1]*qs*qfrac,1,sum) ; Ncur<-Nx[,,y-1,];  Vcur<-VFx[,,,y-1];  Retcur<-FretAx[,,,y-1];  M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
+
+      Fcur<-apply(Effind[,,y-1]*qs*qfrac,1,sum)
+
+      out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Nx[,,y-1,],
+                            Vcur=VFx[,,,y-1], Retcur=FretAx[,,,y-1], Fcur=Fcur, PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1],
+                            distx=distx, movx=movx, SRrelx=SRrelx, M_agecur=M_ageArrayx[,,y-1], Mat_agecur=Mat_agex[,,y-1],
+                            Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0y[,y-1], ax=ay[,y-1],
+                            bx=by[,y-1],Rel=Rel)
+
+      Nx[,,y,]<-out$Nnext
+      Wt_agey[,,y]<-out$Wt_age
+      M_ageArrayx[,,y]<-out$M_agecurx
+      Ky[,y]<-out$Kx; Linfy[,y]<-out$Linfx; t0y[,y]<-out$t0x; My[,y]<-out$Mx; R0y[,y]<-out$R0x; hsy[,y]<-out$hsx; ay[,y]<-out$ax; by[,y]<-out$bx
+
+    }
+
+    Nind<-TEG(dim(Nx))
+    Bx[Nind]<-Nx[Nind]*Wt_agey[Nind[,1:3]]
+    SSBx[Nind]<-Bx[Nind]*Mat_agex[Nind[,1:3]]
+    # matplot(t(apply(SSBx,c(1,3),sum)))
   }
 
 
 }
 
 
-popdynOneMICE<-function(nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYr, hs,R0a, mov, SRrel,M_agecur,Mat_agecur,
-                        Kx,Linfx,t0x,Mx,R0x,hsx,ax,b,herm=NULL, Rel){
+popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp, hsx,R0a, distx, movx, SRrelx,M_agecur,Mat_agecur,
+                        Kx,Linfx,t0x,Mx,R0x,ax,bx,herm=NULL, Rel){
 
   # FMarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Vuln.col(0))/Asize_c(A);
   # FMretarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Retc.col(0))/Asize_c(A);
 
-  Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
-  for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
-
-
-  # R0recalc thus aR bR recalc ---------------
-  #bR <- matrix(log(5 * hs)/(0.8 * SSB0a), nrow=nsim)  # Ricker SR params
-  #aR <- matrix(exp(bR * SSB0a)/SSBpR, nrow=nsim)  # Ricker SR params
-
-  # M and Z recalc--------------------------
-  # Bcalc
-
+  # Initial Bcur calc (before any weight at age recalculation change)
   # Bcalc ---------------------------------------------------------------------------
+  Bcur<-SSBcur<-Ncur
   Nind<-TEG(dim(Ncur)) # p, age, area
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
   Wt_age<-ax*Len_age^bx
-  Bcur<-N[Nind]*Wt_age
+  Bcur[Nind]<-Ncur[Nind]*Wt_age[Nind[,1:2]]
 
+  # old surv
+  surv <- cbind(rep(1,np),t(exp(-apply(M_agecur, 1, cumsum)))[, 1:(maxage-1)])  # Survival array
+  oldM<-apply(surv*M_agecur*Mat_agecur,1,sum)/apply(surv*Mat_agecur,1,sum)
+
+  Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
+  for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
+  # Parameters that could have changed R0, M, K, Linf, t0, a, b, hs, bR, aR
+  # Recalculate growth
+  Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
+  Wt_age<-ax*Len_age^bx
+
+  # Recalc SSBpR, SSB0
+  M_agecurx<-M_agecur*Mx/oldM  # updated M
+  surv <- cbind(rep(1,np),t(exp(-apply(M_agecurx, 1, cumsum)))[, 1:(maxage-1)])  # Survival array
+  SSB0x<-apply(R0x*surv*Mat_agecur*Wt_age,1,sum)
+  SSBpRx<-SSB0x/R0x
+  SSBpRax<-SSBpRx*dist
+  SSB0ax<-dist*SSB0x
+  R0ax<-dist*R0x
+
+  # R0recalc thus aR bR recalc ---------------
+  bRx <- matrix(log(5 * hsx)/(0.8 * SSB0ax), nrow=np)  # Ricker SR params
+  aRx <- matrix(exp(bRx * SSB0ax)/SSBpRx, nrow=np)  # Ricker SR params
+
+  # Bcalc ---------------------------------------------------------------------------
+
+  Bcur[Nind]<-Ncur[Nind]*Wt_age[Nind[,1:2]]
+  SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
 
   # Vulnerable biomass calculation --------------------------------------------------
   VBx<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
@@ -114,14 +161,29 @@ popdynOneMICE<-function(nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYr, hs,R0a
   FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1]]*Vcur[VBind[,1:3]]
   FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1]]*Retcur[VBind[,1:3]]
   Zx[VBind]<-FMx[VBind]+M_agecur[VBind[,c(1,3)]]
+  Zcur<-apply(Zx,c(1,3,4),sum)
 
-  NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
-                          Zcurr=Z[x,,nyears,], PerrYr=Perr_y[x, nyears+maxage-1], hs=hs[x],
-                          R0a=R0a[x,], SSBpR=SSBpR[x,], aR=aR[x,], bR=bR[x,],
-                          mov=mov[x,,,], SRrel=SRrel[x])
+  Nnext<-array(NA,c(np,maxage,nareas))
 
-  out<-list(NextYrN,M_agecur,R0a,hs,aR,bR)
+  for(p in 1:np){
+    #NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
+    #                        Zcurr=Zcur[p,,], PerrYr=PerrYrp[x, nyears+maxage-1], hs=hs[x],
+    #                        R0a=R0a[x,], SSBpR=SSBpRax[p,], aR=aRx[p,], bR=bRx[p,],
+    #                        mov=mov[x,,,], SRrel=SRrelx[p])
 
+    NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=SSBcur[p,,], Ncurr=Ncur[p,,],
+                            Zcurr=Zcur[p,,], PerrYr=PerrYrp[p], hs=hsx[p],
+                            R0a=R0ax[p,], SSBpR=SSBpRax[p,], aR=aR[p,], bR=bR[p,],
+                            mov=movx[p,,,], SRrel=SRrelx[p])
+
+    Nnext[p,,]<-NextYrN
+
+  }
+
+  # returns new N and any updated parameters:
+  list(Nnext=Nnext,M_agecurx=M_agecurx,R0x=R0x,R0ax=R0ax,hsx=hsx,
+       aRx=aRx,bRx=bRx,Linfx=Linfx,Kx=Kx,t0x=t0x,Mx=Mx,ax=ax,bx=bx,
+       Len_age=Len_age,Wt_age=Wt_age,surv=surv)
 
 }
 
@@ -152,7 +214,7 @@ ResFromRel<-function(Rel,Bcur,SSBcur,Ncur,seed){
       p<-as.numeric(IVs[2,iv])
       if(IVs[1,iv]=="B")newdat<-rbind(newdat,sum(Bcur[p,,]))
       if(IVs[1,iv]=="SSB")newdat<-rbind(newdat,sum(SSBcur[p,,]))
-      if(IVs[1,iv]=="SSB")newdat<-rbind(newdat,sum(Ncur[p,,]))
+      if(IVs[1,iv]=="N")newdat<-rbind(newdat,sum(Ncur[p,,]))
     }
     newdat<-as.data.frame(newdat)
     names(newdat)<-IV
