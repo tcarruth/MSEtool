@@ -1,7 +1,6 @@
 # multiMSE funcs
 
 
-
 HistMulti<-function(x,FleetP,StockP,maxage,allyears,nyears,nf,MPAc,qfrac, qs,maxF){
 
   Vuln=retA=array(NA,c(nf,maxage,nyears))

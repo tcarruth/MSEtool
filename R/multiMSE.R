@@ -185,6 +185,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # 4) Spatial targetting is currently calculated as the fleet-specific spatial targetting weighted by total F by fleet - not perfect at all!
   # 5) MICE mode: MSY calcs are fully dynamic and by year - we do not solve the long-term equilibrium MSY for MICE models
   # 6) No check for MOM correct object formatting yet
+  # 7) MICE mode: SSB0 is constant (does not change with M for example) and based on long-term ecosystem average as specified in StockPars[[p]]$SSB0
 
   # Needs checking
   # 1) The vulnerability in the fleets does not max to 1
@@ -252,6 +253,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       FleetPars[[p]][[f]] <- SampleFleetPars(MOM@Fleets[[p]][[f]], Stock=StockPars[[p]], nsim, nyears, proyears, cpars=SampCpars[[p]][[f]])
       ObsPars[[p]][[f]] <- SampleObsPars(MOM@Obs[[p]][[f]], nsim, cpars=SampCpars[[p]][[f]])
       ImpPars[[p]][[f]] <- SampleImpPars(MOM@Imps[[p]][[f]],nsim, cpars=SampCpars[[p]][[f]])
+
+      FleetPars[[p]][[f]]$Find<-FleetPars[[p]][[f]]$Find/(apply(FleetPars[[p]][[f]]$Find,1,mean))
     }
   }
 
@@ -356,6 +359,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     StockPars[[p]]$bR<-bR
     StockPars[[p]]$SSB0<-SSB0
     StockPars[[p]]$R0a <-R0a
+    StockPars[[p]]$surv<-surv
 
 
     for(f in 1:nf)FleetPars[[p]][[f]]$V<-VF[,p,f,,]
@@ -363,6 +367,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     # --- Historical Spatial closures ----
 
     for(f in 1:nf){
+
       if (all(!is.na(Fleets[[p]][[f]]@MPA)) && sum(Fleets[[p]][[f]]@MPA) != 0) {
 
         yrindex <- Fleets[[p]][[f]]@MPA[,1]
@@ -377,12 +382,12 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       }
     }
 
-
-
   } # end of np
 
-  getq_multi_MICE<-function(x=1,StockPars, FleetPars, nsim, np,nf, nareas,maxage, nyears, N, B, SSB, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds,Rel){
+  test<-getq_multi_MICE(x=2,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel=MOM@Rel)
 
+  out<-lapply(1:2,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel)
+  out2<-sfLapply(1:2,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel)
 
   # --- Optimize catchability (q) to fit depletion ----
   #if ('unfished' %in% names(control) && control$unfished) {
@@ -567,7 +572,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       }
     }
 
-  } # end of stocks
+  # end of stocks
   #} # end of if not unfished
 
   if(!silent) message("Calculating MSY reference points")  # Print a progress update
