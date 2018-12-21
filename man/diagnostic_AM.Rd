@@ -4,7 +4,8 @@
 \alias{diagnostic_AM}
 \title{diagnostic_AM (diagnostic of Assessments in MSE): Did Assess models converge during MSE?}
 \usage{
-diagnostic_AM(MSE, MP = NULL, gradient_threshold = 0.1, figure = TRUE)
+diagnostic_AM(MSE, MP = NULL, gradient_threshold = 0.1,
+  figure = TRUE)
 }
 \arguments{
 \item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}}. If no MSE object

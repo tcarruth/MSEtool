@@ -4,10 +4,10 @@
 \alias{SS2Data}
 \title{Reads data Stock Synthesis file structure into a Data object using package r4ss}
 \usage{
-SS2Data(SSdir, Name = NULL, Common_Name = "", Species = "", Region = "",
-  min_age_M = 1, comp_fleet = "all", comp_season = "sum",
-  comp_partition = "all", comp_gender = "all", index_fleet = "SSB",
-  index_season = "mean", ...)
+SS2Data(SSdir, Name = NULL, Common_Name = "", Species = "",
+  Region = "", min_age_M = 1, comp_fleet = "all",
+  comp_season = "sum", comp_partition = "all", comp_gender = "all",
+  index_fleet = "SSB", index_season = "mean", ...)
 }
 \arguments{
 \item{SSdir}{A folder with Stock Synthesis input and output files in it}

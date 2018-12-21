@@ -4,9 +4,10 @@
 \alias{SS2OM}
 \title{Reads MLE estimates from Stock Synthesis file structure into an operating model using package r4ss.}
 \usage{
-SS2OM(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
-  Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp, Name = NULL,
-  Source = "No source provided", Author = "No author provided", ...)
+SS2OM(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3,
+  seed = 1, Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp,
+  Name = NULL, Source = "No source provided",
+  Author = "No author provided", ...)
 }
 \arguments{
 \item{SSdir}{A folder with Stock Synthesis input and output files in it}

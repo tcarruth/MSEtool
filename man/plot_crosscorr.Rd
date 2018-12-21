@@ -4,8 +4,8 @@
 \alias{plot_crosscorr}
 \title{Produce a cross-correlation plot of the derived data arising from getinds(MSE_object)}
 \usage{
-plot_crosscorr(indPPD, indData, pp = 1, dnam = c("CS", "CV", "CM", "IS",
-  "MLS"), res = 1)
+plot_crosscorr(indPPD, indData, pp = 1, dnam = c("CS", "CV", "CM",
+  "IS", "MLS"), res = 1)
 }
 \arguments{
 \item{indPPD}{A 3D array of results arising from running getind on an MSE of the Null operating model (type of data/stat (e.g. mean catches),time period (chunk), simulation)}

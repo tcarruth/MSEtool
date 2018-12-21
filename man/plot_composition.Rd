@@ -6,9 +6,10 @@
 \usage{
 plot_composition(Year = 1:nrow(obs), obs, fit = NULL,
   plot_type = c("annual", "bubble_data", "bubble_residuals", "mean"),
-  N = rowSums(obs), CAL_bins = NULL, ages = NULL, ind = 1:nrow(obs),
-  annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
-  bubble_adj = 5, fit_linewidth = 3, fit_color = "red")
+  N = rowSums(obs), CAL_bins = NULL, ages = NULL,
+  ind = 1:nrow(obs), annual_ylab = "Frequency",
+  annual_yscale = c("proportions", "raw"), bubble_adj = 5,
+  fit_linewidth = 3, fit_color = "red")
 }
 \arguments{
 \item{Year}{A vector of years.}

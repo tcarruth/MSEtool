@@ -6,16 +6,16 @@
 \title{Delay - Difference Stock Assessment in TMB}
 \usage{
 DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
-  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 5000, eval.max = 10000), ...)
+  start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE,
+  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
+  1), control = list(iter.max = 5000, eval.max = 10000), ...)
 
 DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_h = FALSE, fix_U_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 5000, eval.max = 10000), inner.control = list(),
-  ...)
+  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
+  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
+  1), control = list(iter.max = 5000, eval.max = 10000),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.

@@ -5,7 +5,8 @@
 \alias{plot,Assessment,ANY-method}
 \title{Plot Assessment object}
 \usage{
-\S4method{plot}{Assessment,ANY}(x, save_figure = TRUE, save_dir = tempdir())
+\S4method{plot}{Assessment,ANY}(x, save_figure = TRUE,
+  save_dir = tempdir())
 }
 \arguments{
 \item{x}{An object of class \linkS4class{Assessment}}

@@ -44,15 +44,8 @@
 #' working directory (this is probably a good idea)
 #' @param savePack Logical to indicate if packets should be save to current working directory
 #' @param ... Arguments to runMSE function
-#'
-#' @templateVar url running-the-mse
-#' @templateVar ref NULL
-#' @template userguide_link
-#'
 #' @return A hierarchical list (by stock then fleet) of objects of class MSE \linkS4class{MSE}
 #' @author T. Carruthers and A. Hordyk
-#' @describeIn multiMSE Default function to use.
-#' @seealso \link{runMSE}
 #' @export
 multiMSE <- function(MOM, MPs = list(c("AvC","DCAC"),c("FMSYref","curE")),
                    CheckMPs = FALSE, timelimit = 1, Hist=FALSE, ntrials=50, fracD=0.05, CalcBlow=TRUE,
@@ -316,14 +309,16 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     Vraw<-array(NIL(listy=FleetPars[[p]],namey="V"),c(nsim,maxage,allyears,nf))
     Vind<-as.matrix(expand.grid(1:nsim,p,1:nf,1:maxage,1:allyears))
     VF[Vind]<-Vraw[Vind[,c(1,4,5,3)]]
-    V<-apply(VF[,p,,,],c(1,3,4),sum) #<-SOL(FleetPars[[p]],"V")
+    if(nf==1){
+      V<-VF[,p,1,,] #<-SOL(FleetPars[[p]],"V")
+    }else{
+      V<-apply(VF[,p,,,,],c(1,3,4),sum)
+    }
     V<-nlz(V,c(1,3),"max") # currently assume unfished vulnerability is equally weighted among fleets
     VBiomass[SPAYR] <- Biomass[SPAYR] * V[SAY]  # Calculate vunerable biomass
 
     Fretraw<-array(NIL(listy=FleetPars[[p]],namey="retA"),c(nsim,maxage,allyears,nf))
     FretA[Vind]<-Fretraw[Vind[,c(1,4,5,3)]]
-
-
 
     if (nsim > 1) {
       SSN0 <- apply(SSN[,p , , 1, ], c(1, 3), sum)  # Calculate unfished spawning stock numbers
@@ -384,10 +379,15 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   } # end of np
 
-  test<-getq_multi_MICE(x=2,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel=MOM@Rel)
+  #test<-getq_multi_MICE(x=2,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel=MOM@Rel)
 
-  out<-lapply(1:2,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel)
-  out2<-sfLapply(1:2,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel)
+
+  sfExport('maxage')
+  sfExport('nareas')
+
+  system.time({
+    out2<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel)
+  })
 
   # --- Optimize catchability (q) to fit depletion ----
   #if ('unfished' %in% names(control) && control$unfished) {
@@ -603,6 +603,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       plot(x,y, xlim=c(0,max(x)), ylim=c(0,max(y)), xlab="SSB/SSBMSY", ylab="D/SSBMSY_SSB0")
       lines(c(-10,10),c(-10,10))
     }
+
   } # end of stocks
 
   # --- Code for deriving low biomass ----

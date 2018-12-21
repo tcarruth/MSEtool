@@ -4,8 +4,8 @@
 \alias{optSR}
 \title{Wrapper for estimating stock recruitment parameters from resampled stock-recruitment data}
 \usage{
-optSR(x, SSB, rec, SSBpR, pars, frac = 0.5, plot = FALSE, type = c("BH",
-  "Ricker"))
+optSR(x, SSB, rec, SSBpR, pars, frac = 0.5, plot = FALSE,
+  type = c("BH", "Ricker"))
 }
 \arguments{
 \item{x}{position to accommodate lapply-type functions}
