@@ -7,6 +7,7 @@
 #' @param np Integer, the number of stocks
 #' @param nf Integer, number of fleets
 #' @param nyears Integer, number of historical years (unfished til today)
+#' @param nareas Integer, the number of spatial areas
 #' @param maxage Integer, maximum modelled age
 #' @param Nx Array [stock, age, year, area] of stock numbers
 #' @param VFx Array [fleet, age, year, area] of the vulnerability curve
@@ -34,11 +35,11 @@
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-popdynMICE<-function(qs,qfrac,np,nf,nyears,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
+popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
 
   Bx<-SSBx<-array(NA,dim(Nx))
   Fy<-array(NA,c(np,nf,nyears))
-  FMy<-array(NA,c(np,nf,maxage,nyears,nf))
+  FMy<-array(NA,c(np,nf,maxage,nyears,nareas))
   Wt_agey<-array(NA,c(np,maxage,nyears))
   Ky<-Linfy<-t0y<-My<-hsy<-ay <-by<-array(NA,c(np,nyears))
   Ky[,1]<-Kx; Linfy[,1]<-Linfx; t0y[,1]<-t0x; My[,1]<-Mx; hsy[,1]<-hsx; ay[,1]<-ax; by[,1]<-bx
@@ -48,13 +49,18 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,maxage,Nx,VFx,FretAx,Effind,movx,Spat
 
   for(y in 2:nyears){
 
-    #y<-2; Fcur<-apply(Effind[,,y-1]*qs*qfrac,1,sum) ; Ncur<-Nx[,,y-1,];  Vcur<-VFx[,,,y-1];  Retcur<-FretAx[,,,y-1];  M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
-    #y<-y+1
+    # y<-y+1
     Fy[,,y-1]<-Effind[,,y-1]*qs*qfrac
+    # y<-2; M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
+    Vcur=array(VFx[,,,y-1],dim(VFx)[1:3])
+    Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
+    Fcur=array(Fy[,,y-1],dim(Fy)[1:2])
+    Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)])
+    M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2])
+    Mat_agecur<-array(Mat_agex[,,y-1],dim(Mat_agex)[1:2])
 
-    out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Nx[,,y-1,],
-                       Vcur=VFx[,,,y-1], Retcur=FretAx[,,,y-1], Fcur=Fy[,,y-1], PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
-                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_ageArrayx[,,y-1], Mat_agecur=Mat_agex[,,y-1],
+    out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Ncur, Vcur=Vcur, Retcur=Retcur, Fcur=Fcur, PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
+                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
                        bx=by[,y-1],Rel=Rel)
 
@@ -70,7 +76,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,maxage,Nx,VFx,FretAx,Effind,movx,Spat
   Bx[Nind]<-Nx[Nind]*Wt_agey[Nind[,1:3]]
   SSBx[Nind]<-Bx[Nind]*Mat_agex[Nind[,1:3]]
   # matplot(t(apply(SSBx,c(1,3),sum)))
-  #matplot(t(apply(Nx,c(1,3),sum)))
+  # matplot(t(apply(Nx,c(1,3),sum)))
 
   list(Nx=Nx,Bx=Bx,SSBx=SSBx,Fy=Fy,FMy=FMy,Ky=Ky,Linfy=Linfy,t0y=t0y,My=My,hsy=hsy,ay=ay,by=by)
 }
@@ -131,12 +137,13 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   # old surv
   # surv <- matrix(1, nsim, maxage)
   #surv[, 2:maxage] <- t(exp(-apply(StockPars[[1]]$M_ageArray[,,1], 1, cumsum)))[, 1:(maxage-1)]  # Survival array
-  surv <- cbind(rep(1,np),t(exp(-apply(M_agecur, 1, cumsum)))[, 1:(maxage-1)])  # Survival array
+  surv <- array(c(rep(1,np),t(exp(-apply(M_agecur, 1, cumsum)))[, 1:(maxage-1)]),c(np,maxage))  # Survival array
   oldM<-apply(surv*M_agecur*Mat_agecur,1,sum)/apply(surv*Mat_agecur,1,sum)
 
-  Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
-  for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
-
+  if(np>1 & length(Rel)>0){
+    Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
+    for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
+  }
   # Parameters that could have changed: M, K, Linf, t0, a, b, hs
   # Recalculate growth
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
@@ -246,6 +253,7 @@ ResFromRel<-function(Rel,Bcur,SSBcur,Ncur,seed){
     out[r,2]<-DV
     out[r,3]<-Dp
     out[r,4]<-modnam[match(Dnam,DVnam)]
+
   }
 
   out

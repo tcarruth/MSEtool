@@ -111,7 +111,7 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
 
   .Object@CatchFrac<-CatchFrac
 
-
+  if(is.null(Rel))  Rel<-list()
   .Object@seed=1
   .Object@Rel=Rel
   .Object

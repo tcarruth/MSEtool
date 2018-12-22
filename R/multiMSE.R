@@ -196,15 +196,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   allyears<-nyears+proyears
   Stocks<-MOM@Stocks
   Fleets<-MOM@Fleets
+  Rel<-MOM@Rel
+  CatchFrac<-MOM@CatchFrac
   np<-length(Stocks)
   nf<-length(Fleets[[1]])
   maxF<-MOM@maxF
-
-  if(is.null(MOM@Rel)|is.na(MOM@Rel[1])){
-    MICE=FALSE
-  }else{
-    MICE=TRUE
-  }
 
   #MOM <- ChkObj(MOM) # Check that all required slots in OM object contain values
   if (proyears < 2) stop('OM@proyears must be > 1', call.=FALSE)
@@ -312,7 +308,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     if(nf==1){
       V<-VF[,p,1,,] #<-SOL(FleetPars[[p]],"V")
     }else{
-      V<-apply(VF[,p,,,,],c(1,3,4),sum)
+      V<-apply(VF[,p,,,],c(1,3,4),sum)
     }
     V<-nlz(V,c(1,3),"max") # currently assume unfished vulnerability is equally weighted among fleets
     VBiomass[SPAYR] <- Biomass[SPAYR] * V[SAY]  # Calculate vunerable biomass
@@ -379,15 +375,9 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   } # end of np
 
-  #test<-getq_multi_MICE(x=2,StockPars, FleetPars, np,nf, nareas,maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel=MOM@Rel)
 
 
-  sfExport('maxage')
-  sfExport('nareas')
 
-  system.time({
-    out2<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel)
-  })
 
   # --- Optimize catchability (q) to fit depletion ----
   #if ('unfished' %in% names(control) && control$unfished) {
@@ -399,178 +389,193 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   if(!silent) message("Optimizing for user-specified depletion")  # Print a progress update
 
-    bounds <- c(0.0001, 15) # q bounds for optimizer
+  bounds <- c(0.0001, 15) # q bounds for optimizer
+  out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
 
-    if(MICE){
+  #out<-lapply(1:nsim,getq_multi_MICE, StockPars, FleetPars, nareas,maxage, pyears, N, maxF=MOM@maxF, MPA, CatchFrac, bounds)
+  #return and reallocate
+  qs<-t(matrix(NIL(out,"qtot"),nrow=np))
+  qout<-array(NIL(out,"qfrac"),c(np,nf,nsim))
+  qfrac<-array(NA,c(nsim,np,nf))
+  qind<-TEG(dim(qfrac))
+  qfrac[qind]<-qout[qind[,c(2,3,1)]]
 
-      out<-lapply(1:nsim,getq_multi_MICE, StockPars, FleetPars, nareas,maxage, pyears, N, maxF=MOM@maxF, MPA, CatchFrac, bounds)
+    #out<-lapply(1:sim,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
+    #                Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
+    #                FleetP=FleetPars[[p]], # instead of V, retA, Find, Spat_targ,
+    #                Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
+    #                bounds = c(1e-05, 15), maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
 
-      #return and reallocate
-      qs<-NIL(out,"qtot")
-      qfrac<-t(matrix(NIL(out,"qfrac"),nrow=nf))
-
-    }else{
-
-      out<-lapply(1:sim,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
-                      Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
-                      FleetP=FleetPars[[p]], # instead of V, retA, Find, Spat_targ,
-                      Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
-                      bounds = c(1e-05, 15), maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
-
-      qs<-NIL(out,"qtot")
-      qfrac<-t(matrix(NIL(out,"qfrac"),nrow=nf))
-    }
+    #qs<-NIL(out,"qtot")
+    #qfrac<-t(matrix(NIL(out,"qfrac"),nrow=nf))
 
 
-    # --- Check that q optimizer has converged ----
-    LimBound <- c(1.1, 0.9)*range(bounds)  # bounds for q (catchability). Flag if bounded optimizer hits the bounds
-    probQ <- which(qs > max(LimBound) | qs < min(LimBound))
-    Nprob <- length(probQ)
+  # --- Check that q optimizer has converged ----
+  #qs[3,2]<-qs[2,1]<- -10000
+  LimBound <- c(1.1, 0.9)*range(bounds)  # bounds for q (catchability). Flag if bounded optimizer hits the bounds
+  probQ <- which(apply(qs > max(LimBound) | qs < min(LimBound),1,sum)>0)
+  Nprob <- length(probQ)
 
-    # If q has hit bound, re-sample depletion and try again. Tries 'ntrials' times and then alerts user
-    if (length(probQ) > 0) {
+  # If q has hit bound, re-sample depletion and try again. Tries 'ntrials' times and then alerts user
+  if (length(probQ) > 0) {
 
-      Err <- TRUE
-      if(!silent) message(Nprob,' simulations have final biomass that is not close to sampled depletion')
-      if(!silent) message('Re-sampling depletion, recruitment error, and fishing effort')
+    Err <- TRUE
+    if(!silent) message(Nprob,' simulations have final biomass that is not close to sampled depletion')
+    if(!silent) message('Re-sampling depletion, recruitment error, and fishing effort')
 
-      count <- 0
-      MOM2 <- MOM
+    count <- 0
+    MOM2 <- MOM
 
-      while (Err & count < ntrials) {
-        # Re-sample Stock Parameters
+    while (Err & count < ntrials) {
+      # Re-sample Stock Parameters
 
-        Nprob <- length(probQ)
-        MOM2@nsim <- Nprob
+      Nprob <- length(probQ)
+      MOM2@nsim <- Nprob
 
-        SampCpars2<-list()
-        for(f in 1:nf){
-          if(length(cpars[[p]][[f]])>0){
-            #message(paste(Stocks[[p]]@Name," - ",Fleets[[p]][[f]]@Name))
-            ncparsim<-cparscheck(cpars[[p]][[f]])   # check each list object has the same length and if not stop and error report
-            SampCpars2[[f]] <- SampleCpars(cpars[[p]][[f]], Nprob, msg=!silent)
-          }
-        }
-
-        #StockPars[[p]] <- SampleStockPars(MOM@Stocks[[p]], nsim, nyears, proyears,  SampCpars[[p]][[f]], msg=!silent)
-        ResampStockPars <- SampleStockPars(MOM2@Stocks[[p]], nsim=Nprob,nyears=nyears,proyears=proyears,cpars=SampCpars2[[1]], msg=FALSE)
-        #ResampStockPars$CAL_bins <- StockPars$CAL_bins
-        #ResampStockPars$CAL_binsmid <- StockPars$CAL_binsmid
-
-        # Re-sample depletion
-        StockPars[[p]]$D[probQ] <- ResampStockPars$D
-
-        # Re-sample recruitment deviations
-        StockPars[[p]]$procsd[probQ] <- ResampStockPars$procsd
-        StockPars[[p]]$AC[probQ] <- ResampStockPars$AC
-        StockPars[[p]]$Perr_y[probQ,] <- ResampStockPars$Perr_y
-        StockPars[[p]]$hs[probQ] <- ResampStockPars$hs
-
-        # Re-sample historical fishing effort
-        ResampFleetPars<-list()
-
-        for(f in 1:nf){
-          ResampFleetPars <- SampleFleetPars(MOM2@Fleets[[p]][[f]], Stock=ResampStockPars, nsim=Nprob, nyears=nyears, proyears=proyears, cpars=SampCpars2[[f]])
-          FleetPars[[p]][[f]]$Esd[probQ] <- ResampFleetPars$Esd
-          FleetPars[[p]][[f]]$Find[probQ, ] <- ResampFleetPars$Find
-          FleetPars[[p]][[f]]$dFfinal[probQ] <- ResampFleetPars$dFfinal
-        }
-
-        if(nf>1){
-          # Optimize for q
-          out2<-lapply(probQ,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
-                      Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age, FleetP=FleetPars[[p]], Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
-                      bounds = bounds, maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
-
-          qs2<-NIL(out2,"qtot")
-          qfrac2<-t(matrix(NIL(out2,"qfrac"),nrow=nf))
-          qfrac[probQ,]<-qfrac2
-          qs[probQ]<-qs2
-
-        }else{
-
-          qs2 <- sapply(probQ, getq3, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, N=N[,p,,,], pyears=nyears,
-                       M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age, Asize=StockPars[[p]]$Asize,
-                       Wt_age=StockPars[[p]]$Wt_age, V=V, retA=FleetPars[[p]][[1]]$retA, Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov,
-                       SRrel=StockPars[[p]]$SRrel, Find=FleetPars[[p]][[1]]$Find,
-                       Spat_targ=FleetPars[[p]][[1]]$Spat_targ, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
-                       bounds=bounds, MPA=MPA[p,1,,], maxF=MOM@maxF) # find the q that gives current stock depletion
-
-          qs[probQ]<-qs2
-          # need a qfract thing in here
-
-        }
-
-        probQ <- which(qs > max(LimBound) | qs < min(LimBound))
-        count <- count + 1
-        if (length(probQ) == 0) Err <- FALSE
-
-      }
-      if (Err) { # still a problem
-
-        tooLow <- length(which(qs > max(LimBound)))
-        tooHigh <- length(which(qs < min(LimBound)))
-        prErr <- length(probQ)/nsim
-        if (prErr > fracD & length(probQ) >= 1) {
-          if (length(tooLow) > 0) message(tooLow, " sims can't get down to the lower bound on depletion")
-          if (length(tooHigh) > 0) message(tooHigh, " sims can't get to the upper bound on depletion")
-          if(!silent) message("More than ", fracD*100, "% of simulations can't get to the specified level of depletion with these Operating Model parameters")
-          stop("Change OM@seed and try again for a complete new sample, modify the input parameters, or increase ntrials")
-        } else {
-          if (length(tooLow) > 0) message(tooLow, " sims can't get down to the lower bound on depletion")
-          if (length(tooHigh) > 0) message(tooHigh, " sims can't get to the upper bound on depletion")
-          if(!silent) message("More than ", 100-fracD*100, "% simulations can get to the sampled depletion.\nContinuing")
+      SampCpars2<-list()
+      for(f in 1:nf){
+        if(length(cpars[[p]][[f]])>0){
+          #message(paste(Stocks[[p]]@Name," - ",Fleets[[p]][[f]]@Name))
+          ncparsim<-cparscheck(cpars[[p]][[f]])   # check each list object has the same length and if not stop and error report
+          SampCpars2[[f]] <- SampleCpars(cpars[[p]][[f]], Nprob, msg=!silent)
         }
       }
 
-      for(f in 1:nf) FleetPars[[p]][[ff]]$qs<-qs*qfrac[,f]
+      #StockPars[[p]] <- SampleStockPars(MOM@Stocks[[p]], nsim, nyears, proyears,  SampCpars[[p]][[f]], msg=!silent)
+      ResampStockPars <- SampleStockPars(MOM2@Stocks[[p]], nsim=Nprob,nyears=nyears,proyears=proyears,cpars=SampCpars2[[1]], msg=FALSE)
+      #ResampStockPars$CAL_bins <- StockPars$CAL_bins
+      #ResampStockPars$CAL_binsmid <- StockPars$CAL_binsmid
 
-    }  # end of q estimation steps
+      # Re-sample depletion
+      StockPars[[p]]$D[probQ] <- ResampStockPars$D
 
-    if(!silent) message("Calculating historical stock and fishing dynamics")  # Print a progress update
+      # Re-sample recruitment deviations
+      StockPars[[p]]$procsd[probQ] <- ResampStockPars$procsd
+      StockPars[[p]]$AC[probQ] <- ResampStockPars$AC
+      StockPars[[p]]$Perr_y[probQ,] <- ResampStockPars$Perr_y
+      StockPars[[p]]$hs[probQ] <- ResampStockPars$hs
 
-    # Got to here!
-    # need retA, Effind, Vuln, Spat_targ
+      # Re-sample historical fishing effort
+      ResampFleetPars<-list()
+
+      for(f in 1:nf){
+        ResampFleetPars <- SampleFleetPars(MOM2@Fleets[[p]][[f]], Stock=ResampStockPars, nsim=Nprob, nyears=nyears, proyears=proyears, cpars=SampCpars2[[f]])
+        FleetPars[[p]][[f]]$Esd[probQ] <- ResampFleetPars$Esd
+        FleetPars[[p]][[f]]$Find[probQ, ] <- ResampFleetPars$Find
+        FleetPars[[p]][[f]]$dFfinal[probQ] <- ResampFleetPars$dFfinal
+      }
 
 
+      out2<-sfLapply(probQ,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
 
-    histYrs <- sapply(1:nsim, HistMulti, FleetP=FleetPars[[p]], StockP=StockPars[[p]],
-                      maxage=maxage,allyears=allyears, nyears=nyears, nf=nf,
-                      MPAc=MPA[p,,,], qfrac=qfrac, qs=qs, maxF=maxF)
+      qs2<-t(matrix(NIL(out2,"qtot"),nrow=np))
+      qout2<-array(NIL(out2,"qfrac"),c(np,nf,nsim))
+      qfrac2<-array(NA,c(Nprob,np,nf))
+      qind2<-TEG(dim(qfrac2))
+      qfrac2[qind2]<-qout2[qind2[,c(2,3,1)]]
 
+      #qs2<-NIL(out2,"qtot")
+      #qfrac2<-t(matrix(NIL(out2,"qfrac"),nrow=nf))
+      qfrac[probQ,,]<-qfrac2
+      qs[probQ,]<-qs2
 
-    N[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[1,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
-    Biomass[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[2,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
-    SSN[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[3,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
-    SSB[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[4,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
-    VBiomass[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[5,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+      #if(nf>1){
+        # Optimize for q
 
-    for(f in 1:nf){
-      VBFind<-as.matrix(expand.grid(1:nsim,p,f,1:maxage,1:nyears,1:nareas))
-      VBF[VBFind]<- Biomass[VBFind[,c(1:2,4:6)]] * FleetPars[[p]][[f]]$V[VBFind[,c(1,4,5)]]
+       # out2<-lapply(probQ,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
+         #           Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age, FleetP=FleetPars[[p]], Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
+        #            bounds = bounds, maxF=MOM@maxF, MPAc=MPA[p,,,], CFp=CatchFrac[[p]], useCPP=TRUE)
+
+        #qs2<-NIL(out2,"qtot")
+        #qfrac2<-t(matrix(NIL(out2,"qfrac"),nrow=nf))
+        #qfrac[probQ,]<-qfrac2
+        #qs[probQ]<-qs2
+
+      #}else{
+
+       # qs2 <- sapply(probQ, getq3, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, N=N[,p,,,], pyears=nyears,
+        #             M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age, Asize=StockPars[[p]]$Asize,
+         #            Wt_age=StockPars[[p]]$Wt_age, V=V, retA=FleetPars[[p]][[1]]$retA, Perr=StockPars[[p]]$Perr_y, mov=StockPars[[p]]$mov,
+          #           SRrel=StockPars[[p]]$SRrel, Find=FleetPars[[p]][[1]]$Find,
+           #          Spat_targ=FleetPars[[p]][[1]]$Spat_targ, hs=StockPars[[p]]$hs, R0a=R0a, SSBpR=SSBpR, aR=aR, bR=bR,
+            #         bounds=bounds, MPA=MPA[p,1,,], maxF=MOM@maxF) # find the q that gives current stock depletion
+
+        #qs[probQ]<-qs2
+        # need a qfract thing in here
+
+      #}
+
+      probQ <- which(apply(qs > max(LimBound) | qs < min(LimBound),1,sum)>0)
+      count <- count + 1
+      if (length(probQ) == 0) Err <- FALSE
+
     }
-    #matplot(t(VBF[1,1,,,10,1]))
-    #matplot(t(VBF[1:3,1,1,,10,1]))
+    if (Err) { # still a problem
 
-    Effind<-array(NIL(FleetPars[[p]],"Find"),dim=c(nsim,nyears,nf))
-    FMind<-as.matrix(expand.grid(1:nsim,p,1:nf,1:maxage,1:nyears,1:nareas))
-    FM[FMind]<-Effind[FMind[,c(1,5,3)]]*qs[FMind[,1]]*qfrac[FMind[,c(1,3)]]*VF[FMind[,1:5]]
-    FMret[FMind] <-  FM[FMind]*FretA[FMind[,1:5]]
-    Z[,p,,,]<-aperm(array(as.numeric(unlist(histYrs[8,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
-
-    if (nsim > 1) Depletion <- apply(SSB[,p,,nyears,],1,sum)/SSB0#^betas
-    if (nsim == 1) Depletion <- sum(SSB[,p,,nyears,])/SSB0 #^betas
-
-
-    # # apply hyperstability / hyperdepletion
-
-    # Check that depletion is correct
-    if (checks) {
-      if (prod(round(StockPars[[p]]$D, 2)/ round(Depletion,2)) != 1) {
-        print(cbind(round(D,4), round(Depletion,4)))
-        warning("Possible problem in depletion calculations")
+      tooLow <- length(which(qs > max(LimBound)))
+      tooHigh <- length(which(qs < min(LimBound)))
+      prErr <- length(probQ)/nsim
+      if (prErr > fracD & length(probQ) >= 1) {
+        if (length(tooLow) > 0) message(tooLow, " sims can't get down to the lower bound on depletion")
+        if (length(tooHigh) > 0) message(tooHigh, " sims can't get to the upper bound on depletion")
+        if(!silent) message("More than ", fracD*100, "% of simulations can't get to the specified level of depletion with these Operating Model parameters")
+        stop("Change OM@seed and try again for a complete new sample, modify the input parameters, or increase ntrials")
+      } else {
+        if (length(tooLow) > 0) message(tooLow, " sims can't get down to the lower bound on depletion")
+        if (length(tooHigh) > 0) message(tooHigh, " sims can't get to the upper bound on depletion")
+        if(!silent) message("More than ", 100-fracD*100, "% simulations can get to the sampled depletion.\nContinuing")
       }
     }
+
+    for(f in 1:nf) FleetPars[[p]][[ff]]$qs<-qs*qfrac[,f]
+
+  }  # end of q estimation steps
+
+  if(!silent) message("Calculating historical stock and fishing dynamics")  # Print a progress update
+
+  # Got to here!
+
+
+  # need retA, Effind, Vuln, Spat_targ
+
+
+  histYrs <- sapply(1:nsim, HistMulti, FleetP=FleetPars[[p]], StockP=StockPars[[p]],
+                    maxage=maxage,allyears=allyears, nyears=nyears, nf=nf,
+                    MPAc=MPA[p,,,], qfrac=qfrac, qs=qs, maxF=maxF)
+
+
+  N[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[1,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+  Biomass[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[2,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+  SSN[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[3,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+  SSB[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[4,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+  VBiomass[,p,,,] <- aperm(array(as.numeric(unlist(histYrs[5,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+
+  for(f in 1:nf){
+    VBFind<-as.matrix(expand.grid(1:nsim,p,f,1:maxage,1:nyears,1:nareas))
+    VBF[VBFind]<- Biomass[VBFind[,c(1:2,4:6)]] * FleetPars[[p]][[f]]$V[VBFind[,c(1,4,5)]]
+  }
+  #matplot(t(VBF[1,1,,,10,1]))
+  #matplot(t(VBF[1:3,1,1,,10,1]))
+
+  Effind<-array(NIL(FleetPars[[p]],"Find"),dim=c(nsim,nyears,nf))
+  FMind<-as.matrix(expand.grid(1:nsim,p,1:nf,1:maxage,1:nyears,1:nareas))
+  FM[FMind]<-Effind[FMind[,c(1,5,3)]]*qs[FMind[,1]]*qfrac[FMind[,c(1,3)]]*VF[FMind[,1:5]]
+  FMret[FMind] <-  FM[FMind]*FretA[FMind[,1:5]]
+  Z[,p,,,]<-aperm(array(as.numeric(unlist(histYrs[8,], use.names=FALSE)), dim=c(maxage, nyears, nareas, nsim)), c(4,1,2,3))
+
+  if (nsim > 1) Depletion <- apply(SSB[,p,,nyears,],1,sum)/SSB0#^betas
+  if (nsim == 1) Depletion <- sum(SSB[,p,,nyears,])/SSB0 #^betas
+
+
+  # # apply hyperstability / hyperdepletion
+
+  # Check that depletion is correct
+  if (checks) {
+    if (prod(round(StockPars[[p]]$D, 2)/ round(Depletion,2)) != 1) {
+      print(cbind(round(D,4), round(Depletion,4)))
+      warning("Possible problem in depletion calculations")
+    }
+  }
 
   # end of stocks
   #} # end of if not unfished

@@ -25,10 +25,10 @@
 #' @keywords internal
 getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= c(1e-05, 15),Rel){
 
-  Nx<-N[x,,,,]
-  VFx<-VF[x,,,,]
-  FretAx<-FretA[x,,,,]
-  NIL(StockPars,"K")
+  Nx<-array(N[x,,,,],dim(N)[2:5])
+  VFx<-array(VF[x,,,,],dim(VF)[2:5])
+  FretAx<-array(FretA[x,,,,],dim(VF)[2:5])
+  #NIL(StockPars,"K")
 
   Kx<-matrix(unlist(lapply(StockPars,function(dat)dat['K'])),ncol=np)[x,]
   Linfx<-matrix(unlist(lapply(StockPars,function(dat)dat['Linf'])),ncol=np)[x,]
@@ -68,8 +68,13 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 
   CF<-t(matrix(unlist(lapply(CatchFrac,function(dat)dat[x,])),nrow=nf))
   Fdist<-CF/Effind[,,nyears] # Catch divided by effort (q proxy)
-  Fdist<-Fdist/apply(Fdist,1,sum)    # q ratio proxy (real space)
-  par<-c(rep(-5,np),log(Fdist[,2:nf]/(1-Fdist[,2:nf]))) # low initial F followed by logit guess at fraction based on Fdist according to catch fraction in recent year
+  Fdist<-Fdist/apply(Fdist[,,drop=F],1,sum)    # q ratio proxy (real space)
+
+  if(nf==1){
+    par<-rep(-5,np)
+  }else{
+    par<-c(rep(-5,np),log(Fdist[,2:nf]/(1-Fdist[,2:nf]))) # low initial F followed by logit guess at fraction based on Fdist according to catch fraction in recent year
+  }
 
   depc=matrix(unlist(lapply(StockPars,function(dat)dat['D'])),ncol=np)[x,]
   CFc<-array(NA,c(np,nf))
@@ -77,12 +82,12 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 
   opt<-optim(par,qestMICE,
              method="L-BFGS-B",lower=c(rep(log(bounds[1]),np),rep(-5,np*(nf-1))),upper=c(rep(log(bounds[2]),np),rep(5,np*(nf-1))),
-             depc=depc,CFc=CFc,mode='opt',np=np,nf=nf,nyears=nyears,nareas=nareas,Nx=Nx,VFx=VFx,FretAx=FretAx,
+             depc=depc,CFc=CFc,mode='opt',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
              Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Kx=Kx,
              Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,hsx=hsx,ax=ax,bx=bx,aRx=aRx,bRx=bRx,Perrx=Perrx,SRrelx=SRrelx,Rel=Rel,
              control=list(trace=1))
 
-  out<-qestMICE(par=opt$par, depc=depc,CFc=CFc,mode='calc',np=np,nf=nf,nyears=nyears,nareas=nareas,Nx=Nx,VFx=VFx,FretAx=FretAx,
+  out<-qestMICE(par=opt$par, depc=depc,CFc=CFc,mode='calc',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
           Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Kx=Kx,
           Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,hsx=hsx,aRx=aRx,bRx=bRx,ax=ax,bx=bx,Perrx=Perrx,SRrelx=SRrelx,Rel=Rel)
 
@@ -103,6 +108,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 #' @param nf Integer, number of fleets
 #' @param nyears Integer, number of historical years (unfished til today)
 #' @param nareas Integer, number of areas (default is 2)
+#' @param maxage Integer, maximum number of age classes for calculation
 #' @param Nx Array [stock, age, year, area] of stock numbers
 #' @param VFx Array [fleet, age, year, area] of the vulnerability curve
 #' @param FretAx Array [fleet, age, year, area] of the retention curve
@@ -129,15 +135,19 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,
+qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,
                    Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx, ax,bx,Perrx,SRrelx,Rel){
 
   qs<-exp(par[1:np])
-  qlogit<-array(0,c(np,nf))
-  qlogit[,2:nf]<-par[(np+1):length(par)]
-  qfrac<-exp(qlogit)/apply(exp(qlogit),1,sum)
+  if(nf==1){
+    qfrac<-1
+  }else{
+    qlogit<-array(0,c(np,nf))
+    qlogit[,2:nf]<-par[(np+1):length(par)]
+    qfrac<-exp(qlogit)/apply(exp(qlogit),1,sum)
+  }
 
-  HistVars<-popdynMICE(qs,qfrac,np,nf,nyears,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
+  HistVars<-popdynMICE(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
   # matplot(t(apply(HistVars$SSBx,c(1,3),sum)))
   # matplot(t(apply(HistVars$Nx,c(1,3),sum)))
   # matplot(t(HistVars$Fy))
@@ -153,7 +163,7 @@ qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,Nx,VFx,FretAx,Eff
   Cpred<-Ctot/apply(Ctot,1,sum)
 
   depOBJ<-sum((log(depc) - log(deppred))^2)
-  cOBJ<-sum(log(CFc[,2:nf]/Cpred[,2:nf])^2)
+  cOBJ<-sum(log(CFc/Cpred)^2) # Lazy - should be: sum(log(CFc[,2:nf]/Cpred[,2:nf])^2) but this doesn't work for single fleets and it makes no difference anyway
 
   if(mode=='opt'){
     return(depOBJ+cOBJ)
