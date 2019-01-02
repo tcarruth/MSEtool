@@ -37,9 +37,10 @@
 #' @export
 popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
 
-  Bx<-SSBx<-array(NA,dim(Nx))
+  Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
   Fy<-array(NA,c(np,nf,nyears))
-  FMy<-array(NA,c(np,nf,maxage,nyears,nareas))
+  Fty<-array(NA,c(np,maxage,nyears,nareas))
+  FMy<-VBfx<-array(NA,c(np,nf,maxage,nyears,nareas))
   Wt_agey<-array(NA,c(np,maxage,nyears))
   Ky<-Linfy<-t0y<-My<-hsy<-ay <-by<-array(NA,c(np,nyears))
   Ky[,1]<-Kx; Linfy[,1]<-Linfx; t0y[,1]<-t0x; My[,1]<-Mx; hsy[,1]<-hsx; ay[,1]<-ax; by[,1]<-bx
@@ -69,16 +70,22 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
     M_ageArrayx[,,y]<-out$M_agecurx
     Ky[,y]<-out$Kx; Linfy[,y]<-out$Linfx; t0y[,y]<-out$t0x; My[,y]<-out$Mx; hsy[,y]<-out$hsx; ay[,y]<-out$ax; by[,y]<-out$bx
     FMy[,,,y,]<-out$FMx
+    VBx[,,y,]<-out$VBt
+    VBfx[,,,y,]<-out$VBft
+    Zx[,,y,]<-out$Zt
+    Fty[,,y,]<-out$Ft
 
   }
 
   Nind<-TEG(dim(Nx))
   Bx[Nind]<-Nx[Nind]*Wt_agey[Nind[,1:3]]
+  SSNx[Nind]<-Nx[Nind]*Mat_agex[Nind[,1:3]]
   SSBx[Nind]<-Bx[Nind]*Mat_agex[Nind[,1:3]]
+
   # matplot(t(apply(SSBx,c(1,3),sum)))
   # matplot(t(apply(Nx,c(1,3),sum)))
 
-  list(Nx=Nx,Bx=Bx,SSBx=SSBx,Fy=Fy,FMy=FMy,Ky=Ky,Linfy=Linfy,t0y=t0y,My=My,hsy=hsy,ay=ay,by=by)
+  list(Nx=Nx,Bx=Bx,SSNx=SSNx,SSBx=SSBx,VBx=VBx,Fy=Fy,FMy=FMy,Ky=Ky,Linfy=Linfy,t0y=t0y,My=My,hsy=hsy,ay=ay,by=by,VBfx=VBfx,Zx=Zx,Fty=Fty)
 }
 
 
@@ -169,19 +176,27 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
 
   # Vulnerable biomass calculation --------------------------------------------------
-  VBx<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
-  VBind<-TEG(dim(VBx))
-  VBx[VBind]<-Vcur[VBind[,1:3]]*Bcur[VBind[,c(1,3:4)]]
-  Fdist[VBind]<-VBx[VBind]^Spat_targ[VBind[,1:2]]
+  VBft<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
+  VBind<-TEG(dim(VBft))
+  VBft[VBind]<-Vcur[VBind[,1:3]]*Bcur[VBind[,c(1,3:4)]]
+  Fdist[VBind]<-VBft[VBind]^Spat_targ[VBind[,1:2]]
   VBagg<-apply(Fdist,1:3,sum)
   Fdist[VBind]<-Fdist[VBind]/VBagg[VBind[,1:3]]
 
   FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Vcur[VBind[,1:3]]
+
   FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Retcur[VBind[,1:3]]
   Ft<-apply(FMx,c(1,3,4),sum)#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
   Zcur<-Ft+array(rep(M_agecur[VBind[,c(1,3)]],nareas),c(np,maxage,nareas))
 
   Nnext<-array(NA,c(np,maxage,nareas))
+
+  # just for vulnerable biomass calculation
+  SumF<-apply(FMx,c(1,3:4),sum) # sum over fleets stock,age,area
+  MaxF<-apply(SumF,c(1,3),max)     # get max F
+  Selx<-array(NA,dim(SumF))
+  Selx[Nind]<-SumF[Nind]/MaxF[Nind[,c(1,3)]]
+  VBt<-Bcur*Selx
 
   for(p in 1:np){
     #NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
@@ -201,7 +216,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   # returns new N and any updated parameters:
   list(Nnext=Nnext,M_agecurx=M_agecurx,R0x=R0x,R0ax=R0ax,hsx=hsx,
        aRx=aRx,bRx=bRx,Linfx=Linfx,Kx=Kx,t0x=t0x,Mx=Mx,ax=ax,bx=bx,
-       Len_age=Len_age,Wt_age=Wt_age,surv=surv,FMx=FMx)
+       Len_age=Len_age,Wt_age=Wt_age,surv=surv,FMx=FMx,VBt=VBt,VBft=VBft,Zt=Zcur,Ft=Ft)
 
 }
 
