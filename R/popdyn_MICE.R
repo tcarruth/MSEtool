@@ -40,7 +40,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
   Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
   Fy<-array(NA,c(np,nf,nyears))
   Fty<-array(NA,c(np,maxage,nyears,nareas))
-  FMy<-VBfx<-array(NA,c(np,nf,maxage,nyears,nareas))
+  FMy<-FMrety<-VBfx<-array(NA,c(np,nf,maxage,nyears,nareas))
   Wt_agey<-array(NA,c(np,maxage,nyears))
   Ky<-Linfy<-t0y<-My<-hsy<-ay <-by<-array(NA,c(np,nyears))
   Ky[,1]<-Kx; Linfy[,1]<-Linfx; t0y[,1]<-t0x; My[,1]<-Mx; hsy[,1]<-hsx; ay[,1]<-ax; by[,1]<-bx
@@ -48,7 +48,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
   Wt_agey[,,1]<-ax*Len_age^bx
 
-  for(y in 2:nyears){
+  for(y in 2:(nyears+1)){
 
     # y<-y+1
     Fy[,,y-1]<-Effind[,,y-1]*qs*qfrac
@@ -64,16 +64,19 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
                        movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
                        bx=by[,y-1],Rel=Rel)
+    if(y<=nyears){
+      Nx[,,y,]<-out$Nnext
+      Wt_agey[,,y]<-out$Wt_age
+      M_ageArrayx[,,y]<-out$M_agecurx
+      Ky[,y]<-out$Kx; Linfy[,y]<-out$Linfx; t0y[,y]<-out$t0x; My[,y]<-out$Mx; hsy[,y]<-out$hsx; ay[,y]<-out$ax; by[,y]<-out$bx
+      VBx[,,y,]<-out$VBt
+      VBfx[,,,y,]<-out$VBft
+    }
 
-    Nx[,,y,]<-out$Nnext
-    Wt_agey[,,y]<-out$Wt_age
-    M_ageArrayx[,,y]<-out$M_agecurx
-    Ky[,y]<-out$Kx; Linfy[,y]<-out$Linfx; t0y[,y]<-out$t0x; My[,y]<-out$Mx; hsy[,y]<-out$hsx; ay[,y]<-out$ax; by[,y]<-out$bx
-    FMy[,,,y,]<-out$FMx
-    VBx[,,y,]<-out$VBt
-    VBfx[,,,y,]<-out$VBft
-    Zx[,,y,]<-out$Zt
-    Fty[,,y,]<-out$Ft
+    Zx[,,y-1,]<-out$Zt
+    Fty[,,y-1,]<-out$Ft
+    FMy[,,,y-1,]<-out$FMx
+    FMrety[,,,y-1,]<-out$FMretx
 
   }
 
@@ -85,7 +88,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
   # matplot(t(apply(SSBx,c(1,3),sum)))
   # matplot(t(apply(Nx,c(1,3),sum)))
 
-  list(Nx=Nx,Bx=Bx,SSNx=SSNx,SSBx=SSBx,VBx=VBx,Fy=Fy,FMy=FMy,Ky=Ky,Linfy=Linfy,t0y=t0y,My=My,hsy=hsy,ay=ay,by=by,VBfx=VBfx,Zx=Zx,Fty=Fty)
+  list(Nx=Nx,Bx=Bx,SSNx=SSNx,SSBx=SSBx,VBx=VBx,FMy=FMy,FMrety=FMrety,Ky=Ky,Linfy=Linfy,t0y=t0y,My=My,hsy=hsy,ay=ay,by=by,VBfx=VBfx,Zx=Zx,Fty=Fty)
 }
 
 
@@ -216,7 +219,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   # returns new N and any updated parameters:
   list(Nnext=Nnext,M_agecurx=M_agecurx,R0x=R0x,R0ax=R0ax,hsx=hsx,
        aRx=aRx,bRx=bRx,Linfx=Linfx,Kx=Kx,t0x=t0x,Mx=Mx,ax=ax,bx=bx,
-       Len_age=Len_age,Wt_age=Wt_age,surv=surv,FMx=FMx,VBt=VBt,VBft=VBft,Zt=Zcur,Ft=Ft)
+       Len_age=Len_age,Wt_age=Wt_age,surv=surv,FMx=FMx,FMretx=FMretx,VBt=VBt,VBft=VBft,Zt=Zcur,Ft=Ft)
 
 }
 

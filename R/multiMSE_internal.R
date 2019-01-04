@@ -200,6 +200,25 @@ nlz<-function(arr,dims=NULL,func="max"){
   out
 }
 
+#' Dimensions of a hierarchical list object
+#'
+#' @param x A list
+#' @author T. Carruthers
+#' @export
+ldim<-function(x){
+  if(class(x)!='list'){
+    stop(paste(deparse(substitute(x))," is not a list - ldim operates on hieracical list objects"))
+  }else{
+    dim<-NULL
+    cond=TRUE
+    while(cond){
+      dim=c(dim,length(x))
+      cond=(class(x[[1]])=='list')
+      if(cond)x=x[[1]]
+    }
+    return(dim)
+  }
+}
 
 
 

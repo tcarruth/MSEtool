@@ -174,25 +174,26 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # Known issues
   # 1) SSN[SPAYR] <- Nfrac[SA] * StockPars[[p]]$R0[S] * StockPars[[p]]$initdist[SAR]  this is Pinitdist[SR] in runMSE but I have no idea where Pinitdist comes from
   # 2) currently assume unfished vulnerability is equally weighted among fleets (first V calculation)
-  # 3) Historical MPAs are calculated by weighting fleet specific MPA by their historical effort / q (ie apical F) - not exactly ideal as it should be by vulnerable biomass really
-  # 4) Spatial targetting is currently calculated as the fleet-specific spatial targetting weighted by total F by fleet - not perfect at all!
-  # 5) MICE mode: MSY calcs are fully dynamic and by year - we do not solve the long-term equilibrium MSY for MICE models
-  # 6) No check for MOM correct object formatting yet
-  # 7) MICE mode: SSB0 is constant (does not change with M for example) and based on long-term ecosystem average as specified in StockPars[[p]]$SSB0
-  # 8) For MSY calculations, vulnerability is calculated by fishing mortality rate summed over both areas (not weighted by total catches for example)
-  # 9) Blow calculations are currently not coded!
-  # 10) RefY reference yield is currently MSY!
-  # 11) No control$Cbias_yr functionality!
+  # 3) MICE mode: MSY calcs are fully dynamic and by year - we do not solve the long-term equilibrium MSY for MICE models
+  # 4) No check for MOM correct object formatting yet
+  # 5) MICE mode: SSB0 is constant (does not change with M for example) and based on long-term ecosystem average as specified in StockPars[[p]]$SSB0
+  # 6) For MSY calculations, vulnerability is calculated by fishing mortality rate summed over both areas (not weighted by total catches for example)
+  # 7) Blow calculations are currently not coded!
+  # 8) RefY reference yield is currently MSY!
+  # 9) No control$Cbias_yr functionality!
+  # 10) MGT calculation not currently coded!
+
 
   # Needs checking
   # 1) The vulnerability in the fleets does not max to 1
   # 2) When calculating aggregate retention in the multi_q_estimation function, how should max retention at age be calculated (what is the max value)?
   # 3) Single simulation run nsim=1
-
+  # 4) get rid of any DLMtool::: triple colons
 
   if (class(MOM) != "MOM") stop("You must specify a valid operating model of class MOM (multi operating model)")
   Misc<-new('list') # Blank miscellaneous slot created
   if("seed"%in%slotNames(MOM)) set.seed(MOM@seed) # set seed for reproducibility
+  if(is.na(MPs[1]))stop("You must specify valid management procedures - argument MPs")
 
   #OM <- updateMSE(OM)
   tiny <- 1e-15  # define tiny variable
@@ -357,7 +358,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     StockPars[[p]]$SSB0<-SSB0
     StockPars[[p]]$R0a <-R0a
     StockPars[[p]]$surv<-surv
-
+    StockPars[[p]]$B0<-B0
+    StockPars[[p]]$N0<-N0
 
     for(f in 1:nf)FleetPars[[p]][[f]]$V<-VF[,p,f,,]
 
@@ -381,10 +383,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   } # end of np
 
-
-
-
-
   # --- Optimize catchability (q) to fit depletion ----
   #if ('unfished' %in% names(control) && control$unfished) {
   # if(!silent) message("Simulating unfished historical period")
@@ -402,7 +400,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   #return and reallocate
   qs<-t(matrix(NIL(out,"qtot"),nrow=np))
   qfrac<-aperm(array(NIL(out,"qfrac"),c(np,nf,nsim)),c(3,1,2))
-
 
     #out<-lapply(1:sim,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
     #                Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
@@ -559,8 +556,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   D_specified <- array(NIL(StockPars,'D'),c(nsim,np))
   Depletion <- apply(SSB[,,,nyears,],1:2,sum)/ SSB0_specified
   #if (nsim == 1) Depletion <- sum(SSB[,p,,nyears,])/SSB0 #^betas
-
-
+  for(p in 1:np)StockPars[[p]]$Depletion<-Depletion[,p]
   # # apply hyperstability / hyperdepletion
 
   # Check that depletion is correct
@@ -608,27 +604,28 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # --- Code for deriving low biomass ----
   # (SSB where it takes MGThorizon x MGT to reach Bfrac of BMSY)
 
-  Znow<-apply(Z[,,nyears,]*N[,,nyears,],1:2,sum)/apply(N[,,nyears,],1:2,sum)
-  MGTsurv<-t(exp(-apply(Znow,1,cumsum)))
-  MGT<-apply(Agearray*(Mat_age[,,nyears]*MGTsurv),1,sum)/apply(Mat_age[,,nyears]*MGTsurv,1,sum)
+  # Znow<-apply(Z[,,nyears,]*N[,,nyears,],1:2,sum)/apply(N[,,nyears,],1:2,sum)
+  # MGTsurv<-t(exp(-apply(Znow,1,cumsum)))
+  # MGT<-apply(Agearray*(Mat_age[,,nyears]*MGTsurv),1,sum)/apply(Mat_age[,,nyears]*MGTsurv,1,sum)
 
   if(CalcBlow){
-    if(!silent) message("Calculating B-low reference points")              # Print a progress update
+    #if(!silent) message("Calculating B-low reference points")              # Print a progress update
 
-    MGThorizon<-floor(HZN*MGT)
+    #MGThorizon<-floor(HZN*MGT)
 
-    Blow <- sapply(1:nsim,getBlow, N, Asize, MSYrefs[3,],SSBpR, MPA, SSB0, nareas, retA, MGThorizon,
-                   Find,Perr_y,M_ageArray,hs,Mat_age, Wt_age,R0a,V,nyears,maxage,mov,
-                   Spat_targ,SRrel,aR,bR,Bfrac, maxF)
+    #Blow <- sapply(1:nsim,getBlow, N, Asize, MSYrefs[3,],SSBpR, MPA, SSB0, nareas, retA, MGThorizon,
+    #               Find,Perr_y,M_ageArray,hs,Mat_age, Wt_age,R0a,V,nyears,maxage,mov,
+    #               Spat_targ,SRrel,aR,bR,Bfrac, maxF)
   }else{
-    Blow<-rep(NA,nsim)
+    for(p in 1:np)StockPars[[p]]$Blow<-StockPars[[p]]$MGT<-rep(NA,nsim) # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+
   }
 
 
   # --- Calculate Reference Yield ----
   if(!silent) message("Calculating reference yield - best fixed F strategy")  # Print a progress update
 
-  RefY <- array(NIL(StockPars,'MSY'),c(nsim,np))
+  for(p in 1:np)StockPars[[p]]$RefY <-StockPars[[p]]$MSY
 
   #  sapply(1:nsim, getFref3, Asize, nareas, maxage, N=N[,,nyears,, drop=FALSE], pyears=proyears,
   #               M_ageArray=M_ageArray[,,(nyears):(nyears+proyears)], Mat_age[,,(nyears):(nyears+proyears)],
@@ -646,8 +643,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   #Ctemp[CNind]<-N[Nind]*(1-exp(Z[Nind]))*(FM[CNind]/Z[Nind])
   #CN<-apply(Ctemp,1:5,sum)
   #CN[is.na(CN)] <- 0
-  Ctemp[CNind]<-Biomass[Nind]*(1-exp(Z[Nind]))*(FM[CNind]/Z[Nind])
-  CB<-apply(Ctemp,1:5,sum)
+  Ctemp[CNind]<-Biomass[Nind]*(1-exp(-Z[Nind]))*(FM[CNind]/Z[Nind])
+  CB<-Ctemp# apply(Ctemp,1:5,sum)
 
   # Old N and Z dimensions were sim, maxage, nyears, nareas
   #CN <- apply(N * (1 - exp(-Z)) * (FMt/Z), c(1, 3, 2), sum)  # Catch in numbers (removed from population)
@@ -656,11 +653,12 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   # --- Calculate retained-at-age ----
 
- # Ctemp[CNind]<-N[Nind]*(1-exp(Z[Nind]))*(FMret[CNind]/Z[Nind])
- #  Cret<-apply(Ctemp,1:5,sum)
- #  Cret[is.na(Cret)] <- 0
-  Ctemp[CNind]<-Biomass[Nind]*(1-exp(Z[Nind]))*(FMret[CNind]/Z[Nind])
-  CBret<-apply(Ctemp,1:5,sum)
+  Ctemp[CNind]<-N[Nind]*(1-exp(-Z[Nind]))*(FMret[CNind]/Z[Nind])
+  Cret<-apply(Ctemp,1:5,sum)
+  Cret[is.na(Cret)] <- 0
+
+  Ctemp[CNind]<-Biomass[Nind]*(1-exp(-Z[Nind]))*(FMret[CNind]/Z[Nind])
+  CBret<-Ctemp#apply(Ctemp,1:5,sum)
 
   # old calcs
   #Cret <- apply(N * (1 - exp(-Z)) * (FMret/Z), c(1, 3, 2), sum)  # Retained catch in numbers
@@ -670,9 +668,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # --- Calculate dead discarded-at-age ----
   #Cdisc <- CN - Cret # discarded numbers
   CBdisc <- CB - CBret # discarded biomass
-
-
-
 
   # --- Simulate observed catch ----
 
@@ -689,29 +684,39 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   #}
 
 
-  # !! Got to here !!!
-  Cerr <- array(rlnorm((nyears + proyears) * nsim, mconv(1, rep(Csd, (nyears + proyears))),
-                       sdconv(1, rep(Csd, nyears + proyears))), c(nsim, nyears + proyears))
+
+  Cerr <- array(NA,c(nsim,np,nf,nyears+proyears))
+
+  for(p in 1:np){for(f in 1:nf){
+    Cerr[,p,f,] <- array(rlnorm((nyears + proyears) * nsim, mconv(1, rep(ObsPars[[p]][[f]]$Csd, (nyears + proyears))),
+                         sdconv(1, rep(ObsPars[[p]][[f]]$Csd, nyears + proyears))), c(nsim, nyears + proyears))
+  }}
 
   # composite of bias and observation error
-  # Cobs <- Cbiasa[, 1:nyears] * Cerr[, 1:nyears] * apply(CB, c(1, 3), sum)  # Simulated observed catch (biomass)
-  Cobs <- Cbiasa[, 1:nyears] * Cerr[, 1:nyears] * apply(CBret, c(1, 3), sum)  # Simulated observed retained catch (biomass)
-
+  for(p in 1:np){for(f in 1:nf){
+      ObsPars[[p]][[f]]$Cobs <- Cbiasa[,p,f, 1:nyears] * Cerr[,p,f, 1:nyears] * apply(CBret[,p,f,,,], c(1,3), sum)  # Simulated observed retained catch (biomass)
+  }}
   # --- Simulate observed catch-at-age ----
 
   # generate CAA from retained catch-at-age
-  CAA <- array(NA, dim = c(nsim, nyears, maxage))  # Catch  at age array
+  #CAA <- array(NA, dim = c(nsim, nf,np,nyears, maxage))  # Catch  at age array
   # cond <- apply(Cret, 1:2, sum, na.rm = T) < 1  # this is a fix for low sample sizes. If Cret is zero across the board a single fish is caught in age class of model selectivity (dumb I know)
   # fixind <- as.matrix(cbind(expand.grid(1:nsim, 1:nyears), rep(floor(maxage/3), nyears)))  # more fix
   # Cret[fixind[cond, ]] <- 1  # puts a catch in the most vulnerable age class
 
   # a multinomial observation model for catch-at-age data
-  for (i in 1:nsim) {
-    for (j in 1:nyears) {
-      if (!sum( Cret[i, j,])) {
-        CAA[i, j, ] <- 0
-      } else {
-        CAA[i, j, ] <- ceiling(-0.5 + rmultinom(1, CAA_ESS[i], Cret[i, j,]) * CAA_nsamp[i]/CAA_ESS[i])
+  for(p in 1:np){
+    for(f in 1:nf){
+      ObsPars[[p]][[f]]$CAA<-array(NA, dim = c(nsim, nyears, maxage))
+      for (i in 1:nsim) {
+
+        for (j in 1:nyears) {
+          if (!sum( Cret[i, p,f,,j])) {
+            ObsPars[[p]][[f]]$CAA[i, j, ] <- 0
+          } else {
+            ObsPars[[p]][[f]]$CAA[i, j, ] <- ceiling(-0.5 + rmultinom(1, ObsPars[[p]][[f]]$CAA_ESS[i], Cret[i, p,f,,j]) * ObsPars[[p]][[f]]$CAA_nsamp[i]/ObsPars[[p]][[f]]$CAA_ESS[i])
+          }
+        }
       }
     }
   }
@@ -719,294 +724,346 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # --- Simulate observed catch-at-length ----
   # a multinomial observation model for catch-at-length data
   # assumed normally-distributed length-at-age truncated at 2 standard deviations from the mean
-  CAL <- array(NA, dim=c(nsim,  nyears, nCALbins))
-  LFC <- rep(NA, nsim)
-  vn <- (apply(N[,,,], c(1,2,3), sum) * retA[,,1:nyears]) # numbers at age that would be retained
-  vn <- aperm(vn, c(1,3, 2))
 
-  # Generate size comp data with variability in age
-  tempSize <- lapply(1:nsim, genSizeCompWrap, vn, CAL_binsmid, retL, CAL_ESS, CAL_nsamp,
-                     Linfarray, Karray, t0array, LenCV, truncSD=2.5)
+   for(p in 1:np){for(f in 1:nf){
 
-  CAL <- aperm(array(as.numeric(unlist(tempSize, use.names=FALSE)), dim=c(nyears, length(CAL_binsmid), nsim)), c(3,1,2))
+    ObsPars[[p]][[f]]$CAL<- array(NA, c(nsim,  nyears, StockPars[[p]]$nCALbins))
+    vn <- (apply(N[,p,,,], c(1,2,3), sum) * FleetPars[[p]][[f]]$retA[,,1:nyears]) # numbers at age that would be retained
+    vn <- aperm(vn, c(1,3, 2))
+    tempSize <- lapply(1:nsim, DLMtool:::genSizeCompWrap, vn, StockPars[[p]]$CAL_binsmid, FleetPars[[p]][[f]]$retL, ObsPars[[p]][[f]]$CAL_ESS, ObsPars[[p]][[f]]$CAL_nsamp,
+                       StockPars[[p]]$Linfarray,  StockPars[[p]]$Karray,  StockPars[[p]]$t0array, StockPars[[p]]$LenCV, truncSD=2.5)
+    ObsPars[[p]][[f]]$CAL<-aperm(array(as.numeric(unlist(tempSize, use.names=FALSE)), dim=c(nyears, length(StockPars[[p]]$CAL_binsmid), nsim)), c(3,1,2))
+    ObsPars[[p]][[f]]$LFC <- unlist(lapply(tempSize, function(x)  DLMtool:::getfifth(x[nyears, ], StockPars[[p]]$CAL_binsmid)))
+    ObsPars[[p]][[f]]$LFC[is.na(ObsPars[[p]][[f]]$LFC)] <- 1
+    ObsPars[[p]][[f]]$LFC[ObsPars[[p]][[f]]$LFC<1] <- 1
+
+  }}
 
 
   # calculate LFC
-  LFC <- unlist(lapply(tempSize, function(x) getfifth(x[nyears, ], CAL_binsmid)))
-  LFC[is.na(LFC)] <- 1
-  LFC[LFC<1] <- 1
 
   # --- Simulate index of abundance from total biomass ----
-  Ierr <- array(rlnorm((nyears + proyears) * nsim, mconv(1, rep(Isd, nyears + proyears)),
-                       sdconv(1, rep(Isd, nyears + proyears))), c(nsim, nyears + proyears))
-  II <- (apply(Biomass, c(1, 3), sum)^betas) * Ierr[, 1:nyears]  # apply hyperstability / hyperdepletion
-  II <- II/apply(II, 1, mean)  # normalize
 
-  # --- Calculate vulnerable and spawning biomass abundance ----
-  if (nsim > 1) A <- apply(VBiomass[, , nyears, ], 1, sum)  + apply(CB[, , nyears, ], 1, sum) # Abundance before fishing
-  if (nsim == 1) A <- sum(VBiomass[, , nyears, ]) +  sum(CB[,,nyears,]) # Abundance before fishing
-  if (nsim > 1) Asp <- apply(SSB[, , nyears, ], 1, sum)  # SSB Abundance
-  if (nsim == 1) Asp <- sum(SSB[, , nyears, ])  # SSB Abundance
+  for(p in 1:np){for(f in 1:nf){
+    Ierr <- array(rlnorm((nyears + proyears) * nsim, mconv(1, rep(ObsPars[[p]][[f]]$Isd, nyears + proyears)),
+                         sdconv(1, rep(ObsPars[[p]][[f]]$Isd, nyears + proyears))), c(nsim, nyears + proyears))
+    II <- (apply(Biomass[,p,,,], c(1, 3), sum)^ObsPars[[p]][[f]]$betas) * Ierr[, 1:nyears]  # apply hyperstability / hyperdepletion
+    ObsPars[[p]][[f]]$II <- II/apply(II, 1, mean)  # normalize
+  }}
 
-  OFLreal <- A * FMSY  # the true simulated Over Fishing Limit
 
-  # --- Simulate observed values in reference SBMSY/SB0 ----
-  I3 <- apply(Biomass, c(1, 3), sum)^betas  # apply hyperstability / hyperdepletion
-  I3 <- I3/apply(I3, 1, mean)  # normalize index to mean 1
-  # Iref <- apply(I3[, 1:5], 1, mean) * BMSY_B0  # return the real target abundance index corresponding to BMSY
-  if (nsim > 1) Iref <- apply(I3[, 1:5], 1, mean) * SSBMSY_SSB0  # return the real target abundance index corresponding to BMSY
-  if (nsim == 1) Iref <- mean(I3[1:5]) * SSBMSY_SSB0
 
-  # --- Simulate observed values in steepness ----
-  if (!is.null(OM@cpars[['hsim']])) {
-    hsim <- SampCpars$hsim
-    hbias <- hsim/hs  # back calculate the simulated bias
-    if (OM@hbiascv == 0) hbias <- rep(1, nsim)
-    ObsPars$hbias <- hbias
+  for(p in 1:np){
+    # --- Calculate vulnerable and spawning biomass abundance ----
 
-  } else {
-    if (is.null(OM@cpars[['l_hbias']])) {
-      hsim <- rep(NA, nsim)
-      cond <- hs > 0.6
-      hsim[cond] <- 0.2 + rbeta(sum(hs > 0.6), alphaconv((hs[cond] - 0.2)/0.8, (1 - (hs[cond] - 0.2)/0.8) * OM@hbiascv),
-                                betaconv((hs[cond] - 0.2)/0.8,  (1 - (hs[cond] - 0.2)/0.8) * OM@hbiascv)) * 0.8
-      hsim[!cond] <- 0.2 + rbeta(sum(hs <= 0.6), alphaconv((hs[!cond] - 0.2)/0.8,  (hs[!cond] - 0.2)/0.8 * OM@hbiascv),
-                                 betaconv((hs[!cond] - 0.2)/0.8, (hs[!cond] - 0.2)/0.8 * OM@hbiascv)) * 0.8
-      hbias <- hsim/hs  # back calculate the simulated bias
-      if (OM@hbiascv == 0) hbias <- rep(1, nsim)
-      ObsPars$hbias <- hbias
-    } else {
-      l_hbias <- sample(OM@cpars$l_hbias, OM@nsim, replace=TRUE)
+    if (nsim > 1) A <- apply(VBiomass[,p, , nyears, ], 1, sum)  + apply(CB[,p,f , , nyears, ], 1, sum,na.rm=T) # Abundance before fishing
+    if (nsim == 1) A <- sum(VBiomass[,p, , nyears, ]) +  sum(CB[,p,f,,nyears,],na.rm=T) # Abundance before fishing
+    if (nsim > 1) Asp <- apply(SSB[,p, , nyears, ], 1, sum)  # SSB Abundance
+    if (nsim == 1) Asp <- sum(SSB[,p, , nyears, ])  # SSB Abundance
+    StockPars[[p]]$OFLreal <- A * StockPars[[p]]$FMSY  # the true simulated Over Fishing Limit
+    StockPars[[p]]$A<-A
+    StockPars[[p]]$Asp<-Asp
 
-      P <- (hs-.2)/0.8
-      hs_logit <- log(P/(1-P))
-      P2 <- (exp(hs_logit)* l_hbias)/(1+exp(hs_logit) * l_hbias)
-      P2[is.nan(P2)] <- 1
-      hsim <- (P2 * 0.8) + 0.2
-      hbias <- hsim/hs  # back calculate the simulated bias
-
-      ObsPars$hbias <- hbias
-
+    # --- Simulate observed values in reference SBMSY/SB0 ----
+    for(f in 1:nf){
+      I3 <- apply(Biomass[,p,,,], c(1, 3), sum)^ObsPars[[p]][[f]]$betas  # apply hyperstability / hyperdepletion
+      I3 <- I3/apply(I3, 1, mean)  # normalize index to mean 1
+      # Iref <- apply(I3[, 1:5], 1, mean) * BMSY_B0  # return the real target abundance index corresponding to BMSY
+      if (nsim > 1) Iref <- apply(I3[, 1:5], 1, mean) * StockPars[[p]]$SSBMSY_SSB0  # return the real target abundance index corresponding to BMSY
+      if (nsim == 1) Iref <- mean(I3[1:5]) * StockPars[[p]]$SSBMSY_SSB0
+      ObsPars[[p]][[f]]$I3<-I3
+      ObsPars[[p]][[f]]$Iref<-Iref
     }
   }
 
 
+  # --- Simulate observed values in steepness ----
+
+
+  for(p in 1:np){for(f in 1:nf){
+
+    if (!is.null(SampCpars[[p]][[f]][['hsim']])) {
+      hsim <- SampCpars$hsim
+      hbias <- hsim/hs  # back calculate the simulated bias
+      if (OM@hbiascv == 0) hbias <- rep(1, nsim)
+      ObsPars[[p]][[f]]$hbias <- hbias
+
+    } else {
+      if (is.null(SampCpars[[p]][[f]][['l_hbias']])) {
+        hsim <- rep(NA, nsim)
+        cond <- StockPars[[p]]$hs > 0.6
+        hsim[cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs > 0.6), alphaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8, (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * Obs[[p]][[f]]@hbiascv),
+                                  betaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8,  (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * Obs[[p]][[f]]@hbiascv)) * 0.8
+
+        hsim[!cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs <= 0.6), alphaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8,  (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * Obs[[p]][[f]]@hbiascv),
+                                   betaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8, (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * Obs[[p]][[f]]@hbiascv)) * 0.8
+
+        hbias <- hsim/StockPars[[p]]$hs  # back calculate the simulated bias
+        if (Obs[[p]][[f]]@hbiascv == 0) hbias <- rep(1, nsim)
+        ObsPars[[p]][[f]]$hbias <- hbias
+      } else {
+        l_hbias <- sample(SampCpars[[p]][[f]]$l_hbias, nsim, replace=TRUE)
+
+        P <- (StockPars[[p]]$hs-.2)/0.8
+        hs_logit <- log(P/(1-P))
+        P2 <- (exp(hs_logit)* l_hbias)/(1+exp(hs_logit) * l_hbias)
+        P2[is.nan(P2)] <- 1
+        hsim <- (P2 * 0.8) + 0.2
+        hbias <- hsim/hs  # back calculate the simulated bias
+        ObsPars[[p]][[f]]$hbias <- hbias
+
+      }
+    }  # end of is hsim in cpars
+  }} # end of p f
 
 
   # --- Simulate error in observed recruitment index ----
-  Recerr <- array(rlnorm((nyears + proyears) * nsim, mconv(1, rep(Recsd, (nyears + proyears))),
-                         sdconv(1, rep(Recsd, nyears + proyears))), c(nsim, nyears + proyears))
+  for(p in 1:np){for(f in 1:nf){
+    ObsPars[[p]][[f]]$Recerr<- array(rlnorm((nyears + proyears) * nsim, mconv(1, rep(ObsPars[[p]][[f]]$Recsd, (nyears + proyears))),
+                         sdconv(1, rep(ObsPars[[p]][[f]]$Recsd, nyears + proyears))), c(nsim, nyears + proyears))
 
 
-  # --- Simulate observation error in BMSY/B0 ----
-  ntest <- 20  # number of trials
-  BMSY_B0bias <- array(rlnorm(nsim * ntest, mconv(1, OM@BMSY_B0biascv), sdconv(1, OM@BMSY_B0biascv)), dim = c(nsim, ntest))  # trial samples of BMSY relative to unfished
-  # test <- array(BMSY_B0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
-  test <- array(SSBMSY_SSB0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
-  indy <- array(rep(1:ntest, each = nsim), c(nsim, ntest))  # index
+    # --- Simulate observation error in BMSY/B0 ----
+    ntest <- 20  # number of trials
+    BMSY_B0bias <- array(rlnorm(nsim * ntest, mconv(1, Obs[[p]][[f]]@BMSY_B0biascv), sdconv(1, Obs[[p]][[f]]@BMSY_B0biascv)), dim = c(nsim, ntest))  # trial samples of BMSY relative to unfished
+    # test <- array(BMSY_B0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
+    test <- array(StockPars[[p]]$SSBMSY_SSB0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
+    indy <- array(rep(1:ntest, each = nsim), c(nsim, ntest))  # index
 
-  # indy[test > 0.9] <- NA  # interval censor
-  indy[test > max(0.9, max(SSBMSY_SSB0))] <- NA  # interval censor
+    # indy[test > 0.9] <- NA  # interval censor
+    indy[test > max(0.9, max(StockPars[[p]]$SSBMSY_SSB0))] <- NA  # interval censor
 
-  BMSY_B0bias <- BMSY_B0bias[cbind(1:nsim, apply(indy, 1, min, na.rm = T))]  # sample such that BMSY_B0<90%
-  ObsPars$BMSY_B0bias <- BMSY_B0bias
-
+    BMSY_B0bias <- BMSY_B0bias[cbind(1:nsim, apply(indy, 1, min, na.rm = T))]  # sample such that BMSY_B0<90%
+    ObsPars[[p]][[f]]$BMSY_B0bias <- BMSY_B0bias
+  }}
   # --- Implementation error time series ----
 
-  TAC_f <- array(rlnorm(proyears * nsim, mconv(TACFrac, TACSD),
-                        sdconv(TACFrac, TACSD)), c(nsim, proyears))  # composite of TAC fraction and error
+  for(p in 1:np){for(f in 1:nf){
+      ImpPars[[p]][[f]]$TAC_f <- array(rlnorm(proyears * nsim, mconv(ImpPars[[p]][[f]]$TACFrac, ImpPars[[p]][[f]]$TACSD),
+                            sdconv(ImpPars[[p]][[f]]$TACFrac, ImpPars[[p]][[f]]$TACSD)), c(nsim, proyears))  # composite of TAC fraction and error
 
-  E_f <- array(rlnorm(proyears * nsim, mconv(TAEFrac, TAESD),
-                      sdconv(TAEFrac, TAESD)), c(nsim, proyears))  # composite of TAC fraction and error
+      ImpPars[[p]][[f]]$E_f <- array(rlnorm(proyears * nsim, mconv(ImpPars[[p]][[f]]$TAEFrac, ImpPars[[p]][[f]]$TAESD),
+                          sdconv(ImpPars[[p]][[f]]$TAEFrac, ImpPars[[p]][[f]]$TAESD)), c(nsim, proyears))  # composite of TAC fraction and error
 
-  SizeLim_f<-array(rlnorm(proyears * nsim, mconv(SizeLimFrac, SizeLimSD),
-                          sdconv(SizeLimFrac, SizeLimSD)), c(nsim, proyears))  # composite of TAC fraction and error
-
+      ImpPars[[p]][[f]]$SizeLim_f<-array(rlnorm(proyears * nsim, mconv(ImpPars[[p]][[f]]$SizeLimFrac, ImpPars[[p]][[f]]$SizeLimSD),
+                              sdconv(ImpPars[[p]][[f]]$SizeLimFrac, ImpPars[[p]][[f]]$SizeLimSD)), c(nsim, proyears))  # composite of TAC fraction and error
+  }}
 
   # --- Populate Data object with Historical Data ----
-  Data <- new("Data", stock = "MSE")  # create a blank DLM data object
-  if (reps == 1) Data <- OneRep(Data)  # make stochastic variables certain for only one rep
-  Data <- replic8(Data, nsim)  # make nsim sized slots in the DLM data object
-  Data@Name <- OM@Name
-  Data@Year <- 1:nyears
-  Data@Cat <- Cobs
-  Data@Ind <- II
-  Data@Rec <- apply(N[, 1, , ], c(1, 2), sum) * Recerr[, 1:nyears]
-  Data@t <- rep(nyears, nsim)
-  Data@AvC <- apply(Cobs, 1, mean)
-  Data@Dt <- Dbias * Depletion * rlnorm(nsim, mconv(1, Derr), sdconv(1, Derr))
-  Data@Mort <- M * Mbias
-  Data@FMSY_M <- FMSY_M * FMSY_Mbias
-  # Data@BMSY_B0 <- BMSY_B0 * BMSY_B0bias
-  Data@BMSY_B0 <- SSBMSY_SSB0 * BMSY_B0bias
-  Data@Cref <- MSY * Crefbias
-  Data@Bref <- VBMSY * Brefbias
-  Data@Iref <- Iref * Irefbias
-  Data@LFC <- LFC * LFCbias
-  Data@LFS <- LFS[nyears,] * LFSbias
-  Data@CAA <- CAA
-  Data@Dep <- Dbias * Depletion * rlnorm(nsim, mconv(1, Derr), sdconv(1, Derr))
-  Data@Abun <- A * Abias * rlnorm(nsim, mconv(1, Aerr), sdconv(1, Aerr))
-  Data@SpAbun <- Asp * Abias * rlnorm(nsim, mconv(1, Aerr), sdconv(1, Aerr))
-  Data@vbK <- K * Kbias
-  Data@vbt0 <- t0 * t0bias
-  Data@LenCV <- LenCV # * LenCVbias
-  Data@vbLinf <- Linf * Linfbias
-  Data@L50 <- L50 * lenMbias
-  Data@L95 <- L95 * lenMbias
-  Data@L95[Data@L95 > 0.9 * Data@vbLinf] <- 0.9 * Data@vbLinf[Data@L95 > 0.9 * Data@vbLinf]  # Set a hard limit on ratio of L95 to Linf
-  Data@L50[Data@L50 > 0.9 * Data@L95] <- 0.9 * Data@L95[Data@L50 > 0.9 * Data@L95]  # Set a hard limit on ratio of L95 to Linf
-  Data@steep <- hs * hbias
-  Data@sigmaR <- procsd # sigmaR assumed no obs error
-  Data@CAL_bins <- CAL_bins
-  Data@CAL <- CAL
-  MLbin <- (CAL_bins[1:(length(CAL_bins) - 1)] + CAL_bins[2:length(CAL_bins)])/2
-  temp <- CAL * rep(MLbin, each = nsim * nyears)
-  Data@ML <- apply(temp, 1:2, sum)/apply(CAL, 1:2, sum)
-  Data@Lc <- array(MLbin[apply(CAL, 1:2, which.max)], dim = c(nsim, nyears))
-  nuCAL <- CAL
-  for (i in 1:nsim) for (j in 1:nyears) nuCAL[i, j, 1:match(max(1, Data@Lc[i, j]), MLbin, nomatch=1)] <- NA
-  temp <- nuCAL * rep(MLbin, each = nsim * nyears)
-  Data@Lbar <- apply(temp, 1:2, sum, na.rm=TRUE)/apply(nuCAL, 1:2, sum, na.rm=TRUE)
-  Data@MaxAge <- maxage
-  Data@Units <- "unitless"
-  Data@Ref <- OFLreal
-  Data@Ref_type <- "Simulated OFL"
-  Data@wla <- rep(a, nsim)
-  Data@wlb <- rep(b, nsim)
-  Data@nareas <- nareas
+  DataList<-new('list')
+  for(p in 1:np)DataList[[p]]<-new('list')
 
-  # put all the operating model parameters in one table
-  OMtable <- data.frame(RefY, M, Depletion, A, SSBMSY_SSB0, FMSY_M, Mgrad, Msd, procsd, Esd, dFfinal,
-                        MSY=MSY, qinc, qcv, FMSY=FMSY, Linf, K, t0, hs, Linfgrad, Kgrad, Linfsd, Ksd,
-                        ageM=ageM[,nyears], L5=L5[nyears, ], LFS=LFS[nyears, ], Vmaxlen=Vmaxlen[nyears, ], LFC, OFLreal,
-                        Spat_targ, Size_area_1, Frac_area_1, Prob_staying, AC, L50, L95, B0, N0, SSB0, BMSY_B0,
-                        TACSD,TACFrac,TAESD,TAEFrac,SizeLimSD,SizeLimFrac,Blow,MGT,
-                        BMSY, SSBMSY=SSBMSY, Mexp, Fdisc,
-                        LR5=LR5[nyears,], LFR=LFR[nyears,], Rmaxlen=Rmaxlen[nyears,], DR=DR[nyears,])
-  OMtable <- OMtable[,order(names(OMtable))]
+  for(p in 1:np){for(f in 1:nf){
 
-  Data@OM <- OMtable
+    Data <- new("Data", stock = "MSE")  # create a blank DLM data object
+    if (MOM@reps == 1) Data <- DLMtool:::OneRep(Data)  # make stochastic variables certain for only one rep
+    Data <- replic8(Data, nsim)  # make nsim sized slots in the DLM data object
+    Data@Name <- paste(Stocks[[p]]@Name,Fleets[[p]][[f]]@Name,sep="-")
+    Data@Year <- 1:nyears
+    Data@Cat <-  ObsPars[[p]][[f]]$Cobs
+    Data@Ind <-  ObsPars[[p]][[f]]$II
+    Data@Rec <- apply(N[, p,1, , ], c(1, 2), sum) *  ObsPars[[p]][[f]]$Recerr[, 1:nyears]
+    Data@t <- rep(nyears, nsim)
+    Data@AvC <- apply(ObsPars[[p]][[f]]$Cobs, 1, mean)
+    Data@Dt <- ObsPars[[p]][[f]]$Dbias * StockPars[[p]]$Depletion * rlnorm(nsim, mconv(1,  ObsPars[[p]][[f]]$Derr), sdconv(1,  ObsPars[[p]][[f]]$Derr))
+    Data@Mort <- StockPars[[p]]$M * ObsPars[[p]][[f]]$Mbias
+    Data@FMSY_M <- StockPars[[p]]$FMSY_M * ObsPars[[p]][[f]]$FMSY_Mbias
+    # Data@BMSY_B0 <- BMSY_B0 * BMSY_B0bias
+    Data@BMSY_B0 <- StockPars[[p]]$SSBMSY_SSB0 * ObsPars[[p]][[f]]$BMSY_B0bias
+    Data@Cref <- StockPars[[p]]$MSY * ObsPars[[p]][[f]]$Crefbias
+    Data@Bref <- StockPars[[p]]$VBMSY * ObsPars[[p]][[f]]$Brefbias
+    Data@Iref <- ObsPars[[p]][[f]]$Iref * ObsPars[[p]][[f]]$Irefbias
+    Data@LFC <- ObsPars[[p]][[f]]$LFC * ObsPars[[p]][[f]]$LFCbias
+    Data@LFS <- FleetPars[[p]][[f]]$LFS[nyears,] * ObsPars[[p]][[f]]$LFSbias
+    Data@CAA <- ObsPars[[p]][[f]]$CAA
+    Data@Dep <- ObsPars[[p]][[f]]$Dbias * StockPars[[p]]$Depletion * rlnorm(nsim, mconv(1,  ObsPars[[p]][[f]]$Derr), sdconv(1,  ObsPars[[p]][[f]]$Derr))
+    Data@Abun <- StockPars[[p]]$A * ObsPars[[p]][[f]]$Abias * rlnorm(nsim, mconv(1, ObsPars[[p]][[f]]$Aerr), sdconv(1, ObsPars[[p]][[f]]$Aerr))
+    Data@SpAbun <- StockPars[[p]]$Asp * ObsPars[[p]][[f]]$Abias * rlnorm(nsim, mconv(1, ObsPars[[p]][[f]]$Aerr), sdconv(1, ObsPars[[p]][[f]]$Aerr))
+    Data@vbK <- StockPars[[p]]$K * ObsPars[[p]][[f]]$Kbias
+    Data@vbt0 <- StockPars[[p]]$t0 * ObsPars[[p]][[f]]$t0bias
+    Data@LenCV <- StockPars[[p]]$LenCV # * LenCVbias
+    Data@vbLinf <- StockPars[[p]]$Linf * ObsPars[[p]][[f]]$Linfbias
+    Data@L50 <- StockPars[[p]]$L50 * ObsPars[[p]][[f]]$lenMbias
+    Data@L95 <- StockPars[[p]]$L95 * ObsPars[[p]][[f]]$lenMbias
+    Data@L95[Data@L95 > 0.9 * Data@vbLinf] <- 0.9 * Data@vbLinf[Data@L95 > 0.9 * Data@vbLinf]  # Set a hard limit on ratio of L95 to Linf
+    Data@L50[Data@L50 > 0.9 * Data@L95] <- 0.9 * Data@L95[Data@L50 > 0.9 * Data@L95]  # Set a hard limit on ratio of L95 to Linf
+    Data@steep <- StockPars[[p]]$hs * ObsPars[[p]][[f]]$hbias
+    Data@sigmaR <- StockPars[[p]]$procsd # sigmaR assumed no obs error
+    Data@CAL_bins <- StockPars[[p]]$CAL_bins
+    Data@CAL <- ObsPars[[p]][[f]]$CAL
+    MLbin <- (StockPars[[p]]$CAL_bins[1:(length(StockPars[[p]]$CAL_bins) - 1)] + StockPars[[p]]$CAL_bins[2:length(StockPars[[p]]$CAL_bins)])/2
+    temp <- ObsPars[[p]][[f]]$CAL * rep(MLbin, each = nsim * nyears)
+    Data@ML <- apply(temp, 1:2, sum)/apply(ObsPars[[p]][[f]]$CAL, 1:2, sum)
+    Data@Lc <- array(MLbin[apply(ObsPars[[p]][[f]]$CAL, 1:2, which.max)], dim = c(nsim, nyears))
+    nuCAL <- ObsPars[[p]][[f]]$CAL
+    for (i in 1:nsim) for (j in 1:nyears) nuCAL[i, j, 1:match(max(1, Data@Lc[i, j]), MLbin, nomatch=1)] <- NA
+    temp <- nuCAL * rep(MLbin, each = nsim * nyears)
+    Data@Lbar <- apply(temp, 1:2, sum, na.rm=TRUE)/apply(nuCAL, 1:2, sum, na.rm=TRUE)
+    Data@MaxAge <- maxage
+    Data@Units <- "unitless"
+    Data@Ref <- StockPars[[p]]$OFLreal
+    Data@Ref_type <- "Simulated OFL"
+    Data@wla <- rep(StockPars[[p]]$a, nsim)
+    Data@wlb <- rep(StockPars[[p]]$b, nsim)
+    Data@nareas <- nareas
 
-  ObsTable <- as.data.frame(ObsPars)
-  ObsTable <- ObsTable[,order(names(ObsTable))]
-  Data@Obs <- ObsTable # put all the observation error model parameters in one table
+    # put all the operating model parameters in one table
 
-  Data@LHYear <- OM@nyears  # Last historical year is nyears (for fixed MPs)
-  histCatches <- apply(CBret, c(1, 3), sum)
-  Data@MPrec <- histCatches[, nyears]
-  Data@MPeff <- rep(1, nsim)
-  Data@Misc <- vector("list", nsim)
+    OMtable<-cbind(
+      as.data.frame(StockPars[[p]][c('RefY',"M","Depletion","A","SSBMSY_SSB0","FMSY_M","Mgrad","Msd","procsd","MSY",
+                                   "FMSY",'Linf','K','t0','hs','Linfgrad','Kgrad','Linfsd','Ksd','OFLreal','Size_area_1',
+                                   'Frac_area_1','Prob_staying','AC','L50','L95','B0','N0','SSB0','BMSY_B0','Blow','MGT','BMSY','SSBMSY','Mexp','Fdisc')]),
+
+      as.data.frame(FleetPars[[p]][[f]][c('Esd','dFfinal','qinc','qcv','Spat_targ')]),
+
+      as.data.frame(ImpPars[[p]][[f]][c('TACSD','TACFrac','TAESD','TAEFrac','SizeLimSD','SizeLimFrac')]),
+
+      data.frame(ageM=StockPars[[p]]$ageM[,nyears], L5=FleetPars[[p]][[f]]$L5[nyears,],LFS=FleetPars[[p]][[f]]$LFS[nyears,],
+               Vmaxlen=FleetPars[[p]][[f]]$Vmaxlen[nyears,], LFC=ObsPars[[p]][[f]]$LFC,
+               LR5=FleetPars[[p]][[f]]$LR5[nyears,],  LFR=FleetPars[[p]][[f]]$LFR[nyears,],
+               Rmaxlen=FleetPars[[p]][[f]]$Rmaxlen[nyears,], DR=FleetPars[[p]][[f]]$DR[nyears,])
+
+    )
+
+    OMtable <- OMtable[,order(names(OMtable))]
+    Data@OM <- OMtable
+
+
+
+    ObsTable <- as.data.frame(ObsPars[[p]][[f]][1:24])
+    ObsTable <- ObsTable[,order(names(ObsTable))]
+    Data@Obs <- ObsTable # put all the observation error model parameters in one table
+
+    Data@LHYear <- nyears  # Last historical year is nyears (for fixed MPs)
+    histCatches <- apply(CBret[,p,f,,,], c(1, 3), sum,na.rm=T)
+    Data@MPrec <- histCatches[, nyears]
+    Data@MPeff <- rep(1, nsim)
+    Data@Misc <- vector("list", nsim)
+    DataList[[p]][[f]]<-Data
+
+  }} # end of np nf
+
+  # you were here...
 
   # --- Return Historical Simulations and Data from last historical year ----
   if (Hist) { # Stop the model after historical simulations are complete
     if(!silent) message("Returning historical simulations")
 
-    nout <- t(apply(N, c(1, 3), sum))
-    vb <- t(apply(VBiomass, c(1, 3), sum))
-    b <- t(apply(Biomass, c(1, 3), sum))
-    ssb <- t(apply(SSB, c(1, 3), sum))
-    Cc <- t(apply(CB, c(1,3), sum))
-    rec <- t(apply((N)[, 1, , ], c(1,2), sum))
+    nout <- apply(N, c(1,2, 4), sum)
+    vb <- apply(VBiomass, c(1,2,4), sum)
+    b <- apply(Biomass, c(1,2,4), sum)
+    ssb <- apply(SSB, c(1,2,4), sum)
+    Cc <- apply(CB, c(1,2,3,5), sum)
+    rec <- apply((N)[,,1, , ], c(1,2,3), sum)
 
-    TSdata <- list(VB=vb, SSB=ssb, Bio=b, Catch=Cc, Rec=rec, N=nout, E_f=E_f,TAC_f=TAC_f,SizeLim_f=SizeLim_f)
-    AtAge <- list(Len_age=Len_age, Wt_age=Wt_age, Sl_age=V, Mat_age=Mat_age,
-                  Nage=apply(N, c(1:3), sum), SSBage=apply(SSB, c(1:3), sum), M_ageArray=M_ageArray,
-                  Z=Z, FM=FM, FMret=FMret)
-    MSYs <- list(MSY=MSY, FMSY=FMSY, VBMSY=VBMSY, UMSY=UMSY,
-                 SSBMSY=SSBMSY, BMSY_B0=BMSY_B0, SSBMSY_SSB0=SSBMSY_SSB0,
-                 SSB0=SSB0, B0=B0)
+    TSdata <- list(VB=vb, SSB=ssb, Bio=b, Catch=Cc, Rec=rec, N=nout)
+    AtAge <- list(Z=Z, FM=FM, FMret=FMret)
+
 
     StockPars$Depletion <- Depletion
     FleetPars$qs <- qs
     SampPars <- c(StockPars, FleetPars, ObsPars, ImpPars)
     Data@Misc <- list()
-    HistData <- list(SampPars=SampPars, TSdata=TSdata, AtAge=AtAge, MSYs=MSYs,
+    HistData <- list(StockPars=StockPars, FleetPars=FleetPars, ObsPars=ObsPars, ImpPars=ImpPars,
+                     TSdata=TSdata, AtAge=AtAge, Stocks=Stocks, Fleets=Fleets, Obs=Obs, Imps=Imps,
                      Data=Data)
     return(HistData)
   }
 
   # assign('Data',Data,envir=.GlobalEnv) # for debugging fun
 
-  # --- Check MPs ----
-  if (is.na(MPs[1])) CheckMPs <- TRUE
+  if(identical(ldim(MPs),ldim(Fleets))){
+    message("You have specified an MP for each stock and fleet. Only fleet-specific catches and indices will enter the MP for each fleet")
+    MPcond<-"byfleet"
+    nMP <- length(MPs[[1]][[1]])
+  }else{
+    if(ldim(MPs)==ldim(Fleets)[1]&nf>1){ # not a two-tier list
+      message("You have specified a vector of MPs for each stock, but not a vector of MPs for each stock and fleet. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
+      MPcond<-"bystock"
+      nMP<-length(MPs[[1]])
+    }
+    if(class(MPs)!="list"){
+      if(class(get(MPs[1])=="MMP")){
+        message("You have specified multi-fleet, multi-stock MPs of class MMP. This class of MP accepts all data objects (stocks x fleets) to simultaneously make a recommendation for all stocks and fleets")
+        MPcond<-"MMP"
+        nMP<-length(MPs)
+      }
+      if(class(get(MPs[1])=="MP")){
+        message("You have specified a vector of MPs rather than a list of MPs, one list position for each stock. The same MP will be applied to both stocks simultanesously. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
+        MPcond<-"bystock"
+        MPtemp<-MPs
+        MPs<-new('list')
+        for(p in 1:np)MPs[[p]]<-MPtemp
+        nMP<-length(MPs)
+      }
+    } # not a list
+  } # end of two
+
+  if(class(MPs)=="list"){
+    allMPs<-unlist(MPs)
+  }else{
+    allMPs<-MPs
+  }
+    # --- Check MPs ----
   if (CheckMPs) {
     if(!silent) message("Determining available methods")  # print an progress report
-    PosMPs <- Can(Data, timelimit = timelimit)  # list all the methods that could be applied to a DLM data object
-    if (is.na(MPs[1])) {
-      MPs <- PosMPs  # if the user does not supply an argument MPs run the MSE for all available methods
-      if(!silent) message("No MPs specified: running all available")
-    }
-    if (!is.na(MPs[1])) {
-      cant <- MPs[!MPs %in% PosMPs]
+    PosMPs <- Can( Data, timelimit = timelimit)  # list all the methods that could be applied to a DLM data object
+
+    if (!is.na(allMPs[1])) {
+      cant <- allMPs[!allMPs %in% PosMPs]
       if (length(cant) > 0) {
-        if(!silent) message("Cannot run some MPs: ")
-        if(!silent) print(DLMdiag(Data, "not available", funcs1=cant, timelimit = timelimit))
+        if(!silent) stop(paste0("Cannot run some MPs:",DLMdiag(Data, "not available", funcs1=cant, timelimit = timelimit)))
       }
-      MPs <- MPs[MPs %in% PosMPs]  # otherwise run the MSE for all methods that are deemed possible
-    }
-    if (length(MPs) == 0) {
-      if(!silent) message(Cant(Data, timelimit = timelimit))
-      stop("MSE stopped: no viable methods \n\n")  # if none of the user specied methods are possible stop the run
     }
   }
 
-  ok <- rep(TRUE, length(MPs))
-  for (mm in seq_along(MPs)) {
-    test <- try(get(MPs[mm]), silent=TRUE)
-    if (!class(test) == 'MP') {
-      ok[mm] <- FALSE
-      if (class(test) == 'try-error') {
-        message('Object ', paste(MPs[mm], ""), " does not exist - Ignoring")
-      } else message('Dropping MP: ', paste(MPs[mm], ""), " - Not class 'MP'")
+  # the total number of methods used
+  # create a data object for each method (they have identical historical data and branch in projected years)
+  MSElist<-list('list')
+  for(p in 1:np){
+    MSElist[[p]]<-new('list')
+    for(f in 1:nf){
+      MSElist[[p]][[f]]<-list(Data)[rep(1, nMP)]
     }
-
   }
 
-  MPs <- MPs[ok]
-
-  nMP <- length(MPs)  # the total number of methods used
-
-  if (nMP < 1) stop("No valid MPs found")
-  MSElist <- list(Data)[rep(1, nMP)]  # create a data object for each method (they have identical historical data and branch in projected years)
-
-  B_BMSYa <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected B_BMSY
-  F_FMSYa <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected F_FMSY
-  Ba <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected Biomass
-  SSBa <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected SSB
-  VBa <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected vulnerable biomass
-  FMa <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected fishing mortality rate
-  Ca <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected removed catch
-  CaRet <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected retained catch
-  TACa <- array(NA, dim = c(nsim, nMP, proyears))  # store the projected TAC recommendation
-  Effort <- array(NA, dim = c(nsim, nMP, proyears))  # store the Effort
-  PAAout <- array(NA, dim = c(nsim, nMP, maxage))  # store the population-at-age in last projection year
-  CAAout <- array(NA, dim = c(nsim, nMP, maxage))  # store the catch-at-age in last projection year
-  CALout <- array(NA, dim = c(nsim, nMP, nCALbins))  # store the population-at-length in last projection year
+  B_BMSYa <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected B_BMSY
+  F_FMSYa <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected F_FMSY
+  Ba <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected Biomass
+  SSBa <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected SSB
+  VBa <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected vulnerable biomass
+  FMa <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected fishing mortality rate
+  Ca <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected removed catch
+  CaRet <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected retained catch
+  TACa <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the projected TAC recommendation
+  Effort <- array(NA, dim = c(nsim,np,nf, nMP, proyears))  # store the Effort
+  PAAout <- array(NA, dim = c(nsim,np,nf, nMP, maxage))  # store the population-at-age in last projection year
+  CAAout <- array(NA, dim = c(nsim,np,nf, nMP, maxage))  # store the catch-at-age in last projection year
+  CALout <- array(NA, dim = c(nsim,np,nf, nMP, nCALbins))  # store the population-at-length in last projection year
 
   # SPRa <- array(NA,dim=c(nsim,nMP,proyears)) # store the Spawning Potential Ratio
 
   # --- Calculate MSY statistics for each projection year ----
-  MSY_P <- array(MSY, dim=c(nsim, nMP, proyears))
-  FMSY_P <- array(FMSY, dim=c(nsim, nMP, proyears))
-  SSBMSY_P <- array(SSBMSY, dim=c(nsim, nMP, proyears))
+  MSY_P <- array(MSY, dim=c(nsim,np,nf, nMP, proyears))
+  FMSY_P <- array(FMSY, dim=c(nsim,np,nf, nMP, proyears))
+  SSBMSY_P <- array(SSBMSY, dim=c(nsim,np,nf, nMP, proyears))
 
-  if (AnnualMSY) {
+  #if (AnnualMSY) {
 
-    if(!silent) message("Calculating MSY reference points for each projection year")
-    for (y in 1:proyears) {
-      if(!silent) cat('.')
-      if (!silent) flush.console()
-      MSYrefsYr <- sapply(1:nsim, optMSY_eq, M_ageArray, Wt_age, Mat_age, V, maxage, R0, SRrel, hs, yr=nyears+y)
-      MSY_P[,,y] <- MSYrefsYr[1, ]
-      FMSY_P[,,y] <- MSYrefsYr[2,]
-      SSBMSY_P[,,y] <- MSYrefsYr[3,]
+   # if(!silent) message("Calculating MSY reference points for each projection year")
+    #for (y in 1:proyears) {
+     # if(!silent) cat('.')
+      #if (!silent) flush.console()
+      #MSYrefsYr <- sapply(1:nsim, optMSY_eq, M_ageArray, Wt_age, Mat_age, V, maxage, R0, SRrel, hs, yr=nyears+y)
+      #MSY_P[,,y] <- MSYrefsYr[1, ]
+      #FMSY_P[,,y] <- MSYrefsYr[2,]
+      #SSBMSY_P[,,y] <- MSYrefsYr[3,]
 
-    }
-    if(!silent) cat("\n")
-  }
-
-  if (length(interval) != nMP) interval <- rep(interval, nMP)[1:nMP]
+    #}
+    #if(!silent) cat("\n")
+  #}
+  interval<-MOM@interval
+  if (length(MOM@interval) != nMP) interval <- rep(interval, nMP)[1:nMP]
   if (!all(interval == interval[1])) {
     message("Variable management intervals:")
     df <- data.frame(MP=MPs,interval=interval)
@@ -1021,36 +1078,44 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     if(!silent) message(mm, "/", nMP, " Running MSE for ", MPs[mm])  # print a progress report
     checkNA <- NA # save number of NAs
 
-    # reset selectivity parameters for projections
-    L5_P <- L5
-    LFS_P <- LFS
-    Vmaxlen_P <- Vmaxlen
-    SLarray_P <- SLarray # selectivity at length array - projections
-    V_P <- V  #  selectivity at age array - projections
+    for(p in 1:np){
+      for(f in 1:nf){
 
-    # reset retention parametersfor projections
-    LR5_P <- LR5
-    LFR_P <- LFR
-    Rmaxlen_P <- Rmaxlen
-    retA_P <- retA # retention at age array - projections
-    retL_P <- retL # retention at length array - projections
+        # reset selectivity parameters for projections
+        FleetPars[[p]][[f]]$L5_P <- FleetPars[[p]][[f]]$L5
+        FleetPars[[p]][[f]]$LFS_P <- FleetPars[[p]][[f]]$LFS
+        FleetPars[[p]][[f]]$Vmaxlen_P <- FleetPars[[p]][[f]]$Vmaxlen
+        FleetPars[[p]][[f]]$SLarray_P <- FleetPars[[p]][[f]]$SLarray # selectivity at length array - projections
+        FleetPars[[p]][[f]]$V_P <- FleetPars[[p]][[f]]$V  #  selectivity at age array - projections
 
-    Fdisc_P <- Fdisc # Discard mortality for projectons
-    DR_P <- DR # Discard ratio for projections
+        # projection arrays
 
-    # projection arrays
-    N_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    Biomass_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    VBiomass_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    SSN_P <-array(NA, dim = c(nsim, maxage, proyears, nareas))
-    SSB_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    FM_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    FM_Pret <- array(NA, dim = c(nsim, maxage, proyears, nareas)) # retained F
-    FM_nospace <- array(NA, dim = c(nsim, maxage, proyears, nareas))  # stores prospective F before reallocation to new areas
-    FML <- array(NA, dim = c(nsim, nareas))  # last apical F
-    Z_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    CB_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
-    CB_Pret <- array(NA, dim = c(nsim, maxage, proyears, nareas)) # retained catch
+        # reset retention parametersfor projections
+        FleetPars[[p]][[f]]$LR5_P <- FleetPars[[p]][[f]]$LR5
+        FleetPars[[p]][[f]]$LFR_P <- FleetPars[[p]][[f]]$LFR
+        FleetPars[[p]][[f]]$Rmaxlen_P <- FleetPars[[p]][[f]]$Rmaxlen
+        FleetPars[[p]][[f]]$retA_P <- FleetPars[[p]][[f]]$retA # retention at age array - projections
+        FleetPars[[p]][[f]]$retL_P <- FleetPars[[p]][[f]]$retL # retention at length array - projections
+        FleetPars[[p]][[f]]$DR_P <- FleetPars[[p]][[f]]$DR # Discard ratio for projections
+
+        FleetPars[[p]][[f]]$FM_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
+        FleetPars[[p]][[f]]$FM_Pret <- array(NA, dim = c(nsim, ,maxage, proyears, nareas)) # retained F
+        FleetPars[[p]][[f]]$FM_nospace <- array(NA, dim = c(nsim, , maxage, proyears, nareas))  # stores prospective F before reallocation to new areas
+        FleetPars[[p]][[f]]$FML <- array(NA, dim = c(nsim, nareas))  # last apical F
+        FleetPars[[p]][[f]]$Z_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
+        FleetPars[[p]][[f]]$CB_P <- array(NA, dim = c(nsim,maxage, proyears, nareas))
+        FleetPars[[p]][[f]]$CB_Pret <- array(NA, dim = c(nsim,maxage, proyears, nareas)) # retained catch
+
+      }
+
+      StockPars[[p]]$Fdisc_P <- Fdisc # Discard mortality for projectons
+      StockPars[[p]]$N_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
+      StockPars[[p]]$Biomass_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
+      StockPars[[p]]$VBiomass_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
+      StockPars[[p]]$SSN_P <-array(NA, dim = c(nsim,maxage, proyears, nareas))
+      StockPars[[p]]$SSB_P <- array(NA, dim = c(nsim, maxage, proyears, nareas))
+
+    }
 
     # indexes
     SAYRL <- as.matrix(expand.grid(1:nsim, 1:maxage, nyears, 1:nareas))  # Final historical year
@@ -1071,11 +1136,103 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     # -- First projection year ----
     y <- 1
+
+    # old code
     NextYrN <- lapply(1:nsim, function(x)
-      popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
+    popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
                      Zcurr=Z[x,,nyears,], PerrYr=Perr_y[x, nyears+maxage-1], hs=hs[x],
                      R0a=R0a[x,], SSBpR=SSBpR[x,], aR=aR[x,], bR=bR[x,],
                      mov=mov[x,,,], SRrel=SRrel[x]))
+
+    Perr<-hs<-R0<-SRel<-K<-Linf<-t0<-M<-a_y<-b_y<-array(NA,c(nsim,np))
+    aR<-bR<-R0a<-SSBpR<-array(NA,c(nsim,np,nareas))
+    mov<-array(NA,c(nsim,np,maxage,nareas,nareas))
+    Spat_targ_y<-array(NA,c(nsim,np,nf))
+    M_agecur_y<-Mat_agecur_y<-array(NA,c(nsim,np,maxage))
+
+
+    for(p in 1:np){
+      Perr[,p]<-StockPars[[p]]$Perr_y[,nyears+maxage-1]
+      hs[,p]<-StockPars[[p]]$hs
+      aR[,p,]<-StockPars[[p]]$aR
+      bR[,p,]<-StockPars[[p]]$bR
+      mov[,p,,,]<-StockPars[[p]]$mov
+      for(f in 1:nf)Spat_targ[,p,f]<-FleetPars[[p]][[f]]$Spat_targ
+      SRrel[,p]<-StockPars[[p]]$SRrel
+      M_age_cur_y[,p,]<-StockPars[[p]]$M_ageArray[,,nyears]
+      Mat_agecur_y<-StockPars[[p]]$Mat_age[,,nyears]
+      K[,p]<-StockPars[[p]]$Karray[,nyears]
+      Linf[,p]<-StockPars[[p]]$Linfarray[,nyears]
+      t0[,p]<-StockPars[[p]]$t0array[,nyears]
+      M[,p]<-StockPars[[p]]$M
+      R0[,p]<-StockPars[[p]]$R0
+      R0a[,p,]<-StockPars[[p]]$R0a
+      SSBpR[,p,]<-StockPars[[p]]$SSBpR
+      ax[p]<-StockPars[[p]]$a
+      bx[p]<-StockPars[[p]]$a
+    }
+
+    x
+     popdynOneMICE(np,nf,nareas, maxage, Ncur=N[x,,,nyears,], Vcur=VF[x,,,,nyears], Retcur=FretA[x,,,,nyears],
+                  Fcur=apply(apply(FM[x,,,,nyears,],c(1,2,4),max),c(1,2),sum),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
+                  PerrYrp=Perr[x,], hsx=hs[x,], aRx=aR[x,,], bRx=bR[x,,],
+                  movx=mov[x,,,,], Spat_targ=Spat_targ_y[x,,], SRrelx=SRrel[x,],
+                  M_agecur=M_agecur_y[x,,], Mat_agecur=Mat_agecur_y[x,,],
+                  Kx =K[x,], Linfx=Linf[x,],t0x=t0[x,],Mx=M[x,],
+                  R0x=R0[x,],R0ax=R0a[x,,],SSBpRx=SSBpR[x,,],ax=ay,
+                  bx=bx,Rel=Rel)
+
+    # new code
+    Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
+    Fy<-array(NA,c(np,nf,nyears))
+    Fty<-array(NA,c(np,maxage,nyears,nareas))
+    FMy<-FMrety<-VBfx<-array(NA,c(np,nf,maxage,nyears,nareas))
+    Wt_agey<-array(NA,c(np,maxage,nyears))
+    Ky<-Linfy<-t0y<-My<-hsy<-ay <-by<-array(NA,c(np,nyears))
+    Ky[,1]<-Kx; Linfy[,1]<-Linfx; t0y[,1]<-t0x; My[,1]<-Mx; hsy[,1]<-hsx; ay[,1]<-ax; by[,1]<-bx
+
+    Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
+    Wt_agey[,,1]<-ax*Len_age^bx
+
+
+      # y<-y+1
+      Fy[,,y-1]<-Effind[,,y-1]*qs*qfrac
+      # y<-2; M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
+      Vcur=array(VFx[,,,y-1],dim(VFx)[1:3])
+      Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
+      Fcur=array(Fy[,,y-1],dim(Fy)[1:2])
+      Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)])
+      M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2])
+      Mat_agecur<-array(Mat_agex[,,y-1],dim(Mat_agex)[1:2])
+
+      out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Ncur, Vcur=Vcur, Retcur=Retcur, Fcur=Fcur, PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
+                         movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur,
+                         Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
+                         bx=by[,y-1],Rel=Rel)
+      if(y<=nyears){
+        Nx[,,y,]<-out$Nnext
+        Wt_agey[,,y]<-out$Wt_age
+        M_ageArrayx[,,y]<-out$M_agecurx
+        Ky[,y]<-out$Kx; Linfy[,y]<-out$Linfx; t0y[,y]<-out$t0x; My[,y]<-out$Mx; hsy[,y]<-out$hsx; ay[,y]<-out$ax; by[,y]<-out$bx
+        VBx[,,y,]<-out$VBt
+        VBfx[,,,y,]<-out$VBft
+      }
+
+      Zx[,,y-1,]<-out$Zt
+      Fty[,,y-1,]<-out$Ft
+      FMy[,,,y-1,]<-out$FMx
+      FMrety[,,,y-1,]<-out$FMretx
+
+
+
+    # That you use in popdyn_MICE
+    NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSBcur[p,,]), Ncurr=Ncur[p,,],
+                            Zcurr=Zcur[p,,], PerrYr=PerrYrp[p], hs=hsx[p],
+                            R0a=R0ax[p,], SSBpR=SSBpRx[p,], aR=aRx[p,], bR=bRx[p,],
+                            mov=movx[p,,,], SRrel=SRrelx[p])
+
+    Nnext[p,,]<-NextYrN
+
 
     N_P[,,1,] <- aperm(array(unlist(NextYrN), dim=c(maxage, nareas, nsim, 1)), c(3,1,4,2))
 
@@ -1086,7 +1243,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     FML <- apply(FM[, , nyears, ], c(1, 3), max)
 
     # -- apply MP in initial projection year ----
-    # Combined MP ----
+    # - Combined MP -
     runMP <- applyMP(MSElist[[mm]], MPs = MPs[mm], reps = reps, silent=TRUE)  # Apply MP
 
     MPRecs <- runMP[[1]][[1]] # MP recommendations
