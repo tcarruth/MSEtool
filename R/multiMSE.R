@@ -1247,7 +1247,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
           runMP <- applyMP(curdat, MPs = MPs[[p]][mm], reps = MOM@reps, silent=TRUE)  # Apply MP
 
-        }else(MPcond=="byfleet"){
+        }else if(MPcond=="byfleet"){
 
         }
 
