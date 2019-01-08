@@ -138,7 +138,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
 
   # Initial Bcur calc (before any weight at age recalculation change)
   # Bcalc ---------------------------------------------------------------------------
-  Bcur<-SSBcur<-array(NA,dim(Ncur))
+  Bcur<-SSBcur<-SSNcur<-array(NA,dim(Ncur))
   Nind<-TEG(dim(Ncur)) # p, age, area
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
   Wt_age<-ax*Len_age^bx
@@ -177,6 +177,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
 
   Bcur[Nind]<-Ncur[Nind]*Wt_age[Nind[,1:2]]
   SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
+  SSNcur[Nind]<-Ncur[Nind]*Mat_agecur[Nind[,1:2]]
 
   # Vulnerable biomass calculation --------------------------------------------------
   VBft<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
@@ -217,9 +218,10 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   }
 
   # returns new N and any updated parameters:
-  list(Nnext=Nnext,M_agecurx=M_agecurx,R0x=R0x,R0ax=R0ax,hsx=hsx,
-       aRx=aRx,bRx=bRx,Linfx=Linfx,Kx=Kx,t0x=t0x,Mx=Mx,ax=ax,bx=bx,
-       Len_age=Len_age,Wt_age=Wt_age,surv=surv,FMx=FMx,FMretx=FMretx,VBt=VBt,VBft=VBft,Zt=Zcur,Ft=Ft)
+  list(Nnext=Nnext,M_agecurx=M_agecurx,R0x=R0x,R0ax=R0ax,hsx=hsx, #5
+       aRx=aRx,bRx=bRx,Linfx=Linfx,Kx=Kx,t0x=t0x,Mx=Mx,ax=ax,bx=bx, #13
+       Len_age=Len_age,Wt_age=Wt_age,surv=surv,FMx=FMx,FMretx=FMretx, #18
+       VBt=VBt,VBft=VBft,Zt=Zcur,Ft=Ft,Bt=Bcur, SSNt=SSNcur, SSBt=SSBcur) #25
 
 }
 

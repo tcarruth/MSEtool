@@ -111,7 +111,7 @@ HistMICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF,
     Spat_targ[p,]<-unlist(lapply(FleetPars[[p]],function(dat,x)dat['Spat_targ'][[1]][x],x=x))
   }
 
-  popdynMICE(qs=qs[x,],qfrac=qfrac[x,,],np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
+ popdynMICE(qs=qs[x,],qfrac=qfrac[x,,],np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
 
 }
 
@@ -220,6 +220,59 @@ ldim<-function(x){
   }
 }
 
+
+#' Combine data among fleets
+#'
+#' Catches, CAA, CAL are summed. LFC and LFS are weighted averages. ML, Lc and Lbar are recalculated from summed CAL. All other observations are for fleet 1 (indicative)
+#'
+#' @param MSElist A hierarcical list of data objects stock then fleet then MP
+#' @param p Integer the Stock number
+#' @param mm Integer the MP number
+#' @param nf The number of fleets
+#' @author T. Carruthers
+#' @export
+multiData<-function(MSElist,p,mm,nf){
+
+  DBF<-list()
+  for(f in 1:nf)DBF[[f]]<-MSElist[[p]][[f]][[mm]]
+  Dataout<-DBF[[1]]
+  nsim<-dim(Dataout@Cat)[1]
+  nyears<-dim(Dataout@Cat)[2]
+  na<-dim(Dataout@CAA)[3]
+  nl<-dim(Dataout@CAL)[3]
+
+  Cat<-array(SIL(DBF,"Cat"),c(nsim,nyears,nf))
+  CAA<-array(SIL(DBF,"CAA"),c(nsim,nyears,na,nf))
+  CAL<-array(SIL(DBF,"CAL"),c(nsim,nyears,nl,nf))
+  LFS<-array(SIL(DBF,"LFS"),c(nsim,nf))
+  LFC<-array(SIL(DBF,"LFC"),c(nsim,nf))
+
+  #ML<-array(SIL(DBF,"ML"),c(nsim,nyears,nf)) # for checking purposes
+  #Lc<-array(SIL(DBF,"Lc"),c(nsim,nyears,nf))
+  #Lbar<-array(SIL(DBF,"Lbar"),c(nsim,nyears,nf))
+
+  # Additions
+  Dataout@Cat<-apply(Cat,1:2,sum)
+  Dataout@CAA<-apply(CAA,1:3,sum)
+  Dataout@CAL<-apply(CAL,1:3,sum)
+
+  # Weighted means
+  Dataout@LFS<-apply(LFS*Cat[,nyears,],1,sum)/apply(Cat[,nyears,],1,sum)
+  Dataout@LFC<-apply(LFC*Cat[,nyears,],1,sum)/apply(Cat[,nyears,],1,sum)
+
+  # Recalculations
+  MLbin <- (StockPars[[p]]$CAL_bins[1:(length(StockPars[[p]]$CAL_bins) - 1)] + StockPars[[p]]$CAL_bins[2:length(StockPars[[p]]$CAL_bins)])/2
+  temp <- Dataout@CAL * rep(MLbin, each = nsim * nyears)
+  Dataout@ML <- apply(temp, 1:2, sum)/apply(Dataout@CAL, 1:2, sum)
+  Dataout@Lc <- array(MLbin[apply(Dataout@CAL, 1:2, which.max)], dim = c(nsim, nyears))
+  nuCAL <- Dataout@CAL
+  for (i in 1:nsim) for (j in 1:nyears) nuCAL[i, j, 1:match(max(1, Dataout@Lc[i, j]), MLbin, nomatch=1)] <- NA
+  temp <- nuCAL * rep(MLbin, each = nsim * nyears)
+  Dataout@Lbar <- apply(temp, 1:2, sum, na.rm=TRUE)/apply(nuCAL, 1:2, sum, na.rm=TRUE)
+  #      cbind(ML[1,,],Dataout@ML[1,],rep(0,nyears),Lc[1,,],Dataout@Lc[1,],rep(0,nyears),Lbar[1,,],Dataout@Lbar[1,]) # check
+
+  Dataout
+}
 
 
 
