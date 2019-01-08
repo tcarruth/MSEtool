@@ -218,6 +218,18 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   ### Sampling OM parameters ###
   if(!silent) message("Loading operating model")
 
+  # Allocation
+  if(length(MOM@Allocation)==0){
+    MOM@Allocation <-CatchFrac
+    message("Slot @Allocation of MOM object not specified. Setting slot @Allocation equal to slot @CatchFrac - current catch fractions")
+  }
+
+  if(length(MOM@Efactor)==0){
+    MOM@Efactor <-list()
+    for(f in 1:nf)MOM@Efactor[[f]]<-array(1,c(nsim,nf))
+    message("Slot @Efactor of MOM object not specified. Setting slot @Efactor to current effort for all fleets")
+  }
+
   # --- Sample custom parameters ----
 
   SampCpars<-list() # empty list
@@ -1085,11 +1097,15 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   # --- Begin loop over MPs ----
   mm <- 1 # for debugging
+  TAC_A<-array(NA,c(nsim,np,nf)) # Temporary store of the TAC
+  TAE_A<-array(NA,c(nsim,np,nf)) # Temporary store of the TAE
+  MPrecs_A_blank<-list() # Temporary Hierarcical list of MPrec objects
+  for(p in 1:np)MPrecs_A_blank[[p]]<-list()
 
   for (mm in 1:nMP) {  # MSE Loop over methods
 
     if(!silent){
-      message(" ----- ", mm, "/", nMP, " Running MSE for ")  # print a progress report
+      message(" ----- ", mm, "/", nMP, " MPs, Running MSE for: ")  # print a progress report
       for(p in 1:np){
         MPrep<-data.frame(MPrefs[mm,,p])
         row.names(MPrep)<-Fnames[,p]
@@ -1229,11 +1245,17 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
 
     if(MPcond=="MMP"){
+      # returns a hierarchical list object stock then fleet of MPrec objects
 
+      MPrecs_A <- applyMMP(curdat, MPs = MPs[mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+      Data_p_A <- MPrecs_A_blank
+      for(p in 1:np)for(f in 1:nf)Data_p_A[[p]][[f]]<-MSElist[[p]][[f]][[mm]]
 
     }else{
 
-      for(pp in 1:np){
+      MPrecs_A <- Data_p_A <- MPrecs_A_blank # A temporary blank hierarchical list object stock by fleet
+
+      for(p in 1:np){
 
         if(MPcond=="bystock"){
 
@@ -1243,11 +1265,25 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             curdat<-MSElist[[p]][[f]][[mm]]
           }
 
-          # YOU GOT TO HERE!!!
-
           runMP <- applyMP(curdat, MPs = MPs[[p]][mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+          TAC_A[,p,]<-as.vector(unlist(runMP[[1]][[1]]$TAC))*MOM@Allocation[[p]]
+          TAE_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$TAE))*MOM@Efactor[[p]],c(nsim,nf))
+
+          for(f in 1:nf){
+            runMP_A[[p]][[f]]<-runMP[[1]][[1]]
+            runMP_A[[p]][[f]]$TAC<-TAC_A[,p,f]
+            runMP_A[[p]][[f]]$Effort<-TAE_E[,p,f]
+            Data_p_A[[p]][[f]]<-runMP[[2]]
+          }
 
         }else if(MPcond=="byfleet"){
+
+          for(f in 1:nf){
+
+            runMP <- applyMP(curdat, MPs = MPrefs[[p]][[f]][mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+            runMP_A[[p]][[f]]<-runMP[[1]][[1]]
+            Data_p_A[[p]][[f]]<-runMP[[2]]
+          }
 
         }
 
@@ -1255,15 +1291,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     }
 
-
-
-
-    MPRecs <- runMP[[1]][[1]] # MP recommendations
-    Data_p <- runMP[[2]] # Data object object with saved info from MP
     Data_p@TAC <- MPRecs$TAC
 
     # calculate pstar quantile of TAC recommendation dist
     TACused <- apply(Data_p@TAC, 2, quantile, p = pstar, na.rm = T)
+
     checkNA[y] <- sum(is.na(TACused))
     LastEi <- rep(1,nsim) # no effort adjustment
     LastSpatial <- array(MPA[nyears,], dim=c(nareas, nsim)) #

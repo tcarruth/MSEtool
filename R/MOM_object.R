@@ -39,6 +39,7 @@
 #' @slot Imps   Hierarchical List of Implementation model objects Level 1 is stock, level 2 is fleet
 #' @slot CatchFrac A list nstock long, of matrices nsim x nfleet representing the fraction of current catches of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock)
 #' @slot Allocation  A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year).
+#' @slot Efactor A list nstock long, of current effort factors by fleet (default is 1 - same as current effort)
 #' @slot Rel A list of biological / ecological relationships among stocks
 #' over-ridden if an MP of class 'MP_F" is supplied that is a multi-fleet MP.
 #' @author T. Carruthers and A. Hordyk
@@ -51,12 +52,12 @@ setClass("MOM", representation(Name = "character", Agency="character",
                               nsim="numeric", proyears="numeric",
                               interval='numeric', pstar='numeric', maxF='numeric', reps='numeric',
                               cpars="list", seed="numeric", Source="character",Stocks='list',Fleets='list',Obs='list',Imps='list',
-                              CatchFrac='list',Allocation='list',Rel='list'))
+                              CatchFrac='list',Allocation='list',Efactor='list',Rel='list'))
 
 
 # initialize MOM
 setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=NULL, Imps=NULL, CatchFrac=NULL, Stocks_cpars=NULL,Fleets_cpars=NULL,
-                                       interval=4, pstar=0.5, maxF=0.8, reps=1, nsim=48, proyears=50, Source=NULL, Allocation=NULL,Rel=NULL) {
+                                       interval=4, pstar=0.5, maxF=0.8, reps=1, nsim=48, proyears=50, Source=NULL, Allocation=NULL,Efactor=NULL, Rel=NULL) {
   # .Object})
   # .Object<-new('MOM')
 
@@ -102,7 +103,10 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
   .Object@pstar <- pstar
   .Object@maxF <- maxF
   .Object@reps <- reps
-  .Object@Allocation <- new('list')
+  if(is.null(Allocation))Allocation<-new('list')
+  if(is.null(Efactor))Efactor<-new('list')
+  .Object@Allocation <- Allocation
+  .Object@Efactor<-Efactor
 
   if(is.null(CatchFrac)){
     CatchFrac<-list()
