@@ -29,8 +29,7 @@
 #' @slot maxF Maximum instantaneous fishing mortality rate that may be simulated for any given age class
 #' @slot reps Number of samples of the management recommendation for each method. Note that when this is set to 1, the mean value of
 #' the data inputs is used.
-#' @slot Stocks_cpars A hierarcical list nstock long of custom parameters. Time series are a matrix nsim rows by nyears columns. Single parameters are a vector nsim long
-#' @slot Fleets_cpars A hierarcical list nfleet long of custom parameters. Time series are a matrix nsim rows by nyears columns. Single parameters are a vector nsim long
+#' @slot cpars A hierarcical list nstock then nfleet long of custom parameters. Time series are a matrix nsim rows by nyears columns. Single parameters are a vector nsim long
 #' @slot seed A random seed to ensure users can reproduce results exactly
 #' @slot Source A reference to a website or article from which parameters were taken to define the operating model
 #' @slot Stocks List of stock objects
@@ -56,7 +55,7 @@ setClass("MOM", representation(Name = "character", Agency="character",
 
 
 # initialize MOM
-setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=NULL, Imps=NULL, CatchFrac=NULL, Stocks_cpars=NULL,Fleets_cpars=NULL,
+setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=NULL, Imps=NULL, CatchFrac=NULL, cpars=NULL,
                                        interval=4, pstar=0.5, maxF=0.8, reps=1, nsim=48, proyears=50, Source=NULL, Allocation=NULL,Efactor=NULL, Rel=NULL) {
   # .Object})
   # .Object<-new('MOM')
@@ -87,7 +86,20 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
    # Now copy the values for stock, fleet and observation slots to same
   .Object@Stocks<-Stocks
   .Object@Fleets<-Fleets
-  .Object@cpars<-cpars
+
+  np<-length(Stocks)
+  nf<-length(Stocks[[1]])
+
+  if(is.null(cpars)){
+    .Object@cpars<-list()
+    for(p in 1:np){
+      .Object@cpars[[p]]<-list()
+      for(f in 1:nf){
+        .Object@cpars[[p]][[f]]<-list()
+     }
+    }
+  }
+
   .Object@Obs<-Obs
   .Object@Imps<-Imps
 

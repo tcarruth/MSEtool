@@ -143,10 +143,11 @@ SIL<-function(listy,sloty) {
 #'
 #' @param listy A list of objects
 #' @param namey A character vector representing the list item's name
+#' @param lev1 Logical, should NIL default to the first level of the list?
 #' @author T. Carruthers
 #' @export
-NIL<-function(listy,namey){
-  if(class(listy[[1]])=="list"){
+NIL<-function(listy,namey,lev1=T){
+  if(class(listy[[1]])=="list"&!lev1){
     out<-NULL
     for(i in 1:length(listy))out<-c(out,unlist(lapply(listy[[i]],function(x)x[namey])))
   }else{
@@ -236,7 +237,7 @@ ldim<-function(x){
 #' @param nf The number of fleets
 #' @author T. Carruthers
 #' @export
-multiData<-function(MSElist,p,mm,nf){
+multiData<-function(MSElist,StockPars,p,mm,nf){
 
   DBF<-list()
   for(f in 1:nf)DBF[[f]]<-MSElist[[p]][[f]][[mm]]
