@@ -23,6 +23,7 @@
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
 #' @author T.Carruthers
 #' @keywords internal
+#' @export
 getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=0.9, MPA,CatchFrac, bounds= c(1e-05, 15),Rel){
 
   Nx<-array(N[x,,,,],dim(N)[2:5])
@@ -42,7 +43,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
   bx<-matrix(unlist(lapply(StockPars,function(dat)dat['b'])),ncol=np)[1,]
   SRrelx<-matrix(unlist(lapply(StockPars,function(dat)dat['SRrel'])),ncol=np)[x,]
 
-  distx<-SSBpRx<-R0ax<-aRx<-bRx<-array(NA,c(np,nareas))
+  distx<-Asizex<-SSBpRx<-R0ax<-aRx<-bRx<-array(NA,c(np,nareas))
   Perrx<-array(NA,c(np,nyears+maxage))
   movx<-array(NA,c(np,maxage,nareas,nareas))
 
@@ -54,6 +55,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
     R0ax[p,]<-StockPars[[p]]$R0a[x,]
     aRx[p,]<-StockPars[[p]]$aR[x,]
     bRx[p,]<-StockPars[[p]]$bR[x,]
+    Asizex[p,]<-StockPars[[p]]$Asize[x,]
   }
 
   M_ageArrayx<-Mat_agex<-array(NA,c(np,maxage,nyears))
@@ -84,12 +86,12 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
   opt<-optim(par,qestMICE,
              method="L-BFGS-B",lower=c(rep(log(bounds[1]),np),rep(-5,np*(nf-1))),upper=c(rep(log(bounds[2]),np),rep(5,np*(nf-1))),
              depc=depc,CFc=CFc,mode='opt',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
-             Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Kx=Kx,
+             Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Asizex=Asizex,Kx=Kx,
              Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,SSB0x=SSB0x,hsx=hsx,ax=ax,bx=bx,aRx=aRx,bRx=bRx,Perrx=Perrx,SRrelx=SRrelx,Rel=Rel,
              control=list(trace=1))
 
   out<-qestMICE(par=opt$par, depc=depc,CFc=CFc,mode='calc',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
-          Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Kx=Kx,
+          Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Asizex=Asizex,Kx=Kx,
           Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,SSB0x=SSB0x,hsx=hsx,aRx=aRx,bRx=bRx,ax=ax,bx=bx,Perrx=Perrx,SRrelx=SRrelx,Rel=Rel)
 
   return(out)
@@ -118,6 +120,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 #' @param Spat_targ Matrix [stock, fleet] of spatial targetting parameter (0 evenly spatial distributed, 1 proportional to vulnerable biomass)
 #' @param M_ageArrayx Array [stock, age,year] of Natural mortality rate at age
 #' @param Mat_agex Array [stock, age, year] of maturity (spawning fraction) age age
+#' @param Asizex Matrix [stock, area] Area size
 #' @param Kx Vector [stock] of von B growth parameter K
 #' @param Linf Vector [stock] of von B asymptotic length parameter Linf
 #' @param t0 Vector [stock] of von B theoretical age at zero length (t0)
@@ -138,7 +141,7 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 #' @keywords internal
 #' @export
 qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,
-                   Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,SSB0x,hsx,aRx, bRx, ax,bx,Perrx,SRrelx,Rel){
+                   Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,SSB0x,hsx,aRx, bRx, ax,bx,Perrx,SRrelx,Rel){
 
   qs<-exp(par[1:np])
   if(nf==1){
@@ -149,7 +152,7 @@ qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,Fre
     qfrac<-exp(qlogit)/apply(exp(qlogit),1,sum)
   }
 
-  HistVars<-popdynMICE(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
+  HistVars<-popdynMICE(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
   # matplot(t(apply(HistVars$SSBx,c(1,3),sum)))
   # matplot(t(apply(HistVars$Nx,c(1,3),sum)))
   # matplot(t(HistVars$Fy))

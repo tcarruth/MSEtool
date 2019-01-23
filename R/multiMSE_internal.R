@@ -86,13 +86,14 @@ HistMICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF,
   bx<-matrix(unlist(lapply(StockPars,function(dat)dat['b'])),ncol=np)[1,]
   SRrelx<-matrix(unlist(lapply(StockPars,function(dat)dat['SRrel'])),ncol=np)[x,]
 
-  distx<-SSBpRx<-R0ax<-aRx<-bRx<-array(NA,c(np,nareas))
+  distx<-Asizex<-SSBpRx<-R0ax<-aRx<-bRx<-array(NA,c(np,nareas))
   Perrx<-array(NA,c(np,nyears+maxage))
   movx<-array(NA,c(np,maxage,nareas,nareas))
 
   for(p in 1:np){
     distx[p,]<-StockPars[[p]]$R0a[x,]/sum(StockPars[[p]]$R0a[x,])
     Perrx[p,]<-StockPars[[p]]$Perr_y[x,1:(nyears+maxage)]
+    Asizex[p,]<-StockPars[[p]]$Asize[x,]
     movx[p,,,]<-StockPars[[p]]$mov[x,,,]
     SSBpRx[p,]<-StockPars[[p]]$SSBpR[x,]
     R0ax[p,]<-StockPars[[p]]$R0a[x,]
@@ -111,7 +112,7 @@ HistMICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF,
     Spat_targ[p,]<-unlist(lapply(FleetPars[[p]],function(dat,x)dat['Spat_targ'][[1]][x],x=x))
   }
 
- popdynMICE(qs=qs[x,],qfrac=qfrac[x,,],np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
+ popdynMICE(qs=qs[x,],qfrac=qfrac[x,,],np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
 
 }
 

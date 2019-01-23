@@ -16,7 +16,8 @@
 #' @param movx Array [stock,age,area,area] of movement transitions
 #' @param Spat_targ Matrix [stock, fleet] of spatial targetting parameter (0 evenly spatial distributed, 1 proportional to vulnerable biomass)
 #' @param M_ageArrayx Array [stock, age,year] of Natural mortality rate at age
-#' @param Mat_agex Array [stock, age, year] of maturity (spawning fraction) age age
+#' @param Mat_agex Array [stock, age, year] of maturity (spawning fraction) age
+#' @param Asizex  Array [stock, area] Area size
 #' @param Kx Vector [stock] of von B growth parameter K
 #' @param Linf Vector [stock] of von B asymptotic length parameter Linf
 #' @param t0 Vector [stock] of von B theoretical age at zero length (t0)
@@ -35,7 +36,7 @@
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
+popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
 
   Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
   Fy<-array(NA,c(np,nf,nyears))
@@ -51,7 +52,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
   for(y in 2:(nyears+1)){
 
     # y<-y+1
-    Fy[,,y-1]<-Effind[,,y-1]*qs*qfrac
+    Fy[,,y-1]<-Effind[,,y-1]*qs*qfrac  # this is basically apical F - yet to be subject to Fdist and Asize (inside popdynOneMICE)
     # y<-2; M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
     Vcur=array(VFx[,,,y-1],dim(VFx)[1:3])
     Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
@@ -61,7 +62,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
     Mat_agecur<-array(Mat_agex[,,y-1],dim(Mat_agex)[1:2])
 
     out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Ncur, Vcur=Vcur, Retcur=Retcur, Fcur=Fcur, PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
-                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur,
+                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur, Asizex=Asizex,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
                        bx=by[,y-1],Rel=Rel)
     if(y<=nyears){
@@ -114,6 +115,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
 #' @param SRrelx Integer vector [stock] the form of the stock recruitment relationship (1 = Beverton-Holt, 2= Ricker)
 #' @param M_agecur Matrix [stock, age] of Natural mortality rate at age
 #' @param Mat_agecur Matrix [stock, age] of maturity (spawning fraction) age age
+#' @param Asizex Matrix [stock, area] of relative area sizes
 #' @param Kx Vector [stock] of von B growth parameter K
 #' @param Linf Vector [stock] of von B asymptotic length parameter Linf
 #' @param t0 Vector [stock] of von B theoretical age at zero length (t0)
@@ -130,7 +132,7 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
 #' @keywords internal
 #' @export
 popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp, hsx, aRx, bRx, movx,Spat_targ,
-                        SRrelx,M_agecur,Mat_agecur,
+                        SRrelx,M_agecur,Mat_agecur,Asizex,
                         Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx,herm=NULL, sexspecific=NULL, Rel){
 
   # FMarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Vuln.col(0))/Asize_c(A);
@@ -187,10 +189,10 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   VBagg<-apply(Fdist,1:3,sum)
   Fdist[VBind]<-Fdist[VBind]/VBagg[VBind[,1:3]]
 
-  FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Vcur[VBind[,1:3]]
+  FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Vcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
 
-  FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Retcur[VBind[,1:3]]
-  Ft<-apply(FMx,c(1,3,4),sum)#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
+  FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Retcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
+  Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
   Zcur<-Ft+array(rep(M_agecur[VBind[,c(1,3)]],nareas),c(np,maxage,nareas))
 
   Nnext<-array(NA,c(np,maxage,nareas))
