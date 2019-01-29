@@ -4,9 +4,10 @@
 \alias{qestMICE}
 \title{Internal function for optimizing catchability (q) for a MICE model}
 \usage{
-qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, Nx, VFx,
-  FretAx, Effind, distx, movx, Spat_targ, M_ageArrayx, Mat_agex, Kx, Linfx,
-  t0x, Mx, R0x, R0ax, SSBpRx, hsx, aRx, bRx, ax, bx, Perrx, SRrelx, Rel)
+qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, maxage,
+  Nx, VFx, FretAx, Effind, distx, movx, Spat_targ, M_ageArrayx, Mat_agex,
+  Asizex, Kx, Linfx, t0x, Mx, R0x, R0ax, SSBpRx, SSB0x, hsx, aRx, bRx, ax,
+  bx, Perrx, SRrelx, Rel)
 }
 \arguments{
 \item{par}{Integer, the simulation number}
@@ -20,6 +21,8 @@ qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, Nx, VFx,
 \item{nyears}{Integer, number of historical years (unfished til today)}
 
 \item{nareas}{Integer, number of areas (default is 2)}
+
+\item{maxage}{Integer, maximum number of age classes for calculation}
 
 \item{Nx}{Array [stock, age, year, area] of stock numbers}
 
@@ -37,6 +40,8 @@ qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, Nx, VFx,
 
 \item{Mat_agex}{Array [stock, age, year] of maturity (spawning fraction) age age}
 
+\item{Asizex}{Matrix [stock, area] Area size}
+
 \item{Kx}{Vector [stock] of von B growth parameter K}
 
 \item{Mx}{Vector [stock] mature natural mortality rate}
@@ -46,6 +51,8 @@ qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, Nx, VFx,
 \item{R0ax}{Matrix [stock, area] unfished recruitment by area}
 
 \item{SSBpRx}{Matrix [stock, area] spawning biomass per recruit by area}
+
+\item{SSB0x}{Vector [stock] Unfished spawning stock biomass}
 
 \item{hsx}{Vector [stock] steepness of the stock recruitment curve}
 

@@ -6,7 +6,7 @@
 \usage{
 multiMSE(MOM, MPs = list(c("AvC", "DCAC"), c("FMSYref", "curE")),
   CheckMPs = FALSE, timelimit = 1, Hist = FALSE, ntrials = 50,
-  fracD = 0.05, CalcBlow = TRUE, HZN = 2, Bfrac = 0.5,
+  fracD = 0.05, CalcBlow = FALSE, HZN = 2, Bfrac = 0.5,
   AnnualMSY = TRUE, silent = FALSE, PPD = FALSE, parallel = FALSE,
   save_name = NULL, checks = FALSE, control = NULL)
 }

@@ -4,12 +4,14 @@
 \alias{NIL}
 \title{Item in list: get the list values from a list of lists}
 \usage{
-NIL(listy, namey)
+NIL(listy, namey, lev1 = T)
 }
 \arguments{
 \item{listy}{A list of objects}
 
 \item{namey}{A character vector representing the list item's name}
+
+\item{lev1}{Logical, should NIL default to the first level of the list?}
 }
 \description{
 Create of vector of values that correspond with a slot in a list of objects

@@ -40,9 +40,7 @@ bounds of a uniform distribution from which to sample the parameter.
 \item{\code{reps}}{Number of samples of the management recommendation for each method. Note that when this is set to 1, the mean value of
 the data inputs is used.}
 
-\item{\code{Stocks_cpars}}{A hierarcical list nstock long of custom parameters. Time series are a matrix nsim rows by nyears columns. Single parameters are a vector nsim long}
-
-\item{\code{Fleets_cpars}}{A hierarcical list nfleet long of custom parameters. Time series are a matrix nsim rows by nyears columns. Single parameters are a vector nsim long}
+\item{\code{cpars}}{A hierarcical list nstock then nfleet long of custom parameters. Time series are a matrix nsim rows by nyears columns. Single parameters are a vector nsim long}
 
 \item{\code{seed}}{A random seed to ensure users can reproduce results exactly}
 
@@ -59,6 +57,8 @@ the data inputs is used.}
 \item{\code{CatchFrac}}{A list nstock long, of matrices nsim x nfleet representing the fraction of current catches of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock)}
 
 \item{\code{Allocation}}{A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year).}
+
+\item{\code{Efactor}}{A list nstock long, of current effort factors by fleet (default is 1 - same as current effort)}
 
 \item{\code{Rel}}{A list of biological / ecological relationships among stocks
 over-ridden if an MP of class 'MP_F" is supplied that is a multi-fleet MP.}
