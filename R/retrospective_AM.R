@@ -96,7 +96,7 @@ retrospective_AM <- function(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FA
       }
     }
     if(plot_type[i] == "F") {
-      ylab = "F"
+      ylab <- "F"
       Hist <- apply(MSE@FM_hist, c(1, 3), max)[sim, ]
       Proj <- MSE@FM[sim, match_ind, ]
       Assess <- lapply(Assessment_report, slot, "FMort")
@@ -106,6 +106,7 @@ retrospective_AM <- function(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FA
       }
     }
     if(plot_type[i] == "SSB_SSB0") {
+      ylab <- expression(SSB/SSB[0])
       Hist <- apply(MSE@SSB_hist, c(1, 3), sum)[sim, ]/MSE@OM$SSB0[sim]
       Proj <- MSE@SSB[sim, match_ind, ]/MSE@OM$SSB0[sim]
       if(isSP) {
