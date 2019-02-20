@@ -54,12 +54,21 @@ getinds<-function(PPD,styr,res=6, tsd= c("Cat","Cat","Cat","Ind","ML"),stat=c("s
   ntsd<-length(tsd)
   inds<-array(NA,c(ntsd,np,nsim))
 
-  for(i in 1:ntsd){
-    for(pp in 1:np){
-      ind<-styr+((pp-1)*res)+1:res
-      inds[i,pp,]<-sapply(1:nsim,get(stat[i]),mat=slot(PPD,tsd[i]),ind=ind)
-    }
+  ind_range <- list()
+  for(pp in 1:np) {
+    ind<-styr+((pp-1)*res)+1:res
+    ind_range[[pp]] <- range(ind)
+    for(i in 1:ntsd) inds[i,pp,]<-sapply(1:nsim,get(stat[i]),mat=slot(PPD,tsd[i]),ind=ind)
   }
+  #for(i in 1:ntsd){
+  #  for(pp in 1:np){
+  #    ind<-styr+((pp-1)*res)+1:res
+  #    ind_range[[pp]] <- range(ind)
+  #    inds[i,pp,]<-sapply(1:nsim,get(stat[i]),mat=slot(PPD,tsd[i]),ind=ind)
+  #  }
+  #}
+
+  dimnames(inds) <- list(paste0(tsd, "_", stat), vapply(ind_range, paste0, character(1), collapse = "-"), 1:nsim)
 
   inds
 
@@ -192,7 +201,7 @@ Probs<-function(indPPD,indData,alpha=0.05,removedat=FALSE,removethresh=0.05){
 
   }
 
-  return(list(mah=mah,PRB=PRB))
+  return(list(mahalanobis=mah,PRB=PRB))
 
 }
 
@@ -239,12 +248,17 @@ PRBcalc=function(MSE_null,MSE_alt,
 
     out<-Probs(indPPD,indData,alpha=alpha,removedat=removedat,removethresh=removethresh)
 
+    dimnames(out[[1]]) <- list(c("Null_OM", "Alt_OM"), dimnames(indPPD)[[2]], dimnames(indPPD)[[3]])
+    rownames(out[[2]]) <- c("Type-1", "Power")
+    colnames(out[[2]]) <- dimnames(indPPD)[[2]]
+
     outlist[[mm]]<-out
 
     message(paste(mm, "of",MSE_null@nMPs,"MPs processed"))
 
   }
 
+  names(outlist) <- MSE_null@MPs
   return(outlist)
 
 }

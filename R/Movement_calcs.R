@@ -166,7 +166,7 @@ plot_mov <- function(mov, age = 1, type = c("matrix", "all")) {
         text(j, i, labels = paste0(signif(mean_mov[i, j], 2), "\n(", signif(min(mov_at_age[, i, j]), 2), "-", signif(max(mov_at_age[, i, j]), 2), ")"))
       }
     }
-    title(paste("Movement matrix at age", age, "(mean and range across", nsim, "simulations)"))
+    title(paste("Movement matrix at age", age, "\n(mean and range across", nsim, "simulations)"))
   }
 
   if(type == "all") {
@@ -188,7 +188,7 @@ plot_mov <- function(mov, age = 1, type = c("matrix", "all")) {
 
     # Each figure shows movement from one area to all areas
     for(j in 1:nareas) {
-      plot(NULL, NULL, xlim = c(1, maxage), ylim = ylim, ylab = paste("Mean movement probability from Area", j))
+      plot(NULL, NULL, xlim = c(1, maxage), ylim = ylim, ylab = paste("Mean movement probability\nfrom Area", j))
       abline(h = 0, col = "grey")
       for(i in 1:nareas) lines(1:maxage, mean_mov[, j, i], col = color.vec[i], typ = 'o', pch = 16)
     }

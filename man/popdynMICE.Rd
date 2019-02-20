@@ -4,9 +4,9 @@
 \alias{popdynMICE}
 \title{Population dynamics for a MICE model (multiyear)}
 \usage{
-popdynMICE(qs, qfrac, np, nf, nyears, maxage, Nx, VFx, FretAx, Effind,
-  movx, Spat_targ, M_ageArrayx, Mat_agex, Kx, Linfx, t0x, Mx, R0x, R0ax,
-  SSBpRx, hsx, aRx, bRx, ax, bx, Perrx, SRrelx, Rel)
+popdynMICE(qs, qfrac, np, nf, nyears, nareas, maxage, Nx, VFx, FretAx,
+  Effind, movx, Spat_targ, M_ageArrayx, Mat_agex, Asizex, Kx, Linfx, t0x,
+  Mx, R0x, R0ax, SSBpRx, hsx, aRx, bRx, ax, bx, Perrx, SRrelx, Rel)
 }
 \arguments{
 \item{qs}{Total catchability}
@@ -18,6 +18,8 @@ popdynMICE(qs, qfrac, np, nf, nyears, maxage, Nx, VFx, FretAx, Effind,
 \item{nf}{Integer, number of fleets}
 
 \item{nyears}{Integer, number of historical years (unfished til today)}
+
+\item{nareas}{Integer, the number of spatial areas}
 
 \item{maxage}{Integer, maximum modelled age}
 
@@ -35,7 +37,9 @@ popdynMICE(qs, qfrac, np, nf, nyears, maxage, Nx, VFx, FretAx, Effind,
 
 \item{M_ageArrayx}{Array [stock, age,year] of Natural mortality rate at age}
 
-\item{Mat_agex}{Array [stock, age, year] of maturity (spawning fraction) age age}
+\item{Mat_agex}{Array [stock, age, year] of maturity (spawning fraction) age}
+
+\item{Asizex}{Array [stock, area] Area size}
 
 \item{Kx}{Vector [stock] of von B growth parameter K}
 

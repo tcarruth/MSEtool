@@ -5,9 +5,9 @@
 \title{Population dynamics for a MICE model (single year)}
 \usage{
 popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
-  hsx, aRx, bRx, movx, Spat_targ, SRrelx, M_agecur, Mat_agecur, Kx, Linfx,
-  t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, herm = NULL, sexspecific = NULL,
-  Rel)
+  hsx, aRx, bRx, movx, Spat_targ, SRrelx, M_agecur, Mat_agecur, Asizex, Kx,
+  Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, herm = NULL,
+  sexspecific = NULL, Rel)
 }
 \arguments{
 \item{np}{Integer, the number of stocks}
@@ -41,6 +41,8 @@ popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
 \item{M_agecur}{Matrix [stock, age] of Natural mortality rate at age}
 
 \item{Mat_agecur}{Matrix [stock, age] of maturity (spawning fraction) age age}
+
+\item{Asizex}{Matrix [stock, area] of relative area sizes}
 
 \item{Kx}{Vector [stock] of von B growth parameter K}
 

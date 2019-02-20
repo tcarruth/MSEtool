@@ -19,8 +19,8 @@
 #' @slot MPs The names of the MPs that were tested. Vector of length nMPs. Character strings.
 #' @slot nsim Number of simulations. Single value. Positive integer
 #'
-#' @template OM_desc
-#' @template Obs_desc
+#' @slot OM A table of sampled parameters of the operating model. Data frame of nsim rows.
+#' @slot Obs A table of sampled parameters of the observation model. Data frame of nsim rows.
 #'
 #' @slot B_BMSY Simulated biomass relative to BMSY over the projection. An array with dimensions: nsim, nMPs, proyears. Non-negative real numbers
 #' @slot F_FMSY Simulated fishing mortality rate relative to FMSY over the projection. An array with dimensions: nsim, nMPs, proyears. Non-negative real numbers
