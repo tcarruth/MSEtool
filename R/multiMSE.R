@@ -808,6 +808,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   # --- Populate Data object with Historical Data ----
   DataList<-new('list')
+
   for(p in 1:np)DataList[[p]]<-new('list')
 
   for(p in 1:np){for(f in 1:nf){
@@ -1057,6 +1058,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # ===========================================================================================================================================================================
 
 
+
+
   for (mm in 1:nMP) {  # MSE Loop over methods
 
     if(!silent){
@@ -1174,8 +1177,10 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     NextYrN <- sapply(1:nsim, function(x)
      popdynOneMICE(np,nf,nareas, maxage, Ncur=array(N[x,,,nyears,],c(np,maxage,nareas)), Vcur=array(VF[x,,,,nyears],c(np,nf,maxage)),
-                  Retcur=array(FretA[x,,,,nyears],c(np,nf,maxage)),
-                  Fcur=apply(apply(array(FM[x,,,,nyears,],c(np,nf,maxage,nareas)),c(1,2,4),max),c(1,2),sum),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
+                  #Retcur=array(FretA[x,,,,nyears],c(np,nf,maxage)),
+                  #Fcur=apply(apply(array(FM[x,,,,nyears,],c(np,nf,maxage,nareas)),c(1,2,4),max),c(1,2),sum),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
+                  FMretx=array(FMret[x,,,,nyears,],c(np,nf,maxage,nareas)),
+                  FMx=array(FM[x,,,,nyears,],c(np,nf,maxage,nareas)),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
                   PerrYrp=Perr[x,], hsx=hs[x,], aRx=matrix(aR[x,,],nrow=np), bRx=matrix(bR[x,,],nrow=np),
                   movx=array(mov[x,,,,],c(np,maxage,nareas,nareas)), Spat_targ=array(Spat_targ_y[x,,],c(np,nf)), SRrelx=SRrel[x,],
                   M_agecur=matrix(M_agecur_y[x,,],nrow=np), Mat_agecur=matrix(Mat_agecur_y[x,,],nrow=np),
@@ -1242,6 +1247,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
             MPRecs_A[[p]][[f]]$TAC<-matrix(TAC_A[,p,f],nrow=1)
             MPRecs_A[[p]][[f]]$Effort<-matrix(TAE_A[,p,f],nrow=1)
+            # This next line is to make the NULL effort recommendations of an output control MP compatible with CalcMPdynamics (expects a null matrix)
+            if(is.na(MPRecs_A[[p]][[f]]$Effort[1,1])) MPRecs_A[[p]][[f]]$Effort<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$Effort))
             Data_p_A[[p]][[f]]<-runMP[[2]]
             Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
           }
@@ -1311,7 +1318,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         FleetPars[[p]][[f]]$FM_P <- MPCalcs$FM_P # fishing mortality
         FM_P[,p,f,,,]<- MPCalcs$FM_P
         FleetPars[[p]][[f]]$FM_Pret <- MPCalcs$FM_Pret # retained fishing mortality
-        FretA[,p,f,,]<- MPCalcs$FM_Pret
+        FMret_P[,p,f,,,]<- MPCalcs$FM_Pret
+        #FretA[,p,f,,]<- MPCalcs$FM_Pret
         FleetPars[[p]][[f]]$Z_P <- MPCalcs$Z_P # total mortality
         FleetPars[[p]][[f]]$retA_P <- MPCalcs$retA_P # retained-at-age
 
@@ -1403,9 +1411,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       }
 
       NextYrN <- sapply(1:nsim, function(x)
-           MSEtool:::popdynOneMICE(np,nf,nareas, maxage, Ncur=array(N_P[x,,,y-1,],c(np,maxage,nareas)), Vcur=array(VF[x,,,,nyears+y-1],c(np,nf,maxage)),
-                    Retcur=array(FretA[x,,,,nyears+y-1],c(np,nf,maxage)),
-                    Fcur=apply(apply(array(FM_P[x,,,,y-1,],c(np,nf,maxage,nareas)),c(1,2,4),max),c(1,2),sum),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
+           popdynOneMICE(np,nf,nareas, maxage, Ncur=array(N_P[x,,,y-1,],c(np,maxage,nareas)), Vcur=array(VF[x,,,,nyears+y-1],c(np,nf,maxage)),
+                    #Retcur=array(FretA[x,,,,nyears+y-1],c(np,nf,maxage)),
+                    #Fcur=apply(apply(array(FM_P[x,,,,y-1,],c(np,nf,maxage,nareas)),c(1,2,4),max),c(1,2),mean),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
+                    FMretx=array(FMret_P[x,,,,y-1,],c(np,nf,maxage,nareas)),
+                    FMx=array(FM_P[x,,,,y-1,],c(np,nf,maxage,nareas)),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
                     PerrYrp=Perr[x,], hsx=hs[x,], aRx=matrix(aR[x,,],nrow=np), bRx=matrix(bR[x,,],nrow=np),
                     movx=array(mov[x,,,,],c(np,maxage,nareas,nareas)), Spat_targ=array(Spat_targ_y[x,,],c(np,nf)), SRrelx=SRrel[x,],
                     M_agecur=matrix(M_agecur_y[x,,],nrow=np), Mat_agecur=matrix(Mat_agecur_y[x,,],nrow=np),
@@ -1417,6 +1427,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       Biomass_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[23,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       SSN_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[24,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       SSB_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[25,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
+
+      #apply(SSB_P[1,1,,1:y,],c(1,2),sum)
+      #apply(FM_P[1,1,1,,1:y,],c(1,2),mean)
+
+
       VBiomass_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[19,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       FML <- apply(array(FM_P[, ,,, y-1, ],c(nsim,np,nf,maxage,nareas)), c(1, 3), max)
 
@@ -1513,6 +1528,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                              PerrYr=StockPars[[p]]$Perr_y[x, y+nyears+maxage-1], hs=StockPars[[p]]$hs[x],
                              R0a=StockPars[[p]]$R0a[x,], SSBpR=StockPars[[p]]$SSBpR[x,], aR=StockPars[[p]]$aR[x,], bR=StockPars[[p]]$bR[x,],
                              mov=StockPars[[p]]$mov[x,,,], SRrel=StockPars[[p]]$SRrel[x]))
+
 
             N_PNext <- aperm(array(unlist(NextYrNtemp), dim=c(maxage, nareas, nsim, 1)), c(3,1,4,2))
             VBiomassNext <- VBiomass_P[,p,,,]
@@ -1617,6 +1633,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                 MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
                 MPRecs_A[[p]][[f]]$TAC<-matrix(TAC_A[,p,f],nrow=1)
                 MPRecs_A[[p]][[f]]$Effort<-matrix(TAE_A[,p,f],nrow=1)
+                # This next line is to make the NULL effort recommendations of an output control MP compatible with CalcMPdynamics (expects a null matrix)
+                if(is.na(MPRecs_A[[p]][[f]]$Effort[1,1])) MPRecs_A[[p]][[f]]$Effort<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$Effort))
                 Data_p_A[[p]][[f]]<-runMP[[2]]
                 Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
               }
@@ -1714,7 +1732,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             NoMPRecs <- MPRecs_A[[p]][[f]]
             NoMPRecs[lapply(NoMPRecs, length) > 0 ] <- NULL
             NoMPRecs$Spatial <- NA
-            LastEi[,p,f]<-rep(1,nsim)
+            #LastEi[,p,f]<-rep(1,nsim)
 
             MPCalcs <- DLMtool:::CalcMPDynamics(MPRecs=NoMPRecs, y=y, nyears=nyears, proyears=proyears, nsim=nsim,
                                       LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
@@ -1751,7 +1769,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             FleetPars[[p]][[f]]$FM_P <- MPCalcs$FM_P # fishing mortality
             FM_P[,p,f,,,]<- MPCalcs$FM_P
             FleetPars[[p]][[f]]$FM_Pret <- MPCalcs$FM_Pret # retained fishing mortality
-            FretA[,p,f,,]<- MPCalcs$FM_Pret
+            FMret_P[,p,f,,,]<- MPCalcs$FM_Pret
+            #FretA[,p,f,,]<- MPCalcs$FM_Pret
             FleetPars[[p]][[f]]$Z_P <- MPCalcs$Z_P # total mortality
             FleetPars[[p]][[f]]$retA_P <- MPCalcs$retA_P # retained-at-age
 
@@ -1764,7 +1783,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
         } # end of stocks
 
-      }  # not an update year
+      }  # end of not an update year
 
       #checkNA[y] <- sum(is.na(TACused))
 

@@ -2,8 +2,8 @@
 #'
 #' Calls popdynOneMICE iteratively to reconstruct a time series given MICE model inputs
 #'
-#' @param qs Total catchability
-#' @param qfrac Vector [fleet], the fraction of total qs by fleet
+#' @param qsx Total catchability
+#' @param qfracx Vector [fleet], the fraction of total qs by fleet
 #' @param np Integer, the number of stocks
 #' @param nf Integer, number of fleets
 #' @param nyears Integer, number of historical years (unfished til today)
@@ -39,6 +39,7 @@
 popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
 
   Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
+  VBfx<-array(NA,c(np,nf,maxage,nyears,nareas)) # initial year calculation
   Fy<-array(NA,c(np,nf,nyears))
   Fty<-array(NA,c(np,maxage,nyears,nareas))
   FMy<-FMrety<-VBfx<-array(NA,c(np,nf,maxage,nyears,nareas))
@@ -50,20 +51,43 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
   Wt_agey[,,1]<-ax*Len_age^bx
 
 
-
   for(y in 2:(nyears+1)){
+
+    Nind<-as.matrix(expand.grid(1:np,1:maxage,y-1,1:nareas))
+    Bx[Nind]<-Nx[Nind]*Wt_agey[Nind[,1:3]]
+    SSBx[Nind]<-Bx[Nind]*Mat_agex[Nind[,1:3]]
+
+
+    VBfind<-as.matrix(expand.grid(1:np,1:nf,1:maxage,y-1,1:nareas))
+    #              p f a r                  p a y r               p f a y
+    VBfx[VBfind]<-Bx[VBfind[,c(1,3,4,5)]]*VFx[VBfind[,1:4]]
+
+    FMx<-FMretx<-Fdist<-array(NA,c(np,nf,maxage,nareas))
+    Find<-TEG(dim(Fdist))
+    VBcur<-array(VBfx[,,,y-1,],dim(VBfx)[c(1,2,3,5)])
+    Fdist[Find]<-VBcur[Find]^Spat_targ[Find[,1:2]]
+    VBagg<-apply(Fdist,1:3,sum)
+    Fdist[Find]<-Fdist[Find]/VBagg[Find[,1:3]]
+    Ecur<-matrix(Effind[,,y-1],nrow=np,ncol=nf)
+    Vcur<-array(VFx[,,,y-1],c(np,nf,maxage))
+    FMx[Find]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Vcur[Find[,1:3]]/Asizex[Find[,c(1,4)]]
+    Retcur<-array(FretAx[,,,1],c(np,nf,maxage))
+    FMretx[VBind]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Retcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
+    #Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
 
     # y<-y+1
     Fy[,,y-1]<-Effind[,,y-1]*qsx*qfracx  # this is basically apical F - yet to be subject to Fdist and Asize (inside popdynOneMICE)
     # y<-2; M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
-    Vcur=array(VFx[,,,y-1],dim(VFx)[1:3])
-    Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
-    Fcur=array(Fy[,,y-1],dim(Fy)[1:2])
+    #Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
+    #Fcur=array(Fy[,,y-1],dim(Fy)[1:2])
     Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)])
     M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2])
     Mat_agecur<-array(Mat_agex[,,y-1],dim(Mat_agex)[1:2])
 
-    out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Ncur, Vcur=Vcur, Retcur=Retcur, Fcur=Fcur, PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
+    out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Ncur, Vcur=Vcur,
+                       FMretx=FMretx,
+                       FMx=FMx,
+                       PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
                        movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur, Asizex=Asizex,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
                        bx=by[,y-1],Rel=Rel)
@@ -76,7 +100,7 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
       M_ageArrayx[,,y]<-out$M_agecurx
       Ky[,y]<-out$Kx; Linfy[,y]<-out$Linfx; t0y[,y]<-out$t0x; My[,y]<-out$Mx; hsy[,y]<-out$hsx; ay[,y]<-out$ax; by[,y]<-out$bx
       VBx[,,y,]<-out$VBt
-      VBfx[,,,y,]<-out$VBft
+      #VBfx[,,,y,]<-out$VBft
     }
 
     Zx[,,y-1,]<-out$Zt
@@ -93,7 +117,7 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
 
   # matplot(t(apply(SSBx,c(1,3),sum)))
   # matplot(t(apply(Nx,c(1,3),sum)))
-
+  #    1     2     3         4         5       6       7      8      9     10          11      12    13      14    15    16        17    18
   list(Nx=Nx,Bx=Bx,SSNx=SSNx,SSBx=SSBx,VBx=VBx,FMy=FMy,FMrety=FMrety,Ky=Ky,Linfy=Linfy,t0y=t0y,My=My,hsy=hsy,ay=ay,by=by,VBfx=VBfx,Zx=Zx,Fty=Fty)
 }
 
@@ -109,8 +133,8 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
 #' @param maxage Integer, maximum modelled age
 #' @param Ncur Array [stock, age, area] of stock numbers
 #' @param Vcur Array [fleet, age, area] of the vulnerability curve
-#' @param Retcur Array [fleet, age, area] of the retention curve
-#' @param Fcur Array [stock, fleet] fishing mortality rate
+#' @param FMretx Array [stock, fleet, age, area] of the retention curve
+#' @param FMx Array [stock, fleet, age, area] fishing mortality rate
 #' @param PerrYrp Vector [stock] process error - the lognormal factor for recruitment strength
 #' @param hsx Vector [stock] steepness of the stock recruitment curve
 #' @param aRx Vector [stock] stock recruitment parameter alpha (for Ricker curve)
@@ -136,7 +160,7 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp, hsx, aRx, bRx, movx,Spat_targ,
+popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, hsx, aRx, bRx, movx,Spat_targ,
                         SRrelx,M_agecur,Mat_agecur,Asizex,
                         Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx,herm=NULL, sexspecific=NULL, Rel){
 
@@ -155,7 +179,8 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   # surv <- matrix(1, nsim, maxage)
   #surv[, 2:maxage] <- t(exp(-apply(StockPars[[1]]$M_ageArray[,,1], 1, cumsum)))[, 1:(maxage-1)]  # Survival array
   surv <- array(c(rep(1,np),t(exp(-apply(M_agecur, 1, cumsum)))[, 1:(maxage-1)]),c(np,maxage))  # Survival array
-  oldM<-apply(surv*M_agecur*Mat_agecur,1,sum)/apply(surv*Mat_agecur,1,sum)
+  #oldM<-apply(surv*M_agecur*Mat_agecur,1,sum)/apply(surv*Mat_agecur,1,sum)
+  oldM<-apply(M_agecur*Mat_agecur,1,sum)/apply(Mat_agecur,1,sum)
 
   if(np>1 & length(Rel)>0){
     Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
@@ -170,6 +195,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   M_agecurx<-M_agecur*Mx/oldM  # updated M
 
   # This is redundant code for updating parameters when R0 changes
+
   #surv <- cbind(rep(1,np),t(exp(-apply(M_agecurx, 1, cumsum)))[, 1:(maxage-1)])  # Survival array
   #SSB0x<-apply(R0x*surv*Mat_agecur*Wt_age,1,sum)
   #SSBpRx<-SSB0x/R0x
@@ -187,16 +213,17 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
   SSNcur[Nind]<-Ncur[Nind]*Mat_agecur[Nind[,1:2]]
 
   # Vulnerable biomass calculation --------------------------------------------------
-  VBft<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
+  #VBft<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
+  VBft<-Fdist<-array(NA,c(np,nf,maxage,nareas))
   VBind<-TEG(dim(VBft))
   VBft[VBind]<-Vcur[VBind[,1:3]]*Bcur[VBind[,c(1,3:4)]]
-  Fdist[VBind]<-VBft[VBind]^Spat_targ[VBind[,1:2]]
-  VBagg<-apply(Fdist,1:3,sum)
-  Fdist[VBind]<-Fdist[VBind]/VBagg[VBind[,1:3]]
+  #Fdist[VBind]<-VBft[VBind]^Spat_targ[VBind[,1:2]]
+  #VBagg<-apply(Fdist,1:3,sum)
+  #Fdist[VBind]<-Fdist[VBind]/VBagg[VBind[,1:3]]
+  #FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Vcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
+  #FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Retcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
+  #Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
 
-  FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Vcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
-
-  FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Retcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
   Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
   Zcur<-Ft+array(rep(M_agecur[VBind[,c(1,3)]],nareas),c(np,maxage,nareas))
 

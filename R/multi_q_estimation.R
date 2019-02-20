@@ -143,16 +143,16 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,
                    Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,SSB0x,hsx,aRx, bRx, ax,bx,Perrx,SRrelx,Rel){
 
-  qs<-exp(par[1:np])
+  qsx<-exp(par[1:np])
   if(nf==1){
-    qfrac<-1
+    qfracx<-matrix(1,nrow=np)
   }else{
     qlogit<-array(0,c(np,nf))
     qlogit[,2:nf]<-par[(np+1):length(par)]
-    qfrac<-exp(qlogit)/apply(exp(qlogit),1,sum)
+    qfracx<-exp(qlogit)/apply(exp(qlogit),1,sum)
   }
 
-  HistVars<-popdynMICE(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
+  HistVars<-popdynMICE(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
   # matplot(t(apply(HistVars$SSBx,c(1,3),sum)))
   # matplot(t(apply(HistVars$Nx,c(1,3),sum)))
   # matplot(t(HistVars$Fy))
@@ -173,7 +173,7 @@ qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,Fre
   if(mode=='opt'){
     return(depOBJ+cOBJ)
   }else{
-    return(list(qtot=qs,qfrac=qfrac,CFc=CFc,Cpred=Cpred,depc=depc,deppred=deppred))#,Vulnf=Vulnf,Retf=Retf,MPAf=MPAf))
+    return(list(qtot=qsx,qfrac=qfracx,CFc=CFc,Cpred=Cpred,depc=depc,deppred=deppred))#,Vulnf=Vulnf,Retf=Retf,MPAf=MPAf))
   }
 
 }
