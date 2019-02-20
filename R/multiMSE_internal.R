@@ -1,49 +1,5 @@
 # multiMSE funcs
 
-# Outdated function for producing a stock-specific historical reconstruction
-HistMulti<-function(x,FleetP,StockP,maxage,allyears,nyears,nf,MPAc,qfrac, qs,maxF){
-
-  Vuln=retA=array(NA,c(nf,maxage,nyears))
-  Effind<-t(matrix(unlist(lapply(FleetP,function(dat,x)dat['Find'][[1]][x,],x=x)),ncol=nf))
-  Spat_targc<-unlist(lapply(FleetP,function(dat,x)dat['Spat_targ'][[1]][x],x=x))
-
-  for(ff in 1:nf){ # kind of lazy but not THAT slow
-    Vuln[ff,,]<-FleetP[[ff]]$V[x,,1:nyears]
-    retA[ff,,]<-FleetP[[ff]]$retA[x,,1:nyears]
-  }
-
-  Effdist<-qfrac[x,]*Effind
-  Efftot<-apply(Effdist,2,sum)
-
-  MPAind<-TEG(c(nf,nyears,nareas))
-  MPAtemp<-array(1/nf,dim(MPAc))
-  MPAtemp[MPAind]=(MPAc[MPAind]*Effdist[MPAind[,1:2]])/Efftot[MPAind[,2]] # weighted by effort and fleet exposure
-  MPAf<-apply(MPAtemp,2:3,sum)
-
-  Vulnf<-Retc<-array(NA,c(maxage,nyears))
-  Vind<-TEG(c(nf,maxage,nyears))
-  Vtemp<-Vuln[,,1:nyears]
-  Vtemp[Vind]<-(Vuln[Vind]*Effdist[Vind[,c(1,3)]])/Efftot[Vind[,3]]
-  Vulnf[,1:nyears]<-apply(Vtemp,2:3,sum)
-  #Vulnf[,(nyears+1):allyears]<-Vulnf[,nyears]  # Future vulnerability is the same
-  Vulnf<-nlz(Vulnf,2,"max")       # normalize to max 1
-
-  Rtemp<-retA[,,1:nyears]
-  Rtemp[Vind]<-(retA[Vind]*Effdist[Vind[,c(1,3)]])/Efftot[Vind[,3]]
-  Retc[,1:nyears]<-apply(Rtemp,2:3,sum)
-  #Retc[,(nyears+1):allyears]<-Retc[,nyears]   # Future retention is the same
-
-  Spat_targf<-sum(apply(Effdist,1,sum)*Spat_targc)/sum(Effdist) # Approximation according to historical F by fleet
-
-  popdynCPP(nareas, maxage, Ncurr=N[x,p,,1,], nyears,
-            M_age=StockP$M_ageArray[x,,], Asize_c=StockP$Asize[x,], MatAge=StockP$Mat_age[x,,],
-            WtAge=StockP$Wt_age[x,,],Vuln=Vulnf, Retc=Retc, Prec=StockP$Perr_y[x,], movc=StockP$mov[x,,,], SRrelc=StockP$SRrel[x],
-            Effind=Efftot,  Spat_targc=Spat_targf, hc=StockPars[[p]]$hs[x], R0c=R0a[x,],
-            SSBpRc=StockP$SSBpR[x,], aRc=StockP$aR[x,], bRc=StockP$bR[x,], Qc=qs[x], Fapic=0, MPA=MPAf, maxF=maxF,
-            control=1, SSB0c=StockP$SSB0[x])
-
-}
-
 # New function for reconstructing historical MICE model:
 
 #' Reconstruct historical dynamics
@@ -112,7 +68,10 @@ HistMICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF,
     Spat_targ[p,]<-unlist(lapply(FleetPars[[p]],function(dat,x)dat['Spat_targ'][[1]][x],x=x))
   }
 
- popdynMICE(qs=qs[x,],qfrac=qfrac[x,,],np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
+  qsx<-qs[x,]
+  qfracx<-qfrac[x,,]
+
+ popdynMICE(qsx=qsx,qfracx=qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel)
 
 }
 

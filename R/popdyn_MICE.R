@@ -36,7 +36,7 @@
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
+popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
 
   Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
   Fy<-array(NA,c(np,nf,nyears))
@@ -49,10 +49,12 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
   Wt_agey[,,1]<-ax*Len_age^bx
 
+
+
   for(y in 2:(nyears+1)){
 
     # y<-y+1
-    Fy[,,y-1]<-Effind[,,y-1]*qs*qfrac  # this is basically apical F - yet to be subject to Fdist and Asize (inside popdynOneMICE)
+    Fy[,,y-1]<-Effind[,,y-1]*qsx*qfracx  # this is basically apical F - yet to be subject to Fdist and Asize (inside popdynOneMICE)
     # y<-2; M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
     Vcur=array(VFx[,,,y-1],dim(VFx)[1:3])
     Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
@@ -65,6 +67,9 @@ popdynMICE<-function(qs,qfrac,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,mo
                        movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur, Asizex=Asizex,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
                        bx=by[,y-1],Rel=Rel)
+
+    # PerrYrp=Perrx[,y+maxage-2]; hsx=hsy[,y-1]; Kx=Ky[,y-1]; Linfx=Linfy[,y-1]; t0x=t0y[,y-1]; Mx=My[,y-1]; ax=ay[,y-1]; bx=by[,y-1]
+
     if(y<=nyears){
       Nx[,,y,]<-out$Nnext
       Wt_agey[,,y]<-out$Wt_age
