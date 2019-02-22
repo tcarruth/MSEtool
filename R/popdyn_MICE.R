@@ -50,45 +50,50 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
   Wt_agey[,,1]<-ax*Len_age^bx
 
+  VBfind<-as.matrix(expand.grid(1:np,1:nf,1:maxage,1,1:nareas))
+  Nind<-as.matrix(expand.grid(1:np,1:maxage,1,1:nareas))
+  FMx<-FMretx<-Fdist<-array(NA,c(np,nf,maxage,nareas))
+  Find<-TEG(dim(Fdist))
+  VBcur<-array(NA,dim(VBfx)[c(1,2,3,5)])
+  Ecur<-array(NA,c(np,nf))
+  Vcur<-Retcur<-array(NA,c(np,nf,maxage))
 
   for(y in 2:(nyears+1)){
 
-    Nind<-as.matrix(expand.grid(1:np,1:maxage,y-1,1:nareas))
+    Nind[,3]<-y-1
     Bx[Nind]<-Nx[Nind]*Wt_agey[Nind[,1:3]]
-    SSBx[Nind]<-Bx[Nind]*Mat_agex[Nind[,1:3]]
-
-
-    VBfind<-as.matrix(expand.grid(1:np,1:nf,1:maxage,y-1,1:nareas))
-    #              p f a r                  p a y r               p f a y
+    #SSBx[Nind]<-Bx[Nind]*Mat_agex[Nind[,1:3]]
+    VBfind[,4]<-y-1
+    #      p f a r               p a y r             p f a y
     VBfx[VBfind]<-Bx[VBfind[,c(1,3,4,5)]]*VFx[VBfind[,1:4]]
-
-    FMx<-FMretx<-Fdist<-array(NA,c(np,nf,maxage,nareas))
-    Find<-TEG(dim(Fdist))
-    VBcur<-array(VBfx[,,,y-1,],dim(VBfx)[c(1,2,3,5)])
+    VBcur[]<-VBfx[,,,y-1,]#array(VBfx[,,,y-1,],dim(VBfx)[c(1,2,3,5)])
     Fdist[Find]<-VBcur[Find]^Spat_targ[Find[,1:2]]
-    VBagg<-apply(Fdist,1:3,sum)
-    Fdist[Find]<-Fdist[Find]/VBagg[Find[,1:3]]
-    Ecur<-matrix(Effind[,,y-1],nrow=np,ncol=nf)
-    Vcur<-array(VFx[,,,y-1],c(np,nf,maxage))
+    #VBagg<-apply(Fdist,1:3,sum)
+    Fdist[Find]<-Fdist[Find]/apply(Fdist,1:3,sum)[Find[,1:3]]
+    Ecur[]<-Effind[,,y-1] #matrix(Effind[,,y-1],nrow=np,ncol=nf)
+    Vcur[]<-VFx[,,,y-1]#array(VFx[,,,y-1],c(np,nf,maxage))
     FMx[Find]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Vcur[Find[,1:3]]/Asizex[Find[,c(1,4)]]
-    Retcur<-array(FretAx[,,,1],c(np,nf,maxage))
+    Retcur[]<-FretAx[,,,y-1]#array(FretAx[,,,1],c(np,nf,maxage))
     FMretx[Find]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Retcur[Find[,1:3]]/Asizex[Find[,c(1,4)]]
     #Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
-
     # y<-y+1
     Fy[,,y-1]<-Effind[,,y-1]*qsx*qfracx  # this is basically apical F - yet to be subject to Fdist and Asize (inside popdynOneMICE)
     # y<-2; M_agecur=M_ageArrayx[,,y-1];Mat_agecur=Mat_agex[,,y-1];    PerrYrp=Perrx[,y+maxage-2]
     #Retcur=array(FretAx[,,,y-1],dim(FretAx)[1:3])
     #Fcur=array(Fy[,,y-1],dim(Fy)[1:2])
-    Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)])
-    M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2])
-    Mat_agecur<-array(Mat_agex[,,y-1],dim(Mat_agex)[1:2])
+    #Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)])
+    #M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2])
+    #Mat_agecur<-array(Mat_agex[,,y-1],dim(Mat_agex)[1:2])
 
-    out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=Ncur, Vcur=Vcur,
+    out<-popdynOneMICE(np,nf,nareas, maxage, Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)]),
+                       Vcur=Vcur,
                        FMretx=FMretx,
                        FMx=FMx,
                        PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
-                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx, M_agecur=M_agecur, Mat_agecur=Mat_agecur, Asizex=Asizex,
+                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx,
+                       M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2]),
+                       Mat_agecur=array(Mat_agex[,,y-1],dim(Mat_agex)[1:2]),
+                       Asizex=Asizex,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
                        bx=by[,y-1],Rel=Rel)
 

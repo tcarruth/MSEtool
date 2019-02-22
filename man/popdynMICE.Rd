@@ -4,14 +4,14 @@
 \alias{popdynMICE}
 \title{Population dynamics for a MICE model (multiyear)}
 \usage{
-popdynMICE(qs, qfrac, np, nf, nyears, nareas, maxage, Nx, VFx, FretAx,
+popdynMICE(qsx, qfracx, np, nf, nyears, nareas, maxage, Nx, VFx, FretAx,
   Effind, movx, Spat_targ, M_ageArrayx, Mat_agex, Asizex, Kx, Linfx, t0x,
   Mx, R0x, R0ax, SSBpRx, hsx, aRx, bRx, ax, bx, Perrx, SRrelx, Rel)
 }
 \arguments{
-\item{qs}{Total catchability}
+\item{qsx}{Total catchability}
 
-\item{qfrac}{Vector [fleet], the fraction of total qs by fleet}
+\item{qfracx}{Vector [fleet], the fraction of total qs by fleet}
 
 \item{np}{Integer, the number of stocks}
 

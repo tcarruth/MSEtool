@@ -21,7 +21,27 @@ simulation conditions and performance of MPs for a multi-stock, multi-fleet oper
 
 \item{\code{MPs}}{The names of the MPs that were tested. Vector of length nMPs. Character strings.}
 
+\item{\code{MPcond}}{The MP condition. Character ('bystock': an MP per stock, 'byfleet' and MP per stock and fleet, 'MMP' an MP for all stocks and fleets)}
+
+\item{\code{MPrefs}}{The names of the MPs applied for each stock (row) and fleet (column). An array.}
+
 \item{\code{nsim}}{Number of simulations. Single value. Positive integer}
+
+\item{\code{nstocks}}{Number of stocks. Single value. Positive integer}
+
+\item{\code{nfleets}}{Number of fleets. Single value. Positive integer}
+
+\item{\code{Snames}}{Names of the stocks}
+
+\item{\code{Fnames}}{Names of the fleets (matrix nstocks x nfleets)}
+
+\item{\code{Stocks}}{The stock operating model objects. List of Stocks}
+
+\item{\code{Fleets}}{The fleet operating model objects. Hierarchical list, fleets nested in stocks.}
+
+\item{\code{Obss}}{The fleet specific observation error operating model objects. Hierarchical list, fleets nested in stocks.}
+
+\item{\code{Imps}}{The fleet soecific implementation error operating model objects. Hierarchical list, fleets nested in stocks.}
 
 \item{\code{OM}}{A table of sampled parameters of the operating model. Data frame of nsim rows.}
 

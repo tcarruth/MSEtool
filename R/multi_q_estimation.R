@@ -20,11 +20,12 @@
 #' @param MPA An of spatial closures by year [np,nf,nyears+proyears,nareas]
 #' @param CatchFrac A list of stock-specific fleet fractions of current catch list[[stock]][nsim, nf]
 #' @param bounds Bounds for total q estimation
+#' @param tol A numeric value that is the fraction of machine tolerance (once reduction in objective function steps below this, optimization ends)
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=0.9, MPA,CatchFrac, bounds= c(1e-05, 15),Rel){
+getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=0.9, MPA,CatchFrac, bounds= c(1e-05, 15),tol=1E-3,Rel){
 
   Nx<-array(N[x,,,,],dim(N)[2:5])
   VFx<-array(VF[x,,,,],dim(VF)[2:5])
@@ -82,13 +83,14 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
   depc=matrix(unlist(lapply(StockPars,function(dat)dat['D'])),ncol=np)[x,]
   CFc<-array(NA,c(np,nf))
   for(p in 1:np)CFc[p,]=CatchFrac[[p]][x,]
+  factr<-tol/.Machine$double.eps
 
   opt<-optim(par,qestMICE,
              method="L-BFGS-B",lower=c(rep(log(bounds[1]),np),rep(-5,np*(nf-1))),upper=c(rep(log(bounds[2]),np),rep(5,np*(nf-1))),
              depc=depc,CFc=CFc,mode='opt',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
              Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Asizex=Asizex,Kx=Kx,
              Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,SSB0x=SSB0x,hsx=hsx,ax=ax,bx=bx,aRx=aRx,bRx=bRx,Perrx=Perrx,SRrelx=SRrelx,Rel=Rel,
-             control=list(trace=1))
+             control=list(trace=1,factr=factr))
 
   out<-qestMICE(par=opt$par, depc=depc,CFc=CFc,mode='calc',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
           Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Asizex=Asizex,Kx=Kx,

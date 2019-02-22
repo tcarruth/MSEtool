@@ -4,7 +4,7 @@
 \alias{popdynOneMICE}
 \title{Population dynamics for a MICE model (single year)}
 \usage{
-popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
+popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
   hsx, aRx, bRx, movx, Spat_targ, SRrelx, M_agecur, Mat_agecur, Asizex, Kx,
   Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, herm = NULL,
   sexspecific = NULL, Rel)
@@ -20,9 +20,9 @@ popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, Retcur, Fcur, PerrYrp,
 
 \item{Vcur}{Array [fleet, age, area] of the vulnerability curve}
 
-\item{Retcur}{Array [fleet, age, area] of the retention curve}
+\item{FMretx}{Array [stock, fleet, age, area] of the retention curve}
 
-\item{Fcur}{Array [stock, fleet] fishing mortality rate}
+\item{FMx}{Array [stock, fleet, age, area] fishing mortality rate}
 
 \item{PerrYrp}{Vector [stock] process error - the lognormal factor for recruitment strength}
 

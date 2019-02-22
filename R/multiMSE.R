@@ -113,6 +113,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # 12) Currently there is no MMP checking
   # 13) SelectChanged, the switch that only does MSY calcs if selectivity has changed, is currently set permanently to TRUE (around line 1392)
   # 14) Historical vulnerability is calculated across fleets according to todays catch fraction
+  # 15) Pstar quantiles of TACs not available nreps fixed to 1
 
   # Needs checking
   # 1) The vulnerability in the fleets does not max to 1
@@ -139,7 +140,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   nf<-length(Fleets[[1]])
   maxF<-MOM@maxF
   Snames<-SIL(Stocks,"Name")
-  Fnames<-matrix(SIL(Fleets,"Name"),nrow=nf)
+  Fnames<-matrix(make.unique(SIL(Fleets,"Name")),nrow=nf)
+
   cpars<-MOM@cpars
 
   #MOM <- ChkObj(MOM) # Check that all required slots in OM object contain values
@@ -343,20 +345,30 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   #  qs <- array(0,dim(nsim,nf)) # no fishing
   #} else {
 
-  if(!silent) message("Optimizing for user-specified depletion")  # Print a progress update
+  if(!silent) message("Optimizing for user-specified depletion (takes approximately nstocks/3 x nfleets/3 minutes..)")  # Print a progress update
 
   bounds <- c(0.0001, 15) # q bounds for optimizer
 
   if(sfIsRunning()){
-    out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
+    out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)
   }else{
-    out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
+    out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)
   }
+
+  # system.time({ out<-lapply(1:1,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)})
+  # system.time({out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)})
 
   #out<-lapply(1:nsim,getq_multi_MICE, StockPars, FleetPars, nareas,maxage, pyears, N, maxF=MOM@maxF, MPA, CatchFrac, bounds)
   #return and reallocate
   qs<-t(matrix(NIL(out,"qtot"),nrow=np))
   qfrac<-aperm(array(NIL(out,"qfrac"),c(np,nf,nsim)),c(3,1,2))
+
+  for(p in 1:np){
+    for(f in 1:nf){
+
+      FleetPars[[p]][[f]]$qs<-qs[,p]*qfrac[,p,f]
+    }
+  }
 
     #out<-lapply(1:sim,getq_multi, D=StockPars[[p]]$D, SSB0=SSB0, nareas=nareas, maxage=maxage, Np=N[,p,,,], pyears=nyears, M_ageArray=StockPars[[p]]$M_ageArray, Mat_age=StockPars[[p]]$Mat_age,
     #                Asize=StockPars[[p]]$Asize, Wt_age=StockPars[[p]]$Wt_age,
@@ -518,6 +530,25 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # if (nsim == 1) Depletion <- sum(SSB[,p,,nyears,])/SSB0 #^betas
   for(p in 1:np)StockPars[[p]]$Depletion<-Depletion[,p]
 
+
+  if(checks){
+    Cpred<-array(NA,c(nsim,np,nf,maxage,nareas))
+    Cind<-as.matrix(expand.grid(1:nsim,1:np,1:nf,1:maxage,nyears,1:nareas))
+    Cpred[Cind[,c(1:4,6)]]<-Biomass[Cind[,c(1,2,4,5,6)]]*(1-exp(-FM[Cind]))
+    Cpred<-apply(Cpred,1:3,sum,na.rm=T)
+
+    for(p in 1:np){
+      Cp<-array(Cpred[,p,],c(nsim,nf))/apply(Cpred[,p,],1,sum)
+
+      if(prod(round(CatchFrac[[p]],3)/round(Cp,3))!=1){
+        print(Snames[p])
+        print(cbind(CatchFrac[[p]],rep(NaN,nsim),round(Cp,3)))
+        warning("Possible problem in catch fraction calculations")
+      }
+
+    }
+  }
+
   # # apply hyperstability / hyperdepletion
 
   # Check that depletion is correct
@@ -552,13 +583,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     StockPars[[p]]$UMSY <- MSYrefs[1, ]/StockPars[[p]]$VBMSY  # exploitation rate [equivalent to 1-exp(-FMSY)]
     StockPars[[p]]$FMSY_M <- StockPars[[p]]$FMSY/StockPars[[p]]$M  # ratio of true FMSY to natural mortality rate M
 
-    if (checks) {
-      Btemp <- apply(SSB, c(1,3), sum)
-      x <- Btemp[,nyears]/SSBMSY
-      y <-D/SSBMSY_SSB0
-      plot(x,y, xlim=c(0,max(x)), ylim=c(0,max(y)), xlab="SSB/SSBMSY", ylab="D/SSBMSY_SSB0")
-      lines(c(-10,10),c(-10,10))
-    }
+
 
   } # end of stocks
 
@@ -872,7 +897,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     # put all the operating model parameters in one table
 
     OMtable<-cbind(
-      as.data.frame(StockPars[[p]][c('RefY',"M","Depletion","A","SSBMSY_SSB0","FMSY_M","Mgrad","Msd","procsd","MSY",
+      as.data.frame(StockPars[[p]][c('RefY',"M","D","A","SSBMSY_SSB0","FMSY_M","Mgrad","Msd","procsd","MSY",
                                    "FMSY",'Linf','K','t0','hs','Linfgrad','Kgrad','Linfsd','Ksd','OFLreal','Size_area_1',
                                    'Frac_area_1','Prob_staying','AC','L50','L95','B0','N0','SSB0','BMSY_B0','Blow','MGT','BMSY','SSBMSY','Mexp','Fdisc')]),
 
@@ -999,7 +1024,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # also create the CALout (true catch at length) by stock and fleet as a list since nCALbins varies among stocks (ragged)
   MSElist<-CALout<-list('list')
   for(p in 1:np){
-    MSElist[[p]]<-
+    MSElist[[p]]<-new('list')
     CALout[[p]]<-new('list')
     for(f in 1:nf){
       MSElist[[p]][[f]]<-list(DataList[[p]][[f]])[rep(1, nMP)]
@@ -1156,7 +1181,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     M_agecur_y<-Mat_agecur_y<-array(NA,c(nsim,np,maxage))
     a_y<-b_y<-rep(NA,np)
 
-
     for(p in 1:np){
       Perr[,p]<-StockPars[[p]]$Perr_y[,nyears+maxage-1]
       hs[,p]<-StockPars[[p]]$hs
@@ -1193,7 +1217,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                   bx=b_y,Rel=Rel))
 
 
-
     N_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[1,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
     Biomass_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[23,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
     SSN_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[24,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
@@ -1206,6 +1229,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     #VBF[,,,,1,] <- aperm(array(as.numeric(unlist(NextYrN[20,], use.names=FALSE)), dim=c(np ,nf,maxage, nareas, nsim)), c(5,1,2,3,4))
     #Z_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[21,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
     #FMt_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[22,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
+
     for(p in 1:np){
       StockPars[[p]]$N_P<-N_P[,p,,,]
       StockPars[[p]]$Biomass_P<-Biomass_P[,p,,,]
@@ -1220,7 +1244,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     if(MPcond=="MMP"){
       # returns a hierarchical list object stock then fleet of MPrec objects
 
-      MPRecs_A <- applyMMP(curdat, MPs = MPs[mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+      MPRecs_A <- applyMMP(curdat, MPs = MPs[mm], reps = 1, silent=TRUE)  # Apply MP
       Data_p_A <- MPrecs_A_blank
       for(p in 1:np)for(f in 1:nf){
         Data_p_A[[p]][[f]]<-MSElist[[p]][[f]][[mm]]
@@ -1241,20 +1265,23 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             curdat<-MSElist[[p]][[f]][[mm]]
           }
 
-          runMP <- applyMP(curdat, MPs = MPs[[p]][mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+          runMP <- applyMP(curdat, MPs = MPs[[p]][mm], reps = 1, silent=TRUE)  # Apply MP
 
           # Do allocation calcs
-          TAC_A[,p,]<-as.vector(unlist(runMP[[1]][[1]]$TAC))*MOM@Allocation[[p]]
-          TAE_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$TAE))*MOM@Efactor[[p]],c(nsim,nf))
+          TAC_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$TAC))*MOM@Allocation[[p]],c(nsim,nf))
+          TAE_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$Effort))*MOM@Efactor[[p]],c(nsim,nf))
 
           for(f in 1:nf){
             MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
-            MPRecs_A[[p]][[f]]$TAC<-matrix(TAC_A[,p,f],nrow=1)
+            MPRecs_A[[p]][[f]]$TAC<-matrix(TAC_A[,p,f],nrow=1) # copy allocated TAC
             MPRecs_A[[p]][[f]]$Effort<-matrix(TAE_A[,p,f],nrow=1)
             # This next line is to make the NULL effort recommendations of an output control MP compatible with CalcMPdynamics (expects a null matrix)
             if(is.na(MPRecs_A[[p]][[f]]$Effort[1,1])) MPRecs_A[[p]][[f]]$Effort<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$Effort))
+            if(is.na(MPRecs_A[[p]][[f]]$TAC[1,1])) MPRecs_A[[p]][[f]]$TAC<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+            if(is.na(MPRecs_A[[p]][[f]]$Spatial[1,1])) MPRecs_A[[p]][[f]]$Spatial<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+
             Data_p_A[[p]][[f]]<-runMP[[2]]
-            Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
+            Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC   # copy allocated tAC
           }
 
         }else if(MPcond=="byfleet"){
@@ -1262,7 +1289,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
           for(f in 1:nf){
 
             curdat<-MSElist[[p]][[f]][[mm]]
-            runMP <- applyMP(curdat, MPs = MPrefs[p,f,mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+            runMP <- applyMP(curdat, MPs = MPrefs[p,f,mm], reps = 1, silent=TRUE)  # Apply MP
             MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
             Data_p_A[[p]][[f]]<-runMP[[2]]
             Data_p_A[[p]][[f]]@TAC <- MPRecs_A[[p]][[f]]$TAC
@@ -1282,7 +1309,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       for(f in 1:nf){
 
                 # calculate pstar quantile of TAC recommendation dist
-        TACused[,p,f] <- apply(Data_p_A[[p]][[f]]@TAC, 2, quantile, p = MOM@pstar, na.rm = T)
+        TACused[,p,f] <- TAC_A[,p,f]#apply(Data_p_A[[p]][[f]]@TAC, 2, quantile, p = MOM@pstar, na.rm = T)
 
         checkNA[p,f,y] <- sum(is.na(TACused[,p,f]))
 
@@ -1336,7 +1363,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     }
 
 
-
     #### DEBUG ####
 
     # fs <- -log(1 - apply(CB_P[,,y,], c(1), sum, na.rm=TRUE)/apply(VBiomass_P[,,y,]+CB_P[,,y,], c(1), sum, na.rm=TRUE))
@@ -1372,7 +1398,9 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       if (AnnualMSY) { #
         for(p in 1:np){
 
-         for(f in 1:nf) V_Pt[,f,,]<-FleetPars[[p]][[f]]$V_P*LastCatch[,p,f] # Weighted by catch frac
+         for(f in 1:nf){
+           V_Pt[,f,,]<-FleetPars[[p]][[f]]$V_P*apply(CB[,p,f,,nyears,], 1, sum) # Weighted by catch frac
+         }
          V_P<-nlz(apply(V_Pt,c(1,3,4),sum),c(1,3),"max") #summed over fleets and normalized to 1
 
 
@@ -1630,17 +1658,19 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
               runMP <- applyMP(curdat, MPs = MPs[[p]][mm], reps = MOM@reps, silent=TRUE)  # Apply MP
 
               # Do allocation calcs
-              TAC_A[,p,]<-as.vector(unlist(runMP[[1]][[1]]$TAC))*MOM@Allocation[[p]]
-              TAE_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$TAE))*MOM@Efactor[[p]],c(nsim,nf))
+              TAC_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$TAC))*MOM@Allocation[[p]],c(nsim,nf))
+              TAE_A[,p,]<-array(as.vector(unlist(runMP[[1]][[1]]$Effort))*MOM@Efactor[[p]],c(nsim,nf))
 
               for(f in 1:nf){
                 MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
-                MPRecs_A[[p]][[f]]$TAC<-matrix(TAC_A[,p,f],nrow=1)
+                MPRecs_A[[p]][[f]]$TAC<-matrix(TAC_A[,p,f],nrow=1) # Just pass the allocated TAC
                 MPRecs_A[[p]][[f]]$Effort<-matrix(TAE_A[,p,f],nrow=1)
                 # This next line is to make the NULL effort recommendations of an output control MP compatible with CalcMPdynamics (expects a null matrix)
                 if(is.na(MPRecs_A[[p]][[f]]$Effort[1,1])) MPRecs_A[[p]][[f]]$Effort<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$Effort))
+                if(is.na(MPRecs_A[[p]][[f]]$TAC[1,1])) MPRecs_A[[p]][[f]]$TAC<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+                if(is.na(MPRecs_A[[p]][[f]]$Spatial[1,1])) MPRecs_A[[p]][[f]]$Spatial<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
                 Data_p_A[[p]][[f]]<-runMP[[2]]
-                Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
+                Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC # Copy the allocated TAC
               }
 
             }else if(MPcond=="byfleet"){
