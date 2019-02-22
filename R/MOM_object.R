@@ -57,8 +57,7 @@ setClass("MOM", representation(Name = "character", Agency="character",
 # initialize MOM
 setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=NULL, Imps=NULL, CatchFrac=NULL, cpars=NULL,
                                        interval=4, pstar=0.5, maxF=0.8, reps=1, nsim=48, proyears=50, Source=NULL, Allocation=NULL,Efactor=NULL, Rel=NULL) {
-  # .Object})
-  # .Object<-new('MOM')
+  # .Object}) ; .Object<-new('MOM')
 
   if (is.null(Stocks)|is.null(Fleets)|is.null(Obs)|is.null(Imps)) {
     message("A specified list of objects is required for each of the following arguments: Stocks, Fleets, Obs, Imps, CatchFrac. Returning a blank MOM object")
@@ -88,7 +87,7 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
   .Object@Fleets<-Fleets
 
   np<-length(Stocks)
-  nf<-length(Stocks[[1]])
+  nf<-length(Fleets[[1]])
 
   if(is.null(cpars)){
     .Object@cpars<-list()

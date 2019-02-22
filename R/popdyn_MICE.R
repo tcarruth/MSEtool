@@ -72,7 +72,7 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
     Vcur<-array(VFx[,,,y-1],c(np,nf,maxage))
     FMx[Find]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Vcur[Find[,1:3]]/Asizex[Find[,c(1,4)]]
     Retcur<-array(FretAx[,,,1],c(np,nf,maxage))
-    FMretx[VBind]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Retcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
+    FMretx[Find]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Retcur[Find[,1:3]]/Asizex[Find[,c(1,4)]]
     #Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
 
     # y<-y+1

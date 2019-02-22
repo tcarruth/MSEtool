@@ -155,7 +155,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   if(length(MOM@Efactor)==0){
     MOM@Efactor <-list()
-    for(f in 1:nf)MOM@Efactor[[f]]<-array(1,c(nsim,nf))
+    for(p in 1:np)MOM@Efactor[[p]]<-array(1,c(nsim,nf))
     message("Slot @Efactor of MOM object not specified. Setting slot @Efactor to current effort for all fleets")
   }
 
@@ -346,8 +346,12 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   if(!silent) message("Optimizing for user-specified depletion")  # Print a progress update
 
   bounds <- c(0.0001, 15) # q bounds for optimizer
-  #out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
-  out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
+
+  if(sfIsRunning()){
+    out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
+  }else{
+    out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
+  }
 
   #out<-lapply(1:nsim,getq_multi_MICE, StockPars, FleetPars, nareas,maxage, pyears, N, maxF=MOM@maxF, MPA, CatchFrac, bounds)
   #return and reallocate
@@ -943,7 +947,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     MPrefs<-array(NA,c(nMP,nf,np))
     MPrefs[]<-unlist(MPs)
   }else{
-    if(MSEtool:::ldim(MPs)==MSEtool:::ldim(Fleets)[1]&nf>1){ # not a two-tier list
+    if(MSEtool:::ldim(MPs)==MSEtool:::ldim(Fleets)[1]){ # not a two-tier list
       message("You have specified a vector of MPs for each stock, but not a vector of MPs for each stock and fleet. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
       MPcond<-"bystock"
       nMP<-length(MPs[[1]])
@@ -1851,9 +1855,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     }
   }
 
+  Misc[['MOM']]<-MOM
+
   ## Create MSE Object ####
-  MSEout <- new("MMSE", Name = MOM@Name, nyears, proyears, nMPs=nMP, MPs, nsim,
-                OM=OM, Obs=Obsout, B_BMSY=B_BMSYa, F_FMSY=F_FMSYa, B=Ba,
+  MSEout <- new("MMSE", Name = MOM@Name, nyears, proyears, nMPs=nMP, MPs, MPcond=MPcond,MPrefs=MPrefs,nsim, nstocks=np, nfleets=nf,
+                Snames=Snames, Fnames=Fnames, Stocks=Stocks, Fleets=Fleets, Obss=Obs, Imps=Imps,OM=OM, Obs=Obsout, B_BMSY=B_BMSYa, F_FMSY=F_FMSYa, B=Ba,
                 SSB=SSBa, VB=VBa, FM=FMa, CaRet, TAC=TACa, SSB_hist = SSB, CB_hist = CB,
                 FM_hist = FM, Effort = Effort, PAA=PAAout, CAA=CAAout, CAL=CALout, CALbins=CALbins,
                 Misc = Misc)
