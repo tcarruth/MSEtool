@@ -1,0 +1,327 @@
+---
+title: "User guide for multiMSE: "
+subtitle: "Multi-species, multi-stock and MICE dynamics using MSEtool"
+author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>)"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true 
+vignette: >
+  %\VignetteIndexEntry{User guide to MSEtool}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+   font-size: 12px;
+}
+td {  /* Table  */
+   font-size: 8px;
+}
+h1 { /* Header 1 */
+ font-size: 18px;
+ color: DarkBlue;
+}
+h2 { /* Header 2 */
+ font-size: 15px;
+ color: DarkBlue;
+}
+h3 { /* Header 3 */
+ font-size: 14px;
+ color: DarkBlue;
+}
+code.r{ /* Code block */
+  font-size: 10px;
+}
+pre { /* Code block */
+  font-size: 10px
+}
+</style>
+
+
+```{r set options, echo = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(dpi=85)
+options(width = 650)
+library(DLMtool)
+library(DLMextra)
+library(MSEtool)
+```
+
+<br>
+
+
+
+# Introduction 
+
+Management Strategy Evaluation can be a complex business even for single-stock and single-fleet operating models. Population dynamics, fleet dynamics, observation processes (e.g. catch over reporting), implementation error (e.g. catch-limit overages) and appropriate management procedures (MPs) need to be specified. 
+
+In most fisheries settings, single-stock, single-fleet operating models are sufficient. Unless management advice is explicitly given on a fleet-by-fleet basis (e.g. two TACs specific to recreational and commercial fisheries) then the fleet dynamics can be pooled into an aggregate fishery. Unless (A) dynamics of one stock interact with another stock (e.g. a predator and prey) or (B) stocks with varying dynamics are managed as a complex (e.g. one TAC for all sculpins as in Alaska) then MPs can be tested for one individual stock at a time. 
+
+There are however situations when managers wish to evaluate the robustness of a proposed management plan among fleets and/or stocks, acknowledging that there are interactions between these. To this end, MSEtool includes the function multiMSE() a version of runMSE() that conducts MSE for multiple fleets/stocks and allows users to prescribe interactions between stocks using conventional R models. 
+
+To accomplish this, you will need to know about a new class of operating model object 'MOM' (multi operating model), a new class of MSE object 'MMSE' (multi MSE), and optionally, a new class of management procedure 'MMP' (multi MP). 
+
+Beyond learning to use these new object and functions, multiMSE() is extremely simple to use and hence misuse. I can't stress enough how important it is to have a clear justification for why a multi-stock and/or multi-fleet MSE is necessary for your particular management setting (it may not be). The coding for multiMSE() required careful thought about the various use-cases and it became increasingly clear that there are a very large number each with their own specific set of requirement and assumptions. 
+
+In this guide I will attempt to clarify these various use cases and be explicit about the assumptions entailed. You are now wondering into a relatively unestablished and unchartered territory of MSE - good luck! 
+
+Remebemr you can always fire off an email to me if you have questions: <t.carruthers@oceans.ubc.ca>
+
+Also, a general guide to using DLMtool and MSEtool can be found using:
+
+```{r, eval = FALSE}
+DLMtool::userguide()
+```
+
+
+# The multi operating model object MOM
+
+The MOM object is not terribly different from a standard DLMtool/MSEtool OM object. 
+
+```{r, eval = TRUE}
+library(DLMtool) # load DLMtool library
+DLMextra()       # download lots of cool DLMtool/MSEtool objects from GitHub
+library(DLMextra)# load all those objects
+library(MSEtool) # load MSEtool (data rich MPs, MOM object class etc)
+
+slotNames(MOM)   # what slots are there in an MOM object
+class?MOM        # check out the help file on MOM objects
+
+```
+
+The big difference betweeen objects of class OM and those of class MOM, is that instead of including a slot for each parameter of the stock (Stock), fleet (Fleet), observation (Obs) and implementation (Imp) models, MOM objects include just four slots that are lists of whole Stock, Fleet, Obs and Imp objects - after all its multi-fleet and/or multi stock right?!
+
+
+## Stocks, Fleets, Obs and Imps
+
+There are four new slots in an MOM object (compared with an OM object): MOM@Stocks MOM@Fleets MOM@Obs, MOM@Imps 
+
+* MOM@Stocks is a list of stock objects (nstocks long)
+* MOM@Fleets is a hierarchical list of fleet objects (nstocks with fleets nested in stocks)
+* MOM@Obs is a hierarchical list of observation error objects (nstocks with fleets nested in stocks)
+* MOM@Imps is a hierarchical list of implementation error objects (nstocks with fleets nested in stocks)
+
+Ideally you'd get your various dynamics from conditioned operating models either using the StochasticSRA or using the helper functions that read in stock assessment outputs from, for example Stock Synthesis (SS2OM) or iSCAM (iSCAM2OM). However for simplicity I'll demonstrate how to do multiMSE with some pre-existing Stock, Fleet, Obs and Imp objects that were loaded with library(DLMextra):
+
+```{r, eval = TRUE}
+avail('Stock')   # what Stock objects are loaded?
+avail('Fleet')   # what Fleet objects are loaded?
+avail('Obs')     # what Obs objects are loaded?
+avail('Imp')     # what Imp objects are loaded?
+
+```
+
+Lets imagine that we lose our minds and decide to create a model that simulates interactions between bluefin tuna and herring (we think bluefin eat herring). We also want to simulate three fleets, a bluefin fleet, a herring fleet and a mixed fleet that somehow, against all odds catches both bluefin and herring! About as hypothetical as it gets but that is intentional, this is just a demonstration! First we start off by creating the list of stock objects, this is pretty easy:
+
+```{r, eval = TRUE}
+Stocks <- list('Bluefin_tuna','Herring')
+
+```
+
+We now want to create our fleets for these stocks. Our bluefin-only fleet has stable effort (premade fleet type 'Generic_FlatE') our herring-only fleet has increasing effort (premade fleet type 'Generic_IncE') and our mythical mixed fishery has decreasing effort (premade fleet type 'Generic_DecE'). A constraint of multiMSE is that we have to replicate these across the stocks using a hierarchical list structure:
+
+```{r, eval = TRUE}
+
+Fleets_both_Stocks <- list(Generic_FlatE, Generic_IncE, Generic_DecE)
+Fleets <- list( Fleets_both_Stocks, # Bluefin (position 1 in Stocks)
+                Fleets_both_Stocks) # Herring (position 2 in Stocks)
+
+```
+
+Since each of these Fleets is going to generate fishery data, they each need an observation model for each stock. Just like the Fleets list, this is hierarchical in nature Fleets nested in Stocks and we are going to assume that we get good data (Precise and Unbiased) for bluefin and bad data (Imprecise and Biased) for herring. 
+
+```{r, eval = TRUE}
+
+Bluefin_obs <- list(Precise_Unbiased, Precise_Unbiased, Precise_Unbiased)
+Herring_obs <- list(Imprecise_Biased, Imprecise_Biased, Imprecise_Biased)
+Fleets <- list( Bluefin_obs, # Bluefin (position 1 in Stocks)
+                Herring_obs) # Herring (position 2 in Stocks)
+
+```
+
+Lastly we need to specify implementation error for these, we are going to assume this is fleet specific and perfect for the first 2 fleets and includes overages for the mixed fleet (fleet 3 - Generic_DecE).
+
+```{r, eval = TRUE}
+
+Imp_both_Stocks <- list(Perfect_Imp, Perfect_Imp, Overages)
+Fleets <- list( Imp_both_Stocks, # Bluefin (position 1 in Stocks)
+                Imp_both_Stocks) # Herring (position 2 in Stocks)
+
+```
+
+Each of the stocks already has a prespecified range of depletion:
+
+
+```{r, eval = TRUE}
+
+Bluefin_tuna@D
+Herring@D
+
+```
+
+## Catch fractions by fleet for each stock
+
+To allow MOM to run we need 1 extra Thing and should have an additional Thing 2 after that. 
+
+Thing 1 is the current (most recent year) catch fractions among fleets for each stock. This information is required to calculate the relative catchabilities among the fleets. Catch fractions are a list (nstock long of) matrices. Suppose we want 80% of current bluefin catches to come from fleet 1, 1% from fleet 2 and 19% from fleet 3, and also 60% of herring catches to come from Fleet 2, 5% from fleet 1 and the remaining 35% from Fleet 3, this is how you would specify that:
+
+
+```{r, eval = TRUE}
+nsim = 10
+#                  Fleet1  Fleet2   Fleet3
+bluefin_catchfrac<-c(0.8,   0.01,   0.19)
+herring_catchfrac<-c(0.05,  0.6,    0.35)
+CatchFrac <- list(
+                  matrix( rep(bluefin_catchfrac, each=nsim), nrow=nsim),
+                  matrix( rep(herring_catchfrac, each=nsim), nrow=nsim)
+)
+
+CatchFrac[[1]]
+
+```
+
+The observant types among you will have noticed that we now need to specify the number of MSE simulations we are going to be doing (nsim). For now this is just 10 for demonstration purposes but ultimately this would be 148+ for a real MSE. The reason we have done this is to allow for uncertainty in the catch fractions - the user could make this a matrix with varying fractions among fleets by simulation. For now these are the same among simulations, which is boring. 
+
+
+## Specifying inter-stock relationships
+
+You'll remember that I said there was a Thing 2 that we should add to our multi operating model? 
+
+Ask yourself why we are modelling bluefin and herring together?
+
+Because we want to look at an interaction between these stocks. If we didnt' we would just model these stocks individually, and their would be only one stock in Stocks and only one list of fleets in Fleets. If we didn't expect to set fleet-specific advice AND we weren't modelling bluefin and herring interactions we should just be using the regular runMSE() from DLMtool and MSEtool and calculate the aggregate fleet dynamics (aggregate size vulnerability and trend in apical fishing mortality rate, for example). 
+
+But we're demonstrating multiMSE() here, and should therefore specify at least one relationship between the stocks (noting that you may wish to evaluate MPs for a stock complex of multiple stock objects with no interactions - more below). The slot MOM@Rel is where you put these relationships - Rel is a list of R models with quite specific formatting. More on this formatting in just a minute.  
+
+Since we think bluefin are predators of herring, we are going to propose a relationship between bluefin abundance and the natural mortality rate of herring. Normally we would have derived this relationship empirically from data (in this case herring tagging estimates of survival regressed on bluefin abundance estimates from a stock assessment, perhaps). 
+
+However for the purposes of this demonstration we're just going to cook something up out of thin air: nominally we are going to assume that herring have a natural mortality rate of 0.2 when there are no bluefin, and 0.4 when bluefin tuna are at unfished levels. To invent this we are going to need to calculate bluefin unfished biomass from the operating model, make some fake data and fit an R model. Here goes:
+
+
+```{r, eval = TRUE}
+ages <- 1:60
+bf_M <- mean(Bluefin_tuna@M)          # natural mortality rate
+bf_Linf <- mean(Bluefin_tuna@Linf)    # asymptotic length
+bf_K <- mean(Bluefin_tuna@K)          # von Bertalanffy growth parameter K
+bf_t0 <- mean(Bluefin_tuna@t0)        # von B. theoretical age at length zero
+bf_R0 <- Bluefin_tuna@R0              # unfished recruitment
+
+bf_surv <- bf_R0*exp(-bf_M*(ages-1))             # survival
+bf_wt_age <- bf_Linf*(1-exp(-bf_K*(ages-bf_t0))) # weight at age   
+bf_unfished <- sum(bf_R0*bf_surv*bf_wt_age)      # approxiate estimate of unfished biomass
+
+M_err <- rlnorm(100,0,0.05)
+M_2 <- seq(0.2,0.4,length.out=100) * M_err  # made up herring (stock 2) M values
+B_1 <- seq(0,bf_unfished,length.out=100)    # made up bluefin tuna abundance levels
+
+dat <- data.frame(M_2,B_1)
+bfB_hM <- lm(M_2~B_1,dat=dat) # a linear model predicting M for stock 2 from biomass B for stock 1
+summary(bfB_hM)
+
+plot(dat$B_1, dat$M_2,pch=19)
+lines(dat$B_1, predict(bfB_hM,newdat=dat),col='red')
+points(dat$B_1, simulate(bfB_hM,nsim=1,newdat=dat)[,1],col='green')
+legend('topleft',legend=c("made up data","best fit","simulated"),text.col=c('black','red','green'))
+
+Rel <- list(bfB_hM)
+
+```
+
+That is a lot to take in. 
+
+We derived a rough level of unfished bluefin biomass, made up some data (normally we would hope to have collected these) with log-normal error in herring M. We then fitted an R model (red line) and also simulated (green points) some new data based on that fit. Lastly, we placed our fitted model in a mysterious list object 'Rel'. More on that in a minute.   
+
+Here are the important things to know about inter-stock relationships in the 'Rel' slot:
+
+Any R model can be used that:
+ * is compatible with the function simulate()
+ * has specific coding for independent (e.g. the bluefin biomass) and dependent variables (e.g. the herring natural mortality rate)
+ 
+The coding of independent variables goes like this:
+
+B   = total stock biomass
+SSB = total spawning stock biomass
+N   = total stock numbers
+
+The coding of dependent variables goes like this:
+
+M    = Natural mortality rate of mature individuals
+K    = von Bertalanffy growth parameter K
+Linf = asymtotic size Linf
+t0   = von Bertalanffy theoretical age at length-0 t0
+a    = weight length parameter a (W=aL^b)
+b    = weight length parameter b (W=aL^b)
+hs   = steepness of the Beverton-Holt or Ricker stock recruitment function
+
+The underscore then number denotes the stock. So SSB_5 is the spawning stock biomass of the fifth stock in the Stocks object, Linf_2 is the asymptotic length of stock 2. 
+
+Currently there can only be one dependent variable but many independent variables so this model is possible:
+
+M_3 ~ B_1 + B_2 - B_4
+
+You can't have transformed independent variables but you can transform the independent variables so this model is possible:
+
+hs_3 ~ log(B_2) * log(B_1)
+
+but not this:
+
+log(hs_3) ~ B_2 + B_1
+
+And another thing, the order you place these in the Rel list object determines the order they operate in. This may not be consequential yet, but plans are in the works to let an dependent variable in one relationship be the independent in the next. 
+
+The idea behind the 'Rel' slot of the MOM object is to open up the option of including ecosystem driven relationships in a terse 'models of intermediate complexity' (MICE) format.
+
+A note of caution before you go hog-wild with the Rel slot: it is probably fairly easy to set up a set of relationship and stock depletions that are impossible to solve in the intialization of the operating models in multiMSE. I haven't had this issue yet, but do give some thought about your proposed relationships before you, for example, make herring M = 5 when bluefin depletion is 0.1 and then specify bluefin depletion as 0.1 and herring at 0.8 ...
+
+## Constructing the MOM object
+
+Now we have the lists: 
+* Stocks,
+* Fleets
+* Obs
+* Imps
+* CatchFrac
+* Rel
+
+We can construct an object of class MOM and see what it looks like:
+
+```{r, eval = TRUE}
+
+MOM_BH <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel=Rel, nsim=nsim)
+plot(MOM_BH)
+
+```
+
+We have our operating model, now we need some MPs to test...
+
+
+# Specifying MPs and various use cases
+
+
+
+## Fleet specific MPs
+
+## Stock-wide MPs
+
+## Stock complexes
+
+## Multi-fleet and/or Multi-stock management plans
+
+
+
+
+
+_Figure 5. Trade-off plot of the MSE for the MPs that use the Delay-Difference model with two harvest control rules and the FMSY reference MP._
+
+
+# Acknowledgements
+
+MSEtool development is funded by the Canadian Department of Fisheries and Oceans and benefits from ongoing collaborations with the Natural Resources Defense Council and number of Canadian government scientists including Robyn Forrest, Sean Anderson and Daniel Duplisea. 
+
+The [DLMtool](http://www.datalimitedtoolkit.org) package was developed at the University of British Columbia in collaboration with the Natural Resources Defense Council. DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
+
+<a href="http://www.datalimitedtoolkit.org"><img src="DLMtool_logo.png" width=250></a>

@@ -135,9 +135,18 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   Stocks<-MOM@Stocks
   Fleets<-MOM@Fleets
   Rel<-MOM@Rel
+  SexPars<-MOM@SexPars
+  Complexes<-MOM@Complexes
   CatchFrac<-MOM@CatchFrac
   np<-length(Stocks)
   nf<-length(Fleets[[1]])
+
+  if(np==1&nf==1){
+    message("You have specified only a single stock and fleet. You should really be using the function runMSE()")
+  }else if(np>1 & length(MOM@Rel)==0 & length(MOM@SexPars)==0){
+    message("You have specified more than one stock but no MICE relationships (slot MOM@Rel) or sex-specific relationships (slot MOM@SexPars) among these. As they are independent, consider doing MSE for one stock at a time for computational efficiency.")
+  }
+
   maxF<-MOM@maxF
   Snames<-SIL(Stocks,"Name")
   Fnames<-matrix(make.unique(SIL(Fleets,"Name")),nrow=nf)
@@ -337,6 +346,27 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   } # end of np
 
+
+  # if SexPars Sex specific exceptions (recalculation of SSB0, aR, bR, SSBpR)
+  if(length(SexPars)>0){
+
+    SSB0s<-matrix(NIL(StockPars,"SSB0"),nrow=nsim) # sim, p
+
+    for(p in 1:np){
+
+      SSB0<-apply(matrix(rep(SexPars$SSBfrom[p,],each=nsim),nrow=nsim)*SSB0s,1,sum)
+      StockPars[[p]]$SSBpR<-array(SSB0/StockPars[[p]]$R0,c(nsim,nareas)) # !!!!!!!!!!! SSBpR hardwired to be the same among areas !!!!
+
+      idist<-StockPars[[p]]$R0a/apply(StockPars[[p]]$R0a,1,sum)
+      SSB0a<-SSB0*idist
+
+      StockPars[[p]]$bR <- matrix(log(5 * StockPars[[p]]$hs)/(0.8 * SSB0a), nrow=nsim)  # Ricker SR params
+      StockPars[[p]]$aR <- matrix(exp(StockPars[[p]]$bR * SSB0a)/StockPars[[p]]$SSBpR, nrow=nsim)  # Ricker SR params
+
+    }
+
+  }
+
   # --- Optimize catchability (q) to fit depletion ----
   #if ('unfished' %in% names(control) && control$unfished) {
   # if(!silent) message("Simulating unfished historical period")
@@ -350,9 +380,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   bounds <- c(0.0001, 15) # q bounds for optimizer
 
   if(sfIsRunning()){
-    out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)
+    out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
+                  MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
   }else{
-    out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)
+    out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
+                MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
   }
 
   # system.time({ out<-lapply(1:1,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel)})
@@ -440,7 +472,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         }
       }
 
-      out2<-sfLapply(probQ,MSEtool:::getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel)
+      out2<-sfLapply(probQ,MSEtool:::getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,Rel,SexPars)
 
       qs2<-t(matrix(NIL(out2,"qtot"),nrow=np))
       qout2<-array(NIL(out2,"qfrac"),c(np,nf,nsim))
@@ -510,7 +542,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
 
   histYrs <- sapply(1:nsim,HistMICE, StockPars=StockPars,FleetPars=FleetPars,np=np,nf=nf,nareas=nareas,
-                    maxage=maxage,nyears=nyears,N=N,VF=VF,FretA=FretA,maxF=MOM@maxF,MPA=MPA,Rel=Rel,qs=qs,qfrac=qfrac)
+                    maxage=maxage,nyears=nyears,N=N,VF=VF,FretA=FretA,maxF=MOM@maxF,MPA=MPA,Rel=Rel,SexPars=SexPars,qs=qs,qfrac=qfrac)
 
   N <- aperm(array(as.numeric(unlist(histYrs[1,], use.names=FALSE)), dim=c(np ,maxage, nyears, nareas, nsim)), c(5,1,2,3,4))
   Biomass <- aperm(array(as.numeric(unlist(histYrs[2,], use.names=FALSE)), dim=c(np ,maxage, nyears, nareas, nsim)), c(5,1,2,3,4))
@@ -571,7 +603,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     V<-nlz(V,c(1,3),"max")
     MSYrefs <- sapply(1:nsim, DLMtool:::optMSY_eq, StockPars[[p]]$M_ageArray, StockPars[[p]]$Wt_age, StockPars[[p]]$Mat_age,
                       V=V, maxage=maxage,
-                      R0=StockPars[[p]]$R0, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, yr=nyears)
+                      R0=StockPars[[p]]$R0, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, yr.ind=(nyears-1):nyears)
 
     StockPars[[p]]$MSY <- MSYrefs[1, ]  # record the MSY results (Vulnerable)
     StockPars[[p]]$FMSY <- MSYrefs[2, ]  # instantaneous FMSY (Vulnerable)
@@ -897,8 +929,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     # put all the operating model parameters in one table
 
     OMtable<-cbind(
-      as.data.frame(StockPars[[p]][c('RefY',"M","D","A","SSBMSY_SSB0","FMSY_M","Mgrad","Msd","procsd","MSY",
-                                   "FMSY",'Linf','K','t0','hs','Linfgrad','Kgrad','Linfsd','Ksd','OFLreal','Size_area_1',
+      as.data.frame(StockPars[[p]][c('RefY',"M","D","A","SSBMSY_SSB0","FMSY_M","Msd","procsd","MSY",
+                                   "FMSY",'Linf','K','t0','hs','Linfsd','Ksd','OFLreal','Size_area_1',
                                    'Frac_area_1','Prob_staying','AC','L50','L95','B0','N0','SSB0','BMSY_B0','Blow','MGT','BMSY','SSBMSY','Mexp','Fdisc')]),
 
       as.data.frame(FleetPars[[p]][[f]][c('Esd','dFfinal','qinc','qcv','Spat_targ')]),
@@ -959,20 +991,19 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   # Detecting MP specification  -----------------------------------------------------------------------------------------------------------------------------------
 
-  if(identical(MSEtool:::ldim(MPs),MSEtool:::ldim(Fleets))){
+  if(identical(ldim(MPs),MSEtool:::ldim(Fleets))){
     message("You have specified an MP for each stock and fleet. Only fleet-specific catches and indices will enter the MP for each fleet")
     MPcond<-"byfleet"
     nMP <- length(MPs[[1]][[1]])
     MPrefs<-array(NA,c(nMP,nf,np))
     MPrefs[]<-unlist(MPs)
   }else if(np==1&nf==1){
-    message("You have specified only a single stock and fleet. You should really be using the function runMSE()")
     nMP <- length(MPs[[1]][[1]])
     MPcond<-"bystock"
     MPrefs<-array(NA,c(nMP,nf,np))
     MPrefs[]<-unlist(MPs)
   }else{
-    if(MSEtool:::ldim(MPs)==MSEtool:::ldim(Fleets)[1]){ # not a two-tier list
+    if(ldim(MPs)==ldim(Fleets)[1]){ # not a two-tier list
       message("You have specified a vector of MPs for each stock, but not a vector of MPs for each stock and fleet. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
       MPcond<-"bystock"
       nMP<-length(MPs[[1]])
@@ -986,14 +1017,13 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         nMP<-length(MPs)
         MPrefs<-array(NA,c(nMP,nf,np))
         MPrefs[]<-MPs
-      }
-      if(class(get(MPs[1]))=="MP"){
-        message("You have specified a vector of MPs rather than a list of MPs, one list position for MP type. The same MP will be applied to all stocks. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
-        MPcond<-"bystock"
+      }else if(class(get(MPs[1]))=="MP"){
+        message("You have specified a vector of MPs rather than a list of MPs, one list position for MP type. The same MP will be applied to the aggregate data for all stocks and fleets. The MP will, for example, be used to set a single TAC for all stocks and fleets combined. This will be allocated among fleets according to recent catches and among stocks according to available, vulnerable biomass")
+        MPcond<-"complex"
         MPtemp<-MPs
         MPs<-new('list')
         for(p in 1:np)MPs[[p]]<-MPtemp
-        nMP<-length(MPs)--
+        nMP<-length(MPs)
         MPrefs<-array(NA,c(nMP,nf,np))
         MPrefs[]<-unlist(MPs)
       }
@@ -1087,7 +1117,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # ===========================================================================================================================================================================
 
 
-
+  mm<-1
 
   for (mm in 1:nMP) {  # MSE Loop over methods
 
@@ -1176,7 +1206,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     Perr<-hs<-R0<-SRrel<-K<-Linf<-t0<-M<-array(NA,c(nsim,np))
     aR<-bR<-R0a<-SSBpR<-Asize<-array(NA,c(nsim,np,nareas))
-    mov<-array(NA,c(nsim,np,maxage,nareas,nareas))
+    mov<-array(NA,c(nsim,np,maxage,nareas,nareas,nyears+proyears))
     Spat_targ_y<-array(NA,c(nsim,np,nf))
     M_agecur_y<-Mat_agecur_y<-array(NA,c(nsim,np,maxage))
     a_y<-b_y<-rep(NA,np)
@@ -1186,7 +1216,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       hs[,p]<-StockPars[[p]]$hs
       aR[,p,]<-StockPars[[p]]$aR
       bR[,p,]<-StockPars[[p]]$bR
-      mov[,p,,,]<-StockPars[[p]]$mov
+      mov[,p,,,,]<-StockPars[[p]]$mov
       for(f in 1:nf)Spat_targ_y[,p,f]<-FleetPars[[p]][[f]]$Spat_targ
       SRrel[,p]<-StockPars[[p]]$SRrel
       M_agecur_y[,p,]<-StockPars[[p]]$M_ageArray[,,nyears]
@@ -1210,11 +1240,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                   FMretx=array(FMret[x,,,,nyears,],c(np,nf,maxage,nareas)),
                   FMx=array(FM[x,,,,nyears,],c(np,nf,maxage,nareas)),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
                   PerrYrp=Perr[x,], hsx=hs[x,], aRx=matrix(aR[x,,],nrow=np), bRx=matrix(bR[x,,],nrow=np),
-                  movx=array(mov[x,,,,],c(np,maxage,nareas,nareas)), Spat_targ=array(Spat_targ_y[x,,],c(np,nf)), SRrelx=SRrel[x,],
+                  movy=array(mov[x,,,,,nyears],c(np,maxage,nareas,nareas)), Spat_targ=array(Spat_targ_y[x,,],c(np,nf)), SRrelx=SRrel[x,],
                   M_agecur=matrix(M_agecur_y[x,,],nrow=np), Mat_agecur=matrix(Mat_agecur_y[x,,],nrow=np),
                   Asizex=matrix(Asize[x,,],ncol=nareas),Kx =K[x,], Linfx=Linf[x,],t0x=t0[x,],Mx=M[x,],
                   R0x=R0[x,],R0ax=matrix(R0a[x,,],nrow=np),SSBpRx=matrix(SSBpR[x,,],nrow=np),ax=a_y,
-                  bx=b_y,Rel=Rel))
+                  bx=b_y,Rel=Rel,SexPars=SexPars))
 
 
     N_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[1,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
@@ -1250,6 +1280,9 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         Data_p_A[[p]][[f]]<-MSElist[[p]][[f]][[mm]]
         Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
       }
+    }else if(MPcond=="complex"){
+
+
 
     }else{
 
@@ -1405,7 +1438,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
 
           MSYrefsYr <- sapply(1:nsim, DLMtool:::optMSY_eq, StockPars[[p]]$M_ageArray,  StockPars[[p]]$Wt_age,  StockPars[[p]]$Mat_age,
-                                V_P, StockPars[[p]]$maxage, StockPars[[p]]$R0, StockPars[[p]]$SRrel, StockPars[[p]]$hs, yr=nyears+y)
+                                V_P, StockPars[[p]]$maxage, StockPars[[p]]$R0, StockPars[[p]]$SRrel, StockPars[[p]]$hs, yr.ind=(nyears+y)+(-1:0))
           MSY_P[,p,mm,y] <- MSYrefsYr[1, ]
           FMSY_P[,p,mm,y] <- MSYrefsYr[2,]
           SSBMSY_P[,p,mm,y] <- MSYrefsYr[3,]
@@ -1434,7 +1467,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
       for(p in 1:np){
         Perr[,p]<-StockPars[[p]]$Perr_y[,y+nyears+maxage-1]
-        mov[,p,,,]<-StockPars[[p]]$mov # Soon to be by year
         M_agecur_y[,p,]<-StockPars[[p]]$M_ageArray[,,nyears+y]
         Mat_agecur_y[,p,]<-StockPars[[p]]$Mat_age[,,nyears+y]
         K[,p]<-StockPars[[p]]$Karray[,nyears+y]
@@ -1449,11 +1481,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                     FMretx=array(FMret_P[x,,,,y-1,],c(np,nf,maxage,nareas)),
                     FMx=array(FM_P[x,,,,y-1,],c(np,nf,maxage,nareas)),   # note that Fcur is apical F but, in popdynOneMICE it is DIVIDED in future years between the two areas depending on vulnerabile biomass. So to get Fcur you need to sum over areas (a bit weird)
                     PerrYrp=Perr[x,], hsx=hs[x,], aRx=matrix(aR[x,,],nrow=np), bRx=matrix(bR[x,,],nrow=np),
-                    movx=array(mov[x,,,,],c(np,maxage,nareas,nareas)), Spat_targ=array(Spat_targ_y[x,,],c(np,nf)), SRrelx=SRrel[x,],
+                    movy=array(mov[x,,,,,nyears+y],c(np,maxage,nareas,nareas)), Spat_targ=array(Spat_targ_y[x,,],c(np,nf)), SRrelx=SRrel[x,],
                     M_agecur=matrix(M_agecur_y[x,,],nrow=np), Mat_agecur=matrix(Mat_agecur_y[x,,],nrow=np),
                     Asizex=matrix(Asize[x,,],ncol=nareas), Kx =K[x,], Linfx=Linf[x,],t0x=t0[x,],Mx=M[x,],
                     R0x=R0[x,],R0ax=matrix(R0a[x,,],nrow=np),SSBpRx=matrix(SSBpR[x,,],nrow=np),ax=a_y,
-                    bx=b_y,Rel=Rel))
+                    bx=b_y,Rel=Rel, SexPars=SexPars))
 
       N_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[1,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       Biomass_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[23,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
@@ -1559,7 +1591,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                              Zcurr=matrix(StockPars[[p]]$M_ageArray[x,,y+nyears], ncol=nareas, nrow=maxage),
                              PerrYr=StockPars[[p]]$Perr_y[x, y+nyears+maxage-1], hs=StockPars[[p]]$hs[x],
                              R0a=StockPars[[p]]$R0a[x,], SSBpR=StockPars[[p]]$SSBpR[x,], aR=StockPars[[p]]$aR[x,], bR=StockPars[[p]]$bR[x,],
-                             mov=StockPars[[p]]$mov[x,,,], SRrel=StockPars[[p]]$SRrel[x]))
+                             mov=StockPars[[p]]$mov[x,,,,nyears+y], SRrel=StockPars[[p]]$SRrel[x]))
 
 
             N_PNext <- aperm(array(unlist(NextYrNtemp), dim=c(maxage, nareas, nsim, 1)), c(3,1,4,2))
@@ -1901,6 +1933,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   attr(MSEout, "R.version") <- R.version
 
   MSEout
+
 }
 
 

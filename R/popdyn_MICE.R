@@ -33,10 +33,13 @@
 #' @param Perrx Matrix [stock, year] process error - the lognormal factor for recruitment strength
 #' @param SRrelx Integer vector [stock] the form of the stock recruitment relationship (1 = Beverton-Holt, 2= Ricker)
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
+#' @param SexPars A list of sex-specific relationships (SSBfrom, stock_age)
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel){
+popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,
+                     M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx,
+                     bRx,ax,bx,Perrx,SRrelx,Rel, SexPars){
 
   Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
   VBfx<-array(NA,c(np,nf,maxage,nyears,nareas)) # initial year calculation
@@ -90,12 +93,12 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
                        FMretx=FMretx,
                        FMx=FMx,
                        PerrYrp=Perrx[,y+maxage-2], hsx=hsy[,y-1], aRx=aRx, bRx=bRx,
-                       movx=movx, Spat_targ=Spat_targ, SRrelx=SRrelx,
+                       movy=array(movx[,,,,y-1],c(np,maxage,nareas,nareas)), Spat_targ=Spat_targ, SRrelx=SRrelx,
                        M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2]),
                        Mat_agecur=array(Mat_agex[,,y-1],dim(Mat_agex)[1:2]),
                        Asizex=Asizex,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
-                       bx=by[,y-1],Rel=Rel)
+                       bx=by[,y-1],Rel=Rel, SexPars=SexPars)
 
     # PerrYrp=Perrx[,y+maxage-2]; hsx=hsy[,y-1]; Kx=Ky[,y-1]; Linfx=Linfy[,y-1]; t0x=t0y[,y-1]; Mx=My[,y-1]; ax=ay[,y-1]; bx=by[,y-1]
 
@@ -144,7 +147,7 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
 #' @param hsx Vector [stock] steepness of the stock recruitment curve
 #' @param aRx Vector [stock] stock recruitment parameter alpha (for Ricker curve)
 #' @param bRx Vector [stock] stock recruitment parameter beta (for Ricker curve)
-#' @param movx Array [stock,age,area,area] of movement transitions
+#' @param movy Array [stock,age,area,area] of movement transitions
 #' @param Spat_targ Matrix [stock, fleet] of spatial targetting parameter (0 evenly spatial distributed, 1 proportional to vulnerable biomass)
 #' @param SRrelx Integer vector [stock] the form of the stock recruitment relationship (1 = Beverton-Holt, 2= Ricker)
 #' @param M_agecur Matrix [stock, age] of Natural mortality rate at age
@@ -159,18 +162,14 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
 #' @param SSBpRx Matrix [stock, area] spawning biomass per recruit by area
 #' @param ax Vector [stock] weight-length parameter a W=aL^b
 #' @param bx Vector [stock] weight-length parameter b W=aL^b
-#' @param herm Character are there two stocks that are hermaphroditic pg = protogynous (F-M), pn = protandrous (M-F)?
-#' @param sexspecific Logical are the two stocks two sexes (female is stock 1, male is stock 2)
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
+#' @param SexPars A list of sex-specific relationships (SSBfrom, stock_age)
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
-popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, hsx, aRx, bRx, movx,Spat_targ,
+popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, hsx, aRx, bRx, movy,Spat_targ,
                         SRrelx,M_agecur,Mat_agecur,Asizex,
-                        Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx,herm=NULL, sexspecific=NULL, Rel){
-
-  # FMarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Vuln.col(0))/Asize_c(A);
-  # FMretarray.subcube(0,0, A, maxage-1, 0, A) =  (Effind(0) * Qc * fishdist(A) * Retc.col(0))/Asize_c(A);
+                        Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx, Rel, SexPars){
 
   # Initial Bcur calc (before any weight at age recalculation change)
   # Bcalc ---------------------------------------------------------------------------
@@ -179,56 +178,53 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
   Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
   Wt_age<-ax*Len_age^bx
   Bcur[Nind]<-Ncur[Nind]*Wt_age[Nind[,1:2]]
-
-  # old surv
-  # surv <- matrix(1, nsim, maxage)
-  #surv[, 2:maxage] <- t(exp(-apply(StockPars[[1]]$M_ageArray[,,1], 1, cumsum)))[, 1:(maxage-1)]  # Survival array
-  surv <- array(c(rep(1,np),t(exp(-apply(M_agecur, 1, cumsum)))[, 1:(maxage-1)]),c(np,maxage))  # Survival array
-  #oldM<-apply(surv*M_agecur*Mat_agecur,1,sum)/apply(surv*Mat_agecur,1,sum)
-  oldM<-apply(M_agecur*Mat_agecur,1,sum)/apply(Mat_agecur,1,sum)
-
-  if(np>1 & length(Rel)>0){
-    Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
-    for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
-  }
-  # Parameters that could have changed: M, K, Linf, t0, a, b, hs
-  # Recalculate growth
-  Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
-  Wt_age<-ax*Len_age^bx
-
-  # Recalc SSBpR, SSB0
-  M_agecurx<-M_agecur*Mx/oldM  # updated M
-
-  # This is redundant code for updating parameters when R0 changes
-
-  #surv <- cbind(rep(1,np),t(exp(-apply(M_agecurx, 1, cumsum)))[, 1:(maxage-1)])  # Survival array
-  #SSB0x<-apply(R0x*surv*Mat_agecur*Wt_age,1,sum)
-  #SSBpRx<-SSB0x/R0x
-  #SSBpRax<-SSBpRx*distx
-  #SSB0ax<-distx*SSB0x
-  #R0ax<-distx*R0x
-  #R0recalc thus aR bR recalc ---------------
-  #bRx <- matrix(log(5 * hsx)/(0.8 * SSB0ax), nrow=np)  # Ricker SR params
-  #aRx <- matrix(exp(bRx * SSB0ax)/SSBpRx, nrow=np)  # Ricker SR params
-
-  # Bcalc ---------------------------------------------------------------------------
-
-  Bcur[Nind]<-Ncur[Nind]*Wt_age[Nind[,1:2]]
   SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
   SSNcur[Nind]<-Ncur[Nind]*Mat_agecur[Nind[,1:2]]
 
+  # old surv
+  surv <- array(c(rep(1,np),t(exp(-apply(M_agecur, 1, cumsum)))[, 1:(maxage-1)]),c(np,maxage))  # Survival array
+  oldM<-apply(M_agecur*Mat_agecur,1,sum)/apply(Mat_agecur,1,sum)
+  M_agecurx<-M_agecur*Mx/oldM
+
+  if(np>1 & length(Rel)>0){ # If there are MICE relationships
+
+    Responses<-ResFromRel(Rel,Bcur,SSBcur,Ncur,seed=1) # ------------------------------------
+    for(rr in 1:nrow(Responses))  eval(parse(text=paste0(Responses[rr,4],"[",Responses[rr,3],"]<-",as.numeric(Responses[rr,1]))))
+
+    Len_age<-matrix(Linfx*(1-exp(-(rep(1:maxage,each=np)-t0x)*(Kx))),nrow=np)
+    Wt_age<-ax*Len_age^bx
+
+    # Parameters that could have changed: M, K, Linf, t0, a, b, hs
+    # Recalc B SSB, SSN, M_age ------------------
+    Bcur[Nind]<-Ncur[Nind]*Wt_age[Nind[,1:2]]
+    SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
+    SSNcur[Nind]<-Ncur[Nind]*Mat_agecur[Nind[,1:2]]
+    M_agecurx<-M_agecur*Mx/oldM  # updated M
+
+    # --- This is redundant code for updating parameters when R0 changes -----
+    #surv <- cbind(rep(1,np),t(exp(-apply(M_agecurx, 1, cumsum)))[, 1:(maxage-1)])  # Survival array
+    #SSB0x<-apply(R0x*surv*Mat_agecur*Wt_age,1,sum)
+    #SSBpRx<-SSB0x/R0x
+    #SSBpRax<-SSBpRx*distx
+    #SSB0ax<-distx*SSB0x
+    #R0ax<-distx*R0x
+    #R0recalc thus aR bR recalc ---------------
+    #bRx <- matrix(log(5 * hsx)/(0.8 * SSB0ax), nrow=np)  # Ricker SR params
+    #aRx <- matrix(exp(bRx * SSB0ax)/SSBpRx, nrow=np)  # Ricker SR params
+
+  } # end of MICE
+
+  if(length(SexPars)>0){
+    SSBs<-SSBcur
+    for(p in 1:np){ # use SSB from another stock to predict recruitment
+       SSBcur[p,,]<-apply(SexPars$SSBfrom[p,]*SSBs,2:3,sum)
+    }
+  }
+
   # Vulnerable biomass calculation --------------------------------------------------
-  #VBft<-Fdist<-FMx<-FMretx<-Zx<-array(NA,c(np,nf,maxage,nareas))
   VBft<-Fdist<-array(NA,c(np,nf,maxage,nareas))
   VBind<-TEG(dim(VBft))
   VBft[VBind]<-Vcur[VBind[,1:3]]*Bcur[VBind[,c(1,3:4)]]
-  #Fdist[VBind]<-VBft[VBind]^Spat_targ[VBind[,1:2]]
-  #VBagg<-apply(Fdist,1:3,sum)
-  #Fdist[VBind]<-Fdist[VBind]/VBagg[VBind[,1:3]]
-  #FMx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Vcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
-  #FMretx[VBind]<-Fdist[VBind]*Fcur[VBind[,1:2]]*Retcur[VBind[,1:3]]/Asizex[VBind[,c(1,4)]]
-  #Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
-
   Ft<-array(apply(FMx,c(1,3,4),sum),c(np,maxage,nareas))#FMx[VBind]+M_agecur[VBind[,c(1,3)]]
   Zcur<-Ft+array(rep(M_agecur[VBind[,c(1,3)]],nareas),c(np,maxage,nareas))
 
@@ -250,11 +246,16 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
     NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSBcur[p,,]), Ncurr=Ncur[p,,],
                             Zcurr=Zcur[p,,], PerrYr=PerrYrp[p], hs=hsx[p],
                             R0a=R0ax[p,], SSBpR=SSBpRx[p,], aR=aRx[p,], bR=bRx[p,],
-                            mov=movx[p,,,], SRrel=SRrelx[p])
+                            mov=movy[p,,,], SRrel=SRrelx[p])
 
     Nnext[p,,]<-NextYrN
 
+
   }
+
+  Bcur[Nind]<-Nnext[Nind]*Wt_age[Nind[,1:2]]
+  SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
+  SSNcur[Nind]<-Nnext[Nind]*Mat_agecur[Nind[,1:2]]
 
   # returns new N and any updated parameters:
   list(Nnext=Nnext,M_agecurx=M_agecurx,R0x=R0x,R0ax=R0ax,hsx=hsx, #5
