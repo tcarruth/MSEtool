@@ -48,8 +48,10 @@
 #' @slot CAA Catch at age in last projection year. An array with dimensions: nsim, nMPs, nages. Non-negative real numbers
 #' @slot CAL Catch at length in last projection year. An array with dimensions: nsim, nMPs, nCALbins. Non-negative real numbers
 #' @slot CALbins Mid-points of the catch-at-length bins. Vector of length nCALbins. Positive real numbers.
+#' @slot MSY_P Array of projected MSY by year with dimensions: nsim, nstock, nMP, proyears.
+#' @slot FMSY_P Array of projected FMSY by year with dimensions: nsim, nstock, nMP, proyears.
+#' @slot SSBMSY_P Array of projected Spawning Stock Biomass at MSY by year with dimensions: nsim, nstock, nMP, proyears.
 #' @slot Misc Miscellanenous output such as posterior predictive data
-#'
 #' @author T. Carruthers
 #' @keywords classes
 setClass("MMSE", representation(Name = "character", nyears = "numeric",
@@ -60,14 +62,15 @@ setClass("MMSE", representation(Name = "character", nyears = "numeric",
                                B = "array", SSB="array", VB="array", FM = "array", C = "array",
                                TAC = "array", SSB_hist = "array",
                                CB_hist = "array", FM_hist = "array", Effort = "array", PAA= "array", CAA= "array",
-                               CAL= "list", CALbins="list", Misc="list"))
+                               CAL= "list", CALbins="list", MSY_P="array", FMSY_P="array", SSBMSY_P="array", Misc="list"))
 
 
 setMethod("initialize", "MMSE", function(.Object, Name, nyears, proyears,
                                         nMPs, MPs, MPcond, MPrefs,
                                         nsim, nstocks, nfleets, Snames, Fnames, Stocks, Fleets, Obss, Imps,
                                         OM, Obs, B_BMSY, F_FMSY, B, SSB, VB, FM, C, TAC,
-                                        SSB_hist, CB_hist, FM_hist, Effort = array(), PAA,  CAA, CAL, CALbins, Misc) {
+                                        SSB_hist, CB_hist, FM_hist, Effort = array(), PAA,  CAA, CAL, CALbins,
+                                        MSY_P, FMSY_P, SSBMSY_P, Misc) {
   .Object@Name <- Name
   .Object@nyears <- nyears
   .Object@proyears <- proyears

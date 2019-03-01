@@ -375,7 +375,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   #  qs <- array(0,dim(nsim,nf)) # no fishing
   #} else {
 
-  if(!silent) message("Optimizing for user-specified depletion (takes approximately nstocks/3 x nfleets/3 minutes..)")  # Print a progress update
+  if(!silent) message("Optimizing for user-specified depletion (takes approximately [(nstocks x nfleets)/(9 x number of cores in cluster)] minutes per simulation)")  # Print a progress update
 
   bounds <- c(0.0001, 15) # q bounds for optimizer
 
@@ -1072,26 +1072,10 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   MSY_P <- FMSY_P <- SSBMSY_P <- array(NA, dim=c(nsim,np, nMP, proyears))
 
   for(p in 1:np){
-    MSY_P <- array(StockPars[[p]]$MSY, dim=c(nsim,np, nMP, proyears))
-    FMSY_P <- array(StockPars[[p]]$FMSY, dim=c(nsim,np, nMP, proyears))
-    SSBMSY_P <- array(StockPars[[p]]$SSBMSY, dim=c(nsim,np, nMP, proyears))
+    MSY_P[,p,,] <- StockPars[[p]]$MSY
+    FMSY_P[,p,,] <- StockPars[[p]]$FMSY
+    SSBMSY_P[,p,,] <- StockPars[[p]]$SSBMSY
   }
-
-
-  #if (AnnualMSY) {
-
-   # if(!silent) message("Calculating MSY reference points for each projection year")
-    #for (y in 1:proyears) {
-     # if(!silent) cat('.')
-      #if (!silent) flush.console()
-      #MSYrefsYr <- sapply(1:nsim, optMSY_eq, M_ageArray, Wt_age, Mat_age, V, maxage, R0, SRrel, hs, yr=nyears+y)
-      #MSY_P[,,y] <- MSYrefsYr[1, ]
-      #FMSY_P[,,y] <- MSYrefsYr[2,]
-      #SSBMSY_P[,,y] <- MSYrefsYr[3,]
-
-    #}
-    #if(!silent) cat("\n")
-  #}
 
   interval<-MOM@interval
   if (length(MOM@interval) != nMP) interval <- rep(interval, nMP)[1:nMP]
@@ -1924,7 +1908,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                 Snames=Snames, Fnames=Fnames, Stocks=Stocks, Fleets=Fleets, Obss=Obs, Imps=Imps,OM=OM, Obs=Obsout, B_BMSY=B_BMSYa, F_FMSY=F_FMSYa, B=Ba,
                 SSB=SSBa, VB=VBa, FM=FMa, CaRet, TAC=TACa, SSB_hist = SSB, CB_hist = CB,
                 FM_hist = FM, Effort = Effort, PAA=PAAout, CAA=CAAout, CAL=CALout, CALbins=CALbins,
-                Misc = Misc)
+                MSY_P = MSY_P, FMSY_P = FMSY_P, SSBMSY_P = SSBMSY_P,   Misc = Misc)
 
 
   # Store MSE info

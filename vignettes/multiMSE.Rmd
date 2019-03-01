@@ -57,17 +57,17 @@ library(MSEtool)
 
 # Introduction 
 
-Management Strategy Evaluation can be a complex business even for single-stock and single-fleet operating models. Population dynamics, fleet dynamics, observation processes (e.g. catch over reporting), implementation error (e.g. catch-limit overages) and appropriate management procedures (MPs) need to be specified. 
+Management Strategy Evaluation can be a complex business even for single-stock and single-fleet operating models. Population dynamics, fleet dynamics, observation processes (e.g. catch over reporting), implementation error (e.g. catch-limit overages) and appropriate management procedures (MPs) all need to be specified. 
 
-In most fisheries settings, single-stock, single-fleet operating models are sufficient. Unless management advice is explicitly given on a fleet-by-fleet basis (e.g. two TACs specific to recreational and commercial fisheries) then the fleet dynamics can be pooled into an aggregate fishery. Unless (A) dynamics of one stock interact with another stock (e.g. a predator and prey) or (B) stocks with varying dynamics are managed as a complex (e.g. one TAC for all sculpins as in Alaska) then MPs can be tested for one individual stock at a time. 
+In most fisheries settings, single-stock, single-fleet operating models are sufficient. Unless management advice is explicitly given on a fleet-by-fleet basis (e.g. two TACs each specific to recreational and commercial fisheries) then the fleet dynamics can be pooled into an aggregate fishery. Unless (A) dynamics of one stock interact with another stock (e.g. a predator and prey) or (B) stocks with varying dynamics are managed as a complex (e.g. one TAC for all sculpins as in Alaska) then MPs can be tested for one individual stock at a time. 
 
-There are however situations when managers wish to evaluate the robustness of a proposed management plan among fleets and/or stocks, acknowledging that there are interactions between these. To this end, MSEtool includes the function multiMSE() a version of runMSE() that conducts MSE for multiple fleets/stocks and allows users to prescribe interactions between stocks using conventional R models. 
+There are however situations when managers wish to evaluate the robustness of a proposed management plan among fleets and/or stocks, acknowledging that there are interactions between these. To this end, MSEtool includes the function multiMSE() a version of runMSE() that conducts MSE for multiple fleets/stocks and allows users to prescribe interactions between stocks using R models. 
 
 To accomplish this, you will need to know about a new class of operating model object 'MOM' (multi operating model), a new class of MSE object 'MMSE' (multi MSE), and optionally, a new class of management procedure 'MMP' (multi MP). 
 
-Beyond learning to use these new object and functions, multiMSE() is extremely simple to use and hence misuse. I can't stress enough how important it is to have a clear justification for why a multi-stock and/or multi-fleet MSE is necessary for your particular management setting (it may not be). The coding for multiMSE() required careful thought about the various use-cases and it became increasingly clear that there are a very large number each with their own specific set of requirement and assumptions. 
+Beyond learning to use these new objects and functions, multiMSE() is extremely simple to use and hence, misuse. I can't stress enough how important it is to have a clear justification for why a multi-stock and/or multi-fleet MSE is necessary for your particular management setting (it may not be). The coding for multiMSE() required careful thought about the various use-cases and it became increasingly clear that there are a very large number each with their own specific set of requirements and assumptions. 
 
-In this guide I will attempt to clarify these various use cases and be explicit about the assumptions entailed. You are now wondering into a relatively unestablished and unchartered territory of MSE - good luck! 
+In this guide I will attempt to clarify these various use cases and be explicit about the assumptions entailed. You are now wandering into a relatively unestablished and unchartered territory of MSE - good luck! 
 
 Remebemr you can always fire off an email to me if you have questions: <t.carruthers@oceans.ubc.ca>
 
@@ -87,8 +87,9 @@ library(DLMtool) # load DLMtool library
 DLMextra()       # download lots of cool DLMtool/MSEtool objects from GitHub
 library(DLMextra)# load all those objects
 library(MSEtool) # load MSEtool (data rich MPs, MOM object class etc)
+setup()          # set up a cluster for parallel processing
 
-slotNames(MOM)   # what slots are there in an MOM object
+slotNames('MOM')   # what slots are there in an MOM object
 class?MOM        # check out the help file on MOM objects
 
 ```
@@ -115,41 +116,50 @@ avail('Imp')     # what Imp objects are loaded?
 
 ```
 
-Lets imagine that we lose our minds and decide to create a model that simulates interactions between bluefin tuna and herring (we think bluefin eat herring). We also want to simulate three fleets, a bluefin fleet, a herring fleet and a mixed fleet that somehow, against all odds catches both bluefin and herring! About as hypothetical as it gets but that is intentional, this is just a demonstration! First we start off by creating the list of stock objects, this is pretty easy:
+Lets imagine that we lose our minds and decide to create a model that simulates interactions between bluefin tuna and herring (we think bluefin eat herring). We also want to simulate three fleets, a bluefin fleet, a herring fleet and a mixed fleet that somehow, against all the odds catches both bluefin and herring! About as hypothetical as it gets, but that is intentional - this is just a demonstration! First we start off by creating the list of stock objects, this is pretty easy:
 
 ```{r, eval = TRUE}
-Stocks <- list('Bluefin_tuna','Herring')
+#                 Stock 1    Stock 2
+Stocks <- list(Bluefin_tuna, Herring)
 
 ```
 
-We now want to create our fleets for these stocks. Our bluefin-only fleet has stable effort (premade fleet type 'Generic_FlatE') our herring-only fleet has increasing effort (premade fleet type 'Generic_IncE') and our mythical mixed fishery has decreasing effort (premade fleet type 'Generic_DecE'). A constraint of multiMSE is that we have to replicate these across the stocks using a hierarchical list structure:
+We now want to create our fleets for these stocks. Our bluefin-only fleet has stable effort (premade fleet type 'Generic_FlatE') our herring-only fleet has increasing effort (premade fleet type 'Generic_IncE') and our mythical mixed fishery has decreasing effort (premade fleet type 'Generic_DecE'). 
+
+This is the tricky bit. 
+
+Nominally, the same fleet occupies the same position for each stock. For example, 'longline' is fleet 1 for both bluefin and herring. However, the fleet interactions with the stocks can (and often will) be different - e.g. the trend in exploitation rate of the longline fleet may be stable for bluefin but decreasing for herring (in this admittedly bizarre case). That is why multiMSE requires the same number of fleets for each stock but you have to be able to specify unique fleet dynamics for each stock x fleet. For example longline_stable_exploitation could be Fleet 1 for bluefin and longline_decreasing_exploitation could be Fleet 1 for Herring - it is the same fleet but interacts differently with the two stocks.
+
+A rare exception is if you have one fleet for each stock. Then you can just have one fleet position for each stock and put the stock-specific fleet in position Fleet 1 for all stocks. Confused? I don't blame you!
+
+To specify exploitation dynamics across stocks and fleets you create a hierarchical list structure (Fleets nested in Stocks):
 
 ```{r, eval = TRUE}
-
-Fleets_both_Stocks <- list(Generic_FlatE, Generic_IncE, Generic_DecE)
+#                           Fleet 1         Fleet 2      Fleet 3
+Fleets_both_Stocks <- list(Generic_FlatE, Generic_IncE, Generic_DecE)  # we assume identical fleet dynamics for both stocks
 Fleets <- list( Fleets_both_Stocks, # Bluefin (position 1 in Stocks)
                 Fleets_both_Stocks) # Herring (position 2 in Stocks)
 
 ```
 
-Since each of these Fleets is going to generate fishery data, they each need an observation model for each stock. Just like the Fleets list, this is hierarchical in nature Fleets nested in Stocks and we are going to assume that we get good data (Precise and Unbiased) for bluefin and bad data (Imprecise and Biased) for herring. 
+Since each of these Fleets is going to generate fishery data for each stock, they each need an observation model by stock and fleet. Just like the Fleets list, this is hierarchical - Fleets nested in Stocks. We are going to assume that we get good data (Precise and Unbiased) for bluefin and bad data (Imprecise and Biased) for herring. 
 
 ```{r, eval = TRUE}
-
+#                      Fleet 1             Fleet 2          Fleet 3
 Bluefin_obs <- list(Precise_Unbiased, Precise_Unbiased, Precise_Unbiased)
 Herring_obs <- list(Imprecise_Biased, Imprecise_Biased, Imprecise_Biased)
-Fleets <- list( Bluefin_obs, # Bluefin (position 1 in Stocks)
-                Herring_obs) # Herring (position 2 in Stocks)
+Obs <- list( Bluefin_obs,    # Bluefin (position 1 in Stocks)
+             Herring_obs)    # Herring (position 2 in Stocks)
 
 ```
 
-Lastly we need to specify implementation error for these, we are going to assume this is fleet specific and perfect for the first 2 fleets and includes overages for the mixed fleet (fleet 3 - Generic_DecE).
+Lastly we need to specify implementation error models for these, we are going to assume this is the same for both stocks and is fleet specific: perfect for the first 2 fleets and includes overages for the mixed fleet (fleet 3).
 
 ```{r, eval = TRUE}
-
+#                        Fleet 1       Fleet 2     Fleet 3
 Imp_both_Stocks <- list(Perfect_Imp, Perfect_Imp, Overages)
-Fleets <- list( Imp_both_Stocks, # Bluefin (position 1 in Stocks)
-                Imp_both_Stocks) # Herring (position 2 in Stocks)
+Imps <- list( Imp_both_Stocks,   # Bluefin (position 1 in Stocks)
+              Imp_both_Stocks)   # Herring (position 2 in Stocks)
 
 ```
 
@@ -163,15 +173,17 @@ Herring@D
 
 ```
 
+But how do we attribute the historical exploitation among the various fleets? 
+
 ## Catch fractions by fleet for each stock
 
-To allow MOM to run we need 1 extra Thing and should have an additional Thing 2 after that. 
+To allow MOM to run we *need* extra Thing 1, and *should* have an additional Thing 2 after that. 
 
-Thing 1 is the current (most recent year) catch fractions among fleets for each stock. This information is required to calculate the relative catchabilities among the fleets. Catch fractions are a list (nstock long of) matrices. Suppose we want 80% of current bluefin catches to come from fleet 1, 1% from fleet 2 and 19% from fleet 3, and also 60% of herring catches to come from Fleet 2, 5% from fleet 1 and the remaining 35% from Fleet 3, this is how you would specify that:
+Thing 1 is the current (most recent year) catch fractions among fleets for each stock. This information is required to calculate the relative catchabilities among the fleets. Catch fractions are a list (nstock long) of matrices. Suppose we want 80% of current bluefin catches to come from fleet 1, 1% from fleet 2 and 19% from fleet 3, and also 60% of herring catches to come from Fleet 2, 5% from fleet 1 and the remaining 35% of herring catches from Fleet 3, this is how you would specify that:
 
 
 ```{r, eval = TRUE}
-nsim = 10
+nsim = 12
 #                  Fleet1  Fleet2   Fleet3
 bluefin_catchfrac<-c(0.8,   0.01,   0.19)
 herring_catchfrac<-c(0.05,  0.6,    0.35)
@@ -184,22 +196,26 @@ CatchFrac[[1]]
 
 ```
 
-The observant types among you will have noticed that we now need to specify the number of MSE simulations we are going to be doing (nsim). For now this is just 10 for demonstration purposes but ultimately this would be 148+ for a real MSE. The reason we have done this is to allow for uncertainty in the catch fractions - the user could make this a matrix with varying fractions among fleets by simulation. For now these are the same among simulations, which is boring. 
+The observant types among you will have noticed that we now need to specify the number of MSE simulations we are going to be doing (nsim). For now this is just 12 for demonstration purposes, but ultimately this would be >148 for a real MSE. 
+
+The reason we have done this is to allow for uncertainty in the catch fractions - the user could make catch fractions vary among fleets by simulation. For now, these are the same among simulations, which is the simplest thing albeit a bit boring. 
 
 
 ## Specifying inter-stock relationships
 
-You'll remember that I said there was a Thing 2 that we should add to our multi operating model? 
+You'll remember that I said there was a Thing 2 that we should add to our multi operating model. Ask yourself why we are modelling bluefin and herring together?
 
-Ask yourself why we are modelling bluefin and herring together?
+Because we want to look at an interaction between these stocks. If we didn't we would just model these stocks individually, and there would be only one stock in the Stocks slot and only one list of fleets in the Fleets slot. 
 
-Because we want to look at an interaction between these stocks. If we didnt' we would just model these stocks individually, and their would be only one stock in Stocks and only one list of fleets in Fleets. If we didn't expect to set fleet-specific advice AND we weren't modelling bluefin and herring interactions we should just be using the regular runMSE() from DLMtool and MSEtool and calculate the aggregate fleet dynamics (aggregate size vulnerability and trend in apical fishing mortality rate, for example). 
+If we didn't expect to set fleet-specific advice AND we weren't modelling bluefin and herring interactions, we should just be using the regular runMSE() from DLMtool and MSEtool and calculate the aggregate fleet dynamics (aggregate size vulnerability and trend in apical fishing mortality rate, for example). 
 
-But we're demonstrating multiMSE() here, and should therefore specify at least one relationship between the stocks (noting that you may wish to evaluate MPs for a stock complex of multiple stock objects with no interactions - more below). The slot MOM@Rel is where you put these relationships - Rel is a list of R models with quite specific formatting. More on this formatting in just a minute.  
+But we're demonstrating multiMSE() here, and should therefore specify at least one relationship between the stocks (noting that you may wish to evaluate MPs that provide advice for a stock complex of multiple stock objects with no interactions - more below). The slot MOM@Rel is where you put these relationships - Rel is a list of R models with quite specific formatting. 
 
-Since we think bluefin are predators of herring, we are going to propose a relationship between bluefin abundance and the natural mortality rate of herring. Normally we would have derived this relationship empirically from data (in this case herring tagging estimates of survival regressed on bluefin abundance estimates from a stock assessment, perhaps). 
+Since we think bluefin are predators of herring, we are going to propose a relationship between bluefin abundance and the natural mortality rate of herring. Normally we would have derived this relationship empirically from data (in this case perhaps herring tagging estimates of survival regressed on bluefin abundance estimates from a stock assessment). 
 
-However for the purposes of this demonstration we're just going to cook something up out of thin air: nominally we are going to assume that herring have a natural mortality rate of 0.2 when there are no bluefin, and 0.4 when bluefin tuna are at unfished levels. To invent this we are going to need to calculate bluefin unfished biomass from the operating model, make some fake data and fit an R model. Here goes:
+However for the purposes of this demonstration we're just going to cook something up out of thin air: nominally we are going to assume that herring have a natural mortality rate of 0.2 when there are no bluefin, and 0.4 when bluefin tuna are at unfished levels. To invent this we are going to need to calculate bluefin unfished biomass from the operating model, make some fake data and fit an R model. 
+
+Here goes:
 
 
 ```{r, eval = TRUE}
@@ -233,9 +249,9 @@ Rel <- list(bfB_hM)
 
 That is a lot to take in. 
 
-We derived a rough level of unfished bluefin biomass, made up some data (normally we would hope to have collected these) with log-normal error in herring M. We then fitted an R model (red line) and also simulated (green points) some new data based on that fit. Lastly, we placed our fitted model in a mysterious list object 'Rel'. More on that in a minute.   
+We derived a rough level of unfished bluefin biomass, made up some data (normally we would hope to have collected these) with log-normal error in herring M. We then fitted an R model (red line) and also demonstrated that we could use the simulate() R function to simulate (green points) some new data based on that fit. Lastly, we placed our fitted model in a mysterious list object 'Rel'. More on that in a minute.   
 
-Here are the important things to know about inter-stock relationships in the 'Rel' slot:
+Here are the important things to know about inter-stock relationships listed in the 'Rel' slot:
 
 Any R model can be used that:
  * is compatible with the function simulate()
@@ -257,7 +273,7 @@ a    = weight length parameter a (W=aL^b)
 b    = weight length parameter b (W=aL^b)
 hs   = steepness of the Beverton-Holt or Ricker stock recruitment function
 
-The underscore then number denotes the stock. So SSB_5 is the spawning stock biomass of the fifth stock in the Stocks object, Linf_2 is the asymptotic length of stock 2. 
+The underscore_then_number denotes the stock. So SSB_5 is the spawning stock biomass of the fifth stock in the Stocks slot, Linf_2 is the asymptotic length of stock 2 in the stocks slot. 
 
 Currently there can only be one dependent variable but many independent variables so this model is possible:
 
@@ -275,11 +291,11 @@ And another thing, the order you place these in the Rel list object determines t
 
 The idea behind the 'Rel' slot of the MOM object is to open up the option of including ecosystem driven relationships in a terse 'models of intermediate complexity' (MICE) format.
 
-A note of caution before you go hog-wild with the Rel slot: it is probably fairly easy to set up a set of relationship and stock depletions that are impossible to solve in the intialization of the operating models in multiMSE. I haven't had this issue yet, but do give some thought about your proposed relationships before you, for example, make herring M = 5 when bluefin depletion is 0.1 and then specify bluefin depletion as 0.1 and herring at 0.8 ...
+A note of caution before you go hog-wild with the Rel slot: it is probably fairly easy to set up a set of relationships and stock depletions that are impossible to solve in the intialization of the operating models in multiMSE. I haven't had this issue yet, but do give some thought about your proposed relationships before you, for example, make herring M = 5 when bluefin depletion is 0.1 and then specify bluefin depletion as 0.1 and herring at 0.8 ...
 
 ## Constructing the MOM object
 
-Now we have the lists: 
+Now we have six lists: 
 * Stocks,
 * Fleets
 * Obs
@@ -296,23 +312,200 @@ plot(MOM_BH)
 
 ```
 
-We have our operating model, now we need some MPs to test...
+
+## Single Stock MOM
+
+If you wish to specify only a single stock but multiple fleets (e.g. just bluefin above) that is pretty easy:
+
+```{r, eval = TRUE}
+
+Stocks <-    list( Bluefin_tuna )
+Fleets <-    list( list(Generic_FlatE, Generic_IncE, Generic_DecE) )
+Obs <-       list( list(Precise_Unbiased, Precise_Unbiased, Precise_Unbiased) ) 
+Imps <-      list( list(Perfect_Imp, Perfect_Imp, Overages) )
+CatchFrac <- list( matrix( rep(c(0.8,   0.01,   0.19), each=nsim), nrow=nsim) )
+
+MOM_1S <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, nsim=nsim)
+
+
+```
+
+Stocks is just a list 1 stock object long. CatchFrac is a list 1 stock long of catch fractions by simulation and fleet. For any hierarchical list (Fleets, Obs, Imps) there is just one position (one fleet) in which you have to place a list of Fleet, Obs and Imp objects. 
+
+
+## Single Fleet MOM
+
+If you want to model multiple stocks but are happy with aggregate fleet dynamics for each stock that is fairly straight forward:
+
+
+```{r, eval = TRUE}
+#                     Stock 1    Stock 2
+Stocks <-    list( Bluefin_tuna, Herring )
+#                         Bluefin                Herring            
+Fleets <-    list(  list(Generic_FlatE),    list(Generic_FlatE)    )
+Obs <-       list( list(Precise_Unbiased), list(Imprecise_Biased) )  
+Imps <-      list(   list(Perfect_Imp),       list(Overages)      )
+CatchFrac <- list( matrix(1, nrow=nsim),   matrix(1, nrow=nsim)   )
+
+MOM_1F <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel = Rel, nsim=nsim)
+
+```
+
+The only weird thing here is that we have to create a 1 column (1 fleet) matrix of catch fractions that are 1s (fleet one catches everything of each stock). 
+
+
+
+## A unique fleet for each stock
+
+If you wish to model many stocks but in each case you are able to aggregate fleet dynamics (a single fleet) and provide management advice for the aggregate fishing activities on each stock, then you do exactly as above for the single fleet case but put a stock specific-fleet in position fleet 1:
+
+```{r, eval = TRUE}
+#                     Stock 1    Stock 2  Stock 3
+Stocks <-    list( Bluefin_tuna, Herring, Mackerel )
+#                         Bluefin fleet           Herring fleet       Mackerel fleet          
+Fleets <-    list(  list(Generic_FlatE),    list(Generic_IncE),     list(Generic_DecE)    )
+Obs <-       list( list(Precise_Unbiased), list(Imprecise_Biased),  list(Precise_Biased) )  
+Imps <-      list(   list(Perfect_Imp),       list(Overages),       list(Overages)      )
+CatchFrac <- list( matrix(1, nrow=nsim),   matrix(1, nrow=nsim),    matrix(1, nrow=nsim) )
+
+MOM_FS <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel = Rel, nsim=nsim)
+
+```
+
+One way or another we have our multi operating model, now we need some MPs to test...
 
 
 # Specifying MPs and various use cases
 
+Let us assume you have specified a multi operating model with more than one stock and more than one fleet. There are a surprisingly large number of options for managing this simulated resource:
+
+* 'complex': an single MP is specified that provides a single recommendation that is applied to all stocks (ie a stock complex) and all fleets (e.g. a single TAC is divvied up across stocks and fleets)
+* 'by stock': an MP is specified by stock (e.g. a TAC is divvied up among fleets for a particular stock)
+* 'by fleet' an MP is specified for each stock and each fleet based on stock-fleet specific data (e.g. based on fleet-specific data a TAC is provided for each fleet for a particular stock)
+* 'multi MP' a single MP is specified that takes all the individual data by stock and fleet and provides an individual recomemndation for each fleet and stock. 
+
+## Complex: MPs for stock complexes
+
+To configure management of this type you need only provide a vector of MP names:
+
+```{r, eval = TRUE}
+
+avail('MP')
+MPs_c<-c("DCAC","DBSRA","DD")
+
+```
+
+When you do this, the following assumptions are applied:
+
+- Data from all stocks and fleets are combined. Catches are aggregated. Biological quantities such as depletion are averages weighted by vulnerable biomass. Fleet specific quantities such as mean length in the catch are weighted by vulnerable biomass (among stocks) and by catches (among fleets).
+- Among stocks, overall TACs are distributed in proportion to vulnerable biomass
+- Among fleets within stock, the stock TAC is distributed according to CatchFrac
+- Input controls such as Effort and Size limits apply to all fleets and stocks simultaneously (effort controls are phrased in terms of % of todays effort and therefore affect all fleets equally)
+
+A future priority is the development of Linear Programming tools to provide plausible predictions of the distribution of catches among stocks and fleets given boundary constraints on fishign mortality rates and profitability. 
+
+## By stock: Stock-specific MPs 
+
+To specify an MP for each stock you just list a vector by stock. 
+
+```{r, eval = TRUE}
+
+MPs_bs<-list( c("DCAC", "DBSRA","DD"),       # Stock 1
+              c("DCAC", "DCAC",  "SPMSY") )  # Stock 2
+
+```
+
+Note that each position in the vector is a management scenario (we are describing three management systems in the code above). MP1 for Stock 1 and Stock 2 is DCAC for both stocks and hence we are testing a forward projection where DCAC is used on the data of each stock to provide advice for each stock. MP2 for is DBSRA for Stock 1 and DCAC for Stock 2, so the second management system evaluates this combination simultaneously and so on. 
+
+If a user wished to evaluate a full-cross of DCAC and DBSRA MPs for both stocks then they would need four management systems:
 
 
-## Fleet specific MPs
+```{r, eval = TRUE}
 
-## Stock-wide MPs
+MPs<-list( c("DCAC", "DBSRA","DCAC", "DBSRA"),   # Stock 1
+           c("DCAC", "DCAC", "DBSRA","DBSRA") )  # Stock 2
 
-## Stock complexes
+```
+
+
+Or, less laboriously, for five stocks and a total of 32 management systems:
+
+```{r, eval = TRUE}
+
+myMPs <- c("DCAC","DBSRA")
+nstocks <- 5
+MPs <- split(t(expand.grid(list(myMPs)[rep(1,nstocks)])), 1:nstocks)
+
+```
+
+The 'by stock' mode includes the following assumptions:
+
+- data are aggreated over fleets. Biological information such as depletion is taken from a single fleet. Fleet specific informaiton such as mean length in the catch is weighted by fleet catches. 
+- TAC advice is divided between the fleets according to CatchFrac
+
+## By fleet: fleet and stock specific MPs
+
+Although not very likely, it is possible that users wish to take the individual data of a particular stock and fleet and provide management advice for that fleet and stock. 
+
+Belive it or not the following describes just two management systems that will be tested by closed-loop projection:
+
+```{r, eval = TRUE}
+#                    Fleet 1             Fleet 2
+#                  MP1     MP2          MP1   MP2
+MPs_bf<-list( list(c("DCAC", "DBSRA"),  c("MCD","AvC")),     # Stock 1
+           list(c("CurE", "DD"),     c("AvC","SPMSY")) )  # Stock 2
+
+```
+
+Management system 2 involved the simultaneous tesing of DBSRA  (Stock 1, Fleet 1), AvC (Stock 1, Fleet2), DD (Stock 2, Fleet 1) and SPMSY (Stock 2, Fleet 2). 
 
 ## Multi-fleet and/or Multi-stock management plans
 
+It is conceivable that managers would like to control fishery exploitation holistically, for example accounting for the depletion levels of various stocks on the management of any individual stock. In which case stock and fleet specific data must be submitted to an MP that then provides advice individually for all stock and fleets. 
+
+To do this users need a special class of MP called MMP (multi management procedure) and the user then just specifies a vector of MMPs similarly to the case of 'complex' above:
 
 
+```{r, eval = TRUE}
+
+MPs_mmp <- c(MMP_1, MMP_2, MMP_3)
+
+```
+
+
+# Running an multi MSE
+
+Lets take the fantastical bluefin-herring (BH) MOM operating model object we created above and run a multi MSE for some stock-specific MPs:
+
+
+```{r, eval = TRUE}
+
+MPs_BH <- list( c("DCAC", "DBSRA", "AvC", "MCD"),  # Bluefin
+                c("DCAC", "DBSRA", "AvC", "MCD"))  # Herring
+
+MMSE_BH <- multiMSE(MOM_BH, MPs=MPs)
+
+plot(MMSE_BH)
+
+```
+
+
+# Understanding the MMSE object
+
+
+# Other options
+
+## Sex - specific multistock operating models
+
+SexPars
+
+## Custom TAC allocations
+
+Allocation
+
+## Custom effort allocations
+
+Efactor
 
 
 _Figure 5. Trade-off plot of the MSE for the MPs that use the Delay-Difference model with two harvest control rules and the FMSY reference MP._
