@@ -60,6 +60,10 @@ the data inputs is used.}
 
 \item{\code{Efactor}}{A list nstock long, of current effort factors by fleet (default is 1 - same as current effort)}
 
+\item{\code{Complexes}}{A list of stock complexes. Each position is a vector of stock numbers (as they appear in StockPars) for which data should be aggregated and TAC recommendations split among stocks according to vulnerable biomass}
+
+\item{\code{SexPars}}{A list of slots that control sex-specific dynamics}
+
 \item{\code{Rel}}{A list of biological / ecological relationships among stocks
 over-ridden if an MP of class 'MP_F" is supplied that is a multi-fleet MP.}
 }}

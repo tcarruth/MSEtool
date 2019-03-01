@@ -79,6 +79,12 @@ simulation conditions and performance of MPs for a multi-stock, multi-fleet oper
 
 \item{\code{CALbins}}{Mid-points of the catch-at-length bins. Vector of length nCALbins. Positive real numbers.}
 
+\item{\code{MSY_P}}{Array of projected MSY by year with dimensions: nsim, nstock, nMP, proyears.}
+
+\item{\code{FMSY_P}}{Array of projected FMSY by year with dimensions: nsim, nstock, nMP, proyears.}
+
+\item{\code{SSBMSY_P}}{Array of projected Spawning Stock Biomass at MSY by year with dimensions: nsim, nstock, nMP, proyears.}
+
 \item{\code{Misc}}{Miscellanenous output such as posterior predictive data}
 }}
 

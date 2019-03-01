@@ -5,7 +5,7 @@
 \title{Reconstruct historical dynamics}
 \usage{
 HistMICE(x, StockPars, FleetPars, np, nf, nareas, maxage, nyears, N, VF,
-  FretA, maxF = 0.9, MPA, Rel, qs, qfrac)
+  FretA, maxF = 0.9, MPA, Rel, SexPars, qs, qfrac)
 }
 \arguments{
 \item{x}{Integer, the simulation number}
@@ -35,6 +35,8 @@ HistMICE(x, StockPars, FleetPars, np, nf, nareas, maxage, nyears, N, VF,
 \item{MPA}{An of spatial closures by year [np,nf,nyears+proyears,nareas]}
 
 \item{Rel}{A list of inter-stock relationships see slot Rel of MOM object class}
+
+\item{SexPars}{A list of sex-specific relationships (SSBfrom, stock_age)}
 
 \item{CatchFrac}{A list of stock-specific fleet fractions of current catch list[[stock]][nsim, nf]}
 

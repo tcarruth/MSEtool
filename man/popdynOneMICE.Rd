@@ -5,9 +5,8 @@
 \title{Population dynamics for a MICE model (single year)}
 \usage{
 popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
-  hsx, aRx, bRx, movx, Spat_targ, SRrelx, M_agecur, Mat_agecur, Asizex, Kx,
-  Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, herm = NULL,
-  sexspecific = NULL, Rel)
+  hsx, aRx, bRx, movy, Spat_targ, SRrelx, M_agecur, Mat_agecur, Asizex, Kx,
+  Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, Rel, SexPars)
 }
 \arguments{
 \item{np}{Integer, the number of stocks}
@@ -32,7 +31,7 @@ popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
 
 \item{bRx}{Vector [stock] stock recruitment parameter beta (for Ricker curve)}
 
-\item{movx}{Array [stock,age,area,area] of movement transitions}
+\item{movy}{Array [stock,age,area,area] of movement transitions}
 
 \item{Spat_targ}{Matrix [stock, fleet] of spatial targetting parameter (0 evenly spatial distributed, 1 proportional to vulnerable biomass)}
 
@@ -58,11 +57,9 @@ popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
 
 \item{bx}{Vector [stock] weight-length parameter b W=aL^b}
 
-\item{herm}{Character are there two stocks that are hermaphroditic pg = protogynous (F-M), pn = protandrous (M-F)?}
-
-\item{sexspecific}{Logical are the two stocks two sexes (female is stock 1, male is stock 2)}
-
 \item{Rel}{A list of inter-stock relationships see slot Rel of MOM object class}
+
+\item{SexPars}{A list of sex-specific relationships (SSBfrom, stock_age)}
 
 \item{nyears}{Integer, number of historical years (unfished til today)}
 

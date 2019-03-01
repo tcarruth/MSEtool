@@ -345,13 +345,12 @@ Stocks <-    list( Bluefin_tuna, Herring )
 Fleets <-    list(  list(Generic_FlatE),    list(Generic_FlatE)    )
 Obs <-       list( list(Precise_Unbiased), list(Imprecise_Biased) )  
 Imps <-      list(   list(Perfect_Imp),       list(Overages)      )
-CatchFrac <- list( matrix(1, nrow=nsim),   matrix(1, nrow=nsim)   )
 
-MOM_1F <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel = Rel, nsim=nsim)
+MOM_1F <- new('MOM', Stocks, Fleets, Obs, Imps, Rel = Rel, nsim=nsim)
 
 ```
 
-The only weird thing here is that we have to create a 1 column (1 fleet) matrix of catch fractions that are 1s (fleet one catches everything of each stock). 
+Note we no longer have to specific CatchFrac as we do not have to calculate fleet-specific catchabilties using observed recent catch fractions. 
 
 
 
@@ -440,14 +439,14 @@ MPs <- split(t(expand.grid(list(myMPs)[rep(1,nstocks)])), 1:nstocks)
 
 The 'by stock' mode includes the following assumptions:
 
-- data are aggreated over fleets. Biological information such as depletion is taken from a single fleet. Fleet specific informaiton such as mean length in the catch is weighted by fleet catches. 
+- data are aggregated over fleets. Biological information such as depletion is taken from a single fleet. Fleet specific informaiton such as mean length in the catch is weighted by fleet catches. 
 - TAC advice is divided between the fleets according to CatchFrac
 
 ## By fleet: fleet and stock specific MPs
 
 Although not very likely, it is possible that users wish to take the individual data of a particular stock and fleet and provide management advice for that fleet and stock. 
 
-Belive it or not the following describes just two management systems that will be tested by closed-loop projection:
+Believe it or not, the following describes just two management systems that will be tested by closed-loop projection:
 
 ```{r, eval = TRUE}
 #                    Fleet 1             Fleet 2

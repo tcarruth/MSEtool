@@ -5,7 +5,8 @@
 \title{optimize for catchability (q) and fishing dist for a MICE model}
 \usage{
 getq_multi_MICE(x, StockPars, FleetPars, np, nf, nareas, maxage, nyears, N,
-  VF, FretA, maxF = 0.9, MPA, CatchFrac, bounds = c(1e-05, 15), Rel)
+  VF, FretA, maxF = 0.9, MPA, CatchFrac, bounds = c(1e-05, 15),
+  tol = 1e-06, Rel, SexPars)
 }
 \arguments{
 \item{x}{Integer, the simulation number}
@@ -38,7 +39,11 @@ getq_multi_MICE(x, StockPars, FleetPars, np, nf, nareas, maxage, nyears, N,
 
 \item{bounds}{Bounds for total q estimation}
 
+\item{tol}{A numeric value that is the fraction of machine tolerance (once reduction in objective function steps below this, optimization ends)}
+
 \item{Rel}{A list of inter-stock relationships see slot Rel of MOM object class}
+
+\item{SexPars}{A list of sex-specific dynamics SSBfrom stock_age}
 }
 \description{
 Function optimizes catchability (q, where F=qE) required to get to user-specified stock

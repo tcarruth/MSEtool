@@ -138,6 +138,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   SexPars<-MOM@SexPars
   Complexes<-MOM@Complexes
   CatchFrac<-MOM@CatchFrac
+
   np<-length(Stocks)
   nf<-length(Fleets[[1]])
 
@@ -270,6 +271,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     Vraw<-array(NIL(listy=FleetPars[[p]],namey="V"),c(nsim,maxage,allyears,nf))
     Vind<-as.matrix(expand.grid(1:nsim,p,1:nf,1:maxage,1:allyears))
     VF[Vind]<-Vraw[Vind[,c(1,4,5,3)]]
+
     if(nf==1){
       V<-VF[,p,1,,] #<-SOL(FleetPars[[p]],"V")
     }else{
@@ -281,6 +283,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       #V<-nlz(V,c(1,3),"max") # currently assume unfished vulnerability is equally weighted among fleets
       # V includes discards
     }
+
     VBiomass[SPAYR] <- Biomass[SPAYR] * V[SAY]  # Calculate vunerable biomass
 
     Fretraw<-array(NIL(listy=FleetPars[[p]],namey="retA"),c(nsim,maxage,allyears,nf))
@@ -586,7 +589,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # Check that depletion is correct
   if (checks) {
     if (prod(round(Depletion,2)/ round(D_specified,2)) != 1) {
-      print(cbind(round(Depletion,4), round(D_specified,4)))
+      print(cbind(round(Depletion,4),rep(NaN,nsim), round(D_specified,4)))
       warning("Possible problem in depletion calculations")
     }
   }
@@ -991,8 +994,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   # Detecting MP specification  -----------------------------------------------------------------------------------------------------------------------------------
 
-  if(identical(ldim(MPs),MSEtool:::ldim(Fleets))){
-    message("You have specified an MP for each stock and fleet. Only fleet-specific catches and indices will enter the MP for each fleet")
+  if(identical(ldim(MPs),ldim(Fleets))){
+    message("Byfleet mode: you have specified an MP for each stock and fleet. Only fleet-specific data (e.g. catches and indices) will be used to set advice for each fleet for each stock")
     MPcond<-"byfleet"
     nMP <- length(MPs[[1]][[1]])
     MPrefs<-array(NA,c(nMP,nf,np))
@@ -1000,11 +1003,13 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   }else if(np==1&nf==1){
     nMP <- length(MPs[[1]][[1]])
     MPcond<-"bystock"
+    message("runMSE checking: you have specified a single stock and fleet. For analysis you should be using runMSE(). Use this only for debugging against runMSE.")
+
     MPrefs<-array(NA,c(nMP,nf,np))
     MPrefs[]<-unlist(MPs)
   }else{
     if(ldim(MPs)==ldim(Fleets)[1]){ # not a two-tier list
-      message("You have specified a vector of MPs for each stock, but not a vector of MPs for each stock and fleet. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
+      message("Bystock mode: you have specified a vector of MPs for each stock, but not a vector of MPs for each stock and fleet. The catch data for these fleets will be combined, a single MP will be used to set a single TAC for all fleets combined that will be allocated between the fleets according to recent catches")
       MPcond<-"bystock"
       nMP<-length(MPs[[1]])
       MPrefs<-array(NA,c(nMP,nf,np))
@@ -1012,17 +1017,15 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     }
     if(class(MPs)!="list"){
       if(class(get(MPs[1]))=="MMP"){
-        message("You have specified multi-fleet, multi-stock MPs of class MMP. This class of MP accepts all data objects (stocks x fleets) to simultaneously make a recommendation for all stocks and fleets")
+        message("MMP mode: you have specified multi-fleet, multi-stock MPs of class MMP. This class of MP accepts all data objects (stocks x fleets) to simultaneously make a recommendation specific to each stock and fleet")
         MPcond<-"MMP"
         nMP<-length(MPs)
         MPrefs<-array(NA,c(nMP,nf,np))
         MPrefs[]<-MPs
       }else if(class(get(MPs[1]))=="MP"){
-        message("You have specified a vector of MPs rather than a list of MPs, one list position for MP type. The same MP will be applied to the aggregate data for all stocks and fleets. The MP will, for example, be used to set a single TAC for all stocks and fleets combined. This will be allocated among fleets according to recent catches and among stocks according to available, vulnerable biomass")
+        message("Complex mode: you have specified a vector of MPs rather than a list of MPs, one list position for MP type. The same MP will be applied to the aggregate data for all stocks and fleets. The MP will, for example, be used to set a single TAC for all stocks and fleets combined. This will be allocated among fleets according to recent catches and among stocks according to available, vulnerable biomass")
         MPcond<-"complex"
         MPtemp<-MPs
-        MPs<-new('list')
-        for(p in 1:np)MPs[[p]]<-MPtemp
         nMP<-length(MPs)
         MPrefs<-array(NA,c(nMP,nf,np))
         MPrefs[]<-unlist(MPs)
@@ -1255,18 +1258,42 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     # -- apply MP in initial projection year ----
     # - Combined MP -
 
+    #realC<-apply(CBret[,,,,nyears,], 1:3, sum,na.rm=T)
+
+
     if(MPcond=="MMP"){
       # returns a hierarchical list object stock then fleet of MPrec objects
 
       MPRecs_A <- applyMMP(curdat, MPs = MPs[mm], reps = 1, silent=TRUE)  # Apply MP
       Data_p_A <- MPrecs_A_blank
+
       for(p in 1:np)for(f in 1:nf){
         Data_p_A[[p]][[f]]<-MSElist[[p]][[f]][[mm]]
         Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
       }
+
     }else if(MPcond=="complex"){
 
+      MPRecs_A <- Data_p_A <- MPrecs_A_blank # A temporary blank hierarchical list object stock by fleet
+      realVB<-apply(VBiomass[,,,1:nyears,],c(1,2,4),sum,na.rm=T) # need this for aggregating data and distributing TACs over stocks
 
+      curdat<-multiDataS(MSElist,StockPars,np,mm,nf,realVB)
+      runMP <- applyMP(curdat, MPs = MPs[mm], reps = 1, silent=TRUE)  # Apply MP
+
+      Stock_Alloc<-realVB[,,nyears]/apply(realVB[,,nyears],1,sum)
+
+      for(p in 1:np)  for(f in 1:nf){
+        MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
+        MPRecs_A[[p]][[f]]$TAC<-runMP[[1]][[1]]$TAC*MOM@Allocation[[p]][,f]*Stock_Alloc[,p]
+        MPRecs_A[[p]][[f]]$Effort<-runMP[[1]][[1]]$Effort*MOM@Efactor[[p]][,f]
+
+        if(length(MPRecs_A[[p]][[f]]$Effort)>0) if(is.na(MPRecs_A[[p]][[f]]$Effort[1,1])) MPRecs_A[[p]][[f]]$Effort<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$Effort))
+        if(length(MPRecs_A[[p]][[f]]$TAC)>0) if(is.na(MPRecs_A[[p]][[f]]$TAC[1,1])) MPRecs_A[[p]][[f]]$TAC<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+        if(is.na(MPRecs_A[[p]][[f]]$Spatial[1,1])) MPRecs_A[[p]][[f]]$Spatial<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+
+        Data_p_A[[p]][[f]]<-runMP[[2]]
+        Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
+      }
 
     }else{
 
@@ -1388,6 +1415,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     #### DEBUG ####
 
     upyrs <- 1 + (0:(floor(proyears/interval[mm]) - 1)) * interval[mm]  # the years in which there are updates (every three years)
+    #upyrs <- 1 + (0:(floor(proyears/2) - 1)) * 2
     if(!silent) {
       cat(".")
       flush.console()
@@ -1657,6 +1685,31 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
           }
 
+        }else if(MPcond=="complex"){
+
+          MPRecs_A <- Data_p_A <- MPrecs_A_blank # A temporary blank hierarchical list object stock by fleet
+          realVB<-abind::abind(apply(VBiomass[,,,1:nyears,],c(1,2,4),sum,na.rm=T),apply(VBiomass_P[,,,1:(y-1),],c(1,2,4),sum,na.rm=T),along=3) # need this for aggregating data and distributing TACs over stocks
+
+          curdat<-multiDataS(MSElist,StockPars,np,mm,nf,realVB)
+          runMP <- applyMP(curdat, MPs = MPs[mm], reps = 1, silent=TRUE)  # Apply MP
+
+          Stock_Alloc<-realVB[,,nyears]/apply(realVB[,,nyears],1,sum)
+
+          for(p in 1:np)for(f in 1:nf){
+
+            MPRecs_A[[p]][[f]]<-runMP[[1]][[1]]
+            MPRecs_A[[p]][[f]]$TAC<-runMP[[1]][[1]]$TAC*MOM@Allocation[[p]][,f]*Stock_Alloc[,p]
+            MPRecs_A[[p]][[f]]$Effort<-runMP[[1]][[1]]$Effort*MOM@Efactor[[p]][,f]
+
+            if(length(MPRecs_A[[p]][[f]]$Effort)>0)if(is.na(MPRecs_A[[p]][[f]]$Effort[1,1])) MPRecs_A[[p]][[f]]$Effort<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$Effort))
+            if(length(MPRecs_A[[p]][[f]]$TAC)>0)if(is.na(MPRecs_A[[p]][[f]]$TAC[1,1])) MPRecs_A[[p]][[f]]$TAC<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+            if(is.na(MPRecs_A[[p]][[f]]$Spatial[1,1])) MPRecs_A[[p]][[f]]$Spatial<-matrix(NA,nrow=0,ncol=ncol(MPRecs_A[[p]][[f]]$TAC))
+
+            Data_p_A[[p]][[f]]<-runMP[[2]]
+            Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
+
+          }
+
         }else{
 
           MPRecs_A <- Data_p_A <- MPrecs_A_blank # A temporary blank hierarchical list object stock by fleet
@@ -1903,8 +1956,10 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   Misc[['MOM']]<-MOM
 
+  if(class(MPs)=="character")MPs<-list(MPs) # need to reformat MMP and complex mode to work with MSEout slot
+
   ## Create MSE Object ####
-  MSEout <- new("MMSE", Name = MOM@Name, nyears, proyears, nMPs=nMP, MPs, MPcond=MPcond,MPrefs=MPrefs,nsim, nstocks=np, nfleets=nf,
+  MSEout <- new("MMSE", Name = MOM@Name, nyears, proyears, nMPs=nMP, MPs=MPs, MPcond=MPcond,MPrefs=MPrefs,nsim, nstocks=np, nfleets=nf,
                 Snames=Snames, Fnames=Fnames, Stocks=Stocks, Fleets=Fleets, Obss=Obs, Imps=Imps,OM=OM, Obs=Obsout, B_BMSY=B_BMSYa, F_FMSY=F_FMSYa, B=Ba,
                 SSB=SSBa, VB=VBa, FM=FMa, CaRet, TAC=TACa, SSB_hist = SSB, CB_hist = CB,
                 FM_hist = FM, Effort = Effort, PAA=PAAout, CAA=CAAout, CAL=CALout, CALbins=CALbins,

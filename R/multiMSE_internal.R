@@ -250,24 +250,32 @@ multiData<-function(MSElist,StockPars,p,mm,nf){
 #' @param np The number of stocks
 #' @param mm Integer the MP number
 #' @param nf The number of fleets
+#' @param realVB A matrix of real vulnerable biomass [nsim,year,np]
 #' @author T. Carruthers
 #' @export
-multiDataS<-function(MSElist,StockPars,np,mm,nf){
+multiDataS<-function(MSElist,StockPars,np,mm,nf,realVB){
+
+  nsim<-dim(MSElist[[1]][[1]][[1]]@Cat)[1]
+  nyears<-dim(MSElist[[1]][[1]][[1]]@Cat)[2]
+  na<-dim(MSElist[[1]][[1]][[1]]@CAA)[3]
+  nl<-dim(MSElist[[1]][[1]][[1]]@CAL)[3]
+  ni<-np*nf
+
+  if(realVB[1,1,1]==0)realVB[,,1]<-realVB[,,2] # impute vulnerable biomass for year 1 if missing (a negligible issue to be fixed in popdyn_MICE)
 
   DBF<-list()
+  realVBi<-array(NA,c(nsim,nyears,nf*np))
+
   for(f in 1:nf){
     for(p in 1:np){
       i<-p+(np*(f-1))
       DBF[[i]]<-MSElist[[p]][[f]][[mm]]
+      realVBi[,,i]<-realVB[,,p]
     }
   }
-  ni<-np*nf
+
 
   Dataout<-DBF[[1]]
-  nsim<-dim(Dataout@Cat)[1]
-  nyears<-dim(Dataout@Cat)[2]
-  na<-dim(Dataout@CAA)[3]
-  nl<-dim(Dataout@CAL)[3]
 
   Cat<-array(SIL(DBF,"Cat"),c(nsim,nyears,ni))
   CAA<-array(SIL(DBF,"CAA"),c(nsim,nyears,na,ni))
@@ -288,48 +296,59 @@ multiDataS<-function(MSElist,StockPars,np,mm,nf){
   Dataout@LFS<-apply(LFS*Cat[,nyears,],1,sum)/apply(Cat[,nyears,],1,sum)
   Dataout@LFC<-apply(LFC*Cat[,nyears,],1,sum)/apply(Cat[,nyears,],1,sum)
 
-  # Recalculations
-  #MLbin <- (StockPars[[p]]$CAL_bins[1:(length(StockPars[[p]]$CAL_bins) - 1)] + StockPars[[p]]$CAL_bins[2:length(StockPars[[p]]$CAL_bins)])/2
-  #temp <- Dataout@CAL * rep(MLbin, each = nsim * nyears)
-  #Dataout@ML <- apply(temp, 1:2, sum)/apply(Dataout@CAL, 1:2, sum)
-  #Dataout@Lc <- array(MLbin[apply(Dataout@CAL, 1:2, which.max)], dim = c(nsim, nyears))
-  #nuCAL <- Dataout@CAL
-  #for (i in 1:nsim) for (j in 1:nyears) nuCAL[i, j, 1:match(max(1, Dataout@Lc[i, j]), MLbin, nomatch=1)] <- NA
-  #temp <- nuCAL * rep(MLbin, each = nsim * nyears)
-  #Dataout@Lbar <- apply(temp, 1:2, sum, na.rm=TRUE)/apply(nuCAL, 1:2, sum, na.rm=TRUE)
-  #      cbind(ML[1,,],Dataout@ML[1,],rep(0,nyears),Lc[1,,],Dataout@Lc[1,],rep(0,nyears),Lbar[1,,],Dataout@Lbar[1,]) # check
-
   # Data among stocks have varying length bins so we resort to weighted averages here
   Dataout@ML<-apply(ML*Cat,1:2,sum)/apply(Cat,1:2,sum)
   Dataout@Lc<-apply(Lc*Cat,1:2,sum)/apply(Cat,1:2,sum)
   Dataout@Lbar<-apply(Lbar*Cat,1:2,sum)/apply(Cat,1:2,sum)
 
   # You were here!!!
-  # Ind
-  # Rec
-  # AvC
-  # Dt
-  # Mort
-  # FMSY_M
-  #BMSY_B0
-  #L50
-  #L95
-  #LFC
-  #LFS
-  # Dep
-  # Abun
-  # SpAbun
-  # vbK
-  # vbLinf
-  # vbt0
-  # LenCV
-  # wla
-  # wlb
-  # steep
-  # sigmaR
-  # Cref
-  # Iref
-  # Bref
+  Ind<-array(SIL(DBF,"Ind"),c(nsim,nyears,ni))
+  Rec<-array(SIL(DBF,"Ind"),c(nsim,nyears,ni))
+  Dataout@Ind<-apply(Ind*realVBi,1:2,sum)/apply(realVBi,1:2,sum)
+  Dataout@Rec<-apply(Rec*realVBi,1:2,sum)/apply(realVBi,1:2,sum)
+
+  AvC<-array(SIL(DBF,"AvC"),c(nsim,ni))
+  Dataout@AvC<-apply(AvC,1,sum)
+
+  popsimslot<-function(Dataout,sloty,realVBi,nsim,ni){
+    temp<-array(SIL(DBF,sloty),c(nsim,ni))
+    slot(Dataout,sloty)<-apply(temp*realVBi[,nyears,],1,sum)/apply(realVBi[,nyears,],1,sum)
+    Dataout
+  }
+
+  Dataout<-popsimslot(Dataout,'Dt',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'Mort',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'FMSY_M',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'BMSY_B0',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'L50',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'L95',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'LFC',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'LFS',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'Dep',realVBi,nsim,ni)
+
+  Abun<-array(SIL(DBF,'Abun'),c(nsim,ni))
+  Dataout@Abun<-apply(Abun,1,sum)
+
+  SpAbun<-array(SIL(DBF,'SpAbun'),c(nsim,ni))
+  Dataout@SpAbun<-apply(SpAbun,1,sum)
+
+  Dataout<-popsimslot(Dataout,'vbK',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'vbLinf',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'vbt0',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'LenCV',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'wla',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'wlb',realVBi,nsim,ni)
+
+  Dataout<-popsimslot(Dataout,'steep',realVBi,nsim,ni)
+  Dataout<-popsimslot(Dataout,'sigmaR',realVBi,nsim,ni)
+
+  Cref<-array(SIL(DBF,'Cref'),c(nsim,ni))
+  Dataout@Cref<-apply(Cref,1,sum)
+
+  Dataout<-popsimslot(Dataout,'Iref',realVBi,nsim,ni)
+
+  Bref<-array(SIL(DBF,'Bref'),c(nsim,ni))
+  Dataout@Bref<-apply(Bref,1,sum)
 
   Dataout
 }
