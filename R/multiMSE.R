@@ -77,7 +77,7 @@ multiMSE <- function(MOM, MPs = list(c("AvC","DCAC"),c("FMSYref","curE")),
   if (!all(is.na(MPvec))) {
     for (mm in MPvec) {
       chkMP <- try(get(mm), silent=TRUE)
-      if (class(chkMP) != 'MP') stop(mm, " is not a valid MP", call.=FALSE)
+      if (!(class(chkMP) %in% c('MP','MMP'))) stop(mm, " is not a valid MP", call.=FALSE)
     }
   }
 
@@ -240,16 +240,18 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   MPA<-array(1,c(np,nf, nyears+proyears,nareas))
   Agearray <- array(rep(1:maxage, each = nsim), dim = c(nsim, maxage))  # Age array
 
-  # Survival array with M-at-age
+  # Hermaphroditism
+  HermFrac<-expandHerm(SexPars$Herm,maxage=StockPars[[1]]$maxage,np=np,nsim=nsim) # [sim, stock, maxage] Defaults to all 1s if length(SexPars$Herm)==0
 
   for(p in 1:np){
 
     surv <- matrix(1, nsim, maxage)
     surv[, 2:maxage] <- t(exp(-apply(StockPars[[p]]$M_ageArray[,,1], 1, cumsum)))[, 1:(maxage-1)]  # Survival array
 
-    Nfrac <- surv * StockPars[[p]]$Mat_age[,,1]  # predicted Numbers of mature ages in first year
+    Nfrac <- surv * StockPars[[p]]$Mat_age[,,1] * HermFrac[,p,]  # predicted Numbers of mature ages in first year
 
     SPAYR <- as.matrix(expand.grid(1:nareas, 1, 1:maxage, p, 1:nsim)[5:1])  # Set up some array indexes sim (S) age (A) year (Y) region/area (R)
+    SPA<-SPAYR[,1:3]
     SAY <- SPAYR[, c(1,3,4)]
     SAR <- SPAYR[, c(1,3,5)]
     SA <- Sa <- SPAYR[, c(1,3)]
@@ -263,7 +265,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     R0a <- matrix(StockPars[[p]]$R0, nrow=nsim, ncol=nareas, byrow=FALSE) * StockPars[[p]]$initdist[,1,]  # !!!! INITDIST OF AGE 1. Unfished recruitment by area
 
     SSN[SPAYR] <- Nfrac[SA] * StockPars[[p]]$R0[S] * StockPars[[p]]$initdist[SAR]  # Calculate initial spawning stock numbers
-    N[SPAYR] <- StockPars[[p]]$R0[S] * surv[SA] * StockPars[[p]]$initdist[SAR]  # Calculate initial stock numbers
+    N[SPAYR] <- StockPars[[p]]$R0[S] * surv[SA] *HermFrac[SPA] * StockPars[[p]]$initdist[SAR]  # Calculate initial stock numbers
     Neq <- N
     Biomass[SPAYR] <- N[SPAYR] * StockPars[[p]]$Wt_age[SAY]  # Calculate initial stock biomass
     SSB[SPAYR] <- SSN[SPAYR] * StockPars[[p]]$Wt_age[SAY]    # Calculate spawning stock biomass
@@ -310,7 +312,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     #  --- Non-equilibrium calcs ----
     SSN[SPAYR] <- Nfrac[SA] * StockPars[[p]]$R0[S] * StockPars[[p]]$initdist[SAR]*StockPars[[p]]$Perr_y[Sa]  # Calculate initial spawning stock numbers
-    N[SPAYR] <- StockPars[[p]]$R0[S] * surv[SA] * StockPars[[p]]$initdist[SAR]*StockPars[[p]]$Perr_y[Sa]  # Calculate initial stock numbers
+    N[SPAYR] <- StockPars[[p]]$R0[S] * surv[SA] * HermFrac[SPA]* StockPars[[p]]$initdist[SAR]*StockPars[[p]]$Perr_y[Sa]  # Calculate initial stock numbers
 
     Biomass[SPAYR] <- N[SPAYR] * StockPars[[p]]$Wt_age[SAY]  # Calculate initial stock biomass
     SSB[SPAYR] <- SSN[SPAYR] * StockPars[[p]]$Wt_age[SAY]    # Calculate spawning stock biomass
@@ -349,6 +351,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   } # end of np
 
+  # GOT TO HERE IN YOUR CHECKING
 
   # if SexPars Sex specific exceptions (recalculation of SSB0, aR, bR, SSBpR)
   if(length(SexPars)>0){
@@ -1255,21 +1258,18 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       StockPars[[p]]$VBiomass_P<-VBiomass_P[,p,,,]
       #for(f in 1:nf)FleetPars[[p]][[f]]$FML<-FML[]
     }
+
     # -- apply MP in initial projection year ----
     # - Combined MP -
 
-    #realC<-apply(CBret[,,,,nyears,], 1:3, sum,na.rm=T)
-
-
     if(MPcond=="MMP"){
-      # returns a hierarchical list object stock then fleet of MPrec objects
 
-      MPRecs_A <- applyMMP(curdat, MPs = MPs[mm], reps = 1, silent=TRUE)  # Apply MP
+      DataList<-getDataList(MSElist,mm) # returns a hierarchical list object stock then fleet of Data objects
+      MPRecs_A <- applyMMP(DataList, MP = MPs[mm], reps = 1, silent=TRUE)  # # returns a hierarchical list object stock then fleet then slot type of Rec
       Data_p_A <- MPrecs_A_blank
-
       for(p in 1:np)for(f in 1:nf){
         Data_p_A[[p]][[f]]<-MSElist[[p]][[f]][[mm]]
-        Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
+        Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC # record TAC rec in Data
       }
 
     }else if(MPcond=="complex"){
@@ -1346,14 +1346,12 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     }
 
-
-
     for(p in 1:np){
 
       for(f in 1:nf){
 
                 # calculate pstar quantile of TAC recommendation dist
-        TACused[,p,f] <- TAC_A[,p,f]#apply(Data_p_A[[p]][[f]]@TAC, 2, quantile, p = MOM@pstar, na.rm = T)
+        TACused[,p,f] <- apply(Data_p_A[[p]][[f]]@TAC, 2, quantile, p = MOM@pstar, na.rm = T) #Data_p_A[[p]][[f]]@TAC#TAC_A[,p,f]#apply(Data_p_A[[p]][[f]]@TAC, 2, quantile, p = MOM@pstar, na.rm = T)
 
         checkNA[p,f,y] <- sum(is.na(TACused[,p,f]))
 
@@ -1381,7 +1379,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                   nCALbins=StockPars[[p]]$nCALbins,
                                   qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
 
-        TACa[,p,f, mm, y] <- MPCalcs$TACrec # recommended TAC
+        TACa[,p,f, mm, y] <- TACused[,p,f]#MPCalcs$TACrec # recommended TAC
         LastSpatial[,p,f,] <- MPCalcs$Si
         LastAllocat[,p,f] <- MPCalcs$Ai
         LastEi[,p,f] <- MPCalcs$Ei # adjustment to effort
@@ -1432,12 +1430,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         cat(".")
         flush.console()
       }
-
-
-      #if (AnnualMSY) {
-       # if (any(range(retA_P[,,nyears+y] - retA[,,nyears+y]) !=0)) SelectChanged <- TRUE
-      #  if (any(range(V_P[,,nyears+y] - V[,,nyears+y]) !=0))  SelectChanged <- TRUE
-      #}
 
       # -- Calculate MSY stats for this year ----
       if (AnnualMSY) { #
@@ -1503,9 +1495,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       Biomass_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[23,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       SSN_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[24,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       SSB_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[25,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
-
-      #apply(SSB_P[1,1,,1:y,],c(1,2),sum)
-      #apply(FM_P[1,1,1,,1:y,],c(1,2),mean)
 
 
       VBiomass_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[19,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
@@ -1678,11 +1667,12 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         if(MPcond=="MMP"){
           # returns a hierarchical list object stock then fleet of MPrec objects
 
-          MPRecs_A <- applyMMP(curdat, MPs = MPs[mm], reps = MOM@reps, silent=TRUE)  # Apply MP
+          DataList<-getDataList(MSElist,mm) # returns a hierarchical list object stock then fleet of Data objects
+          MPRecs_A <- applyMMP(DataList, MP = MPs[mm], reps = 1, silent=TRUE)  # # returns a hierarchical list object stock then fleet then slot type of Rec
           Data_p_A <- MPrecs_A_blank
           for(p in 1:np)for(f in 1:nf){
             Data_p_A[[p]][[f]]<-MSElist[[p]][[f]][[mm]]
-            Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC
+            Data_p_A[[p]][[f]]@TAC<-MPRecs_A[[p]][[f]]$TAC # record TAC rec in Data
           }
 
         }else if(MPcond=="complex"){
@@ -1809,8 +1799,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             VF[,p,f,,]<- MPCalcs$V_P
             FleetPars[[p]][[f]]$SLarray_P <- MPCalcs$SLarray_P # vulnerable-at-length
 
-
-
             # apply combined MP ----
             if("DataOut"%in%names(control))if(control$DataOut == y) return(MSElist)
 
@@ -1835,7 +1823,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             NoMPRecs <- MPRecs_A[[p]][[f]]
             NoMPRecs[lapply(NoMPRecs, length) > 0 ] <- NULL
             NoMPRecs$Spatial <- NA
-            #LastEi[,p,f]<-rep(1,nsim)
 
             MPCalcs <- DLMtool:::CalcMPDynamics(MPRecs=NoMPRecs, y=y, nyears=nyears, proyears=proyears, nsim=nsim,
                                       LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
@@ -1855,8 +1842,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                       maxage=StockPars[[p]]$maxage, nareas=StockPars[[p]]$nareas, Asize=StockPars[[p]]$Asize,
                                       nCALbins=StockPars[[p]]$nCALbins,
                                       qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
-
-            #TACa[, mm, y] <- TACused #  MPCalcs$TACrec # recommended TAC
 
 
             TACa[,p,f, mm, y] <- TACused[,p,f] # recommended TAC

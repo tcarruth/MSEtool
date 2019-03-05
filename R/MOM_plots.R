@@ -19,9 +19,6 @@
 #' @export
 plot.MOM<-function(MOM,silent=T,maxsims=6){
 
-  #MOM<-match.arg(MOM)
-  #if(is.null(MOM))MOM=MOM
-
   Rel<-MOM@Rel
   Stocks<-MOM@Stocks
   Fleets<-MOM@Fleets

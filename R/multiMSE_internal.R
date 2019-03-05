@@ -354,4 +354,23 @@ multiDataS<-function(MSElist,StockPars,np,mm,nf,realVB){
 }
 
 
+#' Expand the Herm list in SexPars to a matrix of fractions at age
+#'
+#' @param Herm A list of Hermaphroditic fractions at age (starting age class 1)
+#' @param maxage The maximum age of stocks being simulated
+#' @param np The total number of stocks being simulated
+#' @author T. Carruthers
+#' @export
+expandHerm<-function(Herm,maxage,np,nsim){
+  HermFrac<-array(1,c(nsim,np,maxage))
+  if(length(Herm)>0){
+    ps<-matrix(as.numeric(sapply(names(Herm),function(x)strsplit(x,"_")[[1]][2:3])),nrow=length(Herm),byrow=T)
+    for(i in 1:length(Herm)){
+      HermFrac[,ps[i,1],1:ncol(Herm[[1]])]<-Herm[[1]]
+      HermFrac[,ps[i,2],]<-0
+      HermFrac[,ps[i,2],1:ncol(Herm[[1]])]<-1-Herm[[1]]
+    }
+  }
+  HermFrac
+}
 
