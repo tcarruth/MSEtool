@@ -355,13 +355,24 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # if SexPars Sex specific exceptions (recalculation of SSB0, aR, bR, SSBpR)
   if(length(SexPars)>0){
 
+    message("You have specified sex-specific dynamics, unfished spawning biomass and specified stock depletion will be mirrored across sex types according to SexPars$SSBfrom")
+
     SSB0s<-matrix(NIL(StockPars,"SSB0"),nrow=nsim) # sim, p
     sexmatches<-sapply(1:nrow(SexPars$SSBfrom),function(x,mat)paste(mat[x,],collapse="_"), mat=SexPars$SSBfrom)
-    depcopy<-match(sexmatches,sexmatches)
+    parcopy<-match(sexmatches,sexmatches)
+    StockPars_t<-StockPars # need to store a temporary object for copying to/from
 
     for(p in 1:np){
 
       SSB0<-apply(matrix(rep(SexPars$SSBfrom[p,],each=nsim),nrow=nsim)*SSB0s,1,sum)
+      StockPars[[p]]$SSB0<-SSB0
+
+      # copied parameters
+      StockPars[[p]]$D<-StockPars_t[[parcopy[p]]]$D
+      StockPars[[p]]$hs<-StockPars_t[[parcopy[p]]]$hs
+      StockPars[[p]]$R0<-StockPars_t[[parcopy[p]]]$R0
+      StockPars[[p]]$R0a<-StockPars_t[[parcopy[p]]]$R0a
+
       StockPars[[p]]$SSBpR<-array(SSB0/StockPars[[p]]$R0,c(nsim,nareas)) # !!!!!!!!!!! SSBpR hardwired to be the same among areas !!!!
 
       idist<-StockPars[[p]]$R0a/apply(StockPars[[p]]$R0a,1,sum)
@@ -370,8 +381,11 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       StockPars[[p]]$bR <- matrix(log(5 * StockPars[[p]]$hs)/(0.8 * SSB0a), nrow=nsim)  # Ricker SR params
       StockPars[[p]]$aR <- matrix(exp(StockPars[[p]]$bR * SSB0a)/StockPars[[p]]$SSBpR, nrow=nsim)  # Ricker SR params
 
-      StockPars[[p]]$SSB0<-SSB0
-      StockPars[[p]]$D<-StockPars[[depcopy[p]]]$D
+
+    }
+
+    if(length(SexPars$Herm)>0){
+      message("You have specified sequential hermaphroditism (SexPars$Herm). Unfished stock numbers will be calculated from this vector of fractions at age. Population dynamics will move individuals from one sex to another")
     }
 
   }
@@ -523,6 +537,17 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   SSB0_specified <- array(NIL(StockPars,'SSB0'),c(nsim,np))
   D_specified <- array(NIL(StockPars,'D'),c(nsim,np))
   Depletion <- apply(SSB[,,,nyears,,drop=F],1:2,sum)/ SSB0_specified
+
+  if(length(SexPars)>0){ # need to copy over depletion for a sex-specific model
+
+    sexmatches<-sapply(1:nrow(SexPars$SSBfrom),function(x,mat)paste(mat[x,],collapse="_"), mat=SexPars$SSBfrom)
+    parcopy<-match(sexmatches,sexmatches)
+    StockPars_t<-StockPars # need to store a temporary object for copying to/from
+    Depletion[,1:np]<-Depletion[,parcopy]
+
+  }
+
+
   # if (nsim == 1) Depletion <- sum(SSB[,p,,nyears,])/SSB0 #^betas
   for(p in 1:np)StockPars[[p]]$Depletion<-Depletion[,p]
 

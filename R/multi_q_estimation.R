@@ -168,6 +168,15 @@ qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,Fre
 
   SSBest<-apply(HistVars$SSBx,c(1,3),sum)
   deppred<-SSBest[,nyears]/SSB0x
+
+  if(length(SexPars)>0){ # you need to make depletion just one variable for all components of a sex-specific model
+
+    sexmatches<-sapply(1:nrow(SexPars$SSBfrom),function(x,mat)paste(mat[x,],collapse="_"), mat=SexPars$SSBfrom)
+    parcopy<-match(sexmatches,sexmatches)
+    deppred<-deppred[parcopy]
+
+  }
+
   Cpred0<-array(NA,c(np,nf,maxage,nareas))
   Cind<-TEG(dim(Cpred0))
   Find<-cbind(Cind[,1:3],nyears,Cind[,4]) # p f age y area

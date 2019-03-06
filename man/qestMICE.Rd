@@ -7,7 +7,7 @@
 qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, maxage,
   Nx, VFx, FretAx, Effind, distx, movx, Spat_targ, M_ageArrayx, Mat_agex,
   Asizex, Kx, Linfx, t0x, Mx, R0x, R0ax, SSBpRx, SSB0x, hsx, aRx, bRx, ax,
-  bx, Perrx, SRrelx, Rel, SexPars)
+  bx, Perrx, SRrelx, Rel, SexPars, x)
 }
 \arguments{
 \item{par}{Integer, the simulation number}
@@ -71,6 +71,8 @@ qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, maxage,
 \item{Rel}{A list of inter-stock relationships see slot Rel of MOM object class}
 
 \item{SexPars}{A list of sex-specific dynamics (SSBfrom, stcck_age)}
+
+\item{x}{Integer. The simulation number}
 
 \item{mod}{Character if 'opt' qestMICE returns the objective function otherwise the fitted values in a list}
 

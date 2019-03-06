@@ -174,18 +174,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
                         SRrelx,M_agecur,Mat_agecur,Asizex,
                         Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx,Rel,SexPars,x){
 
-  if(length(SexPars$Herm)>0){ # Hermaphroditic mode
-    Ncur[is.na(Ncur)]<-0 # catch for NAs
-    for(i in 1:length(SexPars$Herm)){
-      ps<-as.numeric(strsplit(names(SexPars$Herm)[i],"_")[[1]][2:3])
-      pfrom<-ps[1]
-      pto<-ps[2]
-      frac<-rep(1,maxage)
-      frac[1:length(SexPars$Herm[[i]][x,])]<-SexPars$Herm[[i]][x,]
-      Ncur[pfrom,,]<-Ncur[pfrom,,]+frac*Ncur[pto,,] #)Nnext[pto,,])
-      Ncur[pto,,]<-(1-frac)*Ncur[pto,,]
-    }
-  }
+
 
   # Initial Bcur calc (before any weight at age recalculation change)
   # Bcalc ---------------------------------------------------------------------------
@@ -259,9 +248,25 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
                             R0a=R0ax[p,], SSBpR=SSBpRx[p,], aR=aRx[p,], bR=bRx[p,],
                             mov=movy[p,,,], SRrel=SRrelx[p])
     Nnext[p,,]<-NextYrN
+
+
   }
 
-  Nnext[is.na(Nnext)]<-0 # catch for NAs
+  if(length(SexPars$Herm)>0){ # Hermaphroditic mode
+    Nnext[is.na(Nnext)]<-0 # catch for NAs
+    for(i in 1:length(SexPars$Herm)){
+      ps<-as.numeric(strsplit(names(SexPars$Herm)[i],"_")[[1]][2:3])
+      pfrom<-ps[2]
+      pto<-ps[1]
+      frac<-rep(1,maxage)
+      frac[1:length(SexPars$Herm[[i]][x,])]<-SexPars$Herm[[i]][x,]
+      h_rate<-hrate(frac)
+      Nnext[pto,,]<- Nnext[pto,,]*(frac>0) # remove any recruitment
+      Nmov<-Nnext[pfrom,,]*h_rate
+      Nnext[pto,,]<- Nnext[pto,,]+Nmov
+      Nnext[pfrom,,]<-Nnext[pfrom,,]-Nmov  # subtract fish
+    }
+  }
 
   Bcur[Nind]<-Nnext[Nind]*Wt_age[Nind[,1:2]]
   SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]
@@ -327,6 +332,27 @@ ResFromRel<-function(Rel,Bcur,SSBcur,Ncur,seed){
   }
 
   out
+
+}
+
+
+#' Derives the rate of exchange from one sex to another based on asymptotic fraction
+#'
+#' @param frac A vector of asymptotic sex fraction (must start with zero and end with 1)
+#' @author T.Carruthers
+#' @keywords internal
+#' @export
+hrate<-function(frac){
+
+  m1frac<-1-frac
+  ind1<-(1:(length(frac)-1))
+  ind2<-ind1+1
+  hrate<-rep(0,length(frac))
+  hrate[ind2]<-1-(m1frac[ind2]/m1frac[ind1])
+  hrate[is.na(hrate)]<-1
+  hrate[hrate<0]<-0
+  #cbind(frac,m1frac,hrate)
+  hrate
 
 }
 

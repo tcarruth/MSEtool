@@ -7,7 +7,7 @@
 popdynMICE(qsx, qfracx, np, nf, nyears, nareas, maxage, Nx, VFx, FretAx,
   Effind, movx, Spat_targ, M_ageArrayx, Mat_agex, Asizex, Kx, Linfx, t0x,
   Mx, R0x, R0ax, SSBpRx, hsx, aRx, bRx, ax, bx, Perrx, SRrelx, Rel,
-  SexPars)
+  SexPars, x)
 }
 \arguments{
 \item{qsx}{Total catchability}
@@ -69,6 +69,8 @@ popdynMICE(qsx, qfracx, np, nf, nyears, nareas, maxage, Nx, VFx, FretAx,
 \item{Rel}{A list of inter-stock relationships see slot Rel of MOM object class}
 
 \item{SexPars}{A list of sex-specific relationships (SSBfrom, stock_age)}
+
+\item{x}{Integer the simulation number}
 
 \item{Linf}{Vector [stock] of von B asymptotic length parameter Linf}
 

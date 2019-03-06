@@ -11,15 +11,15 @@
 #' @export
 plotquant<-function(x,p=c(0.05,0.25,0.75,0.95),yrs,qcol,lcol,addline=T,ablines=NA){
   ny<-length(yrs)
-  qs<-apply(x,2,quantile,p=p[c(1,4)])
-  qsi<-apply(x,2,quantile,p=p[2:3])
+  qs<-apply(x,2,quantile,p=p[c(1,4)],na.rm=T)
+  qsi<-apply(x,2,quantile,p=p[2:3],na.rm=T)
   polygon(c(yrs,yrs[ny:1]),c(qs[1,],qs[2,ny:1]),border=NA,col='#b3ecff')
 
   polygon(c(yrs,yrs[ny:1]),c(qsi[1,],qsi[2,ny:1]),border=NA,col=qcol)
   if(!is.na(ablines[1]))abline(h=ablines,col='#99999980')
 
   if(addline)for(i in 1:2)lines(yrs,x[i,],col=lcol,lty=i)
-  lines(yrs,apply(x,2,quantile,p=0.5),lwd=2,col="white")
+  lines(yrs,apply(x,2,quantile,p=0.5,na.rm=T),lwd=2,col="white")
 }
 
 
@@ -84,7 +84,7 @@ plot.MMSE<-function(MMSE,maxcol=6,qcol=rgb(0.4,0.8,0.95), lcol= "dodgerblue4",qu
 
   F_FMSY<-MMSE@F_FMSY
   F_FMSYsum<-apply(F_FMSY,c(1,2,3,5),sum)
-  Flims<- c(0,quantile(F_FMSYsum,0.95))
+  Flims<- c(0,quantile(F_FMSYsum,0.95,na.rm=T))
 
   for(pp in 1:length(plots)){
 

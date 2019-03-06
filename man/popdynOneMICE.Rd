@@ -6,7 +6,7 @@
 \usage{
 popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
   hsx, aRx, bRx, movy, Spat_targ, SRrelx, M_agecur, Mat_agecur, Asizex, Kx,
-  Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, Rel, SexPars)
+  Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, Rel, SexPars, x)
 }
 \arguments{
 \item{np}{Integer, the number of stocks}
@@ -60,6 +60,8 @@ popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
 \item{Rel}{A list of inter-stock relationships see slot Rel of MOM object class}
 
 \item{SexPars}{A list of sex-specific relationships (SSBfrom, stock_age)}
+
+\item{x}{Integer. The simulation number}
 
 \item{nyears}{Integer, number of historical years (unfished til today)}
 
