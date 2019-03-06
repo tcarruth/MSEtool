@@ -83,7 +83,7 @@ plot.MMSE<-function(MMSE,maxcol=6,qcol=rgb(0.4,0.8,0.95), lcol= "dodgerblue4",qu
   # --- F projection -----------------------------------------------------------
 
   F_FMSY<-MMSE@F_FMSY
-  F_FMSYsum<-apply(F_FMSY,c(1,2,3,5),sum)
+  F_FMSYsum<-apply(F_FMSY,c(1,2,3,5),sum,na.rm=T)
   Flims<- c(0,quantile(F_FMSYsum,0.95,na.rm=T))
 
   for(pp in 1:length(plots)){
