@@ -34,12 +34,13 @@
 #' @param SRrelx Integer vector [stock] the form of the stock recruitment relationship (1 = Beverton-Holt, 2= Ricker)
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
 #' @param SexPars A list of sex-specific relationships (SSBfrom, stock_age)
+#' @param x Integer the simulation number
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
 popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,
                      M_ageArrayx,Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx,
-                     bRx,ax,bx,Perrx,SRrelx,Rel, SexPars){
+                     bRx,ax,bx,Perrx,SRrelx,Rel,SexPars,x){
 
   Bx<-SSNx<-SSBx<-VBx<-Zx<-array(NA,dim(Nx))
   VBfx<-array(NA,c(np,nf,maxage,nyears,nareas)) # initial year calculation
@@ -73,6 +74,7 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
     Fdist[Find]<-VBcur[Find]^Spat_targ[Find[,1:2]]
     #VBagg<-apply(Fdist,1:3,sum)
     Fdist[Find]<-Fdist[Find]/apply(Fdist,1:3,sum)[Find[,1:3]]
+    Fdist[is.na(Fdist)]<-0 # This is an NA catch for hermaphroditism
     Ecur[]<-Effind[,,y-1] #matrix(Effind[,,y-1],nrow=np,ncol=nf)
     Vcur[]<-VFx[,,,y-1]#array(VFx[,,,y-1],c(np,nf,maxage))
     FMx[Find]<-qsx[Find[,1]]*qfracx[Find[,1:2]]*Ecur[Find[,1:2]]*Fdist[Find]*Vcur[Find[,1:3]]/Asizex[Find[,c(1,4)]]
@@ -98,9 +100,9 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
                        Mat_agecur=array(Mat_agex[,,y-1],dim(Mat_agex)[1:2]),
                        Asizex=Asizex,
                        Kx=Ky[,y-1], Linfx=Linfy[,y-1], t0x=t0y[,y-1], Mx=My[,y-1], R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,ax=ay[,y-1],
-                       bx=by[,y-1],Rel=Rel, SexPars=SexPars)
+                       bx=by[,y-1],Rel=Rel, SexPars=SexPars, x=x)
 
-    # PerrYrp=Perrx[,y+maxage-2]; hsx=hsy[,y-1]; Kx=Ky[,y-1]; Linfx=Linfy[,y-1]; t0x=t0y[,y-1]; Mx=My[,y-1]; ax=ay[,y-1]; bx=by[,y-1]
+    # Ncur=array(Nx[,,y-1,],dim(Nx)[c(1:2,4)]);  movy=array(movx[,,,,y-1],c(np,maxage,nareas,nareas)); M_agecur=array(M_ageArrayx[,,y-1],dim(M_ageArrayx)[1:2]); Mat_agecur=array(Mat_agex[,,y-1],dim(Mat_agex)[1:2]); PerrYrp=Perrx[,y+maxage-2]; hsx=hsy[,y-1]; Kx=Ky[,y-1]; Linfx=Linfy[,y-1]; t0x=t0y[,y-1]; Mx=My[,y-1]; ax=ay[,y-1]; bx=by[,y-1]
 
     if(y<=nyears){
       Nx[,,y,]<-out$Nnext
@@ -164,12 +166,26 @@ popdynMICE<-function(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,
 #' @param bx Vector [stock] weight-length parameter b W=aL^b
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
 #' @param SexPars A list of sex-specific relationships (SSBfrom, stock_age)
+#' @param x Integer. The simulation number
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
 popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, hsx, aRx, bRx, movy,Spat_targ,
                         SRrelx,M_agecur,Mat_agecur,Asizex,
-                        Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx, Rel, SexPars){
+                        Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx,Rel,SexPars,x){
+
+  if(length(SexPars$Herm)>0){ # Hermaphroditic mode
+    Ncur[is.na(Ncur)]<-0 # catch for NAs
+    for(i in 1:length(SexPars$Herm)){
+      ps<-as.numeric(strsplit(names(SexPars$Herm)[i],"_")[[1]][2:3])
+      pfrom<-ps[1]
+      pto<-ps[2]
+      frac<-rep(1,maxage)
+      frac[1:length(SexPars$Herm[[i]][x,])]<-SexPars$Herm[[i]][x,]
+      Ncur[pfrom,,]<-Ncur[pfrom,,]+frac*Ncur[pto,,] #)Nnext[pto,,])
+      Ncur[pto,,]<-(1-frac)*Ncur[pto,,]
+    }
+  }
 
   # Initial Bcur calc (before any weight at age recalculation change)
   # Bcalc ---------------------------------------------------------------------------
@@ -214,10 +230,10 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
 
   } # end of MICE
 
-  if(length(SexPars)>0){
+  if(length(SexPars$SSBfrom)>0){
     SSBs<-SSBcur
     for(p in 1:np){ # use SSB from another stock to predict recruitment
-       SSBcur[p,,]<-apply(SexPars$SSBfrom[p,]*SSBs,2:3,sum)
+      SSBcur[p,,]<-apply(SexPars$SSBfrom[p,]*SSBs,2:3,sum)
     }
   }
 
@@ -238,20 +254,14 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
   VBt<-Bcur*Selx
 
   for(p in 1:np){
-    #NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSB[x,,nyears, ]), Ncurr=N[x,,nyears,],
-    #                        Zcurr=Zcur[p,,], PerrYr=PerrYrp[x, nyears+maxage-1], hs=hs[x],
-    #                        R0a=R0a[x,], SSBpR=SSBpRax[p,], aR=aRx[p,], bR=bRx[p,],
-    #                        mov=mov[x,,,], SRrel=SRrelx[p])
-
     NextYrN<-popdynOneTScpp(nareas, maxage, SSBcurr=colSums(SSBcur[p,,]), Ncurr=Ncur[p,,],
                             Zcurr=Zcur[p,,], PerrYr=PerrYrp[p], hs=hsx[p],
                             R0a=R0ax[p,], SSBpR=SSBpRx[p,], aR=aRx[p,], bR=bRx[p,],
                             mov=movy[p,,,], SRrel=SRrelx[p])
-
     Nnext[p,,]<-NextYrN
-
-
   }
+
+  Nnext[is.na(Nnext)]<-0 # catch for NAs
 
   Bcur[Nind]<-Nnext[Nind]*Wt_age[Nind[,1:2]]
   SSBcur[Nind]<-Bcur[Nind]*Mat_agecur[Nind[,1:2]]

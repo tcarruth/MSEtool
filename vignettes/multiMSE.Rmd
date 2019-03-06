@@ -544,12 +544,24 @@ plot(MMSE_BH)
 
 ## Sex - specific multistock operating models
 
-SexPars
-
 R0 of the two stocks determines the sex ratio
 
-When SexPars$Herm is specified, R0s have to be set the same at the level of the R0 of the male (protygynous) or femail (protandrous) recruits. 
 
+## Sequential Hermaphroditism
+
+Assuming you have specified sex-specific stock-recruitmetn using SexPars, you have the option of adding sequential hermaphroditism with the SexPars$Herm list. 
+
+To specify protogyny (Female - Male) where stock 1 is female and stock 2 is male, you include a vector H_1_2 that is the fraction female (Stock 1) at age:
+
+
+
+To specify protandry (Male - Female) where stock 1 is female and stock 2 is male, you include a vector H_2_1 that is the fraction male (Stock 2) at age: 
+
+
+
+These list objects have to be named H_stockfirst_stocksecond where first and second controls the order of the sequential hermaphroditism. 
+
+A current constraint of the current version of multiMSE is that the R0s specified for males and females must be the same. 
 
 
 ## Custom TAC allocations

@@ -91,13 +91,13 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
              depc=depc,CFc=CFc,mode='opt',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
              Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Asizex=Asizex,Kx=Kx,
              Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,SSB0x=SSB0x,hsx=hsx,ax=ax,bx=bx,aRx=aRx,bRx=bRx,Perrx=Perrx,SRrelx=SRrelx,
-             Rel=Rel,SexPars=SexPars,
+             Rel=Rel,SexPars=SexPars,x=x,
              control=list(trace=1,factr=factr))
 
   out<-qestMICE(par=opt$par, depc=depc,CFc=CFc,mode='calc',np=np,nf=nf,nyears=nyears,nareas=nareas,maxage=maxage,Nx=Nx,VFx=VFx,FretAx=FretAx,
           Effind=Effind,distx=distx,movx=movx,Spat_targ=Spat_targ,M_ageArrayx=M_ageArrayx,Mat_agex=Mat_agex,Asizex=Asizex,Kx=Kx,
           Linfx=Linfx,t0x=t0x,Mx=Mx,R0x=R0x,R0ax=R0ax,SSBpRx=SSBpRx,SSB0x=SSB0x,hsx=hsx,aRx=aRx,bRx=bRx,ax=ax,bx=bx,Perrx=Perrx,SRrelx=SRrelx,
-          Rel=Rel,SexPars=SexPars)
+          Rel=Rel,SexPars=SexPars,x=x)
 
   return(out)
 
@@ -143,11 +143,12 @@ getq_multi_MICE<-function(x,StockPars, FleetPars, np,nf, nareas, maxage, nyears,
 #' @param SRrelx Integer vector [stock] the form of the stock recruitment relationship (1 = Beverton-Holt, 2= Ricker)
 #' @param Rel A list of inter-stock relationships see slot Rel of MOM object class
 #' @param SexPars A list of sex-specific dynamics (SSBfrom, stcck_age)
+#' @param x Integer. The simulation number
 #' @author T.Carruthers
 #' @keywords internal
 #' @export
 qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,distx,movx,Spat_targ,M_ageArrayx,Mat_agex,
-                   Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,SSB0x,hsx,aRx, bRx, ax,bx,Perrx,SRrelx,Rel,SexPars){
+                   Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,SSB0x,hsx,aRx, bRx, ax,bx,Perrx,SRrelx,Rel,SexPars,x){
 
   qsx<-exp(par[1:np])
   if(nf==1){
@@ -159,7 +160,7 @@ qestMICE<-function(par,depc,CFc,mode='opt',np,nf,nyears,nareas,maxage,Nx,VFx,Fre
   }
 
   HistVars<-popdynMICE(qsx,qfracx,np,nf,nyears,nareas,maxage,Nx,VFx,FretAx,Effind,movx,Spat_targ,M_ageArrayx,
-                       Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel,SexPars)
+                       Mat_agex,Asizex,Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,hsx,aRx, bRx,ax,bx,Perrx,SRrelx,Rel,SexPars,x)
 
   # matplot(t(apply(HistVars$SSBx,c(1,3),sum)))
   # matplot(t(apply(HistVars$Nx,c(1,3),sum)))
