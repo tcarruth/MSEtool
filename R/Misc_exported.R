@@ -39,3 +39,18 @@ avail <- function(classy, all_avail = TRUE) {
 }
 
 getclass <- function(x, classy) any(inherits(get(x), classy))
+
+#' Get the MSEtool vignettes
+#'
+#' A convenient function to open a web browser with the MSEtool package vignettes
+#' @examples
+#' \dontrun{
+#' MSEtool::userguide()
+#' DLMtool::userguide()
+#' }
+#' @seealso \link[DLMtool]{userguide}
+#' @export
+userguide <- function() {
+  message("For the DLMtool user guide, type in 'DLMtool::userguide()' to the console.")
+  browseVignettes("MSEtool")
+}
