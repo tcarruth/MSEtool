@@ -151,7 +151,6 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   maxF<-MOM@maxF
   Snames<-SIL(Stocks,"Name")
   Fnames<-matrix(make.unique(SIL(Fleets,"Name")),nrow=nf)
-
   cpars<-MOM@cpars
 
   #MOM <- ChkObj(MOM) # Check that all required slots in OM object contain values
@@ -174,8 +173,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   # --- Sample custom parameters ----
 
   SampCpars<-list() # empty list
-  # custom parameters exist - sample and write to list
 
+  # custom parameters exist - sample and write to list
   for(p in 1:np){
     SampCpars[[p]]<-list()
     for(f in 1:nf){
@@ -1178,6 +1177,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                   Asizex=matrix(Asize[x,,],ncol=nareas),Kx =K[x,], Linfx=Linf[x,],t0x=t0[x,],Mx=M[x,],
                   R0x=R0[x,],R0ax=matrix(R0a[x,,],nrow=np),SSBpRx=matrix(SSBpR[x,,],nrow=np),ax=a_y,
                   bx=b_y,Rel=Rel,SexPars=SexPars,x=x))
+    # x=1; Ncur=array(N[x,,,nyears,],c(np,maxage,nareas)); Vcur=array(VF[x,,,,nyears],c(np,nf,maxage)); FMretx=array(FMret[x,,,,nyears,],c(np,nf,maxage,nareas));  FMx=array(FM[x,,,,nyears,],c(np,nf,maxage,nareas));   PerrYrp=Perr[x,]; hsx=hs[x,]; aRx=matrix(aR[x,,],nrow=np); bRx=matrix(bR[x,,],nrow=np);  movy=array(mov[x,,,,,nyears],c(np,maxage,nareas,nareas)); Spat_targ=array(Spat_targ_y[x,,],c(np,nf)); SRrelx=SRrel[x,]; M_agecur=matrix(M_agecur_y[x,,],nrow=np); Mat_agecur=matrix(Mat_agecur_y[x,,],nrow=np);   Asizex=matrix(Asize[x,,],ncol=nareas); Kx =K[x,]; Linfx=Linf[x,];t0x=t0[x,];Mx=M[x,]; R0x=R0[x,]; R0ax=matrix(R0a[x,,],nrow=np); SSBpRx=matrix(SSBpR[x,,],nrow=np); ax=a_y; bx=b_y; Rel=Rel; SexPars=SexPars; x=x
 
     N_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[1,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
     Biomass_P[,,,1,]<-aperm(array(as.numeric(unlist(NextYrN[23,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
@@ -1320,6 +1320,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                   nCALbins=StockPars[[p]]$nCALbins,
                                   qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
 
+        if(length(SexPars)>0)MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
+
         TACa[,p,f, mm, y] <- TACused[,p,f]#MPCalcs$TACrec # recommended TAC
         LastSpatial[,p,f,] <- MPCalcs$Si
         LastAllocat[,p,f] <- MPCalcs$Ai
@@ -1331,6 +1333,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         FleetPars[[p]][[f]]$CB_Pret <- MPCalcs$CB_Pret # retained catch
         FleetPars[[p]][[f]]$FM_P <- MPCalcs$FM_P # fishing mortality
         FM_P[,p,f,,,]<- MPCalcs$FM_P
+
         FleetPars[[p]][[f]]$FM_Pret <- MPCalcs$FM_Pret # retained fishing mortality
         FMret_P[,p,f,,,]<- MPCalcs$FM_Pret
         #FretA[,p,f,,]<- MPCalcs$FM_Pret
@@ -1421,6 +1424,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                     Asizex=matrix(Asize[x,,],ncol=nareas), Kx =K[x,], Linfx=Linf[x,],t0x=t0[x,],Mx=M[x,],
                     R0x=R0[x,],R0ax=matrix(R0a[x,,],nrow=np),SSBpRx=matrix(SSBpR[x,,],nrow=np),ax=a_y,
                     bx=b_y,Rel=Rel,SexPars=SexPars,x=x))
+
+      # x=1; Ncur=array(N_P[x,,,y-1,],c(np,maxage,nareas)); Vcur=array(VF[x,,,,nyears+y-1],c(np,nf,maxage)); FMretx=array(FMret_P[x,,,,y-1,],c(np,nf,maxage,nareas));  FMx=array(FM_P[x,,,,y-1,],c(np,nf,maxage,nareas));   PerrYrp=Perr[x,]; hsx=hs[x,]; aRx=matrix(aR[x,,],nrow=np); bRx=matrix(bR[x,,],nrow=np);  movy=array(mov[x,,,,,nyears+y],c(np,maxage,nareas,nareas)); Spat_targ=array(Spat_targ_y[x,,],c(np,nf)); SRrelx=SRrel[x,]; M_agecur=matrix(M_agecur_y[x,,],nrow=np); Mat_agecur=matrix(Mat_agecur_y[x,,],nrow=np);   Asizex=matrix(Asize[x,,],ncol=nareas); Kx =K[x,]; Linfx=Linf[x,];t0x=t0[x,];Mx=M[x,]; R0x=R0[x,]; R0ax=matrix(R0a[x,,],nrow=np); SSBpRx=matrix(SSBpR[x,,],nrow=np); ax=a_y; bx=b_y; Rel=Rel; SexPars=SexPars; x=x
 
       N_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[1,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
       Biomass_P[,,,y,]<-aperm(array(as.numeric(unlist(NextYrN[23,], use.names=FALSE)), dim=c(np,maxage, nareas, nsim)), c(4,1,2,3))
@@ -1694,6 +1699,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                       nCALbins=StockPars[[p]]$nCALbins,
                                       qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
 
+            if(length(SexPars)>0) MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
+
             TACa[,p,f, mm, y] <- MPCalcs$TACrec # recommended TAC
             LastSpatial[,p,f,] <- MPCalcs$Si
             LastAllocat[,p,f] <- MPCalcs$Ai
@@ -1752,6 +1759,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                       maxage=StockPars[[p]]$maxage, nareas=StockPars[[p]]$nareas, Asize=StockPars[[p]]$Asize,
                                       nCALbins=StockPars[[p]]$nCALbins,
                                       qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
+
+            if(length(SexPars)>0) MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
 
             TACa[,p,f, mm, y] <- TACused[,p,f] # recommended TAC
             #TACa[,p,f, mm, y] <- MPCalcs$TACrec # recommended TAC

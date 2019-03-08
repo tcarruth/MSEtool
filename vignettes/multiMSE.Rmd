@@ -1,12 +1,13 @@
 ---
-title: "User guide for multiMSE: "
-subtitle: "Multi-species, multi-stock and MICE dynamics using MSEtool"
+title: "User guide for multiMSE"
+subtitle: "Multi-stock, multi-fleet and MICE dynamics using MSEtool"
 author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
     toc: true
     number_sections: true 
+    
 vignette: >
   %\VignetteIndexEntry{User guide to MSEtool}
   %\VignetteEngine{knitr::rmarkdown}
@@ -42,7 +43,7 @@ pre { /* Code block */
 </style>
 
 
-```{r set options, echo = FALSE}
+```{r set options, echo = FALSE,message=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 knitr::opts_chunk$set(dpi=85)
 options(width = 650)
@@ -65,16 +66,22 @@ There are however situations when managers wish to evaluate the robustness of a 
 
 To accomplish this, you will need to become familiar with a new class of operating model object 'MOM' (multi operating model), a new class of MSE object 'MMSE' (multi MSE), and optionally, a new class of management procedure 'MMP' (multi MP). 
 
-Beyond learning about these new objects and functions, multiMSE() is extremely simple to use and hence misuse. I can't stress enough how important it is to have a clear justification for why a multi-stock and/or multi-fleet MSE is necessary for your particular management setting (it may not be). To code multiMSE() I had to identify all of the various use-cases and it became clear that there are a very large number each with their own specific set of requirements and assumptions. 
+Beyond learning about these new objects and functions, multiMSE() is extremely simple to use and hence misuse. I can't stress enough how important it is to have a clear justification for why a multi-stock and/or multi-fleet MSE is necessary for your particular management setting (it may not be). To code multiMSE() it was necessary to identify all of the various use-cases and it became clear that there are a very large number each with their own specific set of requirements and assumptions. 
 
-In this guide I will attempt to clarify these various use cases and be explicit about the assumptions entailed. Caution: you are now wandering into a relatively unestablished and unchartered territory of MSE - good luck! 
+In this guide I will attempt to clarify these various use cases and be explicit about the assumptions entailed. 
 
-Remember you can always fire off an email to me if you have questions: <t.carruthers@oceans.ubc.ca>
+Before going crazy with many fleet, many stock models, it might be good to temper your expectations. You can do an awful lot with multiMSE() but numerically solving the multi-stock, multi-fleet equations while maintaining MICE relationships is computationally costly. This is only reflected in the initialization phase of the MSE - which can take some time. A rough rule of thumb is minutes to initialize = (nsimulations * nstocks * nfleets) divided by (10 * ncores). So for a 100 simulation MSE with 4 stocks, 5 fleets and parallel computing set up over 4 cores you are talking about 2000 / 40 = a 50 minute initialization. Faster solutions are on the way for non-MICE models that don't require R optimizaiton due to R MICE functions. 
 
-Also, a general guide to using DLMtool and MSEtool can be found using:
+Caution: you are now wandering into a relatively unestablished and unchartered territory of MSE - good luck! 
+
+Remember you can always fire off an email to me if you have questions about multiMSE: <t.carruthers@oceans.ubc.ca>
+
+For general help, Adrian Hordyk has produced a comprehensive guide for DLMtool including cheat sheets, and Quang Huynh has produced a user guide for MSEtool that can be obtained using the standard R help function:
 
 ```{r, eval = FALSE}
 DLMtool::userguide()
+DLMtool::cheatsheets()
+?MSEtool
 ```
 
 
@@ -106,7 +113,7 @@ There are four new slots in an MOM object (compared with an OM object): MOM@Stoc
 * MOM@Obs is a hierarchical list of observation error objects (nstocks with fleets nested in stocks)
 * MOM@Imps is a hierarchical list of implementation error objects (nstocks with fleets nested in stocks)
 
-Ideally you'd get your various dynamics from conditioned operating models either using the StochasticSRA or using the helper functions that read in stock assessment outputs from, for example Stock Synthesis (SS2OM) or iSCAM (iSCAM2OM) assessments. However for simplicity I'll demonstrate how to do multiMSE with some pre-existing Stock, Fleet, Obs and Imp objects that were loaded with library(DLMextra):
+Ideally you'd get your various dynamics from conditioned operating models either using the MSEtool StochasticSRA() approach or using the various MSEtool helper functions that read in stock assessment outputs from, for example Stock Synthesis (SS2OM) or iSCAM (iSCAM2OM) assessments. However for simplicity I'll demonstrate how to do multiMSE with some pre-existing Stock, Fleet, Obs and Imp objects that were loaded with library(DLMextra):
 
 ```{r, eval = TRUE}
 avail('Stock')   # what Stock objects are loaded?
@@ -189,7 +196,7 @@ Catch fractions are a list (nstock long) of matrices. Suppose we want 80% of cur
 
 
 ```{r, eval = TRUE}
-nsim = 12
+nsim = 4
 #                  Fleet1  Fleet2   Fleet3
 bluefin_catchfrac<-c(0.8,   0.01,   0.19)
 herring_catchfrac<-c(0.05,  0.6,    0.35)
@@ -211,7 +218,7 @@ The reason we have done this is to allow for uncertainty in the catch fractions 
 
 You'll remember that I said there was a Thing 2 that we should add to our multi operating model. Ask yourself why we are modelling bluefin and herring together?
 
-Because we want to look at an interaction between these stocks. If we didn't we would just model these stocks individually, and there would be only one stock in the Stocks slot and only one list of fleets in the Fleets slot. 
+Because we want to look at an interaction between these stocks. If we didn't we would just model these stocks individually, and there would be only one stock in the Stocks slot and only one list of fleets in the Fleets slot (the remaining reason for modelling many stock without interactions is if they are managed by a single MP as a stock complex - we'll come to this in a bit).
 
 If we didn't expect to set fleet-specific advice AND we weren't modelling bluefin and herring interactions, we should just be using the regular runMSE() from DLMtool and MSEtool and calculate the aggregate fleet dynamics (aggregate size vulnerability and trend in apical fishing mortality rate, for example). 
 
@@ -224,7 +231,7 @@ However for the purposes of this demonstration we're just going to cook somethin
 Here goes:
 
 
-```{r, eval = TRUE}
+```{r, eval = TRUE, fig.width=5, fig.height=5}
 ages <- 1:60
 bf_M <- mean(Bluefin_tuna@M)          # natural mortality rate
 bf_Linf <- mean(Bluefin_tuna@Linf)    # asymptotic length
@@ -260,23 +267,24 @@ We derived a rough level of unfished bluefin biomass, made up some data (normall
 Here are the important things to know about inter-stock relationships listed in the 'Rel' slot:
 
 Any R model can be used that:
- * is compatible with the function simulate()
- * has specific coding for independent (e.g. the bluefin biomass) and dependent variables (e.g. the herring natural mortality rate)
+
+* is compatible with the function simulate()
+* has specific coding for independent (e.g. the bluefin biomass) and dependent variables (e.g. the herring natural mortality rate)
  
 The coding of independent variables goes like this:
 
-B   = total stock biomass
-SSB = total spawning stock biomass
+B   = total stock biomass,
+SSB = total spawning stock biomass,
 N   = total stock numbers
 
 The coding of dependent variables goes like this:
 
-M    = Natural mortality rate of mature individuals
-K    = von Bertalanffy growth parameter K
-Linf = asymtotic size Linf
-t0   = von Bertalanffy theoretical age at length-0 t0
-a    = weight length parameter a (W=aL^b)
-b    = weight length parameter b (W=aL^b)
+M    = Natural mortality rate of mature individuals,
+K    = von Bertalanffy growth parameter K,
+Linf = asymtotic size Linf,
+t0   = von Bertalanffy theoretical age at length-0 t0,
+a    = weight length parameter a (W=aL^b),
+b    = weight length parameter b (W=aL^b),
 hs   = steepness of the Beverton-Holt or Ricker stock recruitment function
 
 The underscore_then_number denotes the stock. So SSB_5 is the spawning stock biomass of the fifth stock in the Stocks slot, Linf_2 is the asymptotic length of stock 2 in the stocks slot. 
@@ -302,6 +310,7 @@ A note of caution before you go hog-wild with the Rel slot: it is probably fairl
 ## Constructing the MOM object
 
 Now we have six lists: 
+
 * Stocks,
 * Fleets
 * Obs
@@ -311,7 +320,7 @@ Now we have six lists:
 
 We can construct an object of class MOM and see what it looks like:
 
-```{r, eval = TRUE}
+```{r, eval = TRUE,  fig.width=9, fig.height=7}
 
 MOM_BH <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel=Rel, nsim=nsim)
 plot(MOM_BH)
@@ -336,7 +345,7 @@ MOM_1S <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, nsim=nsim)
 
 ```
 
-Stocks is just a list 1 stock object long. CatchFrac is a list 1 stock long of catch fractions by simulation and fleet. For any hierarchical list (Fleets, Obs, Imps) there is just one position (one fleet) in which you have to place a list of Fleet, Obs and Imp objects. 
+Stocks is just a list 1 stock object long. CatchFrac is a list 1 stock long of catch fractions by simulation and fleet. For any hierarchical list (Fleets, Obs, Imps) there is just one position (one stock) in which you have to place a list of Fleet, Obs and Imp objects. 
 
 
 ## Single Fleet MOM
@@ -356,13 +365,13 @@ MOM_1F <- new('MOM', Stocks, Fleets, Obs, Imps, Rel = Rel, nsim=nsim)
 
 ```
 
-Note we no longer have to specific CatchFrac as we do not have to calculate fleet-specific catchabilties using observed recent catch fractions. 
+Note we no longer have to specify CatchFrac as we do not have to calculate fleet-specific catchabilties using observed recent catch fractions. 
 
 
 
 ## A unique fleet for each stock
 
-If you wish to model many stocks but in each case you are able to aggregate fleet dynamics (a single fleet) and provide management advice for the aggregate fishing activities on each stock, then you do exactly as above for the single fleet case but put a stock specific-fleet in position fleet 1:
+If you wish to model many stocks but in each case you are able to aggregate fleet dynamics (a single fleet), then you do exactly as above for the single fleet case but put a stock specific-fleet in position 1:
 
 ```{r, eval = TRUE}
 #                     Stock 1    Stock 2  Stock 3
@@ -473,7 +482,7 @@ To do this users need a special class of MP called MMP (multi management procedu
 
 ```{r, eval = TRUE}
 
-MPs_mmp <- c(MMP_1, MMP_2, MMP_3)
+MPs_mmp <- c("MMP_1", "MMP_2", "MMP_3")
 
 ```
 
@@ -520,9 +529,9 @@ MMPs can be considered as a multi-stock, multi-fleet management plans.
 
 # Running an multi MSE
 
-Lets take the fantastical bluefin-herring (BH) MOM operating model object we created above and run a multi MSE for some stock-specific MPs:
+Lets take the fantastical bluefin-herring (BH) MOM operating model object we created above and run a multi MSE for some stock-specific MPs and plot the results:
 
-```{r, eval = TRUE}
+```{r, eval = FALSE,fig.width=9, fig.height=7}
 
 MPs_BH <- list( c("DCAC", "DBSRA", "AvC", "MCD"),  # Bluefin
                 c("DCAC", "DBSRA", "AvC", "MCD"))  # Herring
@@ -536,47 +545,203 @@ plot(MMSE_BH)
 
 # Understanding the MMSE object
 
+The MMSE object produced from multiMSE has a number of slots. The easiest way to understand these is to interrogate the help documentation:
 
 
+```{r, eval = TRUE}
+
+class?MMSE
+
+```
 
 
 # Other options
 
 ## Sex - specific multistock operating models
 
-R0 of the two stocks determines the sex ratio
+Many fish population exhibit sex-specific dynamics that may have impacts on the performance of candiate management procedures, such as sexual dimorphism and single-sex spawing biomass limitations. Other sex-specific phenomenon that may be important include sequential hermaphroditism and sex-specific vulnerability to exploitation. 
+
+In this example we place a female 'stock' in position 1, a male 'stock' in position 2 and use the the SexPars slot of the MOM object to calculate stock-recruitment according to a user-specified fraction of Spawning Stock Biomass originating from these stocks.
+
+```{r, eval = TRUE}
+
+MaF<-MaM <- Mackerel        # Copy Mackerel dynamics to female and male objects
+MaF@Name <- "Mackerel_Female"
+MaM@Name <- "Mackerel_Male"
+MaF@Linf <- MaM@Linf*1.2    # females grow to 20% higher asymptotic lengths
+MaF@M    <- MaM@M*1.2       # female natural mortality rate is 20% higher
+MaF@K    <- MaM@K*1.2       # female fish grow 20% faster
+
+Stocks <- list(MaF,MaM)
+Fleets <- list(list(Generic_DecE),list(Generic_DecE)) # A single fleet model
+Obs    <- list(list(Perfect_Info),list(Perfect_Info))
+Imps   <- list(list(Perfect_Imp),list(Perfect_Imp))
+
+SexPars <- list()
+SexPars$SSBfrom <- matrix(c(1,1,0,0),nrow=length(Stocks)) # Stock (Row) spawn from SSB contributed by Stock (Column)
+SexPars$SSBfrom
+MOMsex <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, nsim = nsim, SexPars = SexPars)
+
+```
+
+The list item SSBfrom is a matrix with nstock to rows and nstock from columns. In this case both rows (both stocks) get all of their Spawning Biomass from stock 1. There are 1s in column 1 and zeros in column 2. 
+
+If you wanted to model two sex-specific stocks where both recruit according to the female stock, the Stock and SSBfrom objects would look like this:
+
+```{r, eval = TRUE}
+
+SnF<-SnM <- Snapper        # Copy Mackerel dynamics to female and male objects
+SnF@Name <- "Snapper_Female"
+SnM@Name <- "Snapper_Male"
+SnF@Linf <- SnM@Linf*1.1    # females grow to 10% higher asymptotic lengths
+
+Stocks <- list(MaF, MaM, SnF, SnM)
+SexPars$SSBfrom <- matrix(c(1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0),nrow=length(Stocks)) 
+SexPars$SSBfrom
+
+```
+
+Stocks 1 and 2 (female and male Mackerel) recruit according to spawning biomass from stock 1 (female Mackerel SSB) while Stocks 3 and 4 (female and male Snapper) recruit according to spawning biomass from stock 3 (female snapper SSB).
+
+If for some reason you want SSB to be calculated by more than one stock then:
+
+```{r, eval = TRUE}
+Stocks <- list(MaF, MaM, SnF, SnM)
+SexPars$SSBfrom <- matrix(c(1,1,0,0,1,1,0,0,0,0,1,1,0,0,1,1),nrow=length(Stocks)) 
+SexPars$SSBfrom
+
+```
+
+In this case the recruitment of male and female mackerel is determined by the aggregate SSB of the two sexes (the same applied for the male and female snapper).
+
+If you want to mix a sex-specific stock with non-sex specific stocks you just put a 1 in the diagnonal for non-sex specific stocks. E.g:
+
+```{r, eval = TRUE}
+
+Stocks <- list(Bluefin_tuna, MaF, MaM, Herring)
+SexPars$SSBfrom <- matrix(c(1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1),nrow=length(Stocks)) 
+SexPars$SSBfrom
+
+```
+
+When specified this way, Bluefin tuna(row 1) and Herring (row 4) recruitment is only determined by their stock-specific spawning biomass (rows 1 and 4, respectively), but Male and Female Mackerel recruitment (rows 2 and 3) depends only on female mackerel spawning stock biomass (column 2).
+
+You can put any fraction you like in these:
+
+
+```{r, eval = TRUE}
+
+SexPars$SSBfrom <- matrix(c(1,0,0,0,0,1,1,0,0,0.1,0.1,0,0,0,0,1),nrow=length(Stocks)) 
+SexPars$SSBfrom
+
+```
+
+Now total SSB for male and female mackerel is calculated from all of female SSB and 10% of male SSB. 
 
 
 ## Sequential Hermaphroditism
 
 Assuming you have specified sex-specific stock-recruitment using SexPars, you have the option of adding sequential hermaphroditism with the SexPars$Herm list. 
 
-To specify protogyny (Female - Male) where stock 1 is female and stock 2 is male, you include a vector H_1_2 that is the fraction female (Stock 1) at age:
+To specify protogyny (Female - Male) where stock 1 is male and stock 2 is female, you include a vector H_1_2 that is the fraction male (Stock 1) at age:
 
+```{r, eval = TRUE}
 
+H_1_2<-array(rep(c(0,0,0,0,0,0,0.05,0.1,0.2,0.35,0.65,0.8,0.9,1),each=nsim),c(nsim,14))
+MOMsex@SexPars$Herm<-list(H_1_2=H_1_2)
 
-To specify protandry (Male - Female) where stock 1 is female and stock 2 is male, you include a vector H_2_1 that is the fraction male (Stock 2) at age: 
-
-
+```
 
 These list objects have to be named H_stockfirst_stocksecond (stocks are sexes in this model) where first and second controls the order of the sequential hermaphroditism. These are always vectors that start with a zero (none of stockfirst) and end in 1 (all of stocksecond). 
+
+To specify protandry (Male - Female) you do the same as above but place the Male 'stock' object in stock position 1 and the female in stock position 2.  
+
+The H_1_2 type notation works for any position of stocks so:
+
+```{r, eval = TRUE}
+
+H_3_11<-array(rep(c(0,0,0,0,0,0,0.05,0.1,0.2,0.35,0.65,0.8,0.9,1),each=nsim),c(nsim,14))
+MOMsex@SexPars$Herm<-list(H_1_2 = H_1_2, H_3_11 = H_3_11) 
+
+```
+
+Has two sequential hermaphroditic relationships, one as before exchanges between 'stocks' 1 and 2 and the vector is the fraction at age of 'stock' 1. The second is between 'stocks' 3 and 11 and the vector is the fraction at age of 'stock' 3. 
 
 
 ## Custom TAC allocations
 
-Allocation
+Recall, that when more than one fleet is specified, fleet-specific catchabilities are calculated from the fraction of current stock catches for each fleet. This is the CatchFrac slot of an MOM object, e.g:
+
+```{r, eval = TRUE}
+nsim = 12
+#                  Fleet1  Fleet2   Fleet3
+bluefin_catchfrac<-c(0.8,   0.01,   0.19)
+herring_catchfrac<-c(0.05,  0.6,    0.35)
+CatchFrac <- list(
+                  matrix( rep(bluefin_catchfrac, each=nsim), nrow=nsim),
+                  matrix( rep(herring_catchfrac, each=nsim), nrow=nsim)
+)
+
+CatchFrac[[1]]
+
+```
+
+By default, in multi-fleet operating models, future TACs in projected years are allocated to fleet according to CatchFrac. You can however overide this using the MOM slot Allocation. Lets say you want the same OM initialization using catchfract bu wish to halve the allocation to fleet 1 and redistribute to equally to fleets 2 and 3 in future years. You can do this with something like:
+
+
+```{r, eval = TRUE}
+#                  Fleet1  Fleet2   Fleet3
+bluefin_catchfrac<-c(0.8,   0.01,   0.19)
+herring_catchfrac<-c(0.05,  0.6,    0.35)
+CatchFrac <- list(
+                  matrix( rep(bluefin_catchfrac, each=nsim), nrow=nsim),
+                  matrix( rep(herring_catchfrac, each=nsim), nrow=nsim)
+)
+
+#                  Fleet1  Fleet2   Fleet3
+bluefin_allocation<-c(0.4,   0.21,   0.39)
+herring_allocation<-c(0.025,  0.6125,    0.3625)
+Allocation <- list(
+                  matrix( rep(bluefin_allocation, each=nsim), nrow=nsim),
+                  matrix( rep(herring_allocation, each=nsim), nrow=nsim)
+)
+
+MOM_BH_A <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Allocation=Allocation, nsim=nsim)
+
+```
+
 
 ## Custom effort allocations
 
-Efactor
+When specifying effort control MPs, by default future effort recomemdnations are scaled as a multiple of effort in the current year (e.g. this was 1 in 2018, so an MP halving effort would make this 0.5 for all fleets). 
+
+If users wish to control the relative effort of the various fleets in the future they can do this similarly to the Allocation code above. 
 
 
-_Figure 5. Trade-off plot of the MSE for the MPs that use the Delay-Difference model with two harvest control rules and the FMSY reference MP._
+```{r, eval = TRUE}
+#                        Fleet1  Fleet2   Fleet3
+bluefin_fleet_efforts <- c(1,    0.5,    0.0001)
+herring_fleet_efforts <- c(1,     1,       1)
+
+Efactor <- list(
+                  matrix( rep(bluefin_fleet_efforts, each=nsim), nrow=nsim),
+                  matrix( rep(herring_fleet_efforts, each=nsim), nrow=nsim)
+)
+
+MOM_BH_A <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Efactor=Efactor, nsim=nsim)
+
+```
+
+In this case all simulations are the same. Effort of the first bluefin fleet and all herring fleets will be as the default: phrased in terms of 100% of current year (e.g. 2018) fishing effort. However MPs providing effort advice will now provide half the recommended amount to bluefin tuna fleet 2 and nearly zero effort to bluefin fleet 3. 
+
+This relatively basic effort distribution code will be improved in later package versions but for now allows users to investigate alternative management regimes in which fleets can reduced, increased or be turned off completely. 
 
 
 # Acknowledgements
 
 MSEtool development is funded by the Canadian Department of Fisheries and Oceans and benefits from ongoing collaborations with the Natural Resources Defense Council and number of Canadian government scientists including Robyn Forrest, Sean Anderson and Daniel Duplisea. 
+
+The multiMSE function relies heavily on very efficient and robust OMx operating model code developed by Adrian Hordyk in the DLMtool package. 
 
 The [DLMtool](http://www.datalimitedtoolkit.org) package was developed at the University of British Columbia in collaboration with the Natural Resources Defense Council. DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
 

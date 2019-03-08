@@ -174,8 +174,6 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
                         SRrelx,M_agecur,Mat_agecur,Asizex,
                         Kx,Linfx,t0x,Mx,R0x,R0ax,SSBpRx,ax,bx,Rel,SexPars,x){
 
-
-
   # Initial Bcur calc (before any weight at age recalculation change)
   # Bcalc ---------------------------------------------------------------------------
   Bcur<-SSBcur<-SSNcur<-array(NA,dim(Ncur))
@@ -236,7 +234,7 @@ popdynOneMICE<-function(np,nf,nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp, 
   Nnext<-array(NA,c(np,maxage,nareas))
 
   # just for vulnerable biomass calculation
-  SumF<-apply(FMx,c(1,3:4),sum) # sum over fleets stock,age,area
+  SumF<-apply(FMx,c(1,3:4),sum,na.rm=T) # sum over fleets stock,age,area
   MaxF<-apply(SumF,c(1,3),max)     # get max F
   Selx<-array(NA,dim(SumF))
   Selx[Nind]<-SumF[Nind]/MaxF[Nind[,c(1,3)]]

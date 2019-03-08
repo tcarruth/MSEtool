@@ -37,7 +37,7 @@
 #' @slot Obs    Hierarchical List of Observation model objects Level 1 is stock, level 2 is fleet
 #' @slot Imps   Hierarchical List of Implementation model objects Level 1 is stock, level 2 is fleet
 #' @slot CatchFrac A list nstock long, of matrices nsim x nfleet representing the fraction of current catches of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock)
-#' @slot Allocation  A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year).
+#' @slot Allocation  A list nstock long, of matrices nsim x nfleet representing the fraction of future TACs of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock).
 #' @slot Efactor A list nstock long, of current effort factors by fleet (default is 1 - same as current effort)
 #' @slot Complexes A list of stock complexes. Each position is a vector of stock numbers (as they appear in StockPars) for which data should be aggregated and TAC recommendations split among stocks according to vulnerable biomass
 #' @slot SexPars A list of slots that control sex-specific dynamics

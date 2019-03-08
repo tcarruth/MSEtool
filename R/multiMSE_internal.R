@@ -374,3 +374,17 @@ expandHerm<-function(Herm,maxage,np,nsim){
   HermFrac
 }
 
+
+#' Fill any NAs arising from MPCalcs (hermaphroditism mode)
+#'
+#' @param MPCalcs A list of arrays arising fromt the DLMtool function CalcMPDynamics()
+#' @author T. Carruthers
+#' @export
+MPCalcsNAs<-function(MPCalcs){
+
+  for(i in 1:length(MPCalcs))MPCalcs[[i]][is.na(MPCalcs[[i]])]<-0
+  MPCalcs
+
+}
+
+

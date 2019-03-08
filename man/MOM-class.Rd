@@ -56,7 +56,7 @@ the data inputs is used.}
 
 \item{\code{CatchFrac}}{A list nstock long, of matrices nsim x nfleet representing the fraction of current catches of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock)}
 
-\item{\code{Allocation}}{A list nstock long, of vector allocations by fleet (default is NULL and allocation is according to last historical year).}
+\item{\code{Allocation}}{A list nstock long, of matrices nsim x nfleet representing the fraction of future TACs of the various fleets to each stock (each matrix is nsim by nfleet long and rows sum to 1 for each stock).}
 
 \item{\code{Efactor}}{A list nstock long, of current effort factors by fleet (default is 1 - same as current effort)}
 

@@ -39,6 +39,7 @@ plotquant<-function(x,p=c(0.05,0.25,0.75,0.95),yrs,qcol,lcol,addline=T,ablines=N
 #' @author T.Carruthers
 #' @export
 plot.MMSE<-function(MMSE,maxcol=6,qcol=rgb(0.4,0.8,0.95), lcol= "dodgerblue4",quants=c(0.05,0.25,0.75,0.95),curyr=2018,addline=F){
+  # maxcol=6;qcol=rgb(0.4,0.8,0.95); lcol= "dodgerblue4"; quants=c(0.05,0.25,0.75,0.95); curyr=2018; addline=F
 
 
   if(is.na(maxcol))maxcol=ceiling(length(MMSE@MPs)/0.5) # defaults to portrait 1:2
@@ -83,7 +84,7 @@ plot.MMSE<-function(MMSE,maxcol=6,qcol=rgb(0.4,0.8,0.95), lcol= "dodgerblue4",qu
   # --- F projection -----------------------------------------------------------
 
   F_FMSY<-MMSE@F_FMSY
-  F_FMSYsum<-apply(F_FMSY,c(1,2,3,5),sum,na.rm=T)
+  F_FMSYsum<-apply(F_FMSY,c(1,2,4,5),sum,na.rm=T)
   Flims<- c(0,quantile(F_FMSYsum,0.95,na.rm=T))
 
   for(pp in 1:length(plots)){
@@ -111,7 +112,7 @@ plot.MMSE<-function(MMSE,maxcol=6,qcol=rgb(0.4,0.8,0.95), lcol= "dodgerblue4",qu
   # --- Total yield projection -----------------------------------------------------
 
   Yd<-MMSE@C#MMSE@OM$RefY
-  Ydsum<-apply(Yd, c(1,2,3,5),sum,na.rm=T)
+  Ydsum<-apply(Yd, c(1,2,4,5),sum,na.rm=T)
   Ydsum<-Ydsum/array(rep(Ydsum[,,,1],MMSE@proyears),dim(Ydsum))
   Ylims<- c(0,quantile(Ydsum,0.95,na.rm=T))
 
@@ -153,7 +154,7 @@ plot.MMSE<-function(MMSE,maxcol=6,qcol=rgb(0.4,0.8,0.95), lcol= "dodgerblue4",qu
 
     for(MP in toplot){
       for(ss in 1:ns){
-        matplot(t(YdbyF[ss,MP,,]),type='l',col=cols,lty=ltys,yaxs="i",ylim=c(0,max(YdbyF[ss,MP,,])))
+        matplot(yrs,t(matrix(YdbyF[ss,,MP,],nrow=nf)),type='l',col=cols,lty=ltys,yaxs="i",ylim=c(0,max(YdbyF[ss,,MP,])))
         mtext(paste(paste0("F",1:nf),MPrefs[MP,,ss],collapse=", "),3,line=0.2,font=2,cex=0.7)
         if(MP==toplot[1])mtext(MMSE@Snames[ss],2,line=2.5)
         if(MP==toplot[1])legend("bottomleft",legend=paste(paste0("F",1:nf),MMSE@Fnames[,ss]),text.col=cols,cex=0.8,text.font=2,bty='n')
