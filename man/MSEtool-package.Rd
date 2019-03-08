@@ -12,6 +12,8 @@ assessment models within closed-loop simulation, and helper functions for buildi
 }
 \section{Additional Information}{
 
+See the package vignettes with \code{browseVignettes("MSEtool")}.
+
 See the \href{https://dlmtool.github.io/DLMtool/userguide/introduction.html}{DLMtool User Guide} for
 a detailed description of how to use the DLMtool package.
 

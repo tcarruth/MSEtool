@@ -17,13 +17,12 @@ Depends:
   DLMtool (>= 5.2.0)
 Imports:
   MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm, pryr,
-  r4ss (<= 1.24.0), reshape2, snowfall, stats, utils, abind
+  reshape2, snowfall, stats, utils, abind
 LinkingTo: TMB, RcppEigen
 LazyData: yes
 LazyLoad: yes
 RoxygenNote: 6.1.1
-Suggests: knitr,
-    testthat
+Suggests: knitr, testthat, r4ss
 VignetteBuilder: knitr
 URL: http://www.datalimitedtoolkit.org
 BugReports: https://github.com/tcarruth/MSEtool/issues

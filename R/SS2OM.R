@@ -26,9 +26,10 @@
 #' @export
 #' @seealso \link{SS2Data}
 #' @importFrom stats acf
-#' @importFrom r4ss SS_output
 SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1, Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp,
                   Name = NULL, Source = "No source provided", Author = "No author provided", ...) {
+  if(!requireNamespace("r4ss", quietly = TRUE)) stop("Download the r4ss package to use this function.", call. = FALSE)
+  if(packageVersion("r4ss") != 1.24) warning(paste0("r4ss version ", packageVersion("r4ss"), " was detected. This function is only tested on version 1.24."))
 
   dots <- list(dir = SSdir, ...)
   if(!any(names(dots) == "covar")) dots$covar <- FALSE

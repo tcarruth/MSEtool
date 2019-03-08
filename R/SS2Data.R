@@ -28,10 +28,11 @@
 #' @author T. Carruthers
 #' @export
 #' @seealso \link{SS2OM}
-#' @importFrom r4ss SS_output
 SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region = "",
                     min_age_M = 1, comp_fleet = "all", comp_season = "sum", comp_partition = "all", comp_gender = "all",
                     index_fleet = "SSB", index_season = "mean", ...) {
+  if(!requireNamespace("r4ss", quietly = TRUE)) stop("Download the r4ss package to use this function.", call. = FALSE)
+  if(packageVersion("r4ss") != 1.24) warning(paste0("r4ss version ", packageVersion("r4ss"), " was detected. This function is only tested on version 1.24."))
 
   dots <- list(dir = SSdir, ...)
   if(!any(names(dots) == "covar")) dots$covar <- FALSE
@@ -43,7 +44,7 @@ SS2Data <- function(SSdir, Name = NULL, Common_Name = "", Species = "", Region =
 
   message(paste("-- Using function SS_output of package r4ss version", packageVersion("r4ss"), "to extract data from SS file structure --"))
   message(paste("Reading directory:", SSdir))
-  replist <- do.call(SS_output, dots)
+  replist <- do.call(r4ss::SS_output, dots)
   message("-- End of r4ss operations --")
 
   season_as_years <- FALSE
