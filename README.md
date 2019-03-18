@@ -28,6 +28,8 @@ Vignettes describing the features of MSEtool can be obtained via:
 browseVignettes("MSEtool")
 ```
 
+The vignette can also be viewed [here](https://htmlpreview.github.io/?https://github.com/tcarruth/MSEtool/blob/master/inst/doc/MSEtool.html).
+
 A User Guide for the DLMtool package also available at [https://dlmtool.github.io/DLMtool/userguide/introduction.html](https://dlmtool.github.io/DLMtool/userguide/introduction.html). 
 
 ## Bugs and Issues
