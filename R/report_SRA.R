@@ -19,8 +19,8 @@ summary_SRA <- function(Assessment) {
   if(conv) Value <- c(VB0, SSB0, MSY, UMSY, VBMSY, SSBMSY)
   else Value <- rep(NA, 6)
 
-  Description <- c("Virgin vulnerable biomass",
-                  "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
+  Description <- c("Unfished vulnerable biomass",
+                  "Unfished spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Harvest Rate at MSY",
                   "Vulnerable biomass at MSY", "SSB at MSY")
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(derived) <- c("VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY")
@@ -159,10 +159,10 @@ generate_plots_SRA <- function(Assessment, save_figure = FALSE, save_dir = tempd
 
   if(conv) {
     ind <- names(SD$par.fixed) == "log_R0"
-    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
+    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_R0.png"))
-      plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
+      plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)
       dev.off()
       assess.file.caption <- c("assessment_R0.png", "Estimate of R0, distribution based on
                              normal approximation of estimated covariance matrix.")

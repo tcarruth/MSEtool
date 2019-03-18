@@ -87,7 +87,7 @@ setClassUnion("listspict", members = c("list", "spictcls"))
 #' output <- DD_TMB(Data = DLMtool::Red_snapper)
 #' class(output)
 #' }
-#' @seealso \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+#' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 #' @author Q. Huynh
 #' @export
 #' @exportClass Assessment
@@ -112,11 +112,13 @@ Assessment <- setClass("Assessment",
  TMB_report = "list", dependencies = "character"))
 
 
-#' Summary of Assessment object
-#'
-#' @rdname summary-Assessment
+
+#' @name summary.Assessment
+#' @title Summary of Assessment object
+#' @aliases summary,Assessment-method
+#' @description Returns a summary of parameter estimates and output from an \linkS4class{Assessment} object.
 #' @param object An object of class \linkS4class{Assessment}
-#' @return A list of parameters
+#' @return A list of parameters.
 #' @examples
 #' output <- DD_TMB(Data = DLMtool::Simulation_1)
 #' summary(output)
@@ -127,9 +129,12 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
   f(object)
 })
 
-#' Plot Assessment object
+#' @name plot.Assessment
+#' @title Assessment object
+#' @description Produces HTML file with figures of parameter estimates and output from an \linkS4class{Assessment} object.
 #'
-#' @rdname plot-Assessment
+#' @aliases plot,Assessment-method
+#'
 #' @param x An object of class \linkS4class{Assessment}
 #' @param save_figure Indicates whether figures will be saved to disk. A corresponding
 #' html report will be produced.

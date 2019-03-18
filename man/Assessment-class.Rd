@@ -141,7 +141,7 @@ class(output)
 }
 }
 \seealso{
-\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+\link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 }
 \author{
 Q. Huynh

@@ -18,7 +18,7 @@ summary_DD_TMB <- function(Assessment) {
   if(conv) derived <- c(B0, N0, MSY, UMSY, BMSY)
   else derived <- rep(NA, 5)
   derived <- data.frame(Value = derived,
-                        Description = c("Virgin biomass", "Virgin abundance", "Maximum sustainable yield (MSY)",
+                        Description = c("Unfished biomass", "Unfished abundance", "Maximum sustainable yield (MSY)",
                                         "Harvest Rate at MSY", "Biomass at MSY"),
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("B0", "N0", "MSY", "UMSY", "BMSY")
@@ -150,10 +150,10 @@ generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = te
 
   if(conv) {
     ind <- names(SD$par.fixed) == "log_R0"
-    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
+    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_R0.png"))
-      plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Virgin~~recruitment~~(R[0])), logtransform = TRUE)
+      plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)
       dev.off()
       assess.file.caption <- c("assessment_R0.png", "Estimate of R0, distribution based on
                                normal approximation of estimated covariance matrix.")
