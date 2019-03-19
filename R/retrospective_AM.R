@@ -36,7 +36,11 @@ retrospective_AM <- function(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FA
   on.exit(par(old_par))
 
   if(!inherits(MSE, "MSE")) stop("No object of class MSE was provided.")
-  if(length(MSE@Misc) == 0) stop("Nothing found in MSE@Misc. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+  if(packageVersion("DLMtool") >= 5.3) {
+    if(length(MSE@Misc$Data) == 0) stop("Nothing found in MSE@Misc$Data. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+  } else {
+    if(length(MSE@Misc) == 0) stop("Nothing found in MSE@Misc. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+  }
   if(length(sim) > 1 || sim > MSE@nsim) stop(paste0(sim, " should be a number between 1 and ", MSE@nsim, "."))
 
   MPs <- MSE@MPs
@@ -47,10 +51,16 @@ retrospective_AM <- function(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FA
     Misc <- Data@Misc
     all(vapply(Misc, function(y) any(names(y) == "Assessment_report"), logical(1)))
   }
-  has_Assess <- has_Assess_fn(MSE@Misc[[match_ind]])
-  if(!has_Assess) stop("No Assessment objects were found in MSE@Misc for any MP. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
 
-  Assessment_report <- lapply(MSE@Misc[[match_ind]]@Misc, getElement, "Assessment_report")[[sim]]
+  if(packageVersion("DLMtool") >= 5.3) {
+    has_Assess <- has_Assess_fn(MSE@Misc$Data[[match_ind]])
+    if(!has_Assess) stop("No Assessment objects were found in MSE@Misc$Data for any MP. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+    Assessment_report <- lapply(MSE@Misc$Data[[match_ind]]@Misc, getElement, "Assessment_report")[[sim]]
+  } else {
+    has_Assess <- has_Assess_fn(MSE@Misc[[match_ind]])
+    if(!has_Assess) stop("No Assessment objects were found in MSE@Misc for any MP. Use an MP created by 'make_MP(diagnostic = 'full')' and set 'runMSE(PPD = TRUE)'.")
+    Assessment_report <- lapply(MSE@Misc[[match_ind]]@Misc, getElement, "Assessment_report")[[sim]]
+  }
 
   isSP <- grepl("SP", Assessment_report[[1]]@Model)
 
