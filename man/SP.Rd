@@ -11,11 +11,11 @@ SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   control = list(iter.max = 5000, eval.max = 10000), ...)
 
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, fix_sigma = FALSE, fix_omega = TRUE,
-  fix_alpha = TRUE, fix_beta = TRUE, n_seas = 4L, integrate = TRUE,
-  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
-  1), control = list(iter.max = 5000, eval.max = 10000),
-  inner.control = list(), ...)
+  fix_n = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+  early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
+  integrate = TRUE, silent = TRUE, opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
+  eval.max = 10000), inner.control = list(), ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.
@@ -37,6 +37,10 @@ first year of the model). If \code{TRUE}, uses the value in \code{start}, otherw
 uses the value in \code{start}, otherwise equal to \code{n = 2}, where the biomass at MSY
 is half of carrying capacity.}
 
+\item{n_seas}{Integer, the number of seasons in the model for calculating continuous surplus production.}
+
+\item{n_itF}{Integer, the number of iterations to solve F conditional on the observed catch given multiple seasons within an annual time step.}
+
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
 
@@ -55,18 +59,18 @@ hasn't converged. The optimization continues from the parameters from the previo
 \item{fix_sigma}{Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
 
-\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
-of the biomass deviations (thus, treating it as a state-space variable).}
-
-\item{inner.control}{A named list of arguments for optimization of the random effects, which
-is passed on to \link[TMB]{newton} via \code{\link[TMB]{MakeADFun}}.}
-
 \item{fix_tau}{Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
 
 \item{early_dev}{Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
 By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
 once index data are available (\code{"index"}).}
+
+\item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
+of the biomass deviations (thus, treating it as a state-space variable).}
+
+\item{inner.control}{A named list of arguments for optimization of the random effects, which
+is passed on to \link[TMB]{newton} via \code{\link[TMB]{MakeADFun}}.}
 }
 \value{
 An object of \code{\linkS4class{Assessment}} containing objects and output
@@ -132,9 +136,7 @@ Prager, M. H. 1994. A suite of extensions to a nonequilibrium surplus-production
 Fishery Bulletin 92:374-389.
 }
 \seealso{
-\link{SP_production}
-
-\link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+\link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 }
 \author{
 Q. Huynh

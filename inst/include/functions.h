@@ -295,11 +295,13 @@ Type SP_F(Type U_start, Type C_hist, Type MSY, Type K, Type n, Type nterm, Type 
       SP *= dt;
       Catch += F * B_next * dt;
       B_next += SP;
-      if(i==nitF-1) Cpred(y) += F * B_next * dt;
     }
 
     F *= C_hist/Catch;
-    if(i==nitF-1) B(y+1) = B_next;
+    if(i==nitF-1) {
+		B(y+1) = B_next;
+		Cpred(y) = Catch;
+	}
   }
   return F;
 }

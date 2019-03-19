@@ -7,9 +7,12 @@
   DATA_VECTOR(I_hist);
   DATA_INTEGER(ny);
   DATA_VECTOR(est_B_dev);
+  DATA_INTEGER(nstep);
+  DATA_SCALAR(dt);
+  DATA_INTEGER(nitF);
   DATA_VECTOR_INDICATOR(keep, I_hist);
 
-  PARAMETER(logit_UMSY);
+  PARAMETER(log_FMSY);
   PARAMETER(log_MSY);
   PARAMETER(log_dep);
   PARAMETER(log_n);
@@ -17,7 +20,7 @@
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_B_dev);
 
-  Type UMSY = invlogit(logit_UMSY);
+  Type FMSY = exp(log_FMSY);
   Type MSY = exp(log_MSY);
   Type dep = exp(log_dep);
   Type n = exp(log_n);
@@ -27,28 +30,23 @@
   Type n_term = CppAD::CondExpEq(n, Type(1), Type(exp(1)), pow(n, n/(n-1)));
   Type n_term2 = CppAD::CondExpEq(n, Type(1), Type(1/exp(1)), pow(n, 1/(1-n)));
 
-  Type BMSY = MSY/UMSY;
+  Type BMSY = MSY/FMSY;
   Type K = BMSY / n_term2;
   Type r = MSY * n_term / K;
 
   vector<Type> B(ny+1);
   vector<Type> SP(ny);
+  vector<Type> Cpred(ny);
   vector<Type> Ipred(ny);
-  vector<Type> U(ny);
+  vector<Type> F(ny);
 
   Type penalty = 0;
 
   B(0) = dep * K;
-  if(!R_IsNA(asDouble(est_B_dev(0)))) B(0) *= exp(log_B_dev(0) - 0.5 * pow(tau, 2));
   for(int y=0;y<ny;y++) {
-    U(y) = CppAD::CondExpLt(1 - C_hist(y)/B(y), Type(0.025),
-      1 - posfun(1 - C_hist(y)/B(y), Type(0.025), penalty), C_hist(y)/B(y));
-    SP(y) = CppAD::CondExpEq(n, Type(1), -exp(1) * MSY * B(y)/K * log(B(y)/K),
-       n_term/(n-1) * MSY * (B(y)/K - pow(B(y)/K, n)));
-    B(y+1) = B(y) + SP(y) - U(y) * B(y);
-	  if(y<ny-1) {
-	    if(!R_IsNA(asDouble(est_B_dev(y+1)))) B(y+1) *= exp(log_B_dev(y+1) - 0.5 * pow(tau, 2));
-	  }
+    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
+    F(y) = SP_F(C_hist(y)/(C_hist(y) + B(y)), C_hist(y), MSY, K, n, n_term, dt, nstep, nitF, Cpred, B, y);
+    SP(y) = B(y+1) - B(y) + Cpred(y);
   }
 
   Type q = calc_q(I_hist, B);
@@ -64,11 +62,11 @@
 
   Type nll = nll_comp.sum() + penalty;
 
-  Type U_UMSY_final = U(U.size()-1)/UMSY;
+  Type F_FMSY_final = F(F.size()-1)/FMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;
   Type B_K_final = B(B.size()-1)/K;
 
-  ADREPORT(UMSY);
+  ADREPORT(FMSY);
   ADREPORT(MSY);
   ADREPORT(dep);
   ADREPORT(n);
@@ -77,10 +75,10 @@
   ADREPORT(K);
   ADREPORT(sigma);
   ADREPORT(tau);
-  ADREPORT(U_UMSY_final);
+  ADREPORT(F_FMSY_final);
   ADREPORT(B_BMSY_final);
   ADREPORT(B_K_final);
-  REPORT(UMSY);
+  REPORT(FMSY);
   REPORT(MSY);
   REPORT(dep);
   REPORT(n);
@@ -89,10 +87,11 @@
   REPORT(r);
   REPORT(K);
   REPORT(BMSY);
+  REPORT(Cpred);
   REPORT(Ipred);
   REPORT(B);
   REPORT(SP);
-  REPORT(U);
+  REPORT(F);
   REPORT(log_B_dev);
   REPORT(nll_comp);
   REPORT(nll);

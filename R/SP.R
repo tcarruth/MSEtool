@@ -25,6 +25,8 @@
 #' @param early_dev Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
 #' By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
 #' once index data are available (\code{"index"}).
+#' @param n_seas Integer, the number of seasons in the model for calculating continuous surplus production.
+#' @param n_itF Integer, the number of iterations to solve F conditional on the observed catch given multiple seasons within an annual time step.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the biomass deviations (thus, treating it as a state-space variable).
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
@@ -69,8 +71,6 @@
 #' }
 #' @section Optional Data:
 #' \code{SP_SS}: CV_Ind
-#' @export SP
-#' @seealso \link{SP_production}
 #' @examples
 #' \donttest{
 #' data(swordfish)
@@ -87,10 +87,11 @@
 #' res <- SP_SS(Data = swordfish, start = list(dep = 0.875, tau = 0.3),
 #' fix_sigma = TRUE)
 #' }
-#' @seealso \link{plot,Assessment,ANY-method} \link{summary,Assessment-method} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+#' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
+#' @export
 SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
                n_seas = 4L, n_itF = 3L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
@@ -165,6 +166,9 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
                     VB = structure(report$B, names = Yearplusone),
                     VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
                     VB_VB0 = structure(report$B/report$K, names = Yearplusone),
+                    SSB = structure(report$B, names = Yearplusone),
+                    SSB_SSBMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    SSB_SSB0 = structure(report$B/report$K, names = Yearplusone),
                     Obs_Catch = structure(C_hist, names = Year),
                     Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year),
@@ -194,8 +198,8 @@ class(SP) <- "Assess"
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
 SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = FALSE,
-                  fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, integrate = TRUE, silent = TRUE,
-                  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                  fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
+                  integrate = TRUE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind, Data@CV_Ind"
   dots <- list(...)
@@ -245,6 +249,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) params$log_tau <- log(0.3)
+  params$log_B_dev <- rep(0, ny)
 
   map <- list()
   if(any(is.na(est_B_dev))) {
@@ -270,9 +275,9 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
-  browser()
+
   if(rescale != 1) {
-    vars_div <- c("B", "BMSY", "K", "MSY", "Cpred", "Cpred_LL")
+    vars_div <- c("B", "BMSY", "K", "MSY", "Cpred", "SP")
     vars_mult <- NULL
     var_trans <- c("MSY", "K", "q")
     fun_trans <- c("/", "/", "*")
@@ -285,34 +290,34 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
   Assessment <- new("Assessment", Model = "SP_SS", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     FMSY = report$FMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
-                    B0 = report$K, VB0 = report$K, FMort = structure(report$F[year_start_ind], names = Year),
-                    F_FMSY = structure(report$F[year_start_ind]/report$FMSY, names = Year),
-                    B = structure(report$B[c(year_start_ind, length(report$B))], names = Yearplusone),
-                    B_BMSY = structure(report$B[c(year_start_ind, length(report$B))]/report$BMSY, names = Yearplusone),
-                    B_B0 = structure(report$B[c(year_start_ind, length(report$B))], names = Yearplusone),
-                    VB = structure(report$B[c(year_start_ind, length(report$B))], names = Yearplusone),
-                    VB_VBMSY = structure(report$B[c(year_start_ind, length(report$B))]/report$BMSY, names = Yearplusone),
-                    VB_VB0 = structure(report$B[c(year_start_ind, length(report$B))]/report$K, names = Yearplusone),
-                    Obs_Catch = structure(C_hist, names = Year),
-                    Obs_Index = structure(I_hist, names = Year),
-                    Catch = structure(report$Cpred_LL, names = Year),
-                    Index = structure(report$Ipred[year_start_ind], names = Year),
-                    #Dev = structure(report$log_B_dev, names = Year),
-                    Dev_type = "log-Biomass deviations",
+                    B0 = report$K, VB0 = report$K, FMort = structure(report$F, names = Year),
+                    F_FMSY = structure(report$F/report$FMSY, names = Year),
+                    B = structure(report$B, names = Yearplusone),
+                    B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    B_B0 = structure(report$B/report$K, names = Yearplusone),
+                    VB = structure(report$B, names = Yearplusone),
+                    VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    VB_VB0 = structure(report$B/report$K, names = Yearplusone),
+                    SSB = structure(report$B, names = Yearplusone),
+                    SSB_SSBMSY = structure(report$B/report$BMSY, names = Yearplusone),
+                    SSB_SSB0 = structure(report$B/report$K, names = Yearplusone),
+                    Obs_Catch = structure(C_hist, names = Year), Obs_Index = structure(I_hist, names = Year),
+                    Catch = structure(report$Cpred, names = Year), Index = structure(report$Ipred, names = Year),
+                    Dev = structure(report$log_B_dev, names = Year), Dev_type = "log-Biomass deviations",
                     NLL = structure(c(nll_report, report$nll_comp, report$penalty),
                                     names = c("Total", "Index", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
   if(Assessment@conv) {
-   #if(integrate) {
-   #  SE_Dev <- sqrt(SD$diag.cov.random)
-   #} else {
-   #  SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"])
-   #}
-   #SE_Dev_out <- est_B_dev
-   #SE_Dev_out[is.na(SE_Dev_out)] <- 0
-   #SE_Dev_out[!is.na(SE_Dev_out)] <- SE_Dev
+    if(integrate) {
+      SE_Dev <- sqrt(SD$diag.cov.random)
+    } else {
+      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"])
+    }
+    SE_Dev_out <- est_B_dev
+    SE_Dev_out[is.na(SE_Dev_out)] <- 0
+    SE_Dev_out[!is.na(SE_Dev_out)] <- SE_Dev
 
     Assessment@SE_FMSY <- SD$sd[names(SD$value) == "FMSY"]
     Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
@@ -321,7 +326,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     Assessment@SE_B_B0_final <- SD$sd[names(SD$value) == "B_K_final"]
     Assessment@SE_VB_VBMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
     Assessment@SE_VB_VB0_final <- SD$sd[names(SD$value) == "B_K_final"]
-    #Assessment@SE_Dev <- structure(SE_Dev_out, names = Year)
+    Assessment@SE_Dev <- structure(SE_Dev_out, names = Year)
   }
   return(Assessment)
 }
