@@ -6,9 +6,10 @@
 #' @import utils
 #' @import methods
 setOldClass("sdreport")
+setOldClass("spictcls")
 setClassUnion("sdreportAssess", members = c("character", "sdreport"))
 setClassUnion("optAssess", members = c("list", "character"))
-
+setClassUnion("listspict", members = c("list", "spictcls"))
 
 
 #' Class-\code{Assessment}
@@ -28,11 +29,11 @@ setClassUnion("optAssess", members = c("list", "character"))
 #' @slot BMSY Biomass at maximum sustainable yield.
 #' @slot SSBMSY Spawning stock biomass at maximum sustainable yield.
 #' @slot VBMSY Vulnerable biomass at maximum sustainable yield.
-#' @slot B0 Biomass at virgin equilibrium.
-#' @slot R0 Recruitment at virgin equilibrium.
-#' @slot N0 Abundance at virgin equilibrium.
-#' @slot SSB0 Spawning stock biomass at virgin equilibrium.
-#' @slot VB0 Vulnerable biomass at virgin equilibrium.
+#' @slot B0 Biomass at unfished equilibrium.
+#' @slot R0 Recruitment at unfished equilibrium.
+#' @slot N0 Abundance at unfished equilibrium.
+#' @slot SSB0 Spawning stock biomass at unfished equilibrium.
+#' @slot VB0 Vulnerable biomass at unfished equilibrium.
 #' @slot h Steepness.
 #' @slot U Time series of exploitation.
 #' @slot U_UMSY Time series of relative exploitation.
@@ -107,7 +108,7 @@ Assessment <- setClass("Assessment",
  SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric",
  SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
  SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
- SE_Dev = "numeric", info = "list", obj = "list", opt = "optAssess", SD = "sdreportAssess",
+ SE_Dev = "numeric", info = "listspict", obj = "list", opt = "optAssess", SD = "sdreportAssess",
  TMB_report = "list", dependencies = "character"))
 
 
