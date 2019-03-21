@@ -40,7 +40,7 @@
 
   B(0) = dep * K;
   for(int y=0;y<ny;y++) {
-    F(y) = SP_F(C_hist(y)/(C_hist(y) + B(y)), C_hist(y), MSY, K, n, n_term, dt, nstep, nitF, Cpred, B, y);
+    F(y) = SP_F(C_hist(y)/(C_hist(y) + B(y)), C_hist(y), MSY, K, n, n_term, dt, nstep, nitF, Cpred, B, y, penalty);
     SP(y) = B(y+1) - B(y) + Cpred(y);
   }
 

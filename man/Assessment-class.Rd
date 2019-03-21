@@ -30,15 +30,15 @@ positive-definite covariance matrix for the model).}
 
 \item{\code{VBMSY}}{Vulnerable biomass at maximum sustainable yield.}
 
-\item{\code{B0}}{Biomass at virgin equilibrium.}
+\item{\code{B0}}{Biomass at unfished equilibrium.}
 
-\item{\code{R0}}{Recruitment at virgin equilibrium.}
+\item{\code{R0}}{Recruitment at unfished equilibrium.}
 
-\item{\code{N0}}{Abundance at virgin equilibrium.}
+\item{\code{N0}}{Abundance at unfished equilibrium.}
 
-\item{\code{SSB0}}{Spawning stock biomass at virgin equilibrium.}
+\item{\code{SSB0}}{Spawning stock biomass at unfished equilibrium.}
 
-\item{\code{VB0}}{Vulnerable biomass at virgin equilibrium.}
+\item{\code{VB0}}{Vulnerable biomass at unfished equilibrium.}
 
 \item{\code{h}}{Steepness.}
 
