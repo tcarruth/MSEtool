@@ -51,6 +51,6 @@ getclass <- function(x, classy) any(inherits(get(x), classy))
 #' @seealso \link[DLMtool]{userguide}
 #' @export
 userguide <- function() {
-  message("For the DLMtool user guide, type in 'DLMtool::userguide()' to the console.")
+  message("For the DLMtool user guide, type in \"DLMtool::userguide()\" to the console.")
   browseVignettes("MSEtool")
 }
