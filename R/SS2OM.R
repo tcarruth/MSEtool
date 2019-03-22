@@ -445,16 +445,16 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 }
 
 
-#' A function that samples multivariate normal (logspace) variables
-#'
-#' @param xmu The mean (normal space) of the first (x) variable
-#' @param ymu The mean (normal space) of the second (y) variable
-#' @param xcv The coefficient of variation (normal space, log normal sd) of the x variable
-#' @param nsim The number of random draws
-#' @param cor The off-diagonal (symmetrical) correlation among x and y
-#' @param ploty Whether a plot of the sampled variables should be produced
-#' @author T. Carruthers
-#' @export negcorlogspace
+# #' A function that samples multivariate normal (logspace) variables
+# #'
+# #' @param xmu The mean (normal space) of the first (x) variable
+# #' @param ymu The mean (normal space) of the second (y) variable
+# #' @param xcv The coefficient of variation (normal space, log normal sd) of the x variable
+# #' @param nsim The number of random draws
+# #' @param cor The off-diagonal (symmetrical) correlation among x and y
+# #' @param ploty Whether a plot of the sampled variables should be produced
+# #' @author T. Carruthers
+# #' @export negcorlogspace
 #' @importFrom mvtnorm rmvnorm
 negcorlogspace<-function(xmu,ymu,xcv=0.1,nsim,cor=-0.9,ploty=FALSE){
 
