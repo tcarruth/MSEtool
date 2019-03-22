@@ -121,10 +121,12 @@ res <- SP(Data = swordfish)
 start <- list(dep = 0.875, n = 2)
 res <- SP(Data = swordfish, start = start)
 plot(res)
+profile_likelihood(res, FMSY = seq(0.1, 0.4, 0.01))
+retrospective(res)
 
 #### State-space version
 res <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1),
-fix_tau = TRUE, fix_sigma = TRUE)
+             fix_tau = TRUE, fix_sigma = TRUE)
 plot(res)
 }
 }
