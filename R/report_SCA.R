@@ -491,79 +491,84 @@ generate_plots_SCA <- function(Assessment, save_figure = FALSE, save_dir = tempd
 #' @importFrom reshape2 acast
 profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
   dots <- list(...)
-  if(!"R0" %in% names(dots)) stop("Sequence of R0 was not found. See help file.")
-  if(!"transformed_h" %in% names(Assessment@obj$env$map) && !"h" %in% names(dots)) {
-    stop("Sequence of h was not found. See help file.")
+  if(!"R0" %in% names(dots) && !"h" %in% names(dots)) stop("Sequence of neither R0 nor h was found. See help file.")
+  if(!is.null(dots$R0)) R0 <- dots$R0 else {
+    R0 <- Assessment@R0
+    profile_par <- "h"
   }
-  R0 <- dots$R0
-  if(!"transformed_h" %in% names(Assessment@obj$env$map)) h <- dots$h else h <- Assessment@h
+  if(!is.null(dots$h)) h <- dots$h else {
+    h <- Assessment@h
+    profile_par <- "R0"
+  }
 
-  profile.grid <- expand.grid(R0 = R0, h = h)
-  nll <- rep(NA, nrow(profile.grid))
-  params <- Assessment@info$params
-  random <- Assessment@obj$env$random
   map <- Assessment@obj$env$map
-  map$log_R0 <- map$transformed_h <- factor(NA)
-  if(Assessment@info$data$SR_type == "BH") {
-    transformed_h <- logit((profile.grid$h - 0.2)/0.8)
-  } else {
-    transformed_h <- log(profile.grid$h - 0.2)
-  }
-  for(i in 1:nrow(profile.grid)) {
-    params$log_R0 <- log(profile.grid$R0[i] * Assessment@info$rescale)
-    params$transformed_h <- transformed_h[i]
-    obj <- MakeADFun(data = Assessment@info$data, parameters = params,
-                     map = map, random = random, inner.control = Assessment@info$inner.control,
-                     DLL = "MSEtool", silent = TRUE)
-    opt <- optimize_TMB_model(obj, Assessment@info$control)[[1]]
+  params <- Assessment@info$params
 
-    if(!is.character(opt)) nll[i] <- opt$objective
-  }
-  profile.grid$nll <- nll - Assessment@opt$objective
-  if(figure) {
-    if(length(h) > 1) {
-      z.mat <- acast(profile.grid, list("h", "R0"), value.var = "nll")
-      contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
-              nlevels = 20)
+  profile_grid <- expand.grid(R0 = R0, h = h)
+  joint_profile <- !exists("profile_par")
 
-      h.MLE <- Assessment@h
-      R0.MLE <- Assessment@R0
-      points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
-      if(save_figure) {
-        Model <- Assessment@Model
-        prepare_to_save_figure()
-
-        create_png(file.path(plot.dir, "profile_likelihood.png"))
-        contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]),
-                nlevels = 20)
-        points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
-        dev.off()
-        profile.file.caption <- c("profile_likelihood.png",
-                                  "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
-      }
+  profile_fn <- function(i, Assessment, params, map) {
+    params$log_R0 <- log(profile_grid[i, 1]  * Assessment@info$rescale)
+    if(Assessment@info$data$SR_type == "BH") {
+      params$transformed_h <- logit((profile_grid[i, 2] - 0.2)/0.8)
     } else {
-      plot(profile.grid$R0, profile.grid$nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
-      abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
+      params$transformed_h <- log(profile_grid[i, 2] - 0.2)
+    }
 
-      if(save_figure) {
-        Model <- Assessment@Model
-        prepare_to_save_figure()
+    if(joint_profile) {
+      map$log_R0 <- map$transformed_h <- factor(NA)
+    } else {
+      if(profile_par == "R0") map$log_R0 <- factor(NA) else map$transformed_h <- factor(NA)
+    }
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map,
+                      random = Assessment@obj$env$random, inner.control = Assessment@info$inner.control,
+                      DLL = "MSEtool", silent = TRUE)
+    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
+    if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
+    return(nll)
+  }
+  nll <- vapply(1:nrow(profile_grid), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
+  profile_grid$nll <- nll
 
-        create_png(file.path(plot.dir, "profile_likelihood.png"))
-        plot(profile.grid$R0, profile.grid$nll, typ = 'o', pch = 16, xlab = expression(R[0]), ylab = "Change in negative log-likelihood")
-        abline(v = Assessment@SD$value[names(Assessment@SD$value) == "R0"], lty = 2)
-        dev.off()
-        profile.file.caption <- c("profile_likelihood.png",
-                                  "Profile likelihood of R0. Vertical, dashed line indicates maximum likelihood estimate.")
+  if(figure) {
+    R0.MLE <- Assessment@R0
+    h.MLE <- Assessment@h
+    if(joint_profile) {
+      z.mat <- acast(profile_grid, list("h", "R0"), value.var = "nll")
+      contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]), nlevels = 20)
+      points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
+    } else {
+      if(profile_par == "R0") xlab <- expression(R[0]) else xlab <- "h"
+      plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
+    }
 
-        html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
-                    captions = matrix(profile.file.caption, nrow = 1),
-                    name = Assessment@Name, report_type = "Profile_Likelihood")
-        browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
+    if(save_figure) {
+      Model <- Assessment@Model
+      prepare_to_save_figure()
+
+      create_png(file.path(plot.dir, "profile_likelihood.png"))
+      if(joint_profile) {
+        z.mat <- acast(profile_grid, list("h", "R0"), value.var = "nll")
+        contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]), nlevels = 20)
+        points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
+        msg <- "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate."
+      } else {
+        if(profile_par == "R0") xlab <- expression(R[0]) else xlab <- "h"
+        plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
+        msg <- paste0("Profile likelihood of ", profile_par, ". Numbers indicate change in negative log-likelihood relative to the minimum.")
+
       }
+      dev.off()
+
+      profile.file.caption <- c("profile_likelihood.png", msg)
+
+      html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
+                  captions = matrix(profile.file.caption, nrow = 1),
+                  name = Assessment@Name, report_type = "Profile_Likelihood")
+      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
-  return(profile.grid)
+  return(profile_grid)
 }
 
 
@@ -582,7 +587,7 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
   params <- info$params
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, U, U_UMSY, log_rec_dev
+  # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, F, F_FMSY, log_rec_dev
   retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 9))
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev" & rownames(summary(SD)) != "logF", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
@@ -759,7 +764,7 @@ plot_retro_SCA <- function(retro_ts, retro_est, save_figure = FALSE,
 }
 
 
-plot_yield_SCA <- function(data, report, fmsy, msy, F.vector = seq(0, 3, 0.01), SR, xaxis = c("F", "Biomass", "Depletion")) {
+plot_yield_SCA <- function(data, report, fmsy, msy, F.vector = seq(0, 2.5 * fmsy, length.out = 1e2), SR, xaxis = c("F", "Biomass", "Depletion")) {
   xaxis <- match.arg(xaxis)
 
   M <- data$M

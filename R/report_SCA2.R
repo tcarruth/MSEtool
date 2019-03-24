@@ -459,24 +459,24 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
   if(!"meanR" %in% names(dots)) stop("Sequence of meanR was not found. See help file.")
   meanR <- dots$meanR
 
-  nll <- rep(NA, length(meanR))
   params <- Assessment@info$params
-  random <- Assessment@obj$env$random
   map <- Assessment@obj$env$map
   map$log_meanR <- factor(NA)
-  for(i in 1:length(meanR)) {
+
+  profile_fn <- function(i, Assessment, params, map) {
     params$log_meanR <- log(meanR[i] * Assessment@info$rescale)
-    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params,
-                      map = map, random = random, inner.control = Assessment@info$inner.control,
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map,
+                      random = Assessment@obj$env$random, inner.control = Assessment@info$inner.control,
                       DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
-
-    if(!is.character(opt2)) nll[i] <- opt2$objective
-
+    if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
+    return(nll)
   }
-  profile.grid <- data.frame(meanR = meanR, nll = nll - Assessment@opt$objective)
+  nll <- vapply(1:length(meanR), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
+  profile_grid <- data.frame(meanR = meanR, nll = nll)
+
   if(figure) {
-    plot(dots$meanR, profile.grid$nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
+    plot(profile_grid$meanR, profile_grid$nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
     abline(v = Assessment@SD$value[names(Assessment@SD$value) == "meanR"], lty = 2)
 
     if(save_figure) {
@@ -484,7 +484,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
       prepare_to_save_figure()
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(dots$meanR, profile.grid$nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
+      plot(profile_grid$meanR, profile_grid$nll, typ = 'o', pch = 16, xlab = "Mean recruitment", ylab = "Change in negative log-likelihood")
       abline(v = Assessment@SD$value[names(Assessment@SD$value) == "meanR"], lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
@@ -496,7 +496,7 @@ profile_likelihood_SCA2 <- function(Assessment, figure = TRUE, save_figure = TRU
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
-  return(profile.grid)
+  return(profile_grid)
 }
 
 
