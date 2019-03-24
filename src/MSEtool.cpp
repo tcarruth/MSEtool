@@ -33,12 +33,15 @@ template<class Type>
                 } else
                   if(model == "VPA") {
                     #include "../inst/include/VPA.h"
-                  } else {
-                    error("No model found.");
-                  }
+                  } else
+                    if(model == "SRA") {
+                      #include "../inst/include/SRA.h"
+                    } else {
+                        error("No model found.");
+                      }
 
   return 0;
-  }
+}
 
 
 
