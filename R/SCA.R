@@ -1,9 +1,14 @@
 #' Statistical catch-at-age (SCA) model
 #'
 #' A generic statistical catch-at-age model (single fleet, single season) that uses catch, index, and catch-at-age composition
-#' data. There are two parameterizations for estimation of recruitment deviations, the stock-recruit relationship,
-#' and reference points (see functions section below).
+#' data. \code{SCA} parameterizes R0 and steepness as leading productivity parameters in the assessment model. Recruitment is estimated
+#' as deviations from the resulting stock-recruit relationship. In \code{SCA2}, the mean recruitment in the time series is estimated and
+#' recruitment deviations around this mean are estimated as penalized parameters (similar to Cadigan 2016). The standard deviation is set high
+#' so that the recruitment is almost like free parameters. Unfished and MSY reference points are inferred afterwards from the assessment output
+#' (SSB and recruitment estimates). \code{SRA} (stock reduction analysis) is a variant of \code{SCA} that fixes the expected catch to the observed
+#' catch, and Pope's approximation is used to calculate thh annual harvest rate (U).
 #'
+#' @aliases SCA2 SRA
 #' @param x A position in the Data object (by default, equal to one for assessments).
 #' @param Data An object of class Data
 #' @param SR Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).
@@ -124,17 +129,15 @@
 #' res <- SCA(Data = DLMtool::SimulatedData)
 #' res2 <- SCA2(Data = DLMtool::Simulation_1)
 #' }
-#' @describeIn SCA The parameterization with R0 and steepness as leading parameters. Recruitment is estimated
-#' as deviations from the resulting stock-recruit relationship.
 #' @section Required Data:
 #' \itemize{
-#' \item \code{SCA}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
-#' \item \code{SCA2}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+#' \item \code{SCA}, \code{SRA}, and \code{SRA}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
 #' }
 #' @section Optional Data:
 #' \itemize{
 #' \item \code{SCA}: Rec, steep, sigmaR, CV_Ind, CV_Cat
 #' \item \code{SC2}: Rec, steep, CV_Ind, CV_Cat
+#' \item \code{SRA}: Rec, steep, sigmaR, CV_Ind
 #' }
 #' @author Q. Huynh
 #' @return An object of class \linkS4class{Assessment}.
@@ -356,24 +359,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
 
   obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-
-  #if(!estF) {
-  #  # Add starting values for rec-devs and increase R0 start value if U is too high (> 0.975)
-  #  high_U <- try(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0, silent = TRUE)
-  #  if(!is.character(high_U) && high_U) {
-  #    Recruit <- try(Data@Rec[x, ], silent = TRUE)
-  #    if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
-  #      log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
-  #      log_rec_dev[is.na(est_rec_dev) | is.na(log_rec_dev) | is.infinite(log_rec_dev)] <- 0
-  #      info$params$log_rec_dev <- log_rec_dev
-  #      obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
-  #                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  #    }
-  #    while(obj$par["log_R0"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
-  #      obj$par["log_R0"] <- obj$par["log_R0"] + 1
-  #    }
-  #  }
-  #}
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]

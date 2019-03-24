@@ -1,6 +1,4 @@
-#' @describeIn SCA The mean recruitment in the time series is estimated and recruitment deviations around this mean are estimated
-#' as penalized parameters (similar to Cadigan 2016). The standard deviation is set high so that the recruitment is almost like
-#' free parameters. Unfished and MSY reference points are estimated from the assessment output.
+#' @rdname SCA
 #' @useDynLib MSEtool
 #' @export
 SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
