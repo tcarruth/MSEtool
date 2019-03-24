@@ -9,33 +9,34 @@
 SCA(x = 1, Data, SR = c("BH", "Ricker"),
   vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial",
   "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", start = NULL, fix_h = TRUE,
-  fix_F_equilibrium = TRUE, fix_omega = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
-  late_dev = "comp50", integrate = FALSE, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 2e+05, eval.max = 4e+05),
+  rescale = "mean1", max_age = Data@MaxAge, start = NULL,
+  fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, early_dev = c("comp_onegen",
+  "comp", "all"), late_dev = "comp50", integrate = FALSE,
+  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
+  1), control = list(iter.max = 2e+05, eval.max = 4e+05),
   inner.control = list(), ...)
 
 SCA2(x = 1, Data, SR = c("BH", "Ricker"),
   vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial",
   "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", start = NULL, fix_h = TRUE,
-  fix_F_equilibrium = TRUE, fix_omega = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, common_dev = "comp50", integrate = FALSE,
-  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
-  1), control = list(iter.max = 2e+05, eval.max = 4e+05),
-  inner.control = list(), ...)
+  rescale = "mean1", max_age = Data@MaxAge, start = NULL,
+  fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE,
+  fix_sigma = FALSE, fix_tau = TRUE, common_dev = "comp50",
+  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 2e+05,
+  eval.max = 4e+05), inner.control = list(), ...)
 
 SRA(x = 1, Data, SR = c("BH", "Ricker"),
   vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial",
   "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", start = NULL, fix_h = TRUE,
-  fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-  early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50",
-  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
-  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 2e+05,
-  eval.max = 4e+05), inner.control = list(), ...)
+  rescale = "mean1", max_age = Data@MaxAge, start = NULL,
+  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
+  fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
+  late_dev = "comp50", integrate = FALSE, silent = TRUE,
+  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
+  inner.control = list(), ...)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}
@@ -57,6 +58,8 @@ vulnerable biomass (VB), or spawning stock biomass (SSB).}
 \item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
 can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 Output is re-converted back to original units.}
+
+\item{max_age}{Integer, the maximum age (plus-group) in the model.}
 
 \item{start}{Optional list of starting values. See details.}
 
@@ -124,15 +127,14 @@ so that the recruitment is almost like free parameters. Unfished and MSY referen
 catch, and Pope's approximation is used to calculate thh annual harvest rate (U).
 }
 \details{
-For the statistical catch-at-age model, the basic data inputs are catch (by weight), index
-(by weight/biomass), and catch-at-age matrix (by numbers). The maximum age in the model is a plus-group.
-Annual F's are estimated parameters assuming continuous fishing over the year. Note: prior to version 1.2, catches were assumed to be
-known perfectly with an annual harvest rate in a given year from pulse fishing.
+The basic data inputs are catch (by weight), index (by weight/biomass), and catch-at-age matrix (by numbers).
+Annual F's are estimated parameters assuming continuous fishing over the year. Note: prior to version 1.2, catches were assumed
+to be known perfectly with an annual harvest rate from pulse fishing in \code{SCA}. That feature has now moved to \code{SRA}.
 
 By default, steepness is fixed in the model to the value in \code{Data@steep}.
 
-The annual sample sizes of the catch-at-age matrix is provided to the model (used in the
-likelihood for catch-at-age, assuming a multinomial distribution),
+The annual sample sizes of the catch-at-age matrix is provided to the model (used in the likelihood for catch-at-age assuming
+a multinomial distribution),
 and is manipulated via argument \code{CAA_multiplier}. This argument is
 interpreted in two different ways depending on the value provided.
 If \code{CAA_multiplier > 1}, then this value will cap the annual sample sizes

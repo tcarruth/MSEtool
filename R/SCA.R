@@ -21,6 +21,7 @@
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
+#' @param max_age Integer, the maximum age (plus-group) in the model.
 #' @param start Optional list of starting values. See details.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the model for \code{SCA}. This only affects
 #' calculation of reference points for \code{SCA2}.
@@ -59,15 +60,14 @@
 #' is passed on to \code{\link[TMB]{newton}}.
 #' @param ... Other arguments to be passed.
 #' @details
-#' For the statistical catch-at-age model, the basic data inputs are catch (by weight), index
-#' (by weight/biomass), and catch-at-age matrix (by numbers). The maximum age in the model is a plus-group.
-#' Annual F's are estimated parameters assuming continuous fishing over the year. Note: prior to version 1.2, catches were assumed to be
-#' known perfectly with an annual harvest rate in a given year from pulse fishing.
+#' The basic data inputs are catch (by weight), index (by weight/biomass), and catch-at-age matrix (by numbers).
+#' Annual F's are estimated parameters assuming continuous fishing over the year. Note: prior to version 1.2, catches were assumed
+#' to be known perfectly with an annual harvest rate from pulse fishing in \code{SCA}. That feature has now moved to \code{SRA}.
 #'
 #' By default, steepness is fixed in the model to the value in \code{Data@@steep}.
 #'
-#' The annual sample sizes of the catch-at-age matrix is provided to the model (used in the
-#' likelihood for catch-at-age, assuming a multinomial distribution),
+#' The annual sample sizes of the catch-at-age matrix is provided to the model (used in the likelihood for catch-at-age assuming
+#' a multinomial distribution),
 #' and is manipulated via argument \code{CAA_multiplier}. This argument is
 #' interpreted in two different ways depending on the value provided.
 #' If \code{CAA_multiplier > 1}, then this value will cap the annual sample sizes
@@ -144,14 +144,15 @@
 #' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
-SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
+SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial", "lognormal"),
+                CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1", max_age = Data@MaxAge,
                 start = NULL, fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                 early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  max_age <- as.integer(min(max_age, Data@MaxAge))
   vulnerability <- match.arg(vulnerability)
   CAA_dist <- match.arg(CAA_dist)
   SR <- match.arg(SR)
@@ -169,7 +170,8 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(any(is.na(C_hist) | C_hist < 0)) warning("Error. Catch time series is not complete.")
   I_hist <- Data@Ind[x, yind]
   Data <- expand_comp_matrix(Data, "CAA") # Make sure dimensions of CAA match that in catch (nyears).
-  CAA_hist <- Data@CAA[x, yind, ]
+  CAA_hist <- Data@CAA[x, yind, 1:max_age]
+  if(max_age < Data@MaxAge) CAA_hist[, max_age] <- rowSums(Data@CAA[x, yind, max_age:Data@MaxAge], na.rm = TRUE)
 
   CAA_n_nominal <- rowSums(CAA_hist)
   if(CAA_multiplier <= 1) {
@@ -177,7 +179,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   } else CAA_n_rescale <- pmin(CAA_multiplier, CAA_n_nominal)
 
   n_y <- length(C_hist)
-  max_age <- Data@MaxAge
   M <- rep(Data@Mort[x], max_age)
   a <- Data@wla[x]
   b <- Data@wlb[x]

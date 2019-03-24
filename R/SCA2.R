@@ -1,13 +1,14 @@
 #' @rdname SCA
 #' @useDynLib MSEtool
 #' @export
-SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"),
-                 CAA_dist = c("multinomial", "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1",
+SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial", "lognormal"),
+                 CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1", max_age = Data@MaxAge,
                  start = NULL, fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
                  common_dev = "comp50", integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                  control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(),  ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  max_age <- as.integer(min(max_age, Data@MaxAge))
   vulnerability <- match.arg(vulnerability)
   CAA_dist <- match.arg(CAA_dist)
   SR <- match.arg(SR)
@@ -23,7 +24,8 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   if(any(is.na(C_hist) | C_hist < 0)) warning("Error. Catch time series is not complete.")
   I_hist <- Data@Ind[x, yind]
   Data <- expand_comp_matrix(Data, "CAA") # Make sure dimensions of CAA match that in catch (nyears).
-  CAA_hist <- Data@CAA[x, yind, ]
+  CAA_hist <- Data@CAA[x, yind, 1:max_age]
+  if(max_age < Data@MaxAge) CAA_hist[, max_age] <- rowSums(Data@CAA[x, yind, max_age:Data@MaxAge], na.rm = TRUE)
 
   CAA_n_nominal <- rowSums(CAA_hist)
   if(CAA_multiplier <= 1) {
@@ -31,7 +33,6 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   } else CAA_n_rescale <- pmin(CAA_multiplier, CAA_n_nominal)
 
   n_y <- length(C_hist)
-  max_age <- Data@MaxAge
   M <- rep(Data@Mort[x], max_age)
   a <- Data@wla[x]
   b <- Data@wlb[x]
