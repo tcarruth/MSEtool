@@ -133,8 +133,6 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' @title Assessment object
 #' @description Produces HTML file with figures of parameter estimates and output from an \linkS4class{Assessment} object.
 #'
-#' @aliases plot,Assessment-method
-#'
 #' @param x An object of class \linkS4class{Assessment}
 #' @param save_figure Indicates whether figures will be saved to disk. A corresponding
 #' html report will be produced.

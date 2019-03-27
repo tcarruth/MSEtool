@@ -1,3 +1,5 @@
+Meta
+doc
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
@@ -39,7 +41,6 @@ Temporary Items
 .Rproj.user/1427710/pcs/files-pane.pper
 .Rproj.user/1427710/pcs/windowlayoutstate.pper
 .Rproj.user/1427710/pcs/workbench-pane.pper
-.Rproj.user/1427710/pcs/files-pane.pper
 *.pper
 .Rproj.user/1427710/persistent-state
 
@@ -49,10 +50,6 @@ src/*.so
 src/*.dll 
 src-i386/
 src-x64/
-
 *.Rproj
-*.Rhistory
-
 Workfiles
-
 tests/tests_results

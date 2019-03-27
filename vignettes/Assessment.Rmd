@@ -1,15 +1,13 @@
 ---
-title: "Appendix: Description of the Assessment Models in MSEtool"
-author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>) 
-         Adrian Hordyk  (<a.hordyk@oceans.ubc.ca>),
-         Quang Huynh (<q.huynh@oceans.ubc.ca>)"
+title: "Description of the Assessment Models in MSEtool"
+author: "Quang Huynh (<q.huynh@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{Appendix: Description of the Assessment Models in MSEtool}
+  %\VignetteIndexEntry{Description of the Assessment Models in MSEtool}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -58,8 +56,6 @@ options(width = 650)
 
 In MSEtool, assessment models are of class `Assess`. This appendix provides a brief description and references for the `Assess` objects. Further details regarding parameterization, e.g., fixing parameters, and tuning, e.g., adjusting start parameters, are provided in the function documentation.
 
-## Note
-
 For LaTeX equation rendering, it is recommended that this vignette be viewed in a HTML browser. This can be done with the `browseVignettes` function in R:
 
 ```{r, eval = FALSE}
@@ -97,9 +93,9 @@ The predicted catch is
 $$\hat{C}_t = \hat{u}_t \hat{B}_t ,$$
 where the circumflex $^$ denotes the model estimate.
 
-The log-likelihood $L$ of the observed catch $C_t$ over years $t = 1, ..., T$, assuming a lognormal distribution, is
-$$L(C_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(C_t/\hat{C}_t)}{\sigma}\right)^2,$$
-where $\sigma$ is the standard deviation of the lognormal distribution.
+The likelihood $L$ of the observed catch $C_t$, assuming a lognormal distribution, is
+$$\log(C_t) \sim N(\log[\hat{C}_t], \omega^2).$$
+where $\omega$ is the standard deviation of the catch.
 
 ## Stock-recruit parameters
 
@@ -113,9 +109,9 @@ $$ \begin{align}
 \beta &= \dfrac{5h-1}{(1-h)B_0},
 \end{align}$$
 
-Virgin recruitment $R_0$ and steepness $h$ are estimated parameters, with virgin biomass $B_0$ calculated as
+Unfished recruitment $R_0$ and steepness $h$ are estimated parameters, with unfished biomass $B_0$ calculated as
 $$B_0 =  R_0 \phi_0.$$
-The virgin biomass per recruit $\phi_0$ is
+The unfished biomass per recruit $\phi_0$ is
 $$\phi_0 = \dfrac{\tilde{\alpha} \exp(-M) + w_k (1 - \exp(-M))}{1 - \rho \exp(-M)}$$
 and is obtained by solving the equilibrium equation for biomass, $B_0 = \exp(M)(\tilde{\alpha}N_0 + \rho B_0) + w_k R_0$, is solved for $B_0/R_0$, with $N_0 = R_0/(1−\exp(-M))$.
 
@@ -138,8 +134,8 @@ or
 $$ R_t = \alpha B_{t-k}\exp(-\beta B_{t-k})\exp(\delta_t - 0.5 \tau^2),$$
 where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations in lognormal space and $\tau$ is the standard deviation of the recruitment deviations.
 
-The log-likelihood of the log-recruitment deviations $\delta_t$ over years $t=k,\ldots...,T$ is
-$$L(\delta_t) \propto -(T-k) \log\tau - 0.5\sum_{t=k}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.$$
+The likelihood of the estimated log-recruitment deviations $\hat{delta}_t$
+$$\hat{\delta}_t \sim N(0, \tau^2).$$
 
 
 # Surplus-production (SP) model
@@ -155,18 +151,20 @@ $$\gamma = \dfrac{1}{n-1}n^{n/(n-1)}.$$
 By conditioning the model on observed catch, the predicted index $\hat{I}_t$ is
 $$\hat{I}_t = \hat{q} \hat{B}_t $$
 and the harvest rate is
-$$\hat{u}_t = \dfrac{C_t}{\hat{B}_t}.$$
-The log-likelihood $L$ of the observed index $I_t$ over years $t = 1, ..., T$, assuming a lognormal distribution, is
-$$L(I_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(I_t/\hat{I}_t)}{\sigma}\right)^2,$$
+$$\hat{F}_t = \dfrac{C_t}{\hat{B}_t}.$$
+The dynamics equations above use an annual time step. Optionally, smaller time steps are used in the model to approximate continuous production and fishing. Given the biomass in the start of the year and assuming a constant fishing mortality over the time steps within a year, the fishing mortality that produces the observed annual catch is solved iteratively.
 
-## Derivation of SP model parameters from MSY and UMSY estimates
+The likelihood of the observed index $I_t$, assuming a lognormal distribution, is
+$$\log(I_t) \sim N(\log[\hat{I}_t], \sigma^2).$$
 
-From estimates of leading parameters $u_{MSY}$ and $MSY$, the biomass $B_{MSY}$ at $MSY$ is
-$$B_{MSY} = \dfrac{MSY}{u_{MSY}},$$
+## Derivation of SP model parameters from MSY and FMSY estimates
+
+From estimates of leading parameters $F_{MSY}$ and $MSY$, the biomass $B_{MSY}$ at $MSY$ is
+$$B_{MSY} = \dfrac{MSY}{F_{MSY}},$$
 the carrying capacity $K$ is
 $$K = n^{1/(n-1)} B_{MSY} ,$$
 and the intrinsic rate of population increase $r$ is
-$$ r = n u_{MSY}.$$
+$$ r = n F_{MSY}.$$
 The production parameter $n$ is typically fixed and the model has a symmetric productive curve ($B_{MSY}/K = 0.5$) when $n = 2$.
 
 ## State-space version (SP_SS)
@@ -174,22 +172,21 @@ In the state-state version, annual biomass deviates are estimated as random effe
 $$B_t = (B_{t-1} + P_{t-1} - C_{t-1})\exp(\delta_t - 0.5 \tau^2),$$
 where $\delta_t \sim N(0, \tau^2)$ are biomass deviations in lognormal space and $\tau$ is the standard deviation of the biomass deviations.
 
-The log-likelihood of the deviations $\delta_t$ is
-$$L(\delta_t) \propto -T \log\tau - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.$$
-
+The log-likelihood of the estimated deviations $\hat{\delta}_t$ is
+$$\hat{\delta}_t \sim N(0, \tau^2).$$
 # Statistical catch-at-age model (SCA and SCA2) 
 ## Dynamics equations
-The statistical catch-at-age model used in MSEtool assumes pulse fishing at the beginning of each annual time-step, following the parameterization of Forrest et al. (2008). The model uses a time series of total catch (in weight), index, and catch-at-age observations, as well as information on weight, maturity, natural mortality at age.
+The statistical catch-at-age model uses a time series of total catch (in weight), index, and catch-at-age observations, as well as information on weight, maturity, natural mortality at age.
 
 The population abundance $N_{a,t}$ of age $a$ in year $t$ is
 $$ N_{a,t} = 
 \begin{cases} 
       R_t & a = 1\\
-      N_{a-1,t-1} (1 - v_{a-1} u_{t-1}) \exp(-M_{a-1}) & a = 2, \ldots, A-1\\
-      N_{a-1,t-1} (1 - v_{a-1} u_{t-1}) \exp(-M_{a-1}) + N_{a,t-1} (1 - v_a u_{t-1}) \exp(-M_a) & a = A 
+      N_{a-1,t-1} \exp(- v_{a-1} F_{t-1} - M_{a-1}) & a = 2, \ldots, A-1\\
+      N_{a-1,t-1} \exp(- v_{a-1} F_{t-1} - M_{a-1}) + N_{a,t-1} \exp(- v_a F_{t-1} - M_a) & a = A 
 \end{cases},
 $$
-where $R_t$ is the recruitment (age-1), $v_a$ is the vulnerability at age $a$, $u_t$ is the annual harvest rate, $M_a$ is the instantaneous natural mortality rate at age $a$, and $A$ is the maximum age in the model as a plus-group accumulator age.
+where $R_t$ is the recruitment (age-1), $v_a$ is the vulnerability at age $a$, $F_t$ is the apical fishing mortality rate, $M_a$ is the instantaneous natural mortality rate at age $a$, and $A$ is the maximum age in the model as a plus-group accumulator age.
 
 Assuming logistic vulnerability, the vulnerability is:
 $$v_a = \left[1 + \exp\left(-\log(19) \dfrac{a - a_{50}}{a_{95} - a_{50}}\right)\right]^{-1}, $$
@@ -205,7 +202,7 @@ $$ v_a =
 $$
 where $f(a; \mu, \sigma) = \exp(-0.5 (a - \mu)^2/\sigma^2)$ is the normal probability density function scaled to one at $\mu$. Four parameters are estimated: $a_{50}$ the age of 50% vulnerability (ascending limb), $a_{asc}$ the first age of full vulnerability, $a_{des}$ the last age of full vulnerability, and $v_A$ the vulnerability at the maximum age in the model. The $\mu$ and $\sigma$ for both the ascending and descending limbs of the double-normal equation are estimated parameters. From these four parameters, $\sigma_{asc} = \sqrt{(a_{50} - \mu_{asc})^2/\log(4)}$ and $\sigma_{des} = \sqrt{-0.5(A - \mu_{des})^2/\log(v_A)}$ can be derived.
 
-The vulnerable biomass $VB_t$ in year $t$ is
+The vulnerable biomass $VB_t$ at the beginning of year $t$ is
 $$VB_t = \sum_{a=1}^A v_a w_a N_{a,t},$$
 where weight-at-age $w_a$ is given by 
 $$w_a = W_{\infty}(1 - \exp[K\{a-a_0\}])^b.$$ 
@@ -216,24 +213,51 @@ where maturity at age $m_a$ is
 $$m_a = \left[1 + \exp\left(-\log(19) \dfrac{a - \tilde{a}_{50}}{\tilde{a}_{95} - \tilde{a}_{50}}\right)\right]^{-1}, $$
 where $\tilde{a}_{50}$ and $\tilde{a}_{95}$ are the ages of 50% and 95% maturity, respectively.
 
-By conditioning the model on catch in weight $Y_t$, the estimated annual harvest rate $\hat{u}_t$ is
-$$\hat{u}_t = Y_t / \widehat{VB}_t .$$
-The estimated catch at age $\hat{C}_{a,t}$ is
-$$\hat{C}_{a,t} = \hat{v}_a \hat{u}_t \hat{N}_{a,t}.$$
-The log-likelihood $L$ of the observed catch at age $C_{a,t}$ over years $t = 1, ..., T$, assuming a multinomial distribution, is
-$$L(C_{a,t})\propto \sum_{t=1}^T \left(N_t \sum_{a=1}^A p_{a,t} \log(\hat{p}_{a,t}) \right),$$
-where $N_t$ is the sample size of catch-at-age observations in year $t$, $p_{a,t}$ and $\hat{p}_{a,t}$ are the observed and predicted
-proportions of catch-at-age.
-
-If a lognormal distribution for the observed catch at age proportions is assumed, then the likelihood is
-$$L(p_{a,t})\propto -\log\left(\sqrt{\dfrac{0.01}{\hat{p}_{a,t}}}\right) -0.5\left(\log(p_{a,t}/\hat{p}_{a,t})/\sqrt{\dfrac{0.01}{\hat{p}_{a,t}}}\right)^2 $$
+The estimated catch-at-age $\hat{C}_{a,t}$ is obtained from the Baranov equation:
+$$\hat{C}_{a,t} = \dfrac{\hat{v}_a \hat{F}_t}{\hat{v}_a \hat{F}_t + M_a} [1 - \exp(- \hat{v}_a \hat{F}_t - M_a)] \hat{N}_{a,t}.$$
+The predicted total catch in weight $\hat{Y}_t$ is
+$\hat{Y}_t = \sum_a w_a \hat{C}_{a,t}.$$
 
 The estimated index $\hat{I}_t$, assuming that it is an index for total biomass, is
 $$ \hat{I}_t = \hat{q} \hat{B}_t,$$
 where $B_t = \sum_{a=1}^A w_a N_{a,t}$. A function argument allows for the user to specify that the observed index is for vulnerable or spawning biomass. 
 
-The log-likelihood $L$ of the observed index $I_t$ over years $t = 1, ..., T$, assuming a lognormal distribution, is
-$$L(I_t)\propto -T \log\sigma - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(I_t/\hat{I}_t)}{\sigma}\right)^2.$$
+The likelihood of the observed catch at age $C_{a,t}$, assuming a multinomial distribution, is
+$$ C_{a,t} \sim \textrm{Multinomial}(O_t, \hat{p}_{a,t}), $$
+where $O_t$ is the assumed sample size of catch-at-age observations in year $t$ and $\hat{p}_{a,t} = \hat{C}_{a,t}/\sum_a\hat{C}_{a,t}$ is annual predicted
+proportions of catch-at-age.
+
+If a lognormal distribution for the observed proportions at age is assumed, then the likelihood is
+$$\log(p_{a,t}) \sim N(\log[\hat{p}_{a,t}], 0.01/\hat{p}_{a,t}).$$
+
+The likelihood of the observed catch $Y_t$, assuming a lognormal distribution, is
+$$\log(Y_t) \sim N(\log[\hat{Y}_t], \omega^2).$$
+
+The likelihood of the observed index $I_t$, assuming a lognormal distribution, is
+$$\log(I_t) \sim N(\log[\hat{I}_t], \sigma^2)$$
+
+### Stock reduction analysis (SRA)
+A variant of the SCA is the SRA, which fixed the predicted catches to the observed catches and uses Pope's approximation to calculate the annual harvest rate in the midpoint of the year.
+
+The abundance at age is 
+
+$$ N_{a,t} = 
+\begin{cases} 
+      R_t & a = 1\\
+      N_{a-1,t-1} (1 - v_{a-1} u_{t-1}) \exp(-M_{a-1}) & a = 2, \ldots, A-1\\
+      N_{a-1,t-1} (1 - v_{a-1} u_{t-1}) \exp(-M_{a-1}) + N_{a,t-1} (1 - v_a u_{t-1}) \exp(-M_a) & a = A 
+\end{cases},
+$$
+where $u_t$ is the harvest rate.
+
+The vulnerable biomass in the midpoint of the year is
+$$VB^{mid}_t = \sum_{a=1}^A v_a w_a N_{a,t} \exp(-0.5 M_a).$$
+
+By conditioning the model on catch in weight $Y_t$, the estimated annual harvest rate $\hat{u}_t$ is
+$$\hat{u}_t = Y_t / \widehat{VB^{mid}}_t .$$
+The estimated catch at age $\hat{C}_{a,t}$ is
+$$\hat{C}_{a,t} = \hat{v}_a \hat{u}_t \hat{N}_{a,t} \exp(-0.5 M_a).$$
+
 
 ## Estimation of recruitment and reference points
 
@@ -280,8 +304,8 @@ $$R_t = \bar{R} \exp(\delta_t - 0.5 \tau^2), $$
 where $\delta_t \sim N(0, \tau^2)$ are recruitment deviations in lognormal space from the estimated mean recruitment $\bar{R}$ and $\tau$ is the standard deviation of the recruitment deviations. Typically, $\tau$ is set to 1 so that recruitment is estimated almost as free parameters (Cadigan, 2016).
 
 ### Likelihood of recruitment deviations
-The log-likelihood of the log-recruitment deviations $\delta_t$ over years $t=1,\ldots...,T$ is
-$$L(\delta_t) \propto -T \log\tau - 0.5\sum_{t=1}^{T}\left(\dfrac{\log(\delta_t)}{\tau}\right)^2.$$
+The likelihood of the estimated log-recruitment deviations $\hat{\delta}_t$ is
+$$\hat{\delta}_t \sim N(0, \tau^2).$$
 
 # References
 
@@ -290,7 +314,5 @@ Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, inclu
 Carruthers, T, Walters, C.J,, and McAllister, M.K. 2012. Evaluating methods that classify fisheries stock status using only fisheries catch data. Fisheries Research 119-120:66-79.
 
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
-
-Forrest, R.E., Martell, S.J.D., Melnychuk, M.C., and Walters, C.J. 2008. An age-structured model with leading management parameters, incorporating age-specific selectivity and maturity. Canadian Journal of Fisheries and Aquatic Science 65:286-296.
 
 Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice, Dynamics and Uncertainty. Chapman and Hall, New York.
