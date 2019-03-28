@@ -28,6 +28,7 @@
 #' @param fix_F_equilibrium Logical, whether the equilibrium fishing mortality prior to the first year of the model
 #' is estimated. If \code{TRUE}, \code{F_equilibrium} is fixed to value provided in \code{start} (if provided),
 #' otherwise, equal to zero (assumes unfished conditions).
+#' @param fix_U_equilibrium Logical, same as `fix_F_equilibrium` for `SRA`.
 #' @param fix_omega Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Cat}.
 #' @param fix_sigma Logical, whether the standard deviation of the index is fixed. If \code{TRUE},

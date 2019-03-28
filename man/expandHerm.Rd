@@ -12,6 +12,8 @@ expandHerm(Herm, maxage, np, nsim)
 \item{maxage}{The maximum age of stocks being simulated}
 
 \item{np}{The total number of stocks being simulated}
+
+\item{nsim}{The number of simulations}
 }
 \description{
 Expand the Herm list in SexPars to a matrix of fractions at age

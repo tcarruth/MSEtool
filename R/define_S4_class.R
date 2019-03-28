@@ -130,6 +130,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 })
 
 #' @name plot.Assessment
+#' @aliases plot,Assessment,missing-method
 #' @title Assessment object
 #' @description Produces HTML file with figures of parameter estimates and output from an \linkS4class{Assessment} object.
 #'
@@ -144,22 +145,24 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' plot(output, save_figure = FALSE, save_dir = tempdir())
 #' }
 #' @exportMethod plot
-setMethod("plot", signature(x = "Assessment"), function(x, save_figure = TRUE, save_dir = tempdir()) {
-  if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge?.")
-  old.warning <- options()$warn
-  options(warn = -1)
-  on.exit(options(warn = old.warning))
-  old_par <- par(no.readonly = TRUE)
-  on.exit(par(old_par), add = TRUE)
+setMethod("plot", signature(x = "Assessment", y = "missing"),
+          function(x, save_figure = TRUE, save_dir = tempdir()) {
 
-  if(save_figure && !file.exists(save_dir)) {
-    dir_test <- try(dir.create(save_dir))
-    if(!dir_test || inherits(dir_test, "try-error")) stop(paste("Could not create directory:", save_dir))
-  }
+            if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge?.")
+            old.warning <- options()$warn
+            options(warn = -1)
+            on.exit(options(warn = old.warning))
+            old_par <- par(no.readonly = TRUE)
+            on.exit(par(old_par), add = TRUE)
 
-  f <- get(paste0("generate_plots_", x@Model))
-  f(x, save_figure = save_figure, save_dir = save_dir)
-})
+            if(save_figure && !file.exists(save_dir)) {
+              dir_test <- try(dir.create(save_dir))
+              if(!dir_test || inherits(dir_test, "try-error")) stop(paste("Could not create directory:", save_dir))
+            }
+
+            f <- get(paste0("generate_plots_", x@Model))
+            f(x, save_figure = save_figure, save_dir = save_dir)
+          })
 
 
 if(getRversion() >= "2.15.1") {

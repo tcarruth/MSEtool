@@ -1,5 +1,5 @@
 summary_spict <- function(Assessment) {
-  MSEtool:::assign_Assessment_slots()
+  assign_Assessment_slots()
 
   current_status <- data.frame(Value = c(F_FMSY[length(F_FMSY)], B_BMSY[length(B_BMSY)],
                                          B_B0[length(B_B0)]))

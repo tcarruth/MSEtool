@@ -54,25 +54,9 @@ May differ from MSY statistics from last historical year if there are changes in
 \item{checks}{Logical. Run tests?}
 
 \item{control}{control options for testing and debugging}
-
-\item{maxsims}{Maximum number of simulations per packet}
-
-\item{name}{Character string for name of saved MSE packets (if \code{savePack=TRUE})
-and final MSE object. If none provided, it uses the first five letters from the \code{OM} name}
-
-\item{unique}{Logical. Should the name be unique? Current date and time appended to name.}
-
-\item{maxCrash}{Maximum number of consecutive crashes before the MSE stops}
-
-\item{saveMSE}{Logical to indicate if final MSE object should be saved to current
-working directory (this is probably a good idea)}
-
-\item{savePack}{Logical to indicate if packets should be save to current working directory}
-
-\item{...}{Arguments to runMSE function}
 }
 \value{
-A hierarchical list (by stock then fleet) of objects of class MSE \linkS4class{MSE}
+A hierarchical list (by stock then fleet) of objects of class \linkS4class{MSE}
 }
 \description{
 A function that runs a Management Strategy Evaluation (closed-loop

@@ -54,6 +54,7 @@
 #' @slot Misc Miscellanenous output such as posterior predictive data
 #' @author T. Carruthers
 #' @keywords classes
+#' @export
 setClass("MMSE", representation(Name = "character", nyears = "numeric",
                                proyears = "numeric", nMPs = "numeric", MPs = "list", MPcond="character",MPrefs="array",
                                nsim = "numeric",nstocks="numeric",nfleets="numeric", Snames="character",Fnames='array',

@@ -14,14 +14,12 @@
 #' @docType class
 #' @section Objects from the Class: Objects can be created by calls of the form
 #' \code{new('MOM', Stock_list, Fleet_list, Obs_list, Imp_list)}.
-
 #' @slot Name Name of the operating model
 #' @slot Agency Name of the agency responsible for the management of the fishery. Character string
 #' @slot Region Name of the general geographic region of the fishery. Character string
 #' @slot Sponsor Name of the organization who sponsored the OM. Character string
 #' @slot Latitude Latitude (decimal degrees). Negative values represent the South of the Equator. Numeric. Single value
 #' @slot Longitude Longitude (decimal degrees). Negative values represent the West of the Prime Meridian. Numeric. Single value
-
 #' @slot nsim The number of simulations
 #' @slot proyears The number of projected years
 #' @slot interval The assessment interval - how often would you like to update the management system?
@@ -46,7 +44,6 @@
 #' @author T. Carruthers and A. Hordyk
 #' @export
 #' @keywords classes
-#'
 setClass("MOM", representation(Name = "character", Agency="character",
                               Region="character", Sponsor="character",
                               Latitude="numeric", Longitude="numeric",

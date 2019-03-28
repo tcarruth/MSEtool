@@ -148,14 +148,14 @@ TEG<-function(vec){ # make index for list calculation
 
 
 
-#' Normalize
-#'
-#' Normalize an array over certain dimensions
-#'
-#' @param listy A list of objects
-#' @param namey A character vector representing the list item's name
-#' @author T. Carruthers
-#' @export
+# #' Normalize
+# #'
+# #' Normalize an array over certain dimensions
+# #'
+# #' @param listy A list of objects
+# #' @param namey A character vector representing the list item's name
+# #' @author T. Carruthers
+# #' @export
 nlz<-function(arr,dims=NULL,func="max"){
   arrdim<-dim(arr)
   ndim<-length(arrdim)
@@ -194,6 +194,7 @@ ldim<-function(x){
 #' Catches, CAA, CAL are summed. LFC and LFS are weighted averages. ML, Lc and Lbar are recalculated from summed CAL. All other observations are for fleet 1 (indicative)
 #'
 #' @param MSElist A hierarcical list of data objects stock then fleet then MP
+#' @param StockPars A list of stock parameters
 #' @param p Integer the Stock number
 #' @param mm Integer the MP number
 #' @param nf The number of fleets
@@ -247,6 +248,7 @@ multiData<-function(MSElist,StockPars,p,mm,nf){
 #' Catches, CAA, CAL are summed. LFC and LFS are weighted averages. ML, Lc and Lbar are recalculated from summed CAL. All other observations are for fleet 1 (indicative)
 #'
 #' @param MSElist A hierarcical list of data objects stock then fleet then MP
+#' @param StockPars A list of stock parameters
 #' @param np The number of stocks
 #' @param mm Integer the MP number
 #' @param nf The number of fleets
@@ -359,6 +361,7 @@ multiDataS<-function(MSElist,StockPars,np,mm,nf,realVB){
 #' @param Herm A list of Hermaphroditic fractions at age (starting age class 1)
 #' @param maxage The maximum age of stocks being simulated
 #' @param np The total number of stocks being simulated
+#' @param nsim The number of simulations
 #' @author T. Carruthers
 #' @export
 expandHerm<-function(Herm,maxage,np,nsim){

@@ -13,11 +13,11 @@ plotRel(Stocks, Rel, Relno, Snams, leg = F, extras = 0)
 
 \item{Relno}{Integer. The relationship you wish to plot}
 
+\item{Snams}{A vector of stock names}
+
 \item{leg}{Logical. Do you want to plot a legend?}
 
 \item{extras}{Integer. The number of blank plots to create at the end.}
-
-\item{Snames}{A vector of stock names}
 }
 \description{
 Plot a relationship between stocks

@@ -1,13 +1,12 @@
 
 
-#' Get part of an MP specific data-list
-#'
-#' @param MSElist A hierarchical list [Stock][Fleet][MP]
-#' @param mm integer the MP number
-#'
-#' @return a sublist of MSElist for a specific MP
-#' @export
-#'
+# #' Get part of an MP specific data-list
+# #'
+# #' @param MSElist A hierarchical list [Stock][Fleet][MP]
+# #' @param mm integer the MP number
+# #'
+# #' @return a sublist of MSElist for a specific MP
+# #' @export
 getDataList<-function(MSElist,mm){
   DataList<-new('list')
   for(ss in 1:length(MSElist)){
@@ -18,21 +17,21 @@ getDataList<-function(MSElist,mm){
 }
 
 
-#' Apply multi Management Procedures (class MMP) to a hierarchical list of Data class objects
-#'
-#' @param Data List, a hierarchical list of Data objects (Fleets nested in Stocks)
-#' @param MPstorun Name(s) of the MPs to run
-#' @param reps Number of samples
-#' @param nsims Optional. Number of simulations.
-#' @param silent Logical. Should messages be suppressed?
-#'
-#' @return A hierarchical list of management recommendations (object class Rec), Fleets nested in Stocks
-#' @export
-#'
+# #' Apply multi Management Procedures (class MMP) to a hierarchical list of Data class objects
+# #'
+# #' @param DataList A hierarchical list of \linkS4class{Data} objects (Fleets nested in Stocks)
+# #' @param MP Name(s) of the MPs to run
+# #' @param reps Number of samples
+# #' @param nsims Optional. Number of simulations.
+# #' @param silent Logical. Should messages be suppressed?
+# #'
+# #' @return A hierarchical list of management recommendations (object class Rec), Fleets nested in Stocks
+# #' @export
+# #'
 applyMMP <- function(DataList, MP = NA, reps = 1, nsims=NA, silent=FALSE) {
 
   if (is.na(nsims)) nsims <- length(DataList[[1]][[1]]@Mort)
-  nMPs <- length(MPs)
+  nMPs <- length(MP)
   if (.hasSlot(DataList[[1]][[1]], "nareas")) {
     nareas <- DataList[[1]][[1]]@nareas
   } else {
@@ -60,12 +59,12 @@ applyMMP <- function(DataList, MP = NA, reps = 1, nsims=NA, silent=FALSE) {
 
 
 
-#' Create a blank MP recommendations object (class Rec) of the right dimensions
-#'
-#' @param nsim Integer. The number of stocks
-#' @param reps Integer. The number of reps
-#' @author T. Carruthers
-#' @export
+# #' Create a blank MP recommendations object (class Rec) of the right dimensions
+# #'
+# #' @param temp A list of nsim simulations.
+# #' @param nareas The number of areas.
+# #' @author T. Carruthers
+# #' @export
 CombineMMP<-function(temp,nareas){
 
   slots <- slotNames(temp[[1]][[1]][[1]]) # sim stock fleet
@@ -106,13 +105,13 @@ CombineMMP<-function(temp,nareas){
 
 }
 
-#' Extract the first dimension of a hierachical list of recommendation objects
-#'
-#' @param name Character. The slot name to extract.
-#' @param reps Integer. The stock number (second level list)
-#' @param ff Integer. The fleet number (third level list)
-#' @author T. Carruthers
-#' @export
+# #' Extract the first dimension of a hierachical list of recommendation objects
+# #'
+# #' @param name Character. The slot name to extract.
+# #' @param reps Integer. The stock number (second level list)
+# #' @param ff Integer. The fleet number (third level list)
+# #' @author T. Carruthers
+# #' @export
 getfirstlev<-function(x, name,pp,ff)slot(x[[pp]][[ff]], name)
 
 

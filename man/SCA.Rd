@@ -113,6 +113,8 @@ is passed on to \code{\link[TMB]{newton}}.}
 be estimated (in \code{SCA2}, uninformative years will have a recruitment closer to the mean, which can be very misleading,
 especially near the end of the time series). By default, \code{"comp50"} uses the number of ages (smaller than the mode)
 for which the catch-at-age matrix has less than half the abundance than that at the mode.}
+
+\item{fix_U_equilibrium}{Logical, same as `fix_F_equilibrium` for `SRA`.}
 }
 \value{
 An object of class \linkS4class{Assessment}.

@@ -3,10 +3,10 @@
 \docType{methods}
 \name{plot.Assessment}
 \alias{plot.Assessment}
-\alias{plot,Assessment-method}
+\alias{plot,Assessment,missing-method}
 \title{Assessment object}
 \usage{
-\S4method{plot}{Assessment}(x, save_figure = TRUE,
+\S4method{plot}{Assessment,missing}(x, save_figure = TRUE,
   save_dir = tempdir())
 }
 \arguments{

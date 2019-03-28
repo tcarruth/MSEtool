@@ -9,6 +9,8 @@ multiData(MSElist, StockPars, p, mm, nf)
 \arguments{
 \item{MSElist}{A hierarcical list of data objects stock then fleet then MP}
 
+\item{StockPars}{A list of stock parameters}
+
 \item{p}{Integer the Stock number}
 
 \item{mm}{Integer the MP number}

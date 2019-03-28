@@ -35,16 +35,7 @@
 #' @param save_name Character. Optional name to save parallel MSE list
 #' @param checks Logical. Run tests?
 #' @param control control options for testing and debugging
-#' @param maxsims Maximum number of simulations per packet
-#' @param name Character string for name of saved MSE packets (if \code{savePack=TRUE})
-#' and final MSE object. If none provided, it uses the first five letters from the \code{OM} name
-#' @param unique Logical. Should the name be unique? Current date and time appended to name.
-#' @param maxCrash Maximum number of consecutive crashes before the MSE stops
-#' @param saveMSE Logical to indicate if final MSE object should be saved to current
-#' working directory (this is probably a good idea)
-#' @param savePack Logical to indicate if packets should be save to current working directory
-#' @param ... Arguments to runMSE function
-#' @return A hierarchical list (by stock then fleet) of objects of class MSE \linkS4class{MSE}
+#' @return A hierarchical list (by stock then fleet) of objects of class \linkS4class{MSE}
 #' @author T. Carruthers and A. Hordyk
 #' @export
 multiMSE <- function(MOM, MPs = list(c("AvC","DCAC"),c("FMSYref","curE")),
@@ -401,9 +392,9 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
   bounds <- c(0.0001, 15) # q bounds for optimizer
 
-  if(sfIsRunning()){
-    out<-sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
-                  MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
+  if(snowfall::sfIsRunning()){
+    out<-snowfall::sfLapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
+                            MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
   }else{
     out<-lapply(1:nsim,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
                 MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
@@ -480,7 +471,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         }
       }
 
-      out2<-sfLapply(probQ,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
+      out2<-snowfall::sfLapply(probQ,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
 
       qs2<-t(matrix(NIL(out2,"qtot"),nrow=np))
       qout2<-array(NIL(out2,"qfrac"),c(np,nf,nsim))
