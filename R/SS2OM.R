@@ -680,11 +680,11 @@ getGpars_r4ss_124 <- function(replist, seas = 1) {
     cat("!Error with morph indexing in SSplotBiology function.\n",
         " Code is not set up to handle multiple growth patterns or birth seasons.\n")
   }
-  if (FecType == 1) {
-    fec_ylab <- "Eggs per kg"
-    FecX <- biology$Wt_len_F
-    FecY <- FecPar1 + FecPar2 * FecX
-  }
+  #if (FecType == 1) {
+  #  fec_ylab <- "Eggs per kg"
+  #  FecX <- biology$Wt_len_F
+  #  FecY <- FecPar1 + FecPar2 * FecX
+  #}
 
   growdatF <- growdat[growdat$Gender == 1 & growdat$Morph ==
                         mainmorphs[1], ]
@@ -757,8 +757,7 @@ getGpars_r4ss_134 <- function(replist, seas = 1) {
   Grow_std <- replist$derived_quants[grep("Grow_std_", replist$derived_quants$Label), ]
   if (nrow(Grow_std) == 0) {
     Grow_std <- NULL
-  }
-  else {
+  } else {
     Grow_std$pattern <- NA
     Grow_std$sex_char <- NA
     Grow_std$sex <- NA
@@ -774,32 +773,31 @@ getGpars_r4ss_134 <- function(replist, seas = 1) {
   }
   if (!is.null(replist$wtatage_switch)) {
     wtatage_switch <- replist$wtatage_switch
-  }
-  else {
+  } else {
     stop("SSplotBiology function doesn't match SS_output function.",
          "Update one or both functions.")
   }
-  if (wtatage_switch) {
-    cat("Note: this model uses the empirical weight-at-age input.\n",
-        "      Plots of many quantities related to growth are skipped.\n")
-  }
+  #if (wtatage_switch) {
+  #  cat("Note: this model uses the empirical weight-at-age input.\n",
+  #      "      Plots of many quantities related to growth are skipped.\n")
+  #}
   if (!seas %in% 1:nseasons)
     stop("'seas' input should be within 1:nseasons")
-  if (nseasons > 1) {
-    labels[6] <- gsub("beginning of the year", paste("beginning of season",
-                                                     seas), labels[6])
-  }
+  #if (nseasons > 1) {
+  #  labels[6] <- gsub("beginning of the year", paste("beginning of season",
+  #                                                   seas), labels[6])
+  #}
 
   if (length(morphs) > nsexes) {
     cat("!Error with morph indexing in SSplotBiology function.\n",
         " Code is not set up to handle multiple growth patterns or birth seasons.\n")
   }
-  if (FecType == 1) {
-    fec_ylab <- "Eggs per kg"
-    fec_xlab <- labels[8]
-    FecX <- biology$Wt_len_F
-    FecY <- FecPar1 + FecPar2 * FecX
-  }
+  #if (FecType == 1) {
+  #  fec_ylab <- "Eggs per kg"
+  #  fec_xlab <- labels[8]
+  #  FecX <- biology$Wt_len_F
+  #  FecY <- FecPar1 + FecPar2 * FecX
+  #}
   #if (labels[11] != "Default fecundity label")
   #  fec_ylab <- labels[11]
   growdatF <- growdat[growdat$Sex == 1 & growdat$Morph == morphs[1], ]
@@ -809,8 +807,7 @@ getGpars_r4ss_134 <- function(replist, seas = 1) {
                             sdlog = growdatF$Sd_Size)
     growdatF$low <- qlnorm(0.025, meanlog = log(growdatF$Len_Beg),
                            sdlog = growdatF$Sd_Size)
-  }
-  else {
+  } else {
     growdatF$high <- qnorm(0.975, mean = growdatF$Len_Beg,
                            sd = growdatF$Sd_Size)
     growdatF$low <- qnorm(0.025, mean = growdatF$Len_Beg,
@@ -825,8 +822,7 @@ getGpars_r4ss_134 <- function(replist, seas = 1) {
                               sdlog = growdatM$Sd_Size)
       growdatM$low <- qlnorm(0.025, meanlog = log(growdatM$Len_Beg),
                              sdlog = growdatM$Sd_Size)
-    }
-    else {
+    } else {
       growdatM$high <- qnorm(0.975, mean = growdatM$Len_Beg,
                              sd = growdatM$Sd_Size)
       growdatM$low <- qnorm(0.025, mean = growdatM$Len_Beg,
