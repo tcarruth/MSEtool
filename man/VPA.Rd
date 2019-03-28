@@ -69,11 +69,11 @@ hasn't converged. The optimization continues from the parameters from the previo
 \value{
 An object of class \linkS4class{Assessment}. The F vector is the apical fishing mortality experienced by any
 age class in a given year. The U vector is the ratio of catch (weight) and vulnerable biomass, which may be a better
-description of fishing pressure (and UMSY = 1 - exp(-FMSY)).
+description of fishing pressure (and UMSY = MSY/VBMSY).
 }
 \description{
 A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to an index.
-The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). Reference points are then calculated from the
+The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). MSY reference points are then calculated from the
 VPA output.
 }
 \details{

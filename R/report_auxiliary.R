@@ -778,7 +778,7 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, ylab = 
 #' @author Q. Huynh
 #' @return A stock-recruit plot
 #' @export plot_SR
-plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FALSE,
+plot_SR <- function(Spawners, expectedR, R0 = NULL, S0 = NULL, rec_dev = NULL, trajectory = FALSE,
                     y_zoom = NULL, ylab = "Recruitment") {
   if(is.null(rec_dev)) {
     R.max <- 1.1 * max(expectedR)
@@ -802,7 +802,7 @@ plot_SR <- function(Spawners, expectedR, R0, S0, rec_dev = NULL, trajectory = FA
     arrows(x0 = Spawners[1:(n.arrows-1)], y0 = rec_dev[1:(n.arrows-1)],
            x1 = Spawners[2:n.arrows], y1 = rec_dev[2:n.arrows], length = 0.07)
   }
-  points(S0, R0, col = 'red', pch = 16)
+  if(!is.null(R0) && !is.null(S0)) points(S0, R0, col = 'red', pch = 16)
   abline(h = 0, col = 'grey')
   abline(v = 0, col = 'grey')
 }

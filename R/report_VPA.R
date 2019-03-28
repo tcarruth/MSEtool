@@ -212,7 +212,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
       abline(h = 1, lty = 2)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_U_UMSY.png", "Time series of U/UMSY, where UMSY = 1 - exp(-FMSY)."))
+                                   c("assessment_U_UMSY.png", "Time series of U/UMSY, where UMSY = MSY/VBMSY."))
     }
 
   }
@@ -280,10 +280,10 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
     if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
     estR <- R[as.numeric(names(R)) > Year[1]]
 
-    plot_SR(SSB_plot, expectedR, R0, SSB0, estR, ylab = paste0("Recruitment (age-", min(age), ")"))
+    plot_SR(SSB_plot, expectedR, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, ylab = paste0("Recruitment (age-", min(age), ")"))
+      plot_SR(SSB_plot, expectedR, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
@@ -291,20 +291,20 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
 
     if(max(estR) > 3 * max(expectedR)) {
       y_zoom <- 3
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
+      plot_SR(SSB_plot, expectedR, rec_dev = estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
       if(save_figure) {
         create_png(filename = file.path(plot.dir, "assessment_stock_recruit_zoomed.png"))
-        plot_SR(SSB_plot, expectedR, R0, SSB0, estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
+        plot_SR(SSB_plot, expectedR, rec_dev = estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
         dev.off()
         assess.file.caption <- rbind(assess.file.caption,
                                      c("assessment_stock_recruit_zoomed.png", "Stock-recruitment relationship (zoomed in)."))
       }
     } else y_zoom <- NULL
 
-    plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
+    plot_SR(SSB_plot, expectedR, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_stock_recruit_trajectory.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
+      plot_SR(SSB_plot, expectedR, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c("assessment_stock_recruit_trajectory.png", "Stock-recruitment relationship (trajectory plot)."))
@@ -374,7 +374,6 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
   }
 
   if(conv) {
-
     plot_Kobe(B_BMSY, U_UMSY)
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
@@ -402,13 +401,13 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
                                    c("assessment_yield_curve_SSB_SSB0.png", "Yield plot relative to spawning depletion."))
     }
 
-    plot_surplus_production(B, B0, Catch)
+    plot_surplus_production(B, C = Catch)
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-      plot_surplus_production(B, B0, Catch)
+      plot_surplus_production(B, C = Catch)
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_surplus_production.png", "Surplus production relative to depletion (total biomass)."))
+                                   c("assessment_surplus_production.png", "Surplus production relative to total biomass."))
     }
   }
 
@@ -425,7 +424,7 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
 
 
 
-plot_yield_VPA <- function(data, report, vul, fmsy, msy, f.vector = seq(0, 2, 0.01), SR, xaxis = c("F", "Biomass", "Depletion")) {
+plot_yield_VPA <- function(data, report, vul, fmsy, msy, f.vector = seq(0, 2.5 * fmsy, length.out = 100), SR, xaxis = c("F", "Biomass", "Depletion")) {
   xaxis <- match.arg(xaxis)
 
   M <- data$M
@@ -433,8 +432,8 @@ plot_yield_VPA <- function(data, report, vul, fmsy, msy, f.vector = seq(0, 2, 0.
   weight <- data$weight
   maxage <- data$max_age
 
-  BMSY <- report$SSBMSY
-  B0 <- report$SSB0
+  BMSY <- report$EMSY
+  B0 <- report$E0
 
   Arec <- report$Arec
   Brec <- report$Brec
@@ -495,20 +494,22 @@ profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE
   if(!"F_term" %in% names(dots)) stop("Sequence of F_term was not found. See help file.")
   F_term <- dots$F_term
 
-  nll <- rep(NA, length(F_term))
   params <- Assessment@info$params
   map <- Assessment@obj$env$map
   map$logF_term <- factor(NA)
-  for(i in 1:length(F_term)) {
+
+  profile_fn <- function(i, Assessment, params, map) {
     params$logF_term <- log(F_term[i])
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
-
-    if(!is.character(opt2)) nll[i] <- opt2$objective
+    if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
+    return(nll)
   }
-  profile.grid <- data.frame(F_term = F_term, nll = nll - Assessment@opt$objective)
+  nll <- vapply(1:length(F_term), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
+  profile_grid <- data.frame(F_term = F_term, nll = nll)
+
   if(figure) {
-    plot(F_term, profile.grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
+    plot(F_term, profile_grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
     abline(v = Assessment@SD$value[names(Assessment@SD$value) == "F_term"], lty = 2)
 
     if(save_figure) {
@@ -516,7 +517,7 @@ profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE
       prepare_to_save_figure()
 
       create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(F_term, profile.grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
+      plot(F_term, profile_grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
       abline(v = Assessment@SD$value[names(Assessment@SD$value) == "F_term"], lty = 2)
       dev.off()
       profile.file.caption <- c("profile_likelihood.png",
@@ -528,7 +529,7 @@ profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE
       browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
     }
   }
-  return(profile.grid)
+  return(profile_grid)
 }
 
 
@@ -569,7 +570,7 @@ retrospective_VPA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
 
       report <- obj2$report(obj2$env$last.par.best)
       if(rescale != 1) {
-        vars_div <- c("B", "SSB", "VB", "N", "CAApred")
+        vars_div <- c("B", "E", "VB", "N", "CAApred")
         vars_mult <- NULL
         var_trans <- "q"
         fun_trans <- "*"
@@ -579,11 +580,14 @@ retrospective_VPA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
 
       report <- projection_VPA(report, info, data$n_Rpen)
 
-      SSB <- c(report$SSB, rep(NA, i))
+      SSB <- c(report$E, rep(NA, i))
       R <- c(report$N[, 1], rep(NA, i))
       N <- c(rowSums(report$N), rep(NA, i))
       FMort <- c(apply(report$F, 1, max), rep(NA, i + 1))
-      U <- c(colSums(t(report$CAApred) * data$weight)/report$VB[1:(length(report$VB)-1)], rep(NA, i + 1))
+
+      Z_mat <- t(report$F) + data$M
+      VB_mid <- t(report$N[-ncol(report$N), ]) * (1 - exp(-Z_mat))/Z_mat
+      U <- c(colSums(t(report$CAApred) * data$weight)/colSums(VB_mid), rep(NA, i + 1))
 
       retro_ts[i+1, , ] <- cbind(Year, SSB, R, N, FMort, U)
       retro_est[i+1, , ] <- summary(SD)

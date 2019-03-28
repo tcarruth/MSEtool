@@ -1,7 +1,7 @@
 #' Virtual population analysis (VPA)
 #'
 #' A VPA model that back-calculates abundance-at-age assuming that the catch-at-age is known without error and tuned to an index.
-#' The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). Reference points are then calculated from the
+#' The population dynamics equations are primarily drawn from VPA-2BOX (Porch 2018). MSY reference points are then calculated from the
 #' VPA output.
 #'
 #' @param x A position in the Data object (by default, equal to one for assessments).
@@ -61,7 +61,7 @@
 #' }
 #' @return An object of class \linkS4class{Assessment}. The F vector is the apical fishing mortality experienced by any
 #' age class in a given year. The U vector is the ratio of catch (weight) and vulnerable biomass, which may be a better
-#' description of fishing pressure (and UMSY = 1 - exp(-FMSY)).
+#' description of fishing pressure (and UMSY = MSY/VBMSY).
 #' @references
 #' Porch, C.E. 2018. VPA-2BOX 4.01 User Guide. NOAA Tech. Memo. NMFS-SEFSC-726. 67 pp.
 #' @export
@@ -290,13 +290,16 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
 
     E <- report$SSB[1:(length(report$SSB)-min_age)]
     R <- report$N[(min_age + 1):length(report$SSB), 1]
-    ref_pt <- SCA_refpt_calc(E, R, data$weight, data$mat, M, info$vul_refpt, SR, fix_h, info$h)
+    ref_pt <- SCA_refpt_calc(E, R, data$weight, data$mat, data$M, info$vul_refpt, SR, fix_h, info$h)
 
     report <- c(report, ref_pt)
 
+    Z_mat <- t(report$F) + data$M
+    VB_mid <- t(report$N[-ncol(report$N), ]) * data$weight * (1 - exp(-Z_mat))/Z_mat
+
     Assessment@FMSY <- report$FMSY
-    Assessment@U <- Assessment@Catch/(Assessment@Catch + Assessment@VB[1:length(Year)])
-    Assessment@UMSY <- report$MSY/(report$VBMSY + report$MSY)
+    Assessment@U <- structure(Assessment@Catch/colSums(VB_mid), names = Year)
+    Assessment@UMSY <- report$MSY/report$VBMSY
     Assessment@U_UMSY <- Assessment@U/Assessment@UMSY
     Assessment@MSY <- report$MSY
     Assessment@BMSY <- report$BMSY
@@ -334,7 +337,7 @@ projection_VPA <- function(report, info, nR) {
   N[1] <- exp(sum(log(report$N[(termY - nR + 1):termY, 1]))/nR)
 
   report$N <- rbind(report$N, N)
-  report$SSB <- c(report$SSB, sum(N * info$data$mat * info$data$weight))
+  report$E <- c(report$E, sum(N * info$data$mat * info$data$weight))
   report$VB <- c(report$VB, sum(N * report$vul[termY, ] * info$data$weight))
   report$B <- c(report$B, sum(N * info$data$weight))
 

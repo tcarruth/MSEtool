@@ -4,7 +4,7 @@
 \alias{plot_SR}
 \title{Plot stock-recruitment function}
 \usage{
-plot_SR(Spawners, expectedR, R0, S0, rec_dev = NULL,
+plot_SR(Spawners, expectedR, R0 = NULL, S0 = NULL, rec_dev = NULL,
   trajectory = FALSE, y_zoom = NULL, ylab = "Recruitment")
 }
 \arguments{
