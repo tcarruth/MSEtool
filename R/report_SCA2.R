@@ -5,7 +5,7 @@ summary_SCA2 <- function(Assessment) {
   if(conv) current_status <- c(F_FMSY[length(F_FMSY)], B_BMSY[length(B_BMSY)], B_B0[length(B_B0)])
   else current_status <- rep(NA, 3)
   current_status <- data.frame(Value = current_status)
-  rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
+  rownames(current_status) <- c("F/FMSY", "B/BMSY", "B/B0")
 
   Value <- c(info$data$M[1], info$data$max_age, info$LH$Linf, info$LH$K, info$LH$t0,
              info$LH$a * info$LH$Linf ^ info$LH$b, info$LH$A50, info$LH$A95)

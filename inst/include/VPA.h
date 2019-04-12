@@ -70,11 +70,13 @@
       if(a==max_age-1) {
         F(y-1,a-1) = Newton_VPA_F_plus(F(y,a), F_ratio, M(a-1), M(a), CAA_hist(y-1,a-1), CAA_hist(y-1,a), N(y,a), nitF);
       } else {
-        F(y-1,a-1) = Newton_VPA_F(F(y,a), M(a-1), CAA_hist(y-1,a-1), N(y,a), nitF);
+        F(y-1,a-1) = CppAD::CondExpGt(CAA_hist(y-1,a-1), Type(1e-4), Newton_VPA_F(F(y,a), M(a-1), CAA_hist(y-1,a-1), N(y,a), nitF), Type(1e-4));
+        //F(y-1,a-1) = Newton_VPA_F(F(y,a), M(a-1), CAA_hist(y-1,a-1), N(y,a), nitF);
       }
 
-      N(y-1,a-1) = (F(y-1,a-1) + M(a-1)) * CAA_hist(y-1,a-1);
-      N(y-1,a-1) /= (1 - exp(-F(y-1,a-1) - M(a-1))) * F(y-1,a-1);
+      N(y-1,a-1) = CppAD::CondExpGt(CAA_hist(y-1,a-1), Type(1e-4), (F(y-1,a-1) + M(a-1)) * CAA_hist(y-1,a-1)/(1 - exp(-F(y-1,a-1) - M(a-1)))/F(y-1,a-1), N(y,a) * exp(F(y-1,a-1) + M(a)));
+      //N(y-1,a-1) = (F(y-1,a-1) + M(a-1)) * CAA_hist(y-1,a-1);
+      //N(y-1,a-1) /= (1 - exp(-F(y-1,a-1) - M(a-1))) * F(y-1,a-1);
 
       if(a==max_age-1) {
         F(y-1,a) = F_ratio * F(y-1,a-1);

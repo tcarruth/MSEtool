@@ -518,7 +518,7 @@ SCA_refpt_calc <- function(E, R, weight, mat, M, vul, SR, fix_h, h) {
     if(SR == "BH") Rpred <<- (0.8 * R0 * h * E)/(0.2 * EPR0 * R0 *(1-h)+(h-0.2)*E)
     if(SR == "Ricker") Rpred <<- E/EPR0 * (5*h)^(1.25 * (1 - E/E0))
     sigmaR <<- sqrt(sum((log(R/Rpred))^2)/length(Rpred))
-    nLL <- -sum(dnorm(log(R/Rpred), 0.5 * sigmaR^2, sigmaR, log = TRUE))
+    nLL <- -sum(dnorm(log(R/Rpred), -0.5 * sigmaR^2, sigmaR, log = TRUE))
     return(nLL)
   }
 

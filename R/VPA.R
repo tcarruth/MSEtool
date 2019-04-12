@@ -150,6 +150,8 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   }
 
   CAA_hist2[is.na(CAA_hist2) | CAA_hist2 < 1e-8] <- 1e-8
+  max_ind <- CAA_hist2[, ncol(CAA_hist2) - 1] == 1e-8
+  CAA_hist2[max_ind, ncol(CAA_hist2) - 1] <- CAA_hist2[max_ind, ncol(CAA_hist2)]
 
   Wa2 <- Wa[min_age:max_age2]
   Wa2[length(Wa2)] <- mean(Wa[max_age2:max_age])
@@ -157,6 +159,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   La2[length(Wa2)] <- mean(La[max_age2:max_age])
   mat_age2 <- mat_age[min_age:max_age2]
   mat_age2[length(mat_age2)] <- mean(mat_age[max_age2:max_age])
+  mat_age2 <- mat_age2/max(mat_age2)
 
   LH <- list(LAA = La2, WAA = Wa2, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
@@ -288,8 +291,8 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     info$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 2, mean)
     info$vul_refpt <- info$vul_refpt/max(info$vul_refpt)
 
-    E <- report$SSB[1:(length(report$SSB)-min_age)]
-    R <- report$N[(min_age + 1):length(report$SSB), 1]
+    E <- report$E[1:(length(report$E)-min_age)]
+    R <- report$N[(min_age + 1):length(report$E), 1]
     ref_pt <- SCA_refpt_calc(E, R, data$weight, data$mat, data$M, info$vul_refpt, SR, fix_h, info$h)
 
     report <- c(report, ref_pt)

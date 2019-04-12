@@ -280,10 +280,10 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
     if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
     estR <- R[as.numeric(names(R)) > Year[1]]
 
-    plot_SR(SSB_plot, expectedR, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
+    plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
-      plot_SR(SSB_plot, expectedR, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
+      plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
@@ -301,14 +301,13 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
       }
     } else y_zoom <- NULL
 
-    plot_SR(SSB_plot, expectedR, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
+    plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
     if(save_figure) {
       create_png(filename = file.path(plot.dir, "assessment_stock_recruit_trajectory.png"))
-      plot_SR(SSB_plot, expectedR, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
+      plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
       dev.off()
       assess.file.caption <- rbind(assess.file.caption,
                                    c("assessment_stock_recruit_trajectory.png", "Stock-recruitment relationship (trajectory plot)."))
-
     }
 
   }

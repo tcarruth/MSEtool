@@ -240,7 +240,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     SE_Dev <- c(rev(SE_Early), SE_Main)
 
     Assessment@FMSY <- report$FMSY
-    Assessment@MSY < report$MSY
+    Assessment@MSY <- report$MSY
     Assessment@BMSY <- report$BMSY
     Assessment@SSBMSY <- report$EMSY
     Assessment@VBMSY <- report$VBMSY
