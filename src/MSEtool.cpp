@@ -9,43 +9,31 @@ template<class Type>
 
   if(model == "DD") {
     #include "../inst/include/DD.h"
-  } else
-    if(model == "DD_SS") {
-      #include "../inst/include/DD_SS.h"
-    } else
-      if(model =="SP") {
-        #include "../inst/include/SP.h"
-      } else
-        if(model == "SP_SS") {
-          #include "../inst/include/SP_SS.h"
-        } else
-          if(model == "grav") {
-            #include "../inst/include/grav.h"
-          } else
-            if(model == "grav_Pbyarea") {
-              #include "../inst/include/grav_Pbyarea.h"
-            } else
-              if(model == "SCA") {
-                #include "../inst/include/SCA.h"
-              } else
-                if(model == "SCA2") {
-                  #include "../inst/include/SCA2.h"
-                } else
-                  if(model == "VPA") {
-                    #include "../inst/include/VPA.h"
-                  } else
-                    if(model == "SRA") {
-                      #include "../inst/include/SRA.h"
-                    } else {
-                        error("No model found.");
-                      }
-
+  } else if(model == "DD_SS") {
+	#include "../inst/include/DD_SS.h"
+  } else if(model =="SP") {
+    #include "../inst/include/SP.h"
+  } else if(model == "SP_SS") {
+    #include "../inst/include/SP_SS.h"
+  } else if(model == "grav") {
+    #include "../inst/include/grav.h"
+  } else if(model == "grav_Pbyarea") {
+    #include "../inst/include/grav_Pbyarea.h"
+  } else if(model == "SCA") {
+    #include "../inst/include/SCA.h"
+  } else if(model == "SCA2") {
+    #include "../inst/include/SCA2.h"
+  } else if(model == "VPA") {
+    #include "../inst/include/VPA.h"
+  } else if(model == "SRA") {
+    #include "../inst/include/SRA.h"
+  } else if(model == "cDD") {
+    #include "../inst/include/cDD.h"
+  } else if(model == "cDD_SS") {
+	#include "../inst/include/cDD_SS.h"
+  } else {
+    error("No model found.");
+  }
+						  
   return 0;
 }
-
-
-
-
-
-
-
