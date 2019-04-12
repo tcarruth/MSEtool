@@ -92,9 +92,9 @@
     Sp(tt) = B(tt) - Cpred(tt);
 
     if(SR_type == "BH") {
-      R(tt + k) = Arec * Sp(tt)/(1 + Brec * Sp(tt));
+      R(tt + k) = Arec * B(tt)/(1 + Brec * B(tt));
     } else {
-      R(tt + k) = Arec * Sp(tt) * exp(-Brec * Sp(tt));
+      R(tt + k) = Arec * B(tt) * exp(-Brec * B(tt));
     }
     if(tt + k < ny) {
       Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau, 2));

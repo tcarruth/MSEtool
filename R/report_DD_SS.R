@@ -138,17 +138,6 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = tem
     data.file.caption <- c("data_catch.png", "Catch time series")
   }
 
-  #if(!is.na(Data@CV_Cat[1]) && sdconv(1, Data@CV_Cat[1]) > 0.01) {
-  #  plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
-  #  if(save_figure) {
-  #    create_png(filename = file.path(plot.dir, "data_catch_with_CI.png"))
-  #    plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, obs_CV = Data@CV_Cat[1], label = "Catch")
-  #    dev.off()
-  #    data.file.caption <- rbind(data.file.caption,
-  #                               c("data_catch_with_CI.png", "Catch time series with 95% confidence interval."))
-  #  }
-  #}
-
   plot_timeseries(Year, info$I_hist, label = "Index")
   if(save_figure) {
     create_png(filename = file.path(plot.dir, "data_index.png"))
@@ -157,17 +146,6 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = tem
     data.file.caption <- rbind(data.file.caption,
                                c("data_index.png", "Index time series."))
   }
-
-  #if(!is.na(Data@CV_Ind[1]) && sdconv(1, Data@CV_Ind[1]) > 0.01) {
-  #  plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-  #  if(save_figure) {
-  #    create_png(filename = file.path(plot.dir, "data_index_with_CI.png"))
-  #    plot_timeseries(Year, info$I_hist, obs_CV = Data@CV_Ind[1], label = "Index")
-  #    dev.off()
-  #    data.file.caption <- rbind(data.file.caption,
-  #                               c("data_index_with_CI.png", "Index time series with 95% confidence interval."))
-  #  }
-  #}
 
   if(save_figure) {
     html_report(plot.dir, model = "Delay Difference (State-Space)",
@@ -239,7 +217,7 @@ generate_plots_DD_SS <- function(Assessment, save_figure = FALSE, save_dir = tem
   }
 
   ny <- info$data$ny
-  SSB <- B[1:ny] - Catch # B*(1-u)
+  SSB <- B[1:ny] #- Catch # B*(1-u)
   Arec <- TMB_report$Arec
   Brec <- TMB_report$Brec
   if(info$data$SR_type == "BH") expectedR <- Arec * SSB / (1 + Brec * SSB)

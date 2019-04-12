@@ -85,9 +85,9 @@
     Sp(tt) = B(tt) - Cpred(tt);
 
     if(SR_type == "BH") {
-      R(tt + k) = Arec * Sp(tt)/(1 + Brec * Sp(tt));
+      R(tt + k) = Arec * B(tt)/(1 + Brec * B(tt));
     } else {
-      R(tt + k) = Arec * Sp(tt) * exp(-Brec * Sp(tt));
+      R(tt + k) = Arec * B(tt) * exp(-Brec * B(tt));
     }
     B(tt + 1) = Surv(tt) * (Alpha * N(tt) + Rho * B(tt)) + wk * R(tt + 1);
     N(tt + 1) = Surv(tt) * N(tt) + R(tt + 1);
