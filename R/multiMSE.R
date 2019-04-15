@@ -574,7 +574,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     V<-apply(FMt[,p,,,],1:3,sum)
     V<-nlz(V,c(1,3),"max")
-    MSYrefs <- sapply(1:nsim, DLMtool:::optMSY_eq, StockPars[[p]]$M_ageArray, StockPars[[p]]$Wt_age, StockPars[[p]]$Mat_age,
+    MSYrefs <- sapply(1:nsim, DLMtool::optMSY_eq, StockPars[[p]]$M_ageArray, StockPars[[p]]$Wt_age, StockPars[[p]]$Mat_age,
                       V=V, maxage=maxage,
                       R0=StockPars[[p]]$R0, SRrel=StockPars[[p]]$SRrel, hs=StockPars[[p]]$hs, yr.ind=(nyears-1):nyears)
 
@@ -703,10 +703,10 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     ObsPars[[p]][[f]]$CAL<- array(NA, c(nsim,  nyears, StockPars[[p]]$nCALbins))
     vn <- (apply(N[,p,,,], c(1,2,3), sum) * FleetPars[[p]][[f]]$retA[,,1:nyears]) # numbers at age that would be retained
     vn <- aperm(vn, c(1,3, 2))
-    tempSize <- lapply(1:nsim, DLMtool:::genSizeCompWrap, vn, StockPars[[p]]$CAL_binsmid, FleetPars[[p]][[f]]$retL, ObsPars[[p]][[f]]$CAL_ESS, ObsPars[[p]][[f]]$CAL_nsamp,
+    tempSize <- lapply(1:nsim, DLMtool::genSizeCompWrap, vn, StockPars[[p]]$CAL_binsmid, FleetPars[[p]][[f]]$retL, ObsPars[[p]][[f]]$CAL_ESS, ObsPars[[p]][[f]]$CAL_nsamp,
                        StockPars[[p]]$Linfarray,  StockPars[[p]]$Karray,  StockPars[[p]]$t0array, StockPars[[p]]$LenCV, truncSD=2.5)
     ObsPars[[p]][[f]]$CAL<-aperm(array(as.numeric(unlist(tempSize, use.names=FALSE)), dim=c(nyears, length(StockPars[[p]]$CAL_binsmid), nsim)), c(3,1,2))
-    ObsPars[[p]][[f]]$LFC <- unlist(lapply(tempSize, function(x)  DLMtool:::getfifth(x[nyears, ], StockPars[[p]]$CAL_binsmid)))
+    ObsPars[[p]][[f]]$LFC <- unlist(lapply(tempSize, function(x)  DLMtool::getfifth(x[nyears, ], StockPars[[p]]$CAL_binsmid)))
     ObsPars[[p]][[f]]$LFC[is.na(ObsPars[[p]][[f]]$LFC)] <- 1
     ObsPars[[p]][[f]]$LFC[ObsPars[[p]][[f]]$LFC<1] <- 1
 
@@ -760,14 +760,14 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       if (is.null(SampCpars[[p]][[f]][['l_hbias']])) {
         hsim <- rep(NA, nsim)
         cond <- StockPars[[p]]$hs > 0.6
-        hsim[cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs > 0.6), alphaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8, (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * Obs[[p]][[f]]@hbiascv),
-                                  betaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8,  (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * Obs[[p]][[f]]@hbiascv)) * 0.8
+        hsim[cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs > 0.6), alphaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8, (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * ObsPars[[p]][[f]]@hbiascv),
+                                  betaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8,  (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * ObsPars[[p]][[f]]@hbiascv)) * 0.8
 
-        hsim[!cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs <= 0.6), alphaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8,  (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * Obs[[p]][[f]]@hbiascv),
-                                   betaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8, (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * Obs[[p]][[f]]@hbiascv)) * 0.8
+        hsim[!cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs <= 0.6), alphaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8,  (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * ObsPars[[p]][[f]]@hbiascv),
+                                   betaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8, (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * ObsPars[[p]][[f]]@hbiascv)) * 0.8
 
         hbias <- hsim/StockPars[[p]]$hs  # back calculate the simulated bias
-        if (Obs[[p]][[f]]@hbiascv == 0) hbias <- rep(1, nsim)
+        if (ObsPars[[p]][[f]]@hbiascv == 0) hbias <- rep(1, nsim)
         ObsPars[[p]][[f]]$hbias <- hbias
       } else {
         l_hbias <- sample(SampCpars[[p]][[f]]$l_hbias, nsim, replace=TRUE)
@@ -792,7 +792,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     # --- Simulate observation error in BMSY/B0 ----
     ntest <- 20  # number of trials
-    BMSY_B0bias <- array(rlnorm(nsim * ntest, mconv(1, Obs[[p]][[f]]@BMSY_B0biascv), sdconv(1, Obs[[p]][[f]]@BMSY_B0biascv)), dim = c(nsim, ntest))  # trial samples of BMSY relative to unfished
+    BMSY_B0bias <- array(rlnorm(nsim * ntest, mconv(1, ObsPars[[p]][[f]]@BMSY_B0biascv), sdconv(1, ObsPars[[p]][[f]]@BMSY_B0biascv)), dim = c(nsim, ntest))  # trial samples of BMSY relative to unfished
     # test <- array(BMSY_B0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
     test <- array(StockPars[[p]]$SSBMSY_SSB0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
     indy <- array(rep(1:ntest, each = nsim), c(nsim, ntest))  # index
@@ -824,7 +824,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   for(p in 1:np){for(f in 1:nf){
 
     Data <- new("Data", stock = "MSE")  # create a blank DLM data object
-    if (MOM@reps == 1) Data <- DLMtool:::OneRep(Data)  # make stochastic variables certain for only one rep
+    if (MOM@reps == 1) Data <- DLMtool::OneRep(Data)  # make stochastic variables certain for only one rep
     Data <- replic8(Data, nsim)  # make nsim sized slots in the DLM data object
     Data@Name <- paste(Stocks[[p]]@Name,Fleets[[p]][[f]]@Name,sep="-")
     Data@Year <- 1:nyears
@@ -989,7 +989,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     if (!is.na(allMPs[1])) {
       cant <- allMPs[!allMPs %in% PosMPs]
       if (length(cant) > 0) {
-        if(!silent) stop(paste0("Cannot run some MPs:",DLMdiag(Data, "not available", funcs1=cant, timelimit = timelimit)))
+        if(!silent) stop(paste0("Cannot run some MPs:", DLMtool::DLMdiag(Data, "not available", funcs1=cant, timelimit = timelimit)))
       }
     }
   }
@@ -1292,7 +1292,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         LastAllocat[,p,f] <- rep(1, nsim) # default assumption of reallocation of effort to open areas
         LastCatch[,p,f] <- apply(CB[,p,f,,nyears,], 1, sum)
 
-        MPCalcs <- DLMtool:::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
+        MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
                                   LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
                                   TACused=TACused[,p,f], maxF=maxF,
                                   LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,
@@ -1367,7 +1367,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
           }
           V_P<-nlz(apply(V_Pt,c(1,3,4),sum),c(1,3),"max") #summed over fleets and normalized to 1
 
-          MSYrefsYr <- sapply(1:nsim, DLMtool:::optMSY_eq, StockPars[[p]]$M_ageArray,  StockPars[[p]]$Wt_age,  StockPars[[p]]$Mat_age,
+          MSYrefsYr <- sapply(1:nsim, DLMtool::optMSY_eq, StockPars[[p]]$M_ageArray,  StockPars[[p]]$Wt_age,  StockPars[[p]]$Mat_age,
                                 V_P, StockPars[[p]]$maxage, StockPars[[p]]$R0, StockPars[[p]]$SRrel, StockPars[[p]]$hs, yr.ind=(nyears+y)+(-1:0))
           MSY_P[,p,mm,y] <- MSYrefsYr[1, ]
           FMSY_P[,p,mm,y] <- MSYrefsYr[2,]
@@ -1481,7 +1481,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             vn <- aperm(vn, c(1,3,2))
 
             nyrs <- length(yind)
-            tempSize <- lapply(1:nsim, DLMtool:::genSizeCompWrap, vn[,yind,, drop=FALSE], CAL_binsmid=StockPars[[p]]$CAL_binsmid, FleetPars[[p]][[f]]$retL_P,
+            tempSize <- lapply(1:nsim, DLMtool::genSizeCompWrap, vn[,yind,, drop=FALSE], CAL_binsmid=StockPars[[p]]$CAL_binsmid, FleetPars[[p]][[f]]$retL_P,
                                ObsPars[[p]][[f]]$CAL_ESS, ObsPars[[p]][[f]]$CAL_nsamp,
                                StockPars[[p]]$Linfarray[,nyears + yind, drop=FALSE],
                                StockPars[[p]]$Karray[,nyears + yind, drop=FALSE],
@@ -1489,7 +1489,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             CAL <- aperm(array(as.numeric(unlist(tempSize, use.names=FALSE)), dim=c(length(yind), length(StockPars[[p]]$CAL_binsmid), nsim)), c(3,1,2))
 
             # calculate LFC - approx 5th percentile
-            LFC <- unlist(lapply(tempSize, function(x) DLMtool:::getfifth(x[nrow(x), ], StockPars[[p]]$CAL_binsmid)))
+            LFC <- unlist(lapply(tempSize, function(x) DLMtool::getfifth(x[nrow(x), ], StockPars[[p]]$CAL_binsmid)))
             LFC[is.na(LFC)] <- 1
             LFC[LFC<1] <- 1
 
@@ -1671,7 +1671,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
             checkNA[p,f,y] <-checkNA[p,f,y] + sum(is.na(TACused[,p,f]))
 
-            MPCalcs <- DLMtool:::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
+            MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
                                       LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
                                       TACused=TACused[,p,f], maxF=maxF,
                                       LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,
@@ -1732,7 +1732,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             NoMPRecs[lapply(NoMPRecs, length) > 0 ] <- NULL
             NoMPRecs$Spatial <- NA
 
-            MPCalcs <- DLMtool:::CalcMPDynamics(MPRecs=NoMPRecs, y=y, nyears=nyears, proyears=proyears, nsim=nsim,
+            MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=NoMPRecs, y=y, nyears=nyears, proyears=proyears, nsim=nsim,
                                       LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
                                       TACused=TACused[,p,f], maxF=maxF,
                                       LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,

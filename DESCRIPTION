@@ -22,7 +22,7 @@ LinkingTo: TMB, RcppEigen
 LazyData: yes
 LazyLoad: yes
 RoxygenNote: 6.1.1
-Suggests: knitr, testthat, r4ss
+Suggests: knitr, testthat, r4ss, shiny
 VignetteBuilder: knitr
 URL: http://www.datalimitedtoolkit.org
 BugReports: https://github.com/tcarruth/MSEtool/issues

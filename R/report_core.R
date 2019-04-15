@@ -159,7 +159,7 @@ ts_matplot <- function(m, ylab, color, dotted_one = FALSE) {
   x <- matrix(as.numeric(rownames(m)), ncol = ncol(m), nrow = nrow(m))
   plot(NULL, NULL, xlim = range(as.numeric(rownames(m))), ylim = c(0, 1.1 * max(m, na.rm = TRUE)), xlab = "Year", ylab = ylab)
   abline(h = 0, col = "grey")
-  matlines(x, m, typ = "l", col = color, lty = 1, lwd = 2)
+  matlines(x, m, type = "l", col = color, lty = 1, lwd = 2)
   if(dotted_one) abline(h = 1, lty = 3)
 }
 

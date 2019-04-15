@@ -140,7 +140,7 @@ optQ_multi <- function(par, depc, SSB0c, nareas, maxage, Ncurr, pyears, M_age,
 
   Spat_targf<-sum(apply(Effdist,1,sum)*Spat_targc)/sum(Effdist) # Approximation according to historical F by fleet
 
-  simpop <- popdynCPP(nareas, maxage, Ncurr, pyears, M_age, Asize_c,
+  simpop <- DLMtool::popdynCPP(nareas, maxage, Ncurr, pyears, M_age, Asize_c,
                       MatAge, WtAge, Vuln=Vulnf, Retc=Retf, Prec, movc, SRrelc, Effind=Efftot, Spat_targc=Spat_targf, hc,
                       R0c=R0c, SSBpRc=SSBpRc, aRc=aRc, bRc=bRc, Qc=qtot, Fapic=0,
                       maxF=maxF, MPA=MPAf, control=1,  SSB0c=SSB0c)
