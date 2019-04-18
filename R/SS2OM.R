@@ -44,7 +44,8 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
   message(paste("-- Using function SS_output of package r4ss version", packageVersion("r4ss"), "to extract data from SS file structure --"))
   message(paste("Reading directory:", SSdir))
-  replist <- do.call(r4ss::SS_output, dots)
+  replist <- try(do.call(r4ss::SS_output, dots), silent = TRUE)
+  if(is.character(replist)) stop("r4ss::SS_output function returned an error -\n", replist, call. = FALSE)
   message("-- End of r4ss operations --\n")
 
   season_as_years <- FALSE
