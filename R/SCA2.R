@@ -124,7 +124,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   params$log_rec_dev <- rep(0, n_y)
 
   info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, control = control,
-               inner.control = inner.control, rescale = rescale)
+               inner.control = inner.control, rescale = rescale, fix_h = fix_h)
 
   map <- list()
   if(any(info$data$C_hist <= 0)) {
@@ -159,22 +159,6 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
 
   obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-
-  ## Add starting values for rec-devs and increase R0 start value if too low
-  #high_U <- try(obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0, silent = TRUE)
-  #if(!is.character(high_U) && high_U) {
-  #  Recruit <- try(Data@Rec[x, ], silent = TRUE)
-  #  if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
-  #    log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
-  #    log_rec_dev[is.infinite(log_rec_dev) | is.na(log_rec_dev)] <- 0
-  #    info$params$log_rec_dev <- log_rec_dev
-  #    obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
-  #                     map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-  #  }
-  #  while(obj$par["log_meanR"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
-  #    obj$par["log_meanR"] <- obj$par["log_meanR"] + 1
-  #  }
-  #}
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]

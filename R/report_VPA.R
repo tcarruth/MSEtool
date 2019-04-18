@@ -1,6 +1,6 @@
 
 summary_VPA <- function(Assessment) {
-  assign_Assessment_slots()
+  assign_Assessment_slots(Assessment)
 
   if(conv) current_status <- c(F_FMSY[length(F_FMSY)], B_BMSY[length(B_BMSY)], B_B0[length(B_B0)])
   else current_status <- rep(NA, 3)
@@ -14,27 +14,79 @@ summary_VPA <- function(Assessment) {
   rownam <- c("h", "M", "minage", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
+  if(!info$fix_h) input_parameters <- input_parameters[-1, ]
 
-  if(conv) Value <- c(VB0, SSB0, MSY, FMSY, VBMSY, SSBMSY)
-  else Value <- rep(NA, 6)
+  if(conv) Value <- c(VB0, SSB0, MSY, FMSY, VBMSY, SSBMSY, SSBMSY/SSB0)
+  else Value <- rep(NA, 7)
 
-  Description <- c("Virgin vulnerable biomass",
-                  "Virgin spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Fishing mortality at MSY",
-                  "Vulnerable biomass at MSY", "SSB at MSY")
+  Description <- c("Unfished vulnerable biomass",
+                  "Unfished spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Fishing mortality at MSY",
+                  "Vulnerable biomass at MSY", "SSB at MSY", "Spawning depletion at MSY")
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
-  rownames(derived) <- c("VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY")
+  rownames(derived) <- c("VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY", "SSBMSY/SSB0")
 
   if(!is.character(SD)) {
     model_estimates <- summary(SD)
-    model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
+    model_estimates <- model_estimates[!is.na(model_estimates[, 2]) && model_estimates[, 2] > 0, ]
   } else model_estimates <- SD
 
   output <- list(model = "Virtual Population Analysis (VPA)",
                  current_status = current_status, input_parameters = input_parameters,
-                 derived_quantities = derived,
-                 model_estimates = model_estimates)
+                 derived_quantities = derived, model_estimates = model_estimates)
   return(output)
 }
+
+rmd_VPA <- function(Assessment) {
+  ss <- rmd_summary("Virtual Population Analysis (VPA)")
+
+  # Life History
+  age <- Assessment@info$ages
+  LH_section <- c(rmd_LAA(age, Assessment@info$LH$LAA, header = "## Life History\n"), rmd_WAA(age, Assessment@info$LH$WAA),
+                  rmd_LW(Assessment@info$LH$LAA, Assessment@info$LH$WAA),
+                  rmd_mat(age, Assessment@info$data$mat, fig.cap = "Maturity at age. Length-based maturity parameters were converted to the corresponding ages."))
+
+  # Data section
+  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"), rmd_data_timeseries("Index"),
+                    rmd_data_age_comps("bubble", ages = vector2char(age)),
+                    rmd_data_age_comps("annual", ages = vector2char(age), annual_yscale = "\"raw\"", annual_ylab = "\"Catch-at-age\""))
+
+  # Assessment
+  #### Pars and Fit
+  assess_fit <- c("## Assessment {.tabset}\n### Estimates and Model Fit\n",
+                  rmd_sel(age, Assessment@Selectivity[nrow(Assessment@Selectivity), ], fig.cap = "Estimated selectivity at age."),
+                  rmd_assess_fit("Index", "index"), rmd_assess_resid("Index"), rmd_assess_qq("Index", "index"),
+                  rmd_fit_age_comps("annual", ages = vector2char(age), match = TRUE))
+
+  #### Time Series
+  ts_output <- c(rmd_F(header = "### Time Series Output\n", fig.cap = "apical fishing mortality"), rmd_F_FMSY(),
+                 rmd_sel_annual(age), rmd_sel_persp(age),
+                 rmd_U(fig.cap = "harvest rate (ratio of catch and vulnerable biomass)"),
+                 rmd_U_UMSY(fig.cap = "U/UMSY, where UMSY = MSY/VBMSY"),
+                 rmd_SSB(), rmd_SSB_SSBMSY(), rmd_SSB_SSB0(),
+                 rmd_Kobe("SSB_SSBMSY", "U_UMSY", xlab = "expression(SSB/SSB[MSY])", ylab = "expression(U/U[MSY])"),
+                 rmd_R(), rmd_N(), rmd_N_at_age(), rmd_C_at_age(), rmd_C_mean_age())
+
+  # Productivity
+  Arec <- Assessment@TMB_report$Arec
+  Brec <- Assessment@TMB_report$Brec
+  SSB <- Assessment@SSB[1:(length(Assessment@SSB)-1)]
+
+  SR <- Assessment@info$SR
+  if(SR == "BH") expectedR <- Arec * SSB / (1 + Brec * SSB) else {
+    expectedR <- Arec * SSB * exp(-Brec * SSB)
+  }
+  estR <- Assessment@R[as.numeric(names(Assessment@R)) > Assessment@info$Year[1]]
+
+  productivity <- c(rmd_SR(SSB, expectedR, estR, ylab = paste0("Recruitment (age- ", min(age), ")"),
+                           header = "### Productivity\n\n\n", conv_check = TRUE),
+                    rmd_SR(SSB, expectedR, estR, ylab = paste0("Recruitment (age- ", min(age), ")"),
+                           fig.cap = "Stock-recruit relationship (trajectory plot).", trajectory = TRUE, conv_check = TRUE),
+                    rmd_yield_F("VPA"), rmd_yield_depletion("VPA"), rmd_sp(depletion = FALSE))
+
+  return(c(ss, LH_section, data_section, assess_fit, ts_output, productivity))
+}
+
+
 
 #' @import grDevices
 #' @importFrom stats qqnorm qqline
@@ -42,379 +94,10 @@ summary_VPA <- function(Assessment) {
 generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempdir()) {
   assign_Assessment_slots()
 
-  if(save_figure) {
-    prepare_to_save_figure()
-    index.report <- summary(Assessment)
-    html_report(plot.dir, model = "Virtual Population Analysis (VPA)",
-                current_status = index.report$current_status,
-                input_parameters = index.report$input_parameters,
-                model_estimates = index.report$model_estimates,
-                derived_quantities = index.report$derived_quantities,
-                name = Name, report_type = "Index")
-  }
-
-  age <- info$ages
-
-  plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_1_length_at_age.png"))
-    plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
-    dev.off()
-    lh.file.caption <- c("lifehistory_1_length_at_age.png",
-                         paste("Mean Length-at-age from Data object."))
-  }
-
-  plot_generic_at_age(age, info$LH$WAA, label = 'Mean Weight-at-age')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_2_mean_weight_at_age.png"))
-    plot_generic_at_age(age, info$LH$WAA, label = 'Mean Weight-at-age')
-    dev.off()
-    lh.file.caption <- rbind(lh.file.caption,
-                             c("lifehistory_2_mean_weight_at_age.png",
-                               "Mean Weight at age from Data object."))
-  }
-
-  plot(info$LH$LAA, info$LH$WAA, typ = 'o', xlab = 'Length', ylab = 'Weight')
-  abline(h = 0, col = 'grey')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_3_length_weight.png"))
-    plot(info$LH$LAA, info$LH$WAA, typ = 'o', xlab = 'Length', ylab = 'Weight')
-    abline(h = 0, col = 'grey')
-    dev.off()
-    lh.file.caption <- rbind(lh.file.caption,
-                             c("lifehistory_3_length_weight.png",
-                               "Length-weight relationship from Data object."))
-  }
-
-  plot_ogive(age, info$data$mat, label = "Maturity")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_4_maturity.png"))
-    plot_ogive(age, info$data$mat, label = "Maturity")
-    dev.off()
-    lh.file.caption <- rbind(lh.file.caption,
-                             c("lifehistory_4_maturity.png", "Maturity at age."))
-  }
-
-  if(save_figure) {
-    html_report(plot.dir, model = "Virtual Population Analysis (VPA)",
-                captions = lh.file.caption, name = Name, report_type = "Life_History")
-  }
-
-  Year <- info$Year
-
-  plot_timeseries(Year, Obs_Catch, label = "Catch")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "data_catch.png"))
-    plot_timeseries(Year, Obs_Catch, label = "Catch")
-    dev.off()
-    data.file.caption <- c("data_catch.png", "Catch time series")
-  }
-
-  plot_timeseries(Year, Obs_Index, label = "Index")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "data_index.png"))
-    plot_timeseries(Year, Obs_Index, label = "Index")
-    dev.off()
-    data.file.caption <- rbind(data.file.caption,
-                               c("data_index.png", "Index time series."))
-  }
-
-  plot_composition(Year, Obs_C_at_age, ages = age, plot_type = 'bubble_data')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "data_age_comps_bubble.png"))
-    plot_composition(Year, Obs_C_at_age, ages = age, plot_type = 'bubble_data')
-    dev.off()
-    data.file.caption <- rbind(data.file.caption,
-                               c("data_age_comps_bubble.png", "Catch-at-age bubble plot."))
-  }
-
-  plot_composition(Year, Obs_C_at_age, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Catch-at-age")
-  if(save_figure) {
-    nplots <- ceiling(length(Year)/16)
-    for(i in 1:nplots) {
-      ind <- (16*(i-1)+1):(16*i)
-      if(i == nplots) ind <- (16*(i-1)+1):length(Year)
-
-      create_png(filename = file.path(plot.dir, paste0("data_age_comps_", i, ".png")))
-      plot_composition(Year, Obs_C_at_age, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Catch-at-age", ind = ind)
-      dev.off()
-      data.file.caption <- rbind(data.file.caption,
-                                 c(paste0("data_age_comps_", i, ".png"), paste0("Annual catch-at-age (", i, "/", nplots, ")")))
-    }
-  }
-
-  if(save_figure) {
-    html_report(plot.dir, model = "Virtual Population Analysis (VPA)",
-                captions = data.file.caption, name = Name, report_type = "Data")
-  }
-
-
-  plot_timeseries(as.numeric(names(FMort)), FMort, label = "Apical Fishing Mortality (F)")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_F.png"))
-    plot_timeseries(as.numeric(names(FMort)), FMort, label = "Apical Fishing Mortality (F)")
-    dev.off()
-    assess.file.caption <- c("assessment_F.png", "Time series of apical fishing mortality.")
-  }
-
   plot_composition(Year, Selectivity, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Selectivity")
-  if(save_figure) {
-    nplots <- ceiling(length(Year)/16)
-    for(i in 1:nplots) {
-      ind <- (16*(i-1)+1):(16*i)
-      if(i == nplots) ind <- (16*(i-1)+1):length(Year)
-
-      create_png(filename = file.path(plot.dir, paste0("assessment_selectivity_", i, ".png")))
-      plot_composition(Year, Selectivity, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Selectivity", ind = ind)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                 c(paste0("assessment_selectivity_", i, ".png"), paste0("Annual selectivity (", i, "/", nplots, ")")))
-    }
-  }
-
-  persp(Year, age, Selectivity, expand = 0.35, ticktype = 'detailed', phi = 25,
-        theta = 45, xlab = "Year", ylab = "Age", zlab = "Selectivity")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("assessment_selectivity_persp.png")))
-    persp(Year, age, Selectivity, expand = 0.35, ticktype = 'detailed', phi = 25,
-          theta = 45, xlab = "Year", ylab = "Age", zlab = "Selectivity")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c(paste0("assessment_selectivity_persp.png"), "Perspective plot of selectivity."))
-  }
-
-  if(conv) {
-    plot_timeseries(as.numeric(names(F_FMSY)), F_FMSY, label = expression(F/F[MSY]))
-    abline(h = 1, lty = 2)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_F_FMSY.png"))
-      plot_timeseries(as.numeric(names(F_FMSY)), F_FMSY, label = expression(F/F[MSY]))
-      abline(h = 1, lty = 2)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_F_FMSY.png", "Time series of F/FMSY."))
-    }
-
-    plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_exploitation.png"))
-      plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_exploitation.png", "Time series of exploitation rate (ratio of catch and vulnerable biomass)."))
-    }
-
-    plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-    abline(h = 1, lty = 2)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_U_UMSY.png"))
-      plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-      abline(h = 1, lty = 2)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_U_UMSY.png", "Time series of U/UMSY, where UMSY = MSY/VBMSY."))
-    }
-
-  }
-
-  plot_timeseries(Year, Obs_Index, Index, label = "Index")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_index.png"))
-    plot_timeseries(Year, Obs_Index, Index, label = "Index")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_index.png", "Observed (black) and predicted (red) index."))
-  }
-
-  plot_residuals(Year, log(Obs_Index/Index), label = "log(Index) Residual")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_index_residual.png"))
-    plot_residuals(Year, log(Obs_Index/Index), label = "log(Index) Residual")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_index_residual.png", "Index residuals in log-space."))
-  }
-
-  qqnorm(log(Obs_Index/Index), main = "")
-  qqline(log(Obs_Index/Index))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_index_qqplot.png"))
-    qqnorm(log(Obs_Index/Index), main = "")
-    qqline(log(Obs_Index/Index))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_index_qqplot.png", "QQ-plot of index residuals in log-space."))
-  }
-
-  plot_composition(Year, Obs_C_at_age, C_at_age, N = rowSums(Obs_C_at_age), ages = age, plot_type = 'annual')
-  if(save_figure) {
-    nplots <- ceiling(length(Year)/16)
-    for(i in 1:nplots) {
-      ind <- (16*(i-1)+1):(16*i)
-      if(i == nplots) ind <- (16*(i-1)+1):length(Year)
-
-      create_png(filename = file.path(plot.dir, paste0("assess_age_comps_", i, ".png")))
-      plot_composition(Year, Obs_C_at_age, C_at_age, N = rowSums(Obs_C_at_age), ages = age, plot_type = 'annual', ind = ind)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c(paste0("assess_age_comps_", i, ".png"), paste0("Annual observed (black) and predicted (red) catch-at-age (",
-                                                                                    i, "/", nplots, ")")))
-    }
-  }
-
-  plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_mean_age.png"))
-    plot_composition(Year, Obs_C_at_age, C_at_age, plot_type = 'mean')
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_mean_age.png", "Observed (black) and predicted (red) mean age of the catch-at-age."))
-  }
-
-  if(conv) {
-
-    Arec <- TMB_report$Arec
-    Brec <- TMB_report$Brec
-    SSB_plot <- SSB[1:(length(SSB)-1)]
-    if(info$SR == "BH") expectedR <- Arec * SSB_plot / (1 + Brec * SSB_plot)
-    if(info$SR == "Ricker") expectedR <- Arec * SSB_plot * exp(-Brec * SSB_plot)
-    estR <- R[as.numeric(names(R)) > Year[1]]
-
-    plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, ylab = paste0("Recruitment (age-", min(age), ")"))
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
-    }
-
-    if(max(estR) > 3 * max(expectedR)) {
-      y_zoom <- 3
-      plot_SR(SSB_plot, expectedR, rec_dev = estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
-      if(save_figure) {
-        create_png(filename = file.path(plot.dir, "assessment_stock_recruit_zoomed.png"))
-        plot_SR(SSB_plot, expectedR, rec_dev = estR, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
-        dev.off()
-        assess.file.caption <- rbind(assess.file.caption,
-                                     c("assessment_stock_recruit_zoomed.png", "Stock-recruitment relationship (zoomed in)."))
-      }
-    } else y_zoom <- NULL
-
-    plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_stock_recruit_trajectory.png"))
-      plot_SR(SSB_plot, expectedR, R0, SSB0, rec_dev = estR, trajectory = TRUE, y_zoom = y_zoom, ylab = paste0("Recruitment (age-", min(age), ")"))
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_stock_recruit_trajectory.png", "Stock-recruitment relationship (trajectory plot)."))
-    }
-
-  }
-
-  plot_timeseries(as.numeric(names(SSB)), SSB, label = "Spawning Stock Biomass (SSB)")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_spawning_biomass.png"))
-    plot_timeseries(as.numeric(names(SSB)), SSB, label = "Spawning Stock Biomass (SSB)")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_spawning_biomass.png", "Time series of spawning stock biomass."))
-  }
-
-  if(conv) {
-
-    plot_timeseries(as.numeric(names(SSB_SSBMSY)), SSB_SSBMSY, label = expression(SSB/SSB[MSY]))
-    abline(h = 1, lty = 2)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_SSB_SSBMSY.png"))
-      plot_timeseries(as.numeric(names(SSB_SSBMSY)), SSB_SSBMSY, label = expression(SSB/SSB[MSY]))
-      abline(h = 1, lty = 2)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_SSB_SSBMSY.png", "Time series of SSB/SSBMSY."))
-    }
-
-    plot_timeseries(as.numeric(names(SSB_SSB0)), SSB_SSB0, label = expression(SSB/SSB[0]))
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_SSB_SSB0.png"))
-      plot_timeseries(as.numeric(names(SSB_SSB0)), SSB_SSB0, label = expression(SSB/SSB[0]))
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_SSB_SSB0.png", "Time series of spawning stock biomass depletion."))
-    }
-  }
 
 
-  plot_timeseries(as.numeric(names(R)), R, label = paste0("Recruitment (age-", min(age), ")"))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_recruitment.png"))
-    plot_timeseries(as.numeric(names(R)), R, label = paste0("Recruitment (age-", min(age), ")"))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_recruitment.png", "Time series of recruitment."))
-  }
-
-  plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_abundance.png"))
-    plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_abundance.png", "Time series of abundance."))
-  }
-
-  plot_composition(c(Year, max(Year) + 1), N_at_age, ages = age, plot_type = 'bubble_data')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_abundance_at_age_bubble.png"))
-    plot_composition(c(Year, max(Year) + 1), N_at_age, ages = age, plot_type = 'bubble_data')
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                               c("assessment_abundance_at_age_bubble.png", "Abundance at age bubble plot."))
-  }
-
-  if(conv) {
-    plot_Kobe(B_BMSY, U_UMSY)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
-      plot_Kobe(B_BMSY, U_UMSY)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
-    }
-
-    plot_yield_VPA(info$data, TMB_report, info$vul_refpt, FMSY, MSY, xaxis = "F", SR = info$SR)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_yield_curve_F.png"))
-      plot_yield_VPA(info$data, TMB_report, info$vul_refpt, FMSY, MSY, xaxis = "F", SR = info$SR)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_yield_curve_F.png", "Yield plot relative to fishing mortality."))
-    }
-
-    plot_yield_VPA(info$data, TMB_report, info$vul_refpt, FMSY, MSY, xaxis = "Depletion", SR = info$SR)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_yield_curve_SSB_SSB0.png"))
-      plot_yield_VPA(info$data, TMB_report, info$vul_refpt, FMSY, MSY, xaxis = "Depletion", SR = info$SR)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_yield_curve_SSB_SSB0.png", "Yield plot relative to spawning depletion."))
-    }
-
-    plot_surplus_production(B, C = Catch)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-      plot_surplus_production(B, C = Catch)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_surplus_production.png", "Surplus production relative to total biomass."))
-    }
-  }
-
-  if(save_figure) {
-    html_report(plot.dir, model = "Virtual Population Analysis (VPA)",
-                captions = assess.file.caption, name = Name, report_type = "Assessment")
-    browseURL(file.path(plot.dir, "Assessment.html"))
-  }
+  plot_composition(Year, Obs_C_at_age, C_at_age, ages = age, plot_type = 'annual')
 
   return(invisible())
 }
@@ -422,68 +105,8 @@ generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempd
 
 
 
-
-plot_yield_VPA <- function(data, report, vul, fmsy, msy, f.vector = seq(0, 2.5 * fmsy, length.out = 100), SR, xaxis = c("F", "Biomass", "Depletion")) {
-  xaxis <- match.arg(xaxis)
-
-  M <- data$M
-  mat <- data$mat
-  weight <- data$weight
-  maxage <- data$max_age
-
-  BMSY <- report$EMSY
-  B0 <- report$E0
-
-  Arec <- report$Arec
-  Brec <- report$Brec
-
-  BPR <- Req <- NA
-  solveMSY <- function(logF) {
-    Fmort <- exp(logF)
-    surv <- exp(-vul * Fmort - M)
-    NPR <- c(1, cumprod(surv[1:(maxage-1)]))
-    NPR[maxage] <- NPR[maxage]/(1 - surv[maxage])
-    BPR <<- sum(NPR * mat * weight)
-    if(SR == "BH") Req <<- (Arec * BPR - 1)/(Brec * BPR)
-    if(SR == "Ricker") Req <<- log(Arec * BPR)/(Brec * BPR)
-    CPR <- vul * Fmort/(vul * Fmort + M) * NPR * (1 - exp(-vul * Fmort - M))
-    Yield <- Req * sum(CPR * weight)
-    return(-1 * Yield)
-  }
-
-  Biomass <- Yield <- R <- rep(NA, length(f.vector))
-  for(i in 1:length(f.vector)) {
-    Yield[i] <- -1 * solveMSY(log(f.vector[i]))
-    R[i] <- Req
-    Biomass[i] <- BPR * Req
-  }
-
-  ind <- R >= 0
-
-  if(xaxis == "F") {
-    plot(f.vector[ind], Yield[ind], typ = 'l', xlab = "Fishing Mortality (F)",
-         ylab = "Equilibrium yield")
-    segments(x0 = fmsy, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = fmsy, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-
-  if(xaxis == "Biomass") {
-    plot(Biomass[ind], Yield[ind], typ = 'l', xlab = "Spawning Stock Biomass",
-         ylab = "Equilibrium yield")
-    segments(x0 = BMSY, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-
-  if(xaxis == "Depletion") {
-    plot(Biomass[ind]/B0, Yield[ind], typ = 'l',
-         xlab = expression(SSB/SSB[0]), ylab = "Equilibrium yield")
-    segments(x0 = BMSY/B0, y0 = 0, y1 = msy, lty = 2)
-    segments(x0 = 0, y0 = msy, x1 = BMSY/B0, lty = 2)
-    abline(h = 0, col = 'grey')
-  }
-  invisible()
+plot_yield_VPA <- function(data, report, fmsy, msy, xaxis = c("F", "Biomass", "Depletion")) {
+  plot_yield_SCA(data = data, report = report, fmsy = fmsy, msy = msy, xaxis = xaxis)
 }
 
 

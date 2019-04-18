@@ -4,26 +4,47 @@
 \name{plot.Assessment}
 \alias{plot.Assessment}
 \alias{plot,Assessment,missing-method}
-\title{Assessment object}
+\alias{plot,Assessment,retro}
+\alias{plot,Assessment,retro-method}
+\title{Plot Assessment object}
 \usage{
-\S4method{plot}{Assessment,missing}(x, save_figure = TRUE,
-  save_dir = tempdir())
+\S4method{plot}{Assessment,missing}(x, filename = paste0("report_",
+  x@Model), dir = tempdir(), ret_yr = 0L, open_file = TRUE,
+  quiet = TRUE, ...)
+
+\S4method{plot}{Assessment,retro}(x, y, filename = paste0("report_",
+  x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...)
 }
 \arguments{
-\item{x}{An object of class \linkS4class{Assessment}}
+\item{x}{An object of class \linkS4class{Assessment}.}
 
-\item{save_figure}{Indicates whether figures will be saved to disk. A corresponding
-html report will be produced.}
+\item{filename}{Character string for the name of the markdown and HTML files.}
 
-\item{save_dir}{The directory (by default, the current working directory) in which a
-sub-directory will be created to save figures.}
+\item{dir}{The directory in which the markdown and HTML files will be saved.}
+
+\item{ret_yr}{If greater than zero, then a retrospective analysis will be performed and results will be reported. The integer here corresponds
+to the number of peels (the maximum number of terminal years for which the data are removed).}
+
+\item{open_file}{Logical, whether the HTML document is opened after it is rendered.}
+
+\item{quiet}{Logical, whether to silence the markdown rendering function.}
+
+\item{...}{Other arguments to pass to \link[rmarkdown]{render}.}
+
+\item{y}{An object of class \linkS4class{retro}.}
+}
+\value{
+Returns invisibily the output from \link[rmarkdown]{render}.
 }
 \description{
-Produces HTML file with figures of parameter estimates and output from an \linkS4class{Assessment} object.
+Produces HTML file (via markdown) figures of parameter estimates and output from an \linkS4class{Assessment} object.
 }
 \examples{
 \donttest{
 output <- DD_TMB(Data = Simulation_1)
-plot(output, save_figure = FALSE, save_dir = tempdir())
+plot(output)
 }
+}
+\seealso{
+\link{retrospective}
 }

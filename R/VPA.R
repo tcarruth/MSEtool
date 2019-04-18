@@ -232,7 +232,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     params$log_sigma <- log(sigmaI)
   }
 
-  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, ages = ages, control = control, rescale = rescale)
+  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, ages = ages, control = control, rescale = rescale, fix_h = fix_h)
 
   map <- list()
   if(fix_sigma) map$log_sigma <- factor(NA)
@@ -277,9 +277,9 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
                     R = structure(report$N[, 1], names = Yearplusone), N = structure(rowSums(report$N), names = Yearplusone),
                     N_at_age = report$N, Selectivity = report$vul, h = NaN,
                     Obs_Catch = structure(if(expanded) colSums(t(CAA_hist2) * data$weight) else C_hist, names = Year),
-                    Obs_Index = structure(I_hist, names = Year),
-                    Obs_C_at_age = CAA_hist2, Catch = colSums(t(report$CAApred) * data$weight),
-                    Index = report$Ipred, C_at_age = report$CAApred,
+                    Obs_Index = structure(I_hist, names = Year), Obs_C_at_age = CAA_hist2,
+                    Catch = structure(colSums(t(report$CAApred) * data$weight), names = Year),
+                    Index = structure(I_hist, names = Year), C_at_age = report$CAApred,
                     NLL = structure(c(report$fn, report$nll_comp[1], sum(report$nll_comp[2:3], report$penalty, report$prior)),
                                     names = c("Total", "Index", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
@@ -287,13 +287,12 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
 
   if(Assessment@conv) {
 
-    info$h <- ifelse(fix_h, Data@steep[x], NA)
-    info$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 2, mean)
-    info$vul_refpt <- info$vul_refpt/max(info$vul_refpt)
+    report$vul_refpt <- apply(report$vul[(length(Year)-vul_pen[1]+1):length(Year), , drop = FALSE], 2, mean)
+    report$vul_refpt <- report$vul_refpt/max(report$vul_refpt)
 
     E <- report$E[1:(length(report$E)-min_age)]
     R <- report$N[(min_age + 1):length(report$E), 1]
-    ref_pt <- SCA_refpt_calc(E, R, data$weight, data$mat, data$M, info$vul_refpt, SR, fix_h, info$h)
+    ref_pt <- SCA_refpt_calc(E, R, data$weight, data$mat, data$M, report$vul_refpt, SR, fix_h, ifelse(fix_h, Data@steep[x], NA))
 
     report <- c(report, ref_pt)
 

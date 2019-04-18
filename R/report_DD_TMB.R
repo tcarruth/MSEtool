@@ -1,5 +1,5 @@
 
-summary_DD_TMB <- function(Assessment) {
+summary_DD_TMB <- function(Assessment, state_space = FALSE) {
   assign_Assessment_slots()
 
   if(conv) current_status <- c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)], B_B0[length(B_B0)])
@@ -7,321 +7,121 @@ summary_DD_TMB <- function(Assessment) {
   current_status <- data.frame(Value = current_status)
   rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
 
-  input_parameters <- data.frame(Value = as.numeric(c(h, unlist(info$data[c(2,3,4,6,7)]))),
-                                 Description = c("Stock-recruit steepness", "Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
-                                                 "rho = (W_k+2 - Winf)/(W_k+1 - Winf)", "Age of knife-edge selectivity",
-                                                 "Weight at age k"),
-                                 stringsAsFactors = FALSE)
-  rownames(input_parameters) <- c("h", "S0", "alpha", "rho", "k", "w_k")
-  if(!"transformed_h" %in% names(obj$env$map)) input_parameters <- input_parameters[-1, ]
+  Value <- c(unlist(info$data[c(2,3,4,6,7)]))
+  Description <- c("Unfished survival = exp(-M)", "alpha = Winf * (1-rho)",
+                  "rho = (W_k+2 - Winf)/(W_k+1 - Winf)",
+                  "Age of knife-edge selectivity",
+                  "Weight at age k")
+  rownam <- c("S0", "alpha", "rho", "k", "w_k")
+  if("log_sigma" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$sigma)
+    Description <- c(Description, "Catch SD (log-space)")
+    rownam <- c(rownam, "sigma")
+  }
+  if("log_tau" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$tau)
+    Description <- c(Description, "log-Recruitment deviation SD")
+    rownam <- c(rownam, "tau")
+  }
+  if("transformed_h" %in% names(obj$env$map)) {
+    Value <- c(Value, h)
+    Description <- c(Description, "Stock-recruit steepness")
+    rownam <- c(rownam, "tau")
+  }
+  input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
+  rownames(input_parameters) <- rownam
 
-  if(conv) derived <- c(B0, N0, MSY, UMSY, BMSY)
-  else derived <- rep(NA, 5)
+  if(conv) derived <- c(B0, N0, MSY, UMSY, BMSY, BMSY/B0)
+  else derived <- rep(NA, 6)
   derived <- data.frame(Value = derived,
                         Description = c("Unfished biomass", "Unfished abundance", "Maximum sustainable yield (MSY)",
-                                        "Harvest Rate at MSY", "Biomass at MSY"),
+                                        "Harvest rate at MSY", "Biomass at MSY", "Depletion at MSY"),
                         stringsAsFactors = FALSE)
-  rownames(derived) <- c("B0", "N0", "MSY", "UMSY", "BMSY")
+  rownames(derived) <- c("B0", "N0", "MSY", "UMSY", "BMSY", "BMSY/B0")
 
   if(!is.character(SD)) {
-    model_estimates <- summary(SD)
-    model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
+    if(state_space) {
+      if(is.null(obj$env$random)) {
+        model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
+        dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_rec_dev", ]
+      } else {
+        model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
+        dev_estimates <- summary(SD, "random")
+      }
+      rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev))
+      model_estimates <- rbind(model_estimates, dev_estimates)
+      model_estimates <- model_estimates[!is.na(model_estimates[, 2]) && model_estimates[, 2] > 0, ]
+    } else model_estimates <- summary(SD)
+
   } else {
     model_estimates <- SD
   }
 
-  output <- list(model = "Delay-Difference",
+  model_name <- "Delay-Difference"
+  if(state_space) model_name <- paste(model_name, "(State-Space)")
+  output <- list(model = model_name,
                  current_status = current_status, input_parameters = input_parameters,
-                 derived_quantities = derived,
-                 model_estimates = model_estimates)
+                 derived_quantities = derived, model_estimates = model_estimates)
   return(output)
 }
 
-#' @import grDevices
-#' @importFrom stats qqnorm qqline
-generate_plots_DD_TMB <- function(Assessment, save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
 
-  if(save_figure) {
-    prepare_to_save_figure()
-    index.report <- summary(Assessment)
-    html_report(plot.dir, model = "Delay Difference",
-                current_status = index.report$current_status,
-                input_parameters = index.report$input_parameters,
-                derived_quantities = index.report$derived_quantities,
-                model_estimates = index.report$model_estimates,
-                name = Name, report_type = "Index")
+rmd_DD_TMB <- function(Assessment, state_space = FALSE) {
+  if(state_space) {
+    ss <- rmd_summary("Delay-Difference (State-Space)")
+  } else ss <- rmd_summary("Delay-Difference")
+
+  # Life History
+  age <- 1:Assessment@info$LH$maxage
+  k <- Assessment@info$data$k
+  mat <- ifelse(age < k, 0, 1)
+  LH_section <- c(rmd_LAA(age, Assessment@info$LH$LAA, header = "## Life History\n"), rmd_WAA(age, Assessment@info$LH$WAA),
+                  rmd_LW(Assessment@info$LH$LAA, Assessment@info$LH$WAA),
+                  rmd_mat(age, mat, fig.cap = "Assumed knife-edge maturity at age corresponding to length of 50% maturity."))
+
+  # Data section
+  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"), rmd_data_timeseries("Index"))
+
+  # Assessment
+  #### Pars and Fit
+  assess_fit <- c(rmd_R0(header = "## Assessment {.tabset}\n### Estimates and Model Fit\n"), rmd_h(),
+                  rmd_sel(age, mat, fig.cap = "Knife-edge selectivity set to the age corresponding to the length of 50% maturity."),
+                  rmd_assess_fit("Catch", "catch"), rmd_assess_resid("Catch"), rmd_assess_qq("Catch", "catch"))
+
+  if(state_space) {
+    assess_fit2 <- c(rmd_residual("Dev", fig.cap = "Time series of recruitment deviations.", label = Assessment@Dev_type),
+                     rmd_residual("Dev", "SE_Dev", fig.cap = "Time series of recruitment deviations with 95% confidence intervals.",
+                                  label = Assessment@Dev_type, conv_check = TRUE))
+    assess_fit <- c(assess_fit, assess_fit2)
   }
 
-  age <- 1:info$LH$maxage
+  #### Time Series
+  ts_output <- c(rmd_U(header = "### Time Series Output\n"), rmd_U_UMSY(), rmd_SSB(), rmd_SSB_SSBMSY(),
+                 rmd_SSB_SSB0(), rmd_Kobe("SSB_SSBMSY", "U_UMSY", xlab = "expression(SSB/SSB[MSY])", ylab = "expression(U/U[MSY])"),
+                 rmd_R(), rmd_N())
 
-  plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_1_length_at_age.png"))
-    plot_generic_at_age(age, info$LH$LAA, label = 'Mean Length-at-age')
-    dev.off()
-    lh.file.caption <- c("lifehistory_1_length_at_age.png",
-                         paste("Mean Length-at-age from Data object."))
+  #### Productivity
+  ny <- Assessment@info$data$ny
+  SSB <- Assessment@SSB[1:ny]
+  Arec <- Assessment@TMB_report$Arec
+  Brec <- Assessment@TMB_report$Brec
+  if(Assessment@info$data$SR_type == "BH") expectedR <- Arec * SSB / (1 + Brec * SSB) else {
+    expectedR <- Arec * SSB * exp(-Brec * SSB)
   }
 
-  plot_generic_at_age(age, info$LH$WAA, label = 'Mean Weight-at-age')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_2_mean_weight_at_age.png"))
-    plot_generic_at_age(age, info$LH$WAA, label = 'Mean Weight-at-age')
-    dev.off()
-    lh.file.caption <- rbind(lh.file.caption,
-                             c("lifehistory_2_mean_weight_at_age.png",
-                               "Mean Weight at age from Data object."))
-  }
+  first_recruit_year <- k + 1
+  last_recruit_year <- length(Assessment@info$Year) + k
+  ind_recruit <- first_recruit_year:last_recruit_year
+  rec_dev <- Assessment@R[ind_recruit]
 
-  plot(info$LH$LAA, info$LH$WAA, typ = 'o', xlab = 'Length', ylab = 'Weight')
-  abline(h = 0, col = 'grey')
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_3_length_weight.png"))
-    plot(info$LH$LAA, info$LH$WAA, typ = 'o', xlab = 'Length', ylab = 'Weight')
-    abline(h = 0, col = 'grey')
-    dev.off()
-    lh.file.caption <- rbind(lh.file.caption,
-                             c("lifehistory_3_length_weight.png",
-                               "Length-weight relationship from Data object."))
-  }
+  productivity <- c(rmd_SR(SSB, expectedR, rec_dev, header = "### Productivity\n\n\n"),
+                    rmd_SR(SSB, expectedR, rec_dev, fig.cap = "Stock-recruit relationship (trajectory plot).", trajectory = TRUE),
+                    rmd_yield_U("DD"), rmd_yield_depletion("DD"), rmd_sp())
 
-  k <- info$data$k
-  sel <- ifelse(age < k, 0, 1)
-  plot_ogive(age, sel, label = "Maturity")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "lifehistory_4_maturity.png"))
-    plot_ogive(age, sel, label = "Maturity")
-    dev.off()
-    lh.file.caption <- rbind(lh.file.caption,
-                             c("lifehistory_4_maturity.png", "Assumed knife-edge maturity at the age corresponding to the length of 50% maturity."))
-  }
+  return(c(ss, LH_section, data_section, assess_fit, ts_output, productivity))
 
-  if(save_figure) {
-    html_report(plot.dir, model = "Delay Difference", captions = lh.file.caption,
-                name = Name, report_type = "Life_History")
-  }
-
-  Year <- info$Year
-
-  plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, label = "Catch")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "data_catch.png"))
-    plot_timeseries(as.numeric(names(Obs_Catch)), Obs_Catch, label = "Catch")
-    dev.off()
-    data.file.caption <- c("data_catch.png", "Catch time series")
-  }
-
-  plot_timeseries(Year, info$I_hist, label = "Index")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "data_index.png"))
-    plot_timeseries(Year, info$I_hist, label = "Index")
-    dev.off()
-    data.file.caption <- rbind(data.file.caption,
-                               c("data_index.png", "Index time series."))
-  }
-
-  if(save_figure) {
-    html_report(plot.dir, model = "Delay Difference", captions = data.file.caption,
-                name = Name, report_type = "Data")
-  }
-
-  if(conv) {
-    ind <- names(SD$par.fixed) == "log_R0"
-    plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_R0.png"))
-      plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)
-      dev.off()
-      assess.file.caption <- c("assessment_R0.png", "Estimate of R0, distribution based on
-                               normal approximation of estimated covariance matrix.")
-    }
-
-    if(!"transformed_h" %in% names(obj$env$map)) {
-      ind <- names(SD$par.fixed) == "transformed_h"
-      plot_steepness(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), is_transform = TRUE, SR = info$data$SR_type)
-      if(save_figure) {
-        create_png(filename = file.path(plot.dir, "assessment_h.png"))
-        plot_steepness(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), is_transform = TRUE, SR = info$data$SR_type)
-        dev.off()
-        assess.file.caption <- rbind(assess.file.caption,
-                                     c("assessment_h.png", "Estimate of steepness, distribution based on normal
-                                       approximation of estimated covariance matrix."))
-      }
-    }
-  }
-
-  plot_ogive(age, sel)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_selectivity.png"))
-    plot_ogive(age, sel)
-    dev.off()
-    if(conv) assess.file.caption <- rbind(assess.file.caption,
-                                          c("assessment_selectivity.png", "Assumed knife-edge selectivity at the age corresponding to the length of 50% maturity."))
-    else assess.file.caption <- c("assessment_selectivity.png",
-                                  "Assumed knife-edge selectivity at the age corresponding to the length of 50% maturity.")
-  }
-
-  plot_timeseries(Year, Obs_Catch, Catch, label = "Catch")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_catch.png"))
-    plot_timeseries(Year, Obs_Catch, Catch, label = "Catch")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_catch.png", "Observed (black) and predicted (red) catch."))
-  }
-
-  plot_residuals(Year, log(Obs_Catch/Catch), label = "log(Catch) Residual")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_catch_residual.png"))
-    plot_residuals(Year, log(Obs_Catch/Catch), label = "log(Catch) Residual")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_catch_residual.png", "Catch residuals in log-space."))
-  }
-
-  qqnorm(log(Obs_Catch/Catch), main = "")
-  qqline(log(Obs_Catch/Catch))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_catch_qqplot.png"))
-    qqnorm(log(Obs_Catch/Catch), main = "")
-    qqline(log(Obs_Catch/Catch))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_catch_qqplot.png", "QQ-plot of catch residuals in log-space."))
-  }
-
-  ny <- info$data$ny
-  SSB <- B[1:ny] #- Catch # B*(1-u)
-  Arec <- TMB_report$Arec
-  Brec <- TMB_report$Brec
-  if(info$data$SR_type == "BH") expectedR <- Arec * SSB / (1 + Brec * SSB)
-  if(info$data$SR_type == "Ricker") expectedR <- Arec * SSB * exp(-Brec * SSB)
-
-  plot_SR(SSB, expectedR, R0, B0)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_stock_recruit.png"))
-    plot_SR(SSB, expectedR, R0, B0)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_stock_recruit.png", "Stock-recruitment relationship."))
-  }
-
-  plot_timeseries(as.numeric(names(B)), B, label = "Biomass")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_biomass.png"))
-    plot_timeseries(as.numeric(names(B)), B, label = "Biomass")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_biomass.png", "Time series of biomass."))
-  }
-
-  if(conv) {
-    plot_timeseries(as.numeric(names(B_BMSY)), B_BMSY, label = expression(B/B[MSY]))
-    abline(h = 1, lty = 2)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_B_BMSY.png"))
-      plot_timeseries(as.numeric(names(B_BMSY)), B_BMSY, label = expression(B/B[MSY]))
-      abline(h = 1, lty = 2)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_B_BMSY.png", "Time series of B/BMSY."))
-    }
-  }
-
-  plot_timeseries(as.numeric(names(B_B0)), B_B0, label = expression(B/B[0]))
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_B_B0.png"))
-    plot_timeseries(as.numeric(names(B_B0)), B_B0, label = expression(B/B[0]))
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_B_B0.png", "Time series of biomass depletion."))
-  }
-
-  plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_recruitment.png"))
-    plot_timeseries(as.numeric(names(R)), R, label = "Recruitment")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_recruitment.png", "Time series of recruitment."))
-  }
-
-  plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_abundance.png"))
-    plot_timeseries(as.numeric(names(N)), N, label = "Population Abundance (N)")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_abundance.png", "Time series of abundance."))
-  }
-
-  plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_exploitation.png"))
-    plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_exploitation.png", "Time series of exploitation rate."))
-  }
-
-  if(conv) {
-    plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-    abline(h = 1, lty = 2)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_U_UMSY.png"))
-      plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-      abline(h = 1, lty = 2)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_U_UMSY.png", "Time series of U/UMSY."))
-    }
-
-    plot_Kobe(B_BMSY, U_UMSY)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
-      plot_Kobe(B_BMSY, U_UMSY)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
-    }
-
-    plot_yield_DD(info$data, TMB_report, UMSY, MSY, xaxis = "U")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
-      plot_yield_DD(info$data, TMB_report, UMSY, MSY, xaxis = "U")
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
-    }
-
-    plot_yield_DD(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_yield_curve_B_B0.png"))
-      plot_yield_DD(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion")
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_yield_curve_B_B0.png", "Yield plot relative to depletion."))
-    }
-  }
-
-  plot_surplus_production(B, B0, Obs_Catch)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-    plot_surplus_production(B, B0, Obs_Catch)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_surplus_production.png", "Surplus production relative to depletion."))
-  }
-
-  if(save_figure) {
-    html_report(plot.dir, model = "Delay Difference", captions = assess.file.caption,
-                name = Name, report_type = "Assessment")
-    browseURL(file.path(plot.dir, "Assessment.html"))
-  }
-
-  return(invisible())
 }
+
 
 
 #' @importFrom reshape2 acast
@@ -571,9 +371,9 @@ plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
 }
 
 
-plot_yield_DD <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01),
-                          xaxis = c("U", "Biomass", "Depletion")) {
+plot_yield_DD <- function(data, report, umsy, msy, xaxis = c("U", "Biomass", "Depletion")) {
   xaxis <- match.arg(xaxis)
+  u.vector <- seq(0, 1, 0.01)
   S0 <- data$S0
   Alpha <- data$Alpha
   wk <- data$wk
@@ -619,5 +419,5 @@ plot_yield_DD <- function(data, report, umsy, msy, u.vector = seq(0, 1, 0.01),
     segments(x0 = 0, y0 = msy, x1 = BMSY/report$B0, lty = 2)
     abline(h = 0, col = 'grey')
   }
-  invisible()
+  invisible(data.frame(U = u.vector[ind], Yield = Yield[ind], B = Biomass[ind], B_B0 = Biomass[ind]/report$B0))
 }

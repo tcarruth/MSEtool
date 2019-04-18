@@ -13,7 +13,7 @@ SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE,
   early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
-  integrate = TRUE, silent = TRUE, opt_hess = FALSE,
+  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
   n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
   eval.max = 10000), inner.control = list(), ...)
 }

@@ -17,7 +17,7 @@ Depends:
   DLMtool (>= 5.2.0)
 Imports:
   MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm, pryr,
-  reshape2, snowfall, stats, utils, abind
+  reshape2, snowfall, stats, utils, abind, rmarkdown
 LinkingTo: TMB, RcppEigen
 LazyData: yes
 LazyLoad: yes

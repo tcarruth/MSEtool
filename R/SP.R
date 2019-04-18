@@ -203,7 +203,7 @@ class(SP) <- "Assess"
 #' @useDynLib MSEtool
 SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                   fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
-                  integrate = TRUE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                  integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind"
   dots <- list(...)

@@ -1,11 +1,10 @@
 
 # Call from inside generate_plots() and summary.Assessment
-assign_Assessment_slots <- function() {
-  Assessment <- get("Assessment", envir = parent.frame())
+assign_Assessment_slots <- function(Assessment = NULL) {
+  if(is.null(Assessment)) Assessment <- get("Assessment", envir = parent.frame(), inherits = FALSE)
   Nslots <- length(slotNames(Assessment))
   for(i in 1:Nslots) {
-    assign(slotNames(Assessment)[i], slot(Assessment, slotNames(Assessment)[i]),
-           envir = parent.frame())
+    assign(slotNames(Assessment)[i], slot(Assessment, slotNames(Assessment)[i]), envir = parent.frame())
   }
   invisible()
 }
@@ -443,6 +442,10 @@ plot_timeseries <- function(Year, obs, fit = NULL, obs_CV = NULL, obs_CV_CI = 0.
 plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
                            res_upper = NULL, res_lower = NULL, res_ind_blue = NULL, draw_zero = TRUE,
                            zero_linetype = 2, label = "Residual") {
+  old.warning <- options()$warn
+  options(warn = -1)
+  on.exit(options(warn = old.warning))
+
   # Without sd interval
   if(is.null(res_sd)) {
     res.lim <- max(abs(res), na.rm = TRUE)
@@ -457,10 +460,8 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 
   # With CV interval
   if(!is.null(res_sd) || (!is.null(res_upper) & !is.null(res_lower))) {
-    if(is.null(res_upper))
-      res_upper <- res + qnorm(1-0.5*(1-res_sd_CI)) * res_sd
-    if(is.null(res_lower))
-      res_lower <- res + qnorm(0.5*(1-res_sd_CI)) * res_sd
+    if(is.null(res_upper)) res_upper <- res + qnorm(1-0.5*(1-res_sd_CI)) * res_sd
+    if(is.null(res_lower)) res_lower <- res + qnorm(0.5*(1-res_sd_CI)) * res_sd
     res.lim <- max(abs(c(res_lower, res_upper, res)), na.rm = TRUE)
 
     if(is.null(res_ind_blue)) {
@@ -700,12 +701,16 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
 
 
 #' @importFrom graphics arrows
-plot_surplus_production <- function(B, B0 = NULL, C, arrow_size = 0.07) {
+plot_surplus_production <- function(B, B0 = NULL, C, yield_fn = NULL, arrow_size = 0.07, xlab = NULL) {
+  old.warning <- options()$warn
+  options(warn = -1)
+  on.exit(options(warn = old.warning))
+
   if(!is.null(B0)) {
     B <- B/B0
-    xlab_label <- expression(B/B[0])
+    if(is.null(xlab)) xlab <- expression(B/B[0])
   } else {
-    xlab_label <- "Biomass"
+    if(is.null(xlab)) xlab <- "Biomass"
   }
   B_now <- B[1:(length(B)-1)]
   B_next <- B[2:length(B)]
@@ -713,8 +718,13 @@ plot_surplus_production <- function(B, B0 = NULL, C, arrow_size = 0.07) {
 
   xlim <- c(0, max(B))
   ylim <- c(min(0, min(SP_now)), max(SP_now))
-  plot(B_now, SP_now, typ = 'n', xlab = xlab_label, xlim = xlim, ylim = ylim,
+  plot(B_now, SP_now, typ = 'n', xlab = xlab, xlim = xlim, ylim = ylim,
        ylab = "Surplus production")
+  if(!is.null(yield_fn)) {
+    if(!is.null(B0)) lines(yield_fn$B_B0, yield_fn$Yield) else {
+      lines(yield_fn$B, yield_fn$Yield)
+    }
+  }
   arrows(x0 = B_now, y0 = SP_now[1:(length(B)-1)], x1 = B_next, y1 = SP_now[2:length(B)],
          length = arrow_size)
   abline(h = 0, col = 'grey')
@@ -723,17 +733,17 @@ plot_surplus_production <- function(B, B0 = NULL, C, arrow_size = 0.07) {
 }
 
 
-plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, ylab = expression(U/U[MSY])) {
+plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, xlab = expression(B/B[MSY]), ylab = expression(F/F[MSY])) {
   old.warning <- options()$warn
   on.exit(options(warn = old.warning))
   options(warn = -1)
+
   n.arrows <- length(exploit)
   if(length(biomass) > n.arrows) biomass <- biomass[1:n.arrows]
 
   x.max <- max(biomass, 1)
   y.max <- max(exploit, 1)
-  plot(NULL, NULL, typ = 'n', xlab = expression(B/B[MSY]), ylab = ylab,
-       xlim = c(0, 1.1 * x.max), ylim = c(0, 1.1 * y.max))
+  plot(NULL, NULL, typ = 'n', xlab = xlab, ylab = ylab, xlim = c(0, max(1.1, 1.1 * x.max)), ylim = c(0, max(1.1, 1.1 * y.max)))
   if(color) {
     # Colors from https://www.rapidtables.com/web/color/html-color-codes.html
     green <- "#228B22"    #forestgreen

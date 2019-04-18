@@ -92,24 +92,25 @@ setClassUnion("listspict", members = c("list", "spictcls"))
 #' @export
 #' @exportClass Assessment
 Assessment <- setClass("Assessment",
- slots = c(Model = "character", Name = "character", conv = "logical", UMSY = "numeric", FMSY = "numeric",
- MSY = "numeric", BMSY = "numeric", SSBMSY = "numeric", VBMSY = "numeric",
- B0 = "numeric", R0 = "numeric", N0 = "numeric", SSB0 = "numeric", VB0 = "numeric",
- h = "numeric", U = "numeric", U_UMSY = "numeric", FMort = "numeric", F_FMSY  = "numeric",
- B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
- SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric", VB = "numeric",
- VB_VBMSY = "numeric", VB_VB0 = "numeric",
- R = "numeric", N = "numeric", N_at_age = "matrix",
- Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
- Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
- C_at_age = "matrix", Dev = "numeric", Dev_type = "character",
- NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
- SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
- SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric",
- SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
- SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
- SE_Dev = "numeric", info = "listspict", obj = "list", opt = "optAssess", SD = "sdreportAssess",
- TMB_report = "list", dependencies = "character"))
+                       slots = c(Model = "character", Name = "character", conv = "logical", UMSY = "numeric", FMSY = "numeric",
+                                 MSY = "numeric", BMSY = "numeric", SSBMSY = "numeric", VBMSY = "numeric",
+                                 B0 = "numeric", R0 = "numeric", N0 = "numeric", SSB0 = "numeric", VB0 = "numeric",
+                                 h = "numeric", U = "numeric", U_UMSY = "numeric", FMort = "numeric", F_FMSY  = "numeric",
+                                 B = "numeric", B_BMSY = "numeric", B_B0 = "numeric",
+                                 SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric", VB = "numeric",
+                                 VB_VBMSY = "numeric", VB_VB0 = "numeric",
+                                 R = "numeric", N = "numeric", N_at_age = "matrix",
+                                 Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
+                                 Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
+                                 C_at_age = "matrix", Dev = "numeric", Dev_type = "character",
+                                 NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
+                                 SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
+                                 SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric",
+                                 SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
+                                 SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
+                                 SE_Dev = "numeric", info = "listspict", obj = "list", opt = "optAssess", SD = "sdreportAssess",
+                                 TMB_report = "list", dependencies = "character"))
+
 
 
 
@@ -130,39 +131,106 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 })
 
 #' @name plot.Assessment
-#' @aliases plot,Assessment,missing-method
-#' @title Assessment object
-#' @description Produces HTML file with figures of parameter estimates and output from an \linkS4class{Assessment} object.
+#' @aliases plot,Assessment,missing-method plot,Assessment,retro
+#' @title Plot Assessment object
+#' @description Produces HTML file (via markdown) figures of parameter estimates and output from an \linkS4class{Assessment} object.
 #'
-#' @param x An object of class \linkS4class{Assessment}
-#' @param save_figure Indicates whether figures will be saved to disk. A corresponding
-#' html report will be produced.
-#' @param save_dir The directory (by default, the current working directory) in which a
-#' sub-directory will be created to save figures.
+#' @param x An object of class \linkS4class{Assessment}.
+#' @param y An object of class \linkS4class{retro}.
+#' @param filename Character string for the name of the markdown and HTML files.
+#' @param dir The directory in which the markdown and HTML files will be saved.
+#' @param ret_yr If greater than zero, then a retrospective analysis will be performed and results will be reported. The integer here corresponds
+#' to the number of peels (the maximum number of terminal years for which the data are removed).
+#' @param open_file Logical, whether the HTML document is opened after it is rendered.
+#' @param quiet Logical, whether to silence the markdown rendering function.
+#' @param ... Other arguments to pass to \link[rmarkdown]{render}.
+#' @return Returns invisibily the output from \link[rmarkdown]{render}.
 #' @examples
 #' \donttest{
 #' output <- DD_TMB(Data = Simulation_1)
-#' plot(output, save_figure = FALSE, save_dir = tempdir())
+#' plot(output)
 #' }
-#' @exportMethod plot
+#' @seealso \link{retrospective}
+#' @exportMethod
 setMethod("plot", signature(x = "Assessment", y = "missing"),
-          function(x, save_figure = TRUE, save_dir = tempdir()) {
-
-            if(is.character(x@opt) || is.character(x@SD)) warning("Did model converge?.")
-            old.warning <- options()$warn
-            options(warn = -1)
-            on.exit(options(warn = old.warning))
-            old_par <- par(no.readonly = TRUE)
-            on.exit(par(old_par), add = TRUE)
-
-            if(save_figure && !file.exists(save_dir)) {
-              dir_test <- try(dir.create(save_dir))
-              if(!dir_test || inherits(dir_test, "try-error")) stop(paste("Could not create directory:", save_dir))
-            }
-
-            f <- get(paste0("generate_plots_", x@Model))
-            f(x, save_figure = save_figure, save_dir = save_dir)
+          function(x, filename = paste0("report_", x@Model), dir = tempdir(), ret_yr = 0L, open_file = TRUE, quiet = TRUE, ...) {
+            # Generating retrospective
+            if(is.numeric(ret_yr) && ret_yr > 0) {
+              ret_yr <- as.integer(ret_yr)
+              message("Running retrospective...")
+              ret <- retrospective(x, nyr = ret_yr, figure = FALSE)
+            } else ret <- NULL
+            report(x, ret, filename = filename, dir = dir, open_file = open_file, quiet = quiet, ...)
           })
+
+#' Class-\code{retro}
+#'
+#' An S4 class that contains output from \link{retrospective}.
+#'
+#' @name retro-class
+#' @docType class
+#'
+#' @slot Model Name of the assessment model.
+#' @slot Name Name of Data object.
+#' @slot TS_var Character vector of time series variables, e.g. recruitment, biomass, from the assessment.
+#' @slot TS An array of time series assessment output of dimension, indexed by: peel (the number of terminal years removed from the base assessment),
+#' years, and variables (corresponding to `TS_var`).
+#' @slot Est_var Character vector of estimated paramters, e.g. R0, steeppness, in the assessment.
+#' @slot Est An array for estimated parameters of dimension, indexed by: peel, variables (corresponding to `Est_var`), and
+#' value (length 2 for estimate and standard error).
+#' @seealso \link{plot.retro} \link{summary.retro} \link{plot.Assessment}
+#' @author Q. Huynh
+#' @exportClass
+retro <- setClass("retro", slots = c(Model = "character", Name = "character", TS_var = "character",
+                                     TS = "array", Est_var = "character", Est = "array"))
+
+#' @rdname plot.Assessment
+#' @importFrom rmarkdown render
+#' @exportMethod
+setMethod("plot", signature(x = "Assessment", y = "retro"),
+          function(x, y, filename = paste0("report_", x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
+            report(x, y, filename = filename, dir = dir, open_file = open_file, quiet = quiet, ...)
+          })
+
+#' @rdname retrospective
+#' @aliases plot.retro
+#' @exportMethod
+setMethod("plot", signature(x = "retro", y = "missing"),
+          function(x, color = NULL) {
+            old_par <- par(no.readonly = TRUE)
+            on.exit(par(old_par))
+
+            retro <- x
+            if(is.null(color)) color <- rich.colors(dim(retro@TS)[1])
+            Year_matrix <- matrix(as.numeric(dimnames(retro@TS)$Year), ncol = length(color), nrow = dim(retro@TS)[2], byrow = FALSE)
+            xlim <- range(as.numeric(dimnames(retro@TS)$Year))
+            nyr_label <- dimnames(retro@TS)$Peel
+
+            for(i in 1:length(retro@TS_var)) {
+              matrix_to_plot <- t(retro@TS[, , i])
+              ylim <- c(0, 1.1 * max(matrix_to_plot, na.rm = TRUE))
+              ylab <- attr(retro, "TS_lab")[i]
+
+              plot(NULL, NULL, xlim = xlim, ylim = ylim, xlab = "Year", ylab = ylab)
+              abline(h = 0, col = "grey")
+              if(grepl("MSY", as.character(ylab))) abline(h = 1, lty = 3)
+
+              matlines(Year_matrix, matrix_to_plot, col = color, lty = 1)
+
+              legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
+            }
+            invisible()
+          })
+
+#' @rdname retrospective
+#' @aliases show.retro
+#' @exportMethod
+setMethod("show", signature(object = "retro"), function(object) print(calculate_Mohn_rho(object@TS, ts_lab = attr(object, "TS_lab"))))
+
+#' @rdname retrospective
+#' @aliases summary.retro
+#' @exportMethod
+setMethod("summary", signature(object = "retro"), function(object) calculate_Mohn_rho(object@TS, ts_lab = attr(object, "TS_lab")))
 
 
 if(getRversion() >= "2.15.1") {

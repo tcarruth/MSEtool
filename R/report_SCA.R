@@ -14,7 +14,7 @@ summary_SCA <- function(Assessment) {
   rownam <- c("h", "M", "maxage", "Linf", "K", "t0", "Winf", "A50", "A95")
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
-  if(!"transformed_h" %in% names(obj$env$map)) input_parameters <- input_parameters[-1, ]
+  if(!"transformed_h" %in% names(obj$env$map) || (SCA2 && !info$fix_h)) input_parameters <- input_parameters[-1, ]
 
   if(conv) Value <- c(VB0, SSB0, MSY, FMSY, VBMSY, SSBMSY)
   else Value <- rep(NA, 6)
@@ -23,7 +23,12 @@ summary_SCA <- function(Assessment) {
                   "Unfished spawning stock biomass (SSB)", "Maximum sustainable yield (MSY)", "Fishing mortality at MSY",
                   "Vulnerable biomass at MSY", "SSB at MSY")
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
-  rownames(derived) <- c("VB0", "SSB0", "MSY", "FMSY", "VBMSY", "SSBMSY")
+  rownames(derived) <- c("VB0", "SSB0", "MSY", "FMSY", "VBMSY", "SSBMSY", "SSBMSY/SSB0")
+
+  if(conv && SCA2 && !info$fix_h) {
+    derived <- rbind(derived, c(h, "Stock-recruit steepness"))
+    rownames(derived)[8] <- "h"
+  }
 
   if(!is.character(SD)) {
     model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev" &

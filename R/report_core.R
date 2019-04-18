@@ -70,7 +70,7 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE, sa
 #' Mohn, R. 1999. The retrospective problem in sequential population analysis: an investigation using cod fishery
 #' and simulated data. ICES Journal of Marine Science 56:473-488.
 #' @export
-retrospective <- function(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE, save_dir = tempdir()) {
+retrospective <- function(Assessment, nyr = 5, figure = TRUE) {
   if(figure) {
     old.warning <- options()$warn
     options(warn = -1)
@@ -81,7 +81,7 @@ retrospective <- function(Assessment, nyr = 5, figure = TRUE, save_figure = TRUE
   }
 
   f <- get(paste0('retrospective_', Assessment@Model))
-  f(Assessment, nyr, figure = figure, save_figure = save_figure, save_dir = save_dir)
+  f(Assessment, nyr)
 }
 
 #' Compare output from several assessment models
@@ -121,6 +121,14 @@ compare_models <- function(..., label = NULL, color = NULL) {
 
   par(mfrow = c(3, 2), mar = c(5, 4, 1, 1), oma = c(2, 0, 0, 0))
 
+  # F
+  FM <- do.call(rbind, lapply(dots, slot, name = "FMort"))
+  ts_matplot(FM, "Fishing Mortality", color = color)
+
+  # F/FMSY
+  F_FMSY <- do.call(rbind, lapply(dots, slot, name = "F_FMSY"))
+  ts_matplot(F_FMSY, expression(F/F[MSY]), color = color, dotted_one = TRUE)
+
   # B/BMSY
   B_BMSY <- do.call(rbind, lapply(dots, slot, name = "SSB_SSBMSY"))
   ts_matplot(B_BMSY, expression(SSB/SSB[MSY]), color = color, dotted_one = TRUE)
@@ -137,14 +145,6 @@ compare_models <- function(..., label = NULL, color = NULL) {
   RR <- lapply(dots, slot, name = "R")
   R <- match_R_years(RR)
   ts_matplot(R, "Recruitment", color = color)
-
-  # F
-  FM <- do.call(rbind, lapply(dots, slot, name = "FMort"))
-  ts_matplot(FM, "Fishing Mortality", color = color)
-
-  # F/FMSY
-  F_FMSY <- do.call(rbind, lapply(dots, slot, name = "F_FMSY"))
-  ts_matplot(F_FMSY, expression(F/F[MSY]), color = color, dotted_one = TRUE)
 
   par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
   plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
@@ -175,4 +175,45 @@ match_R_years <- function(RR) {
   }
   colnames(R) <- R_yrs
   return(R)
+}
+
+
+report <- function(Assessment, retro = NULL, filename = paste0("report_", x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
+  name <- ifelse(nchar(Assessment@Name) > 0, Assessment@Name, substitute(Assessment))
+
+  # Generate markdown report
+  filename_html <- paste0(filename, ".html")
+  filename_rmd <- paste0(filename, ".Rmd")
+
+  if(!dir.exists(dir)) {
+    message("Creating directory: \n", dir)
+    dir.create(dir)
+  }
+  message("Writing markdown file: ", file.path(dir, filename_rmd))
+
+  if(x@Model == "SCA2") x@info$data$SR_type <- x@info$SR
+  f <- get(paste0("rmd_", x@Model))
+  rmd_model <- f(x)
+
+  if(!is.null(retro)) {
+    rmd_ret <- c("## Retrospective\n",
+                 "```{r}",
+                 "as.data.frame(summary(retro))",
+                 "plot(retro)",
+                 "```\n")
+  } else rmd_ret <- ""
+
+  rmd <- c(rmd_head(name), rmd_model, rmd_ret, rmd_footer())
+  write(rmd, file = file.path(dir, filename_rmd))
+
+  # Rendering markdown file
+  message("Rendering markdown file to HTML: ", file.path(dir, filename_html))
+  assign_Assessment_slots(Assessment)
+
+  output <- rmarkdown::render(file.path(dir, filename_rmd), "html_document", filename_html, dir,
+                              output_options = list(df_print = "paged"), quiet = quiet, ...)
+  message("Rendering complete.")
+
+  if(open_file) browseURL(file.path(dir, filename_html))
+  invisible(output)
 }

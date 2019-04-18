@@ -110,10 +110,12 @@
   vector<Type> nll_comp(2);
   nll_comp.setZero();
 
-  for(int tt=0;tt<ny;tt++) {
-    if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
-    if(tt+k<ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
-  }
+  //for(int tt=0;tt<ny;tt++) {
+  //  if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
+  //  if(tt+k<ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
+  //}
+  for(int tt=0;tt<ny;tt++) if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
+  for(int tt=0;tt<log_rec_dev.size();tt++) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
 
   //Summing individual jnll and penalties
   Type nll = nll_comp.sum() + penalty;
