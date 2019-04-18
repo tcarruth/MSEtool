@@ -39,9 +39,7 @@
 CASAL2OM<-function(CASALdir,Obs=DLMtool::Precise_Unbiased, Imp=DLMtool::Perfect_Imp,
                    Name=NA,Agency=NA, Region=NA, Sponsor=NA, Latitude=NA,
                    Longitude=NA, nsim=48,proyears=50, interval=4, pstar=0.5, maxF=2,
-                   reps=1,seed=1, Source=NA,
-
-                   Common_Name=NA,Species=NA, Source=NA,Author=NA){
+                   reps=1,seed=1, Common_Name=NA,Species=NA, Source=NA,Author=NA){
 
   # Known issues / areas for improvement
   # - currently MLE only
