@@ -6,7 +6,7 @@
 #' @description A function that uses the file location of a fitted SS3 model including input files to population the
 #' various slots of an operating model with MLE parameter estimates. The function mainly populates the Stock and Fleet portions
 #' of the operating model; the user still needs to parameterize most of the observation and implementation portions of the operating model.
-#' @param SSdir A folder with Stock Synthesis input and output files in it
+#' @param SSdir A folder with Stock Synthesis input and output files in it. Alternatively, a list that was returned by \code{r4ss::SS_output}.
 #' @param nsim The number of simulations to take for parameters with uncertainty (for OM@@cpars custom parameters).
 #' @param proyears The number of projection years for MSE
 #' @param reps The number of stochastic replicates within each simulation in the operating model.
@@ -18,7 +18,7 @@
 #' @param Source Reference to assessment documentation e.g. a url
 #' @param Author Who did the assessment
 #' @param ... Arguments to pass to \link[r4ss]{SS_output}.
-#' @note Currently supports the latest version of r4ss on CRAN (v.1.24) and Github (v.1.34). Function may be incompatible with other versions of r4ss.
+#' @note Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
 #' @details Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
 #' @return An object of class OM.
 #' @author T. Carruthers
@@ -30,8 +30,8 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   if(!requireNamespace("r4ss", quietly = TRUE)) {
     stop("Download the r4ss package to use this function. It is recommended to install the Github version with: devtools::install_github(\"r4ss/r4ss\")", call. = FALSE)
   }
-  if(packageVersion("r4ss") != 1.24 && packageVersion("r4ss") != 1.34) {
-    warning(paste0("r4ss version ", packageVersion("r4ss"), " was detected. This function is only tested on version 1.24 and 1.34."), call. = FALSE)
+  if(packageVersion("r4ss") < 1.34 && packageVersion("r4ss") != 1.24) {
+    warning(paste0("r4ss version ", packageVersion("r4ss"), " was detected. This function is only tested on versions 1.24 and 1.34-35."), call. = FALSE)
   }
 
   dots <- list(dir = SSdir, ...)
@@ -341,16 +341,21 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   }
 
   # Fleet parameters ============================================================================================================
-
   # Vulnerability --------------------------------------------
   ages <- growdat$Age
+  if(packageVersion("r4ss") >= 1.35) ages <- growdat$int_Age
+
   cols <- match(ages, names(replist$Z_at_age))
+
   rows <- match(mainyrs, replist$Z_at_age$Year)
+  if(packageVersion("r4ss") >= 1.35) rows <- match(mainyrs, replist$Z_at_age$Yr)
 
   Z_at_age <- replist$Z_at_age[rows, ]
   M_at_age <- replist$M_at_age[rows, ]
 
   rows2 <- Z_at_age$Gender == 1 & Z_at_age$Bio_Pattern == 1
+  if(packageVersion("r4ss") >= 1.35) rows2 <- Z_at_age$Sex == 1 & Z_at_age$Bio_Pattern == 1
+
   F_at_age <- t(Z_at_age[rows2, cols] - M_at_age[rows2, cols])
   F_at_age[nrow(F_at_age), ] <- F_at_age[nrow(F_at_age) - 1, ] # assume F at maxage = F at maxage-1
 
@@ -425,9 +430,13 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   OM@CurrentYr <- ifelse(season_as_years, nyears, replist$endyr)
 
   # Observation model parameters ==============================================================================
-  OM@Cobs <- range(sqrt(exp(replist$catch_error^2) - 1), na.rm = TRUE)
-  message("\nRange of error in catch (OM@Cobs) based on range of catch standard deviations: ",
-          paste(replist$catch_error[!is.na(replist$catch_error)], collapse = " "))
+  CSD <- replist$catch_error
+  if(packageVersion("r4ss") == 1.35) CSD <- replist$catch_se
+  if(!all(is.na(CSD))) {
+    OM@Cobs <- range(sqrt(exp(replist$catch_error^2) - 1), na.rm = TRUE)
+    message("\nRange of error in catch (OM@Cobs) based on range of catch standard deviations: ",
+            paste(replist$catch_error[!is.na(replist$catch_error)], collapse = " "))
+  }
 
   # Index observations -------------------------------------------------------
   cpue <- data.frame(Fleet = replist$cpue$Fleet, SE = replist$cpue$SE)
@@ -746,9 +755,9 @@ getGpars_r4ss_134 <- function(replist, seas = 1) {
   ageselex <- replist$ageselex
   MGparmAdj <- replist$MGparmAdj
   wtatage <- replist$wtatage
-  #if ("comment" %in% names(wtatage)) {
+  if ("comment" %in% names(wtatage)) {
     wtatage <- wtatage[, -grep("comment", names(wtatage))]
-  #}
+  }
   M_at_age <- replist$M_at_age
   Growth_Parameters <- replist$Growth_Parameters
   #if (is.null(morphs)) {

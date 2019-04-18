@@ -10,7 +10,7 @@ SS2OM(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3,
   Source = "No source provided", Author = "No author provided", ...)
 }
 \arguments{
-\item{SSdir}{A folder with Stock Synthesis input and output files in it}
+\item{SSdir}{A folder with Stock Synthesis input and output files in it. Alternatively, a list that was returned by \code{r4ss::SS_output}.}
 
 \item{nsim}{The number of simulations to take for parameters with uncertainty (for OM@cpars custom parameters).}
 
@@ -46,7 +46,7 @@ of the operating model; the user still needs to parameterize most of the observa
 Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
 }
 \note{
-Currently supports the latest version of r4ss on CRAN (v.1.24) and Github (v.1.34). Function may be incompatible with other versions of r4ss.
+Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
 }
 \seealso{
 \link{SS2Data}
