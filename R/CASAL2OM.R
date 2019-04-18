@@ -109,8 +109,7 @@ CASAL2OM<-function(CASALdir,Obs=DLMtool::Precise_Unbiased, Imp=DLMtool::Perfect_
 
   # YOU GOT TO HERE
   Dmu<-pars$SSB[nyears]/pars$SSB[1]
-  D<-rlnorm(nsim,0,0.05)*Dmu # cpars
-  OM@D<-rep(Dmu*0.9,Dmu*1.1)
+  OM@D<-rep(Dmu,2)
   OM@a<-pars$a
   OM@b<-pars$b
   OM@Size_area_1<-OM@Frac_area_1<-c(0.1,0.1)
@@ -172,7 +171,7 @@ CASAL2OM<-function(CASALdir,Obs=DLMtool::Precise_Unbiased, Imp=DLMtool::Perfect_
 
   OM@CurrentYr<-as.numeric(pars$yearnams[length(pars$yearnams)])
 
-  OM@cpars<-list(V=V,Find=Find,Mat_age=Mat_age,Perr=Perr, D=D)
+  OM@cpars<-list(V=V,Find=Find,Mat_age=Mat_age,Perr=Perr)
 
   OM
   #test<-runMSE(OM)
