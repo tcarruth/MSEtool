@@ -2,12 +2,12 @@
 #' @rdname SCA
 #' @useDynLib MSEtool
 #' @export
-SRA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial", "lognormal"),
-                CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1", max_age = Data@MaxAge,
-                start = NULL, fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
-                early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
-                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-                control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(), ...) {
+SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial", "lognormal"),
+                     CAA_multiplier = 50, I_type = c("B", "VB", "SSB"), rescale = "mean1", max_age = Data@MaxAge,
+                     start = NULL, fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+                     early_dev = c("comp_onegen", "comp", "all"), late_dev = "comp50", integrate = FALSE,
+                     silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                     control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   max_age <- as.integer(min(c(max_age, Data@MaxAge)))
@@ -84,7 +84,7 @@ SRA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   }
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "SRA", C_hist = C_hist * rescale, I_hist = I_hist,
+  data <- list(model = "SCA_Pope", C_hist = C_hist * rescale, I_hist = I_hist,
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
@@ -240,7 +240,7 @@ SRA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   Dev_out <- structure(Dev, names = YearDev)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SRA", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
+  Assessment <- new("Assessment", Model = "SCA_Pope", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$E0, VB0 = report$VB0,
                     h = report$h, U = structure(report$U, names = Year),
@@ -269,7 +269,7 @@ SRA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                     dependencies = dependencies)
 
   if(Assessment@conv) {
-    ref_pt <- SRA_MSY_calc(Arec = report$Arec, Brec = report$Brec, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
+    ref_pt <- SCA_Pope_MSY_calc(Arec = report$Arec, Brec = report$Brec, M = M, weight = Wa, mat = mat_age, vul = report$vul, SR = SR)
     report <- c(report, ref_pt)
 
     if(integrate) {
@@ -311,11 +311,11 @@ SRA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   }
   return(Assessment)
 }
-class(SRA) <- "Assess"
+class(SCA_Pope) <- "Assess"
 
 
 
-SRA_MSY_calc <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
+SCA_Pope_MSY_calc <- function(Arec, Brec, M, weight, mat, vul, SR = c("BH", "Ricker")) {
   SR <- match.arg(SR)
   maxage <- length(M)
 

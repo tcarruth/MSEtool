@@ -5,10 +5,10 @@
 #' as deviations from the resulting stock-recruit relationship. In \code{SCA2}, the mean recruitment in the time series is estimated and
 #' recruitment deviations around this mean are estimated as penalized parameters (similar to Cadigan 2016). The standard deviation is set high
 #' so that the recruitment is almost like free parameters. Unfished and MSY reference points are inferred afterwards from the assessment output
-#' (SSB and recruitment estimates). \code{SRA} (stock reduction analysis) is a variant of \code{SCA} that fixes the expected catch to the observed
+#' (SSB and recruitment estimates). \code{SCA_Pope} (stock reduction analysis) is a variant of \code{SCA} that fixes the expected catch to the observed
 #' catch, and Pope's approximation is used to calculate thh annual harvest rate (U).
 #'
-#' @aliases SCA2 SRA
+#' @aliases SCA2 SCA_Pope
 #' @param x A position in the Data object (by default, equal to one for assessments).
 #' @param Data An object of class Data
 #' @param SR Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).
@@ -28,7 +28,7 @@
 #' @param fix_F_equilibrium Logical, whether the equilibrium fishing mortality prior to the first year of the model
 #' is estimated. If \code{TRUE}, \code{F_equilibrium} is fixed to value provided in \code{start} (if provided),
 #' otherwise, equal to zero (assumes unfished conditions).
-#' @param fix_U_equilibrium Logical, same as `fix_F_equilibrium` for `SRA`.
+#' @param fix_U_equilibrium Logical, same as `fix_F_equilibrium` for `SCA_Pope`.
 #' @param fix_omega Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Cat}.
 #' @param fix_sigma Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
@@ -63,7 +63,7 @@
 #' @details
 #' The basic data inputs are catch (by weight), index (by weight/biomass), and catch-at-age matrix (by numbers).
 #' Annual F's are estimated parameters assuming continuous fishing over the year. Note: prior to version 1.2, catches were assumed
-#' to be known perfectly with an annual harvest rate from pulse fishing in \code{SCA}. That feature has now moved to \code{SRA}.
+#' to be known perfectly with an annual harvest rate from pulse fishing in \code{SCA}. That feature has now moved to \code{SCA_Pope}.
 #'
 #' By default, steepness is fixed in the model to the value in \code{Data@@steep}.
 #'
@@ -132,13 +132,13 @@
 #' }
 #' @section Required Data:
 #' \itemize{
-#' \item \code{SCA}, \code{SRA}, and \code{SRA}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
+#' \item \code{SCA}, \code{SCA_Pope}, and \code{SCA_Pope}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge
 #' }
 #' @section Optional Data:
 #' \itemize{
 #' \item \code{SCA}: Rec, steep, sigmaR, CV_Ind, CV_Cat
 #' \item \code{SC2}: Rec, steep, CV_Ind, CV_Cat
-#' \item \code{SRA}: Rec, steep, sigmaR, CV_Ind
+#' \item \code{SCA_Pope}: Rec, steep, sigmaR, CV_Ind
 #' }
 #' @author Q. Huynh
 #' @return An object of class \linkS4class{Assessment}.

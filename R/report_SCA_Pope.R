@@ -91,81 +91,8 @@ rmd_SCA_Pope <- function(Assessment) {
   return(c(ss, LH_section, data_section, assess_fit, ts_output, productivity))
 }
 
-#' @import grDevices
-#' @importFrom stats qqnorm qqline
-generate_plots_SRA <- function(Assessment, save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
-
-
-  plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_exploitation.png"))
-    plot_timeseries(as.numeric(names(U)), U, label = "Exploitation rate (U)")
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_exploitation.png", "Time series of exploitation rate."))
-  }
-
-  if(conv) {
-    plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-    abline(h = 1, lty = 2)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_U_UMSY.png"))
-      plot_timeseries(as.numeric(names(U_UMSY)), U_UMSY, label = expression(U/U[MSY]))
-      abline(h = 1, lty = 2)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_U_UMSY.png", "Time series of U/UMSY."))
-    }
-
-    plot_Kobe(B_BMSY, U_UMSY)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_Kobe.png"))
-      plot_Kobe(B_BMSY, U_UMSY)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_Kobe.png", "Kobe plot trajectory of stock."))
-    }
-
-    plot_yield_SRA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$data$SR_type)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_yield_curve_U.png"))
-      plot_yield_SRA(info$data, TMB_report, UMSY, MSY, xaxis = "U", SR = info$data$SR_type)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_yield_curve_U.png", "Yield plot relative to exploitation."))
-    }
-
-    plot_yield_SRA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$data$SR_type)
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, "assessment_yield_curve_SSB_SSB0.png"))
-      plot_yield_SRA(info$data, TMB_report, UMSY, MSY, xaxis = "Depletion", SR = info$data$SR_type)
-      dev.off()
-      assess.file.caption <- rbind(assess.file.caption,
-                                   c("assessment_yield_curve_SSB_SSB0.png", "Yield plot relative to spawning depletion."))
-    }
-  }
-
-  plot_surplus_production(B, B0, Obs_Catch)
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, "assessment_surplus_production.png"))
-    plot_surplus_production(B, B0, Obs_Catch)
-    dev.off()
-    assess.file.caption <- rbind(assess.file.caption,
-                                 c("assessment_surplus_production.png", "Surplus production relative to depletion (total biomass)."))
-  }
-
-  if(save_figure) {
-    html_report(plot.dir, model = "Stock Reduction Analysis (SRA)",
-                captions = assess.file.caption, name = Name, report_type = "Assessment")
-    browseURL(file.path(plot.dir, "Assessment.html"))
-  }
-  return(invisible())
-  }
-
-
 #' @importFrom reshape2 acast
-profile_likelihood_SRA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
+profile_likelihood_SCA_Pope <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
   dots <- list(...)
   if(!"R0" %in% names(dots) && !"h" %in% names(dots)) stop("Sequence of neither R0 nor h was found. See help file.")
   if(!is.null(dots$R0)) R0 <- dots$R0 else {
@@ -248,38 +175,40 @@ profile_likelihood_SRA <- function(Assessment, figure = TRUE, save_figure = TRUE
 }
 
 
-#' @importFrom gplots rich.colors
-retrospective_SRA <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
-  data <- info$data
-  n_y <- data$n_y
+
+
+retrospective_SCA_Pope <- function(Assessment, nyr, figure = TRUE) {
+  assign_Assessment_slots(Assessment)
+  n_y <- info$data$n_y
 
   Year <- c(info$Year, max(info$Year) + 1)
-  C_hist <- data$C_hist
-  I_hist <- data$I_hist
-  CAA_hist <- data$CAA_hist
-  CAA_n <- data$CAA_n
-  est_rec_dev <- data$est_rec_dev
-  params <- info$params
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, SSB, SSB_SSBMSY, SSB_SSB0, N, R, U, U_UMSY, log_rec_dev
-  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 9))
+  # ts includes: Calendar U, U_MSY, B, B/BMSY, B/B0, R, VB
+  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 7))
+  TS_var <- c("U", "U_UMSY", "SSB", "SSB_SSBMSY", "SSB_SSB0", "R", "VB")
+  dimnames(retro_ts) <- list(Peel = 0:nyr, Year = Year, Var = TS_var)
+
   SD_nondev <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
+  dimnames(retro_est) <- list(Peel = 0:nyr, Var = rownames(SD_nondev), Value = c("Estimate", "Std. Error"))
 
   SD <- NULL
   rescale <- info$rescale
 
+  data_ret <- info$data
+  params_ret <- info$params
+
   for(i in 0:nyr) {
     n_y_ret <- n_y - i
-    data$n_y <- n_y_ret
-    data$C_hist <- C_hist[1:n_y_ret]
-    data$I_hist <- I_hist[1:n_y_ret]
-    data$CAA_hist <- CAA_hist[1:n_y_ret, ]
-    data$CAA_n <- CAA_n[1:n_y_ret]
-    data$est_rec_dev <- est_rec_dev[1:n_y_ret]
-    params$log_rec_dev <- rep(0, n_y_ret)
+    data_ret$n_y <- n_y_ret
+    data_ret$C_hist <- info$data$C_hist[1:n_y_ret]
+    data_ret$I_hist <- info$data$I_hist[1:n_y_ret]
+    data_ret$CAA_hist <- info$data$CAA_hist[1:n_y_ret, ]
+    data_ret$CAA_n <- info$data$CAA_n[1:n_y_ret]
+    data_ret$est_rec_dev <- info$data$est_rec_dev[1:n_y_ret]
+
+    params_ret$log_rec_dev <- rep(0, n_y_ret)
 
     map <- obj$env$map
     if(any(names(map) == "log_rec_dev")) {
@@ -287,7 +216,7 @@ retrospective_SRA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
       map$log_rec_dev <- factor(new_map[new_map > 0])
     }
 
-    obj2 <- MakeADFun(data = data, parameters = params, map = map, random = obj$env$random,
+    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
@@ -295,12 +224,13 @@ retrospective_SRA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
-      ref_pt <- SRA_MSY_calc(Arec = report$Arec, Brec = report$Brec, M = data$M, weight = data$weight, mat = data$mat,
-                             vul = report$vul, SR = data$SR_type)
+      ref_pt <- SCA_Pope_MSY_calc(Arec = report$Arec, Brec = report$Brec, M = info$data$M, weight = info$data$weight, mat = info$data$mat,
+                                  vul = report$vul, SR = info$data$SR_type)
+
       report <- c(report, ref_pt)
       if(info$rescale != 1) {
-        vars_div <- c("meanR", "B", "E", "CAApred", "CN", "N", "VB",
-                      "R", "MSY", "VBMSY", "RMSY", "BMSY", "EMSY", "VB0", "R0",
+        vars_div <- c("R0", "B", "E", "CAApred", "CN", "Cpred", "N", "VB",
+                      "R", "MSY", "VBMSY", "RMSY", "BMSY", "EMSY", "VB0",
                       "B0", "E0", "N0")
         vars_mult <- "Brec"
         var_trans <- c("R0", "q")
@@ -309,131 +239,30 @@ retrospective_SRA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
 
+      U <- c(report$U, rep(NA, i + 1))
+      U_UMSY <- U/report$UMSY
       SSB <- c(report$E, rep(NA, i))
       SSB_SSBMSY <- SSB/report$EMSY
       SSB_SSB0 <- SSB/report$E0
       R <- c(report$R, rep(NA, i))
-      N <- c(rowSums(report$N), rep(NA, i))
-      U <- c(report$U, rep(NA, i + 1))
-      U_UMSY <- U/report$UMSY
-      log_rec_dev <- c(report$log_rec_dev, rep(NA, i + 1))
+      VB <- c(report$E, rep(NA, i))
+      #log_rec_dev <- c(report$log_rec_dev, rep(NA, i + 1))
 
-      retro_ts[i+1, , ] <- cbind(Year, SSB, SSB_SSBMSY, SSB_SSB0, R, N, U, U_UMSY, log_rec_dev)
+      retro_ts[i+1, , ] <- cbind(U, U_UMSY, SSB, SSB_SSBMSY, SSB_SSB0, R, VB)
       retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev", ]
 
     } else {
-      message(paste("Non-convergence when", i, "years of data were removed."))
+      message("Non-convergence when peel = ", i, " (years of data removed).")
     }
   }
 
-  fix_h <- "transformed_h" %in% names(obj$env$map)
-  if(fix_h) est_ind <- 5 else est_ind <- c(5, 6)
-  est_lab <- "R0 estimate"
-  if(!fix_h) est_lab <- c(est_lab, "Steepness estimate")
+  retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
+               Est_var = dimnames(retro_est)[[2]], Est = retro_est)
+  attr(retro, "TS_lab") <- c("Harvest rate", expression(U/U[MSY]), "Spawning biomass", expression(SSB/SSB[MSY]), "Spawning depletion",
+                             "Recruitment", "Vulnerable biomass")
 
-  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1], retro_est[, , 1][, est_ind, drop = FALSE],
-                                 ts_lab = c("SSB", "SSB_SSBMSY", "SSB_SSB0", "Recruitment", "Abundance", "U", "U_UMSY", "log_rec_dev"),
-                                 est_lab = est_lab)
-
-  if(figure) {
-    plot_retro_SRA(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
-                   nyr_label = 0:nyr, color = rich.colors(nyr+1), fix_h, SR = data$SR_type)
-  }
-
-  return(Mohn_rho)
-}
-
-
-plot_retro_SRA <- function(retro_ts, retro_est, save_figure = FALSE,
-                           save_dir = tempdir(), nyr_label, color, fix_h, SR) {
-  n_tsplots <- dim(retro_ts)[3] - 1
-  ts_label <- c("Spawning Stock Biomass", expression(SSB/SSB[MSY]), expression(SSB/SSB[0]), "Recruitment",
-                "Population Abundance (N)", "Exploitation rate (U)",
-                expression(U/U[MSY]), "Recruitment deviations")
-  Year <- retro_ts[1, , 1]
-
-  if(save_figure) {
-    Model <- "SRA"
-    prepare_to_save_figure()
-  }
-
-  for(i in 1:n_tsplots) {
-    y.max <- max(abs(retro_ts[, , i+1]), na.rm = TRUE)
-    if(i < n_tsplots) {
-      ylim <- c(0, 1.1 * y.max)
-    } else ylim <- c(-y.max, y.max)
-    plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i],
-         ylim = ylim, col = color[1])
-    for(j in 2:length(nyr_label)) {
-      lines(Year, retro_ts[j, , i+1], col = color[j])
-    }
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    if(i != 8) abline(h = 0, col = 'grey')
-    if(i %in% c(2, 7)) abline(h = 1, lty = 2)
-    if(i == 8) abline(h = 0, lty = 2)
-
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, paste0("retrospective_", i, ".png")))
-      plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i],
-           ylim = ylim, col = color[1])
-      for(j in 2:length(nyr_label)) {
-        lines(Year, retro_ts[j, , i+1], col = color[j])
-      }
-      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-             title = "Years removed:")
-      if(i != 8) abline(h = 0, col = 'grey')
-      if(i %in% c(2, 7)) abline(h = 1, lty = 2)
-      if(i == 8) abline(h = 0, lty = 2)
-      dev.off()
-    }
-  }
-
-  plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
-                    logtransform = TRUE, color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-         title = "Years removed:")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
-    plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
-                      logtransform = TRUE, color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    dev.off()
-  }
-
-  if(!fix_h) {
-    plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
-      plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
-      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-             title = "Years removed:")
-      dev.off()
-    }
-  }
-
-  if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+1)), ".png"),
-                                   x2 = paste0("Retrospective pattern in ",
-                                               c("spawning stock biomass", "SSB/SSBMSY", "spawning depletion", "recruitment",
-                                                 "abundance", "exploitation", "U/UMSY", "recruitment deviations",
-                                                 "R0 estimate"), "."),
-                                   stringsAsFactors = FALSE)
-    if(!fix_h) {
-      ret.file.caption <- rbind(ret.file.caption,
-                                c(paste0("retrospective_", n_tsplots+2, ".png"), "Retrospective pattern in steepness estimate."))
-    }
-
-    Assessment <- get("Assessment", envir = parent.frame())
-    html_report(plot.dir, model = "Stock Reduction Analysis (SRA)", captions = ret.file.caption,
-                name = Assessment@Name, report_type = "Retrospective")
-    browseURL(file.path(plot.dir, "Retrospective.html"))
-  }
-
-  invisible()
+  if(figure) plot(retro)
+  return(retro)
 }
 
 

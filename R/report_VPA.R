@@ -88,19 +88,6 @@ rmd_VPA <- function(Assessment) {
 
 
 
-#' @import grDevices
-#' @importFrom stats qqnorm qqline
-#' @importFrom graphics persp
-generate_plots_VPA <- function(Assessment, save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
-
-  plot_composition(Year, Selectivity, plot_type = 'annual', ages = age, annual_yscale = "raw", annual_ylab = "Selectivity")
-
-
-  plot_composition(Year, Obs_C_at_age, C_at_age, ages = age, plot_type = 'annual')
-
-  return(invisible())
-}
 
 
 
@@ -156,40 +143,41 @@ profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE
 
 
 #' @importFrom gplots rich.colors
-retrospective_VPA <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
-  data <- info$data
-  n_y <- data$n_y
+retrospective_VPA <- function(Assessment, nyr, figure = TRUE) {
+  assign_Assessment_slots(Assessment)
+
+  n_y <- info$data$n_y
 
   Year <- c(info$Year, max(info$Year) + 1)
-  I_hist <- data$I_hist
-  CAA_hist <- data$CAA_hist
-  params <- info$params
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, SSB, N, R, U, U_UMSY
-  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 6))
+  # ts includes: F, U, SSB, R, VB
+  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 5))
+  TS_var <- c("F", "U", "SSB", "R", "VB")
+  dimnames(retro_ts) <- list(Peel = 0:nyr, Year = Year, Var = TS_var)
+
   retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
+  dimnames(retro_est) <- list(Peel = 0:nyr, Var = rownames(summary(SD)), Value = c("Estimate", "Std. Error"))
 
   SD <- NULL
   rescale <- info$rescale
   fix_h <- ifelse(is.null(info$h), FALSE, TRUE)
 
+  data_ret <- info$data
+  params_ret <- info$params
+
   for(i in 0:nyr) {
     n_y_ret <- n_y - i
-    data$n_y <- n_y_ret
-    data$I_hist <- I_hist[1:n_y_ret]
-    data$CAA_hist <- CAA_hist[1:n_y_ret, ]
+    data_ret$n_y <- n_y_ret
+    data_ret$I_hist <- info$data$I_hist[1:n_y_ret]
+    data_ret$CAA_hist <- info$data$CAA_hist[1:n_y_ret, ]
 
-    map <- obj$env$map
-
-    obj2 <- MakeADFun(data = data, parameters = params, map = map, DLL = "MSEtool", silent = TRUE)
+    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = obj$env$map, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
-
       report <- obj2$report(obj2$env$last.par.best)
       if(rescale != 1) {
         vars_div <- c("B", "E", "VB", "N", "CAApred")
@@ -200,77 +188,31 @@ retrospective_VPA <- function(Assessment, nyr, figure = TRUE, save_figure = FALS
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
 
-      report <- projection_VPA(report, info, data$n_Rpen)
+      report <- projection_VPA(report, info, info$data$n_Rpen)
+
+      FMort <- c(apply(report$F, 1, max), rep(NA, i + 1))
+      Z_mat <- t(report$F) + info$data$M
+      VB_mid <- t(report$N[-ncol(report$N), ]) * (1 - exp(-Z_mat))/Z_mat
+      U <- c(colSums(t(report$CAApred) * info$data$weight)/colSums(VB_mid), rep(NA, i + 1))
 
       SSB <- c(report$E, rep(NA, i))
       R <- c(report$N[, 1], rep(NA, i))
-      N <- c(rowSums(report$N), rep(NA, i))
-      FMort <- c(apply(report$F, 1, max), rep(NA, i + 1))
+      VB <- c(report$VB, rep(NA, i))
 
-      Z_mat <- t(report$F) + data$M
-      VB_mid <- t(report$N[-ncol(report$N), ]) * (1 - exp(-Z_mat))/Z_mat
-      U <- c(colSums(t(report$CAApred) * data$weight)/colSums(VB_mid), rep(NA, i + 1))
-
-      retro_ts[i+1, , ] <- cbind(Year, SSB, R, N, FMort, U)
+      retro_ts[i+1, , ] <- cbind(FMort, U, SSB, R, VB)
       retro_est[i+1, , ] <- summary(SD)
 
     } else {
-      message(paste("Non-convergence when", i, "years of data were removed."))
+      message("Non-convergence when peel = ", i, " (years of data removed).")
     }
   }
 
-  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1],
-                                 ts_lab = c("SSB", "Recruitment", "Abundance", "Apical F", "U"))
+  retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
+               Est_var = dimnames(retro_est)[[2]], Est = retro_est)
+  attr(retro, "TS_lab") <- c("Apical fishing mortality", "Harvest rate", "Spawning biomass", "Recruitment", "Vulnerable biomass")
 
-  if(figure) {
-    plot_retro_VPA(retro_ts, save_figure = save_figure, save_dir = save_dir,
-                   nyr_label = 0:nyr, color = rich.colors(nyr+1))
-  }
-
-  return(Mohn_rho)
+  if(figure) plot(retro)
+  return(retro)
 }
 
 
-
-plot_retro_VPA <- function(retro_ts, save_figure = FALSE, save_dir = tempdir(), nyr_label, color) {
-  n_tsplots <- dim(retro_ts)[3] - 1
-  ts_label <- c("Spawning Stock Biomass", "Recruitment",
-                "Population Abundance (N)", "Apical Fishing Mortality (F)", "Exploitation rate (U)")
-  Year <- retro_ts[1, , 1]
-
-  if(save_figure) {
-    Model <- "VPA"
-    prepare_to_save_figure()
-  }
-
-  for(i in 1:n_tsplots) {
-    y.max <- max(abs(retro_ts[, , i+1]), na.rm = TRUE)
-    ylim <- c(0, 1.1 * y.max)
-    plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i], ylim = ylim, col = color[1])
-    for(j in 2:length(nyr_label)) lines(Year, retro_ts[j, , i+1], col = color[j])
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-    abline(h = 0, col = 'grey')
-
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, paste0("retrospective_", i, ".png")))
-      plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i], ylim = ylim, col = color[1])
-      for(j in 2:length(nyr_label)) lines(Year, retro_ts[j, , i+1], col = color[j])
-      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-      abline(h = 0, col = 'grey')
-      dev.off()
-    }
-  }
-
-  if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:n_tsplots), ".png"),
-                                   x2 = paste0("Retrospective pattern in ",
-                                               c("spawning stock biomass", "recruitment",
-                                                 "abundance", "apical fishing mortality", "exploitation"), "."))
-    Assessment <- get("Assessment", envir = parent.frame())
-    html_report(plot.dir, model = "Virtual Population Analysis (VPA)", captions = ret.file.caption,
-                name = Assessment@Name, report_type = "Retrospective")
-    browseURL(file.path(plot.dir, "Retrospective.html"))
-  }
-
-  invisible()
-}

@@ -10,7 +10,7 @@ SS2OM(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3,
   Source = "No source provided", Author = "No author provided", ...)
 }
 \arguments{
-\item{SSdir}{A folder with Stock Synthesis input and output files in it. Alternatively, a list that was returned by \code{r4ss::SS_output}.}
+\item{SSdir}{A folder with Stock Synthesis input and output files in it.}
 
 \item{nsim}{The number of simulations to take for parameters with uncertainty (for OM@cpars custom parameters).}
 

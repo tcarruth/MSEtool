@@ -6,7 +6,7 @@
 #' @description A function that uses the file location of a fitted SS3 model including input files to population the
 #' various slots of an operating model with MLE parameter estimates. The function mainly populates the Stock and Fleet portions
 #' of the operating model; the user still needs to parameterize most of the observation and implementation portions of the operating model.
-#' @param SSdir A folder with Stock Synthesis input and output files in it. Alternatively, a list that was returned by \code{r4ss::SS_output}.
+#' @param SSdir A folder with Stock Synthesis input and output files in it.
 #' @param nsim The number of simulations to take for parameters with uncertainty (for OM@@cpars custom parameters).
 #' @param proyears The number of projection years for MSE
 #' @param reps The number of stochastic replicates within each simulation in the operating model.

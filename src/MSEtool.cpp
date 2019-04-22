@@ -23,10 +23,10 @@ template<class Type>
     #include "../inst/include/SCA.h"
   } else if(model == "SCA2") {
     #include "../inst/include/SCA2.h"
+  } else if(model == "SCA_Pope") {
+    #include "../inst/include/SCA_Pope.h"
   } else if(model == "VPA") {
     #include "../inst/include/VPA.h"
-  } else if(model == "SRA") {
-    #include "../inst/include/SRA.h"
   } else if(model == "cDD") {
     #include "../inst/include/cDD.h"
   } else if(model == "cDD_SS") {
