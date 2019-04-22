@@ -45,45 +45,6 @@ profile_likelihood <- function(Assessment, figure = TRUE, save_figure = TRUE, sa
 }
 
 
-#' Retrospective analysis of assessment models
-#'
-#' Perform a retrospective analysis, successive removals of most recent years of data to evaluate resulting
-#' parameter estimates.
-#'
-#' @param Assessment An S4 object of class \linkS4class{Assessment}.
-#' @param nyr The maximum number of years to remove for the retrospective analysis.
-#' @param figure Indicates whether plots will be drawn.
-#' @return A list with an array of model output and of model estimates from
-#' the retrospective analysis.
-#' @param save_figure Indicates whether figures will be saved to directory.
-#' @param save_dir The directory to which figures will be saved.
-#' @author Q. Huynh
-#' @return Figures showing the time series of biomass and exploitation and parameter estimates
-#' with successive number of years removed. For a variety of time series output (SSB, recruitment, etc.) and
-#' estimates (R0, steepness, etc.), also returns a matrix of Mohn's rho (Mohn 1999).
-#' @examples
-#' \donttest{
-#' output <- DD_TMB(Data = DLMtool::Red_snapper)
-#' get_retro <- retrospective(output, nyr = 5, figure = FALSE)
-#' }
-#' @references
-#' Mohn, R. 1999. The retrospective problem in sequential population analysis: an investigation using cod fishery
-#' and simulated data. ICES Journal of Marine Science 56:473-488.
-#' @export
-retrospective <- function(Assessment, nyr = 5, figure = TRUE) {
-  if(figure) {
-    old.warning <- options()$warn
-    options(warn = -1)
-    on.exit(options(warn = old.warning))
-
-    old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par), add = TRUE)
-  }
-
-  f <- get(paste0('retrospective_', Assessment@Model))
-  f(Assessment, nyr, figure)
-}
-
 #' Compare output from several assessment models
 #'
 #' Plot biomass, recruitment, and fishing mortality time series from several . This function can be used to compare outputs among
@@ -178,6 +139,7 @@ match_R_years <- function(RR) {
 }
 
 
+#' @importFrom rmarkdown render
 report <- function(Assessment, retro = NULL, filename = paste0("report_", Assessment@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
   name <- ifelse(nchar(Assessment@Name) > 0, Assessment@Name, substitute(Assessment))
 

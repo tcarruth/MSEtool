@@ -89,7 +89,7 @@ setClassUnion("listspict", members = c("list", "spictcls"))
 #' }
 #' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 #' @author Q. Huynh
-#' @export
+#' @export Assessment
 #' @exportClass Assessment
 Assessment <- setClass("Assessment",
                        slots = c(Model = "character", Name = "character", conv = "logical", UMSY = "numeric", FMSY = "numeric",
@@ -110,9 +110,6 @@ Assessment <- setClass("Assessment",
                                  SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
                                  SE_Dev = "numeric", info = "listspict", obj = "list", opt = "optAssess", SD = "sdreportAssess",
                                  TMB_report = "list", dependencies = "character"))
-
-
-
 
 #' @name summary.Assessment
 #' @title Summary of Assessment object
@@ -144,7 +141,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
 #' @param ... Other arguments to pass to \link[rmarkdown]{render}.
-#' @return Returns invisibily the output from \link[rmarkdown]{render}.
+#' @return Returns invisibly the output from \link[rmarkdown]{render}.
 #' @examples
 #' \donttest{
 #' output <- DD_TMB(Data = Simulation_1)
@@ -163,6 +160,51 @@ setMethod("plot", signature(x = "Assessment", y = "missing"),
             report(x, ret, filename = filename, dir = dir, open_file = open_file, quiet = quiet, ...)
           })
 
+#' @name retrospective
+#' @title Retrospective analysis of assessment models
+#'
+#' @description Perform a retrospective analysis, successive removals of most recent years of data to evaluate resulting
+#' parameter estimates.
+#'
+#' @param x An S4 object of class \linkS4class{Assessment}.
+#' @param nyr The maximum number of years to remove for the retrospective analysis.
+#' @param figure Indicates whether plots will be drawn.
+#' @return A list with an array of model output and of model estimates from
+#' the retrospective analysis.
+#' @author Q. Huynh
+#' @return Figures showing the time series of biomass and exploitation and parameter estimates
+#' with successive number of years removed. For a variety of time series output (SSB, recruitment, etc.) and
+#' estimates (R0, steepness, etc.), also returns a matrix of Mohn's rho (Mohn 1999).
+#' @examples
+#' \donttest{
+#' output <- DD_TMB(Data = DLMtool::Red_snapper)
+#' get_retro <- retrospective(output, nyr = 5, figure = FALSE)
+#' }
+#' @references
+#' Mohn, R. 1999. The retrospective problem in sequential population analysis: an investigation using cod fishery
+#' and simulated data. ICES Journal of Marine Science 56:473-488.
+#' @export
+setGeneric("retrospective", function(x, ...) standardGeneric("retrospective"))
+
+#' @rdname retrospective
+#' @aliases retrospective,Assessment-method
+#' @exportMethod
+setMethod("retrospective", signature(x = "Assessment"),
+          function(x, nyr = 5, figure = TRUE) {
+            if(figure) {
+              old.warning <- options()$warn
+              options(warn = -1)
+              on.exit(options(warn = old.warning))
+
+              old_par <- par(no.readonly = TRUE)
+              on.exit(par(old_par), add = TRUE)
+            }
+
+            f <- get(paste0('retrospective_', x@Model))
+            f(x, nyr, figure)
+          })
+
+
 #' Class-\code{retro}
 #'
 #' An S4 class that contains output from \link{retrospective}.
@@ -180,12 +222,13 @@ setMethod("plot", signature(x = "Assessment", y = "missing"),
 #' value (length 2 for estimate and standard error).
 #' @seealso \link{plot.retro} \link{summary.retro} \link{plot.Assessment}
 #' @author Q. Huynh
-#' @exportClass
+#' @export retro
+#' @exportClass retro
 retro <- setClass("retro", slots = c(Model = "character", Name = "character", TS_var = "character",
                                      TS = "array", Est_var = "character", Est = "array"))
 
 #' @rdname plot.Assessment
-#' @importFrom rmarkdown render
+#' @aliases plot,Assessment,retro-method
 #' @exportMethod
 setMethod("plot", signature(x = "Assessment", y = "retro"),
           function(x, y, filename = paste0("report_", x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
@@ -193,7 +236,7 @@ setMethod("plot", signature(x = "Assessment", y = "retro"),
           })
 
 #' @rdname retrospective
-#' @aliases plot.retro
+#' @aliases plot.retro plot,retro,missing-method
 #' @exportMethod
 setMethod("plot", signature(x = "retro", y = "missing"),
           function(x, color = NULL) {
@@ -222,13 +265,11 @@ setMethod("plot", signature(x = "retro", y = "missing"),
             invisible()
           })
 
-#' @rdname retrospective
-#' @aliases show.retro
-#' @exportMethod
+
 setMethod("show", signature(object = "retro"), function(object) print(calculate_Mohn_rho(object@TS, ts_lab = attr(object, "TS_lab"))))
 
 #' @rdname retrospective
-#' @aliases summary.retro
+#' @aliases summary.retro summary,retro-method
 #' @exportMethod
 setMethod("summary", signature(object = "retro"), function(object) calculate_Mohn_rho(object@TS, ts_lab = attr(object, "TS_lab")))
 

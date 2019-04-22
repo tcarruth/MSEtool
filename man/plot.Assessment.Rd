@@ -34,7 +34,7 @@ to the number of peels (the maximum number of terminal years for which the data 
 \item{y}{An object of class \linkS4class{retro}.}
 }
 \value{
-Returns invisibily the output from \link[rmarkdown]{render}.
+Returns invisibly the output from \link[rmarkdown]{render}.
 }
 \description{
 Produces HTML file (via markdown) figures of parameter estimates and output from an \linkS4class{Assessment} object.
