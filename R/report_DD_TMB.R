@@ -201,37 +201,41 @@ profile_likelihood_DD_TMB <- function(Assessment, figure = TRUE, save_figure = T
 }
 
 
-#' @importFrom gplots rich.colors
-retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
-                                 save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
-  data <- info$data
-  ny <- data$ny
-  k <- data$k
+retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE, state_space = FALSE) {
+  assign_Assessment_slots(Assessment)
+  ny <- info$data$ny
+  k <- info$data$k
 
   Year <- info$Year
   moreRecruitYears <- max(Year) + 1:k
   Year <- c(Year, moreRecruitYears)
-  C_hist <- data$C_hist
-  E_hist <- data$E_hist
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, B, B/BMSY, B/B0, N, R, U, U/UMSY
-  retro_ts <- array(NA, dim = c(nyr+1, ny + k, 8))
-  retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
+  # ts includes: U, U/UMSY, B, B/BMSY, B/B0, R, VB
+  retro_ts <- array(NA, dim = c(nyr+1, ny+k, 7))
+  TS_var <- c("U", "U_UMSY", "B", "B_BMSY", "B_B0", "R", "VB")
+  dimnames(retro_ts) <- list(Peel = 0:nyr, Year = Year, Var = TS_var)
+
+  retro_est <- array(NA, dim = c(nyr+1, length(SD$par.fixed[names(SD$par.fixed) != "log_rec_dev"]), 2))
+  dimnames(retro_est) <- list(Peel = 0:nyr, Var = names(SD$par.fixed)[names(SD$par.fixed) != "log_rec_dev"],
+                              Value = c("Estimate", "Std. Error"))
 
   SD <- NULL
   rescale <- info$rescale
 
+  data_ret <- info$data
+  params_ret <- info$params
+
   for(i in 0:nyr) {
     ny_ret <- ny - i
-    C_hist_ret <- C_hist[1:ny_ret]
-    E_hist_ret <- E_hist[1:ny_ret]
-    data$ny <- ny_ret
-    data$C_hist <- C_hist_ret
-    data$E_hist <- E_hist_ret
+    data_ret$ny <- ny_ret
+    data_ret$C_hist <- info$data$C_hist[1:ny_ret]
+    data_ret$E_hist <- info$data$E_hist[1:ny_ret]
 
-    obj2 <- MakeADFun(data = data, parameters = info$params, map = obj$env$map, DLL = "MSEtool", silent = TRUE)
+    if(state_space) params_ret$log_rec_dev <- rep(0, ny_ret - k)
+
+    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, random = obj$env$random, map = obj$env$map,
+                      inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
@@ -250,125 +254,35 @@ retrospective_DD_TMB <- function(Assessment, nyr, figure = TRUE,
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
 
+      U <- c(report$U, rep(NA, k + i))
+      U_UMSY <- U/report$UMSY
       B <- c(report$B, rep(NA, k - 1 + i))
       B_BMSY <- B/report$BMSY
       B_B0 <- B/B0
       R <- c(report$R, rep(NA, i))
-      N <- c(report$N, rep(NA, k - 1 + i))
-      U <- c(report$U, rep(NA, k + i))
-      U_UMSY <- U/report$UMSY
+      VB <- B
 
-      retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, R, N, U, U_UMSY)
-      if(!is.character(SD)) retro_est[i+1, , ] <- summary(SD)
+      retro_ts[i+1, , ] <- cbind(U, U_UMSY, B, B_BMSY, B_B0, R, VB)
+
+      sumry <- summary(SD, "fixed")
+      sumry <- sumry[rownames(sumry) != "log_rec_dev", drop = FALSE]
+      retro_est[i+1, , ] <- sumry
 
     } else {
-      message(paste("Non-convergence when", i, "years of data were removed."))
+      message("Non-convergence when peel = ", i, " (years of data removed).")
     }
-
   }
 
-  fix_h <- "transformed_h" %in% names(obj$env$map)
-  if(fix_h) est_ind <- 4 else est_ind <- 4:5
-  est_lab <- "R0 estimate"
-  if(!fix_h) est_lab <- c(est_lab, "Steepness estimate")
+  retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
+               Est_var = dimnames(retro_est)[[2]], Est = retro_est)
+  attr(retro, "TS_lab") <- c("Harvest rate", expression(U/U[MSY]), "Biomass", expression(B/B[MSY]), expression(B/B[0]),
+                             "Recruitment", "Vulnerable biomass")
 
-  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1], retro_est[, , 1][, est_ind, drop = FALSE],
-                                 ts_lab = c("Biomass", "B_BMSY", "B_B0", "Recruitment", "Abundance", "U", "U_UMSY"),
-                                 est_lab = est_lab)
-
-  if(figure) {
-    plot_retro_DD_TMB(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
-                      nyr_label = 0:nyr, color = rich.colors(nyr+1), fix_h, data$SR_type)
-  }
-
-  return(Mohn_rho)
+  if(figure) plot(retro)
+  return(retro)
 }
 
-plot_retro_DD_TMB <- function(retro_ts, retro_est, save_figure = FALSE,
-                              save_dir = tempdir(), nyr_label, color, fix_h, SR) {
-  n_tsplots <- dim(retro_ts)[3] - 1
-  ts_label <- c("Biomass", expression(B/B[MSY]), expression(B/B[0]), "Recruitment",
-                "Population Abundance (N)", "Exploitation rate (U)",
-                expression(U/U[MSY]))
-  Year <- retro_ts[1, , 1]
 
-  if(save_figure) {
-    Model <- "DD_TMB"
-    prepare_to_save_figure()
-  }
-
-  for(i in 1:n_tsplots) {
-    y.max <- max(retro_ts[, , i+1], na.rm = TRUE)
-    plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i],
-         ylim = c(0, 1.1 * y.max), col = color[1])
-    for(j in 2:length(nyr_label)) {
-      lines(Year, retro_ts[j, , i+1], col = color[j])
-    }
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    abline(h = 0, col = 'grey')
-    if(i %in% c(2, 7)) abline(h = 1, lty = 2)
-
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, paste0("retrospective_", i, ".png")))
-      plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i],
-           ylim = c(0, 1.1 * y.max), col = color[1])
-      for(j in 2:length(nyr_label)) {
-        lines(Year, retro_ts[j, , i+1], col = color[j])
-      }
-      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-             title = "Years removed:")
-      abline(h = 0, col = 'grey')
-      if(i %in% c(2, 7)) abline(h = 1, lty = 2)
-      dev.off()
-    }
-  }
-
-  plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
-                    logtransform = TRUE, color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-         title = "Years removed:")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
-    plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], label = expression(hat(R)[0]),
-                      logtransform = TRUE, color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    dev.off()
-  }
-
-  if(!fix_h) {
-    plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-           title = "Years removed:")
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
-      plot_steepness(retro_est[, 2, 1], retro_est[, 2, 2], is_transform = TRUE, SR = SR, color = color)
-      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n",
-             title = "Years removed:")
-      dev.off()
-    }
-  }
-
-  if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+1)), ".png"),
-                                   x2 = paste0("Retrospective pattern in ",
-                                               c("biomass", "B/BMSY", "biomass depletion", "recruitment",
-                                                 "abundance", "exploitation", "U/UMSY", "R0 estimate"), "."),
-                                   stringsAsFactors = FALSE)
-    if(!fix_h) {
-      ret.file.caption <- rbind(ret.file.caption,
-                                c(paste0("retrospective_", n_tsplots+2, ".png"), "Retrospective pattern in steepness estimate."))
-    }
-
-    Assessment <- get("Assessment", envir = parent.frame())
-    html_report(plot.dir, model = "Delay Difference", captions = ret.file.caption,
-                name = Assessment@Name, report_type = "Retrospective")
-    browseURL(file.path(plot.dir, "Retrospective.html"))
-  }
-
-  invisible()
-}
 
 
 plot_yield_DD <- function(data, report, umsy, msy, xaxis = c("U", "Biomass", "Depletion")) {

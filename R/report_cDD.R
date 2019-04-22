@@ -210,7 +210,7 @@ profile_likelihood_cDD <- function(Assessment, figure = TRUE, save_figure = TRUE
 
 
 #' @importFrom gplots rich.colors
-retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
+retrospective_cDD <- function(Assessment, nyr, figure = TRUE, state_space = FALSE) {
   assign_Assessment_slots(Assessment)
   ny <- info$data$ny
   k <- info$data$k
@@ -218,13 +218,11 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
   Year <- info$Year
   moreRecruitYears <- max(Year) + 1:k
   Year <- c(Year, moreRecruitYears)
-  C_hist <- info$data$C_hist
-  I_hist <- info$data$I_hist
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Year, B, B/BMSY, B/B0, R, N, F, F/FMSY
+  # ts includes: F, F/FMSY, B, B/BMSY, B/B0, R, VB
   retro_ts <- array(NA, dim = c(nyr+1, ny+k, 7))
-  TS_var <- c("F", "F_FMSY", "B", "B_BMSY", "B_B0", "R", "N")
+  TS_var <- c("F", "F_FMSY", "B", "B_BMSY", "B_B0", "R", "VB")
   dimnames(retro_ts) <- list(Peel = 0:nyr, Year = Year, Var = TS_var)
 
   retro_est <- array(NA, dim = c(nyr+1, length(SD$par.fixed[names(SD$par.fixed) != "log_rec_dev"]), 2))
@@ -239,16 +237,14 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
 
   for(i in 0:nyr) {
     ny_ret <- ny - i
-    C_hist_ret <- C_hist[1:ny_ret]
-    I_hist_ret <- I_hist[1:ny_ret]
     data_ret$ny <- ny_ret
-    data_ret$data$C_hist <- C_hist_ret
-    data_ret$I_hist <- I_hist_ret
+    data_ret$data$C_hist <- info$data$C_hist[1:ny_ret]
+    data_ret$I_hist <- info$data$I_hist[1:ny_ret]
 
     if(state_space) params_ret$log_rec_dev <- rep(0, ny_ret - k)
 
     obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = obj$env$map, random = obj$env$random,
-                      DLL = "MSEtool", silent = TRUE)
+                      inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
@@ -273,37 +269,24 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$B0
       R <- c(report$R, rep(NA, i))
-      VB <- c(report$B, rep(NA, k - 1 + i))
-
+      VB <- B
+	  
       retro_ts[i+1, , ] <- cbind(FMort, F_FMSY, B, B_BMSY, B_B0, R, VB)
 
-      if(!is.character(SD)) {
-        sumry <- summary(SD, "fixed")
-        sumry <- sumry[rownames(sumry) != "log_rec_dev", drop = FALSE]
-        retro_est[i+1, , ] <- sumry
-      }
+      sumry <- summary(SD, "fixed")
+      sumry <- sumry[rownames(sumry) != "log_rec_dev", drop = FALSE]
+      retro_est[i+1, , ] <- sumry
     } else {
       message("Non-convergence when peel = ", i, " (years of data removed).")
     }
 
   }
-
-  #fix_h <- "transformed_h" %in% names(obj$env$map)
-  #if(fix_h) est_ind <- 4 else est_ind <- 4:5
-  #est_lab <- "R0 estimate"
-  #if(!fix_h) est_lab <- c(est_lab, "Steepness estimate")
-
-  #Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1], retro_est[, , 1][, est_ind, drop = FALSE],
-  #                               ts_lab = c("Biomass", "B_BMSY", "B_B0", "Recruitment", "Abundance", "F", "F_FMSY"),
-  #                               est_lab = est_lab)
-
-  #if(figure) {
-  #  plot_retro_cDD(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir,
-  #                 nyr_label = 0:nyr, color = rich.colors(nyr+1), fix_h, data$SR_type)
-  #}
+  
   retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)
   attr(retro, "TS_lab") <- c("Fishing mortality", expression(F/F[MSY]), "Biomass", expression(B/B[MSY]), expression(B/B[0]), "Recruitment", "Vulnerable biomass")
+  
+  if(figure) plot(retro)
   return(retro)
 }
 

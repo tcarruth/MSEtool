@@ -178,34 +178,43 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
 
 
 #' @importFrom gplots rich.colors
-retrospective_SP <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = tempdir()) {
-  assign_Assessment_slots()
-
-  data <- info$data
-  ny <- data$ny
-
+retrospective_SP <- function(Assessment, nyr, figure = TRUE, state_space = FALSE) {
+  assign_Assessment_slots(Assessment)
+  ny <- info$data$ny
   Year <- info$Year
   Year <- c(Year, max(Year) + 1)
-  C_hist <- data$C_hist
-  I_hist <- data$I_hist
-  params <- info$params
-  map <- obj$env$map
 
   # Array dimension: Retroyr, Year, ts
-  # ts includes: Calendar Year, B, F, relF, relB, dep
-  retro_ts <- array(NA, dim = c(nyr + 1, ny + 1, 6))
-  retro_est <- array(NA, dim = c(nyr + 1, dim(summary(SD))))
+  # ts includes: F, F/FMSY, B, B/BMSY, B/B0
+  retro_ts <- array(NA, dim = c(nyr + 1, ny + 1, 5))
+  TS_var <- c("F", "F_FMSY", "B", "B_BMSY", "B_B0")
+  dimnames(retro_ts) <- list(Peel = 0:nyr, Year = Year, Var = TS_var)
+
+  retro_est <- array(NA, dim = c(nyr + 1, length(SD$par.fixed[names(SD$par.fixed) != "log_B_dev"]), 2))
+  dimnames(retro_est) <- list(Peel = 0:nyr, Var = names(SD$par.fixed)[names(SD$par.fixed) != "log_B_dev"],
+                              Value = c("Estimate", "Std. Error"))
 
   SD <- NULL
   rescale <- info$rescale
 
+  data_ret <- info$data
+  params_ret <- info$params
+
   for(i in 0:nyr) {
     ny_ret <- ny - i
-    data$ny <- ny_ret
-    data$C_hist <- C_hist[1:ny_ret]
-    data$I_hist <- I_hist[1:ny_ret]
+    data_ret$ny <- ny_ret
+    data_ret$C_hist <- info$data$C_hist[1:ny_ret]
+    data_ret$I_hist <- info$data$I_hist[1:ny_ret]
 
-    obj2 <- MakeADFun(data = data, parameters = params, map = map, DLL = "MSEtool", silent = TRUE)
+    map <- obj$env$map
+    if(state_space) {
+      data_ret$est_B_dev <- info$data$est_B_dev[1:ny_ret]
+      params_ret$log_B_dev <- rep(0, ny_ret)
+      map$log_B_dev <- obj$env$map$log_B_dev[1:ny_ret]
+    }
+
+    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = map, random = obj$env$random,
+                      DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
@@ -220,30 +229,31 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE
         fun_fixed <- c("log", NA, NA)
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
-	    B <- c(report$B, rep(NA, i))
-      B_BMSY <- B/report$BMSY
-      B_B0 <- B/report$K
 
       FMort <- c(report$F, rep(NA, 1 + i))
       F_FMSY <- FMort/report$FMSY
+      B <- c(report$B, rep(NA, i))
+      B_BMSY <- B/report$BMSY
+      B_B0 <- B/report$K
 
-      retro_ts[i+1, , ] <- cbind(Year, B, B_BMSY, B_B0, FMort, F_FMSY)
-      retro_est[i+1, , ] <- summary(SD)
+      retro_ts[i+1, , ] <- cbind(FMort, F_FMSY, B, B_BMSY, B_B0)
+
+      sumry <- summary(SD, "fixed")
+	  sumry <- sumry[rownames(sumry) != "log_B_dev", drop = FALSE]
+	  retro_est[i+1, , ] <- sumry
 
     } else {
-      message(paste("Non-convergence when", i, "years of data were removed."))
+      message("Non-convergence when peel = ", i, " (years of data removed).")
     }
 
   }
 
-  Mohn_rho <- calculate_Mohn_rho(retro_ts[, , -1], retro_est[, 3:4, 1], ts_lab = c("Biomass", "B_BMSY", "B_B0", "F", "F_FMSY"),
-                                 est_lab = c("FMSY estimate", "MSY estimate"))
+  retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
+               Est_var = dimnames(retro_est)[[2]], Est = retro_est)
+  attr(retro, "TS_lab") <- c("Fishing mortality", expression(F/F[MSY]), "Biomass", expression(B/B[MSY]), expression(B/B[0]))
 
-  if(figure) {
-    plot_retro_SP(retro_ts, retro_est, save_figure = save_figure, save_dir = save_dir, nyr_label = 0:nyr, color = rich.colors(nyr+1))
-  }
-
-  return(Mohn_rho)
+  if(figure) plot(retro)
+  return(retro)
 }
 
 plot_retro_SP <- function(retro_ts, retro_est, save_figure = FALSE,

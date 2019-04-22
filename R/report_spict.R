@@ -73,7 +73,7 @@ profile_likelihood_spict <- function(Assessment, figure = TRUE, save_figure = FA
 
 
 
-retrospective_spict <- function(Assessment, nyr, figure = TRUE, save_figure = FALSE, save_dir = tempdir()) {
+retrospective_spict <- function(Assessment, nyr, figure = TRUE) {
   stop("Retrospective analysis is currently not supported for spict in MSEtool, but is available in the spict package.", call. = FALSE)
 }
 

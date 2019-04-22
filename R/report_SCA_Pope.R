@@ -1,6 +1,6 @@
 
 summary_SCA_Pope <- function(Assessment) {
-  assign_Assessment_slots()
+  assign_Assessment_slots(Assessment)
 
   if(conv) current_status <- c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)], B_B0[length(B_B0)])
   else current_status <- c(NA, NA, B_B0[length(B_B0)])

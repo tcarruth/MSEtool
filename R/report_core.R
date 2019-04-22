@@ -81,7 +81,7 @@ retrospective <- function(Assessment, nyr = 5, figure = TRUE) {
   }
 
   f <- get(paste0('retrospective_', Assessment@Model))
-  f(Assessment, nyr)
+  f(Assessment, nyr, figure)
 }
 
 #' Compare output from several assessment models
@@ -178,7 +178,7 @@ match_R_years <- function(RR) {
 }
 
 
-report <- function(Assessment, retro = NULL, filename = paste0("report_", x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
+report <- function(Assessment, retro = NULL, filename = paste0("report_", Assessment@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
   name <- ifelse(nchar(Assessment@Name) > 0, Assessment@Name, substitute(Assessment))
 
   # Generate markdown report
@@ -191,9 +191,9 @@ report <- function(Assessment, retro = NULL, filename = paste0("report_", x@Mode
   }
   message("Writing markdown file: ", file.path(dir, filename_rmd))
 
-  if(x@Model == "SCA2") x@info$data$SR_type <- x@info$SR
-  f <- get(paste0("rmd_", x@Model))
-  rmd_model <- f(x)
+  if(Assessment@Model == "SCA2") Assessment@info$data$SR_type <- Assessment@info$SR
+  f <- get(paste0("rmd_", Assessment@Model))
+  rmd_model <- f(Assessment)
 
   if(!is.null(retro)) {
     rmd_ret <- c("## Retrospective\n",

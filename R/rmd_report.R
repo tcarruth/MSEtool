@@ -22,7 +22,7 @@ rmd_summary <- function(modname) {
   ans <- c(nametag,
            "## Summary Tables {.tabset}\n",
            "```{r}",
-           "  sx <- summary(x)[-1]",
+           "  sx <- summary(Assessment)[-1]",
            "  for(i in 1:length(sx)) {",
            "    dat <- as.data.frame(sx[[i]])",
            "    for(j in 1:ncol(dat)) if(nrow(dat) > 0 && is.numeric(dat[, j])) dat[, j] <- ifelse(dat[, j] > 1e3, round(dat[, j], 0), signif(dat[, j], 3))",
