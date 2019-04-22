@@ -4,19 +4,11 @@
 \name{retrospective}
 \alias{retrospective}
 \alias{retrospective,Assessment-method}
-\alias{plot,retro,missing-method}
-\alias{plot.retro}
-\alias{summary,retro-method}
-\alias{summary.retro}
 \title{Retrospective analysis of assessment models}
 \usage{
 retrospective(x, ...)
 
 \S4method{retrospective}{Assessment}(x, nyr = 5, figure = TRUE)
-
-\S4method{plot}{retro,missing}(x, color = NULL)
-
-\S4method{summary}{retro}(object)
 }
 \arguments{
 \item{x}{An S4 object of class \linkS4class{Assessment}.}

@@ -38,6 +38,7 @@ plotquant<-function(x,p=c(0.05,0.25,0.75,0.95),yrs,qcol,lcol,addline=T,ablines=N
 #' @param addline Logical. Should two individual simulations be added to the percentile plots?
 #' @author T.Carruthers
 #' @aliases plot,MMSE,missing-method
+#' @importFrom grDevices rgb
 #' @export
 setMethod("plot", signature(x = "MMSE", y = "missing"),
           function(x, maxcol = 6, qcol = rgb(0.4, 0.8, 0.95), lcol = "dodgerblue4",

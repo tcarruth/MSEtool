@@ -18,11 +18,11 @@ An S4 class that contains output from \link{retrospective}.
 \item{\code{TS_var}}{Character vector of time series variables, e.g. recruitment, biomass, from the assessment.}
 
 \item{\code{TS}}{An array of time series assessment output of dimension, indexed by: peel (the number of terminal years removed from the base assessment),
-years, and variables (corresponding to `TS_var`).}
+years, and variables (corresponding to \code{TS_var}).}
 
 \item{\code{Est_var}}{Character vector of estimated paramters, e.g. R0, steeppness, in the assessment.}
 
-\item{\code{Est}}{An array for estimated parameters of dimension, indexed by: peel, variables (corresponding to `Est_var`), and
+\item{\code{Est}}{An array for estimated parameters of dimension, indexed by: peel, variables (corresponding to \code{Est_var}), and
 value (length 2 for estimate and standard error).}
 }}
 

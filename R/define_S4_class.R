@@ -216,9 +216,9 @@ setMethod("retrospective", signature(x = "Assessment"),
 #' @slot Name Name of Data object.
 #' @slot TS_var Character vector of time series variables, e.g. recruitment, biomass, from the assessment.
 #' @slot TS An array of time series assessment output of dimension, indexed by: peel (the number of terminal years removed from the base assessment),
-#' years, and variables (corresponding to `TS_var`).
+#' years, and variables (corresponding to \code{TS_var}).
 #' @slot Est_var Character vector of estimated paramters, e.g. R0, steeppness, in the assessment.
-#' @slot Est An array for estimated parameters of dimension, indexed by: peel, variables (corresponding to `Est_var`), and
+#' @slot Est An array for estimated parameters of dimension, indexed by: peel, variables (corresponding to \code{Est_var}), and
 #' value (length 2 for estimate and standard error).
 #' @seealso \link{plot.retro} \link{summary.retro} \link{plot.Assessment}
 #' @author Q. Huynh
@@ -235,8 +235,22 @@ setMethod("plot", signature(x = "Assessment", y = "retro"),
             report(x, y, filename = filename, dir = dir, open_file = open_file, quiet = quiet, ...)
           })
 
-#' @rdname retrospective
+#' @name plot.retro
+#' @title Methods for retro object
+#' @description plot and summary functions for retro object.
+#' @param object An object of class \linkS4class{retro}.
+#' @param x An object of class \linkS4class{retro}.
+#' @param color An optional character vector of colors for plotting.
+#' @author Q. Huynh
 #' @aliases plot.retro plot,retro,missing-method
+#' @examples
+#' \donttest{
+#' res <- SCA(Data = DLMtool::Red_snapper)
+#' ret <- retrospective(res)
+#'
+#' plot(ret)
+#' summary(ret)
+#' }
 #' @exportMethod
 setMethod("plot", signature(x = "retro", y = "missing"),
           function(x, color = NULL) {
@@ -244,7 +258,7 @@ setMethod("plot", signature(x = "retro", y = "missing"),
             on.exit(par(old_par))
 
             retro <- x
-            if(is.null(color)) color <- rich.colors(dim(retro@TS)[1])
+            if(is.null(color) || length(color) != dim(retro@TS)[1]) color <- rich.colors(dim(retro@TS)[1])
             Year_matrix <- matrix(as.numeric(dimnames(retro@TS)$Year), ncol = length(color), nrow = dim(retro@TS)[2], byrow = FALSE)
             xlim <- range(as.numeric(dimnames(retro@TS)$Year))
             nyr_label <- dimnames(retro@TS)$Peel
@@ -268,7 +282,7 @@ setMethod("plot", signature(x = "retro", y = "missing"),
 
 setMethod("show", signature(object = "retro"), function(object) print(calculate_Mohn_rho(object@TS, ts_lab = attr(object, "TS_lab"))))
 
-#' @rdname retrospective
+#' @rdname plot.retro
 #' @aliases summary.retro summary,retro-method
 #' @exportMethod
 setMethod("summary", signature(object = "retro"), function(object) calculate_Mohn_rho(object@TS, ts_lab = attr(object, "TS_lab")))

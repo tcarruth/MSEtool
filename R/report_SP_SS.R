@@ -31,7 +31,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
 
     if(joint_profile) {
 	  map$log_MSY <- map$log_FMSY <- factor(NA)
-	} else { 
+	} else {
 	  if(profile_par == "MSY") map$log_MSY <- factor(NA) else map$log_FMSY <- factor(NA)
     }
 	obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, inner.control = Assessment@info$inner.control,
@@ -68,7 +68,7 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
 		msg <- "Joint profile likelihood of FMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate."
       } else {
         if(profile_par == "FMSY") xlab <- expression(F[MSY]) else xlab <- "MSY"
-        plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)		
+        plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
 		msg <- paste0("Profile likelihood of ", profile_par, ". Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
       }
       dev.off()
@@ -87,5 +87,5 @@ profile_likelihood_SP_SS <- function(Assessment, figure = TRUE, save_figure = TR
 
 
 #' @importFrom gplots rich.colors
-retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE) retrospective_SP(Assesssment, nyr, figure, TRUE)
+retrospective_SP_SS <- function(Assessment, nyr, figure = TRUE) retrospective_SP(Assessment, nyr, figure, TRUE)
 
