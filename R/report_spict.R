@@ -67,13 +67,13 @@ rmd_spict_yield_header <- function(header = NULL) {
 }
 
 
-profile_likelihood_spict <- function(Assessment, figure = TRUE, save_figure = FALSE, save_dir = tempdir(), ...) {
+profile_likelihood_spict <- function(Assessment, ...) {
   stop("Profiling currently not supported for spict in MSEtool.", call. = FALSE)
 }
 
 
 
-retrospective_spict <- function(Assessment, nyr, figure = TRUE) {
+retrospective_spict <- function(Assessment, nyr) {
   stop("Retrospective analysis is currently not supported for spict in MSEtool, but is available in the spict package.", call. = FALSE)
 }
 

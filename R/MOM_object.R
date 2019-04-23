@@ -151,7 +151,7 @@ setMethod("initialize", "MOM", function(.Object, Stocks=NULL, Fleets=NULL, Obs=N
 #' @param silent Logical. Should changes be printed to the console?
 #' @author T.Carruthers and A. Hordyk
 #' @keywords internal
-#' @exportMethod
+#' @exportMethod tinyErr
 setMethod("tinyErr", signature(x = "MOM"),
           function(x, obs = TRUE, imp = TRUE, proc = TRUE, grad = TRUE, silent = FALSE) {
             MOM <- x

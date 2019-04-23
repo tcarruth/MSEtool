@@ -91,93 +91,11 @@ rmd_SCA_Pope <- function(Assessment) {
   return(c(ss, LH_section, data_section, assess_fit, ts_output, productivity))
 }
 
-#' @importFrom reshape2 acast
-profile_likelihood_SCA_Pope <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
-  dots <- list(...)
-  if(!"R0" %in% names(dots) && !"h" %in% names(dots)) stop("Sequence of neither R0 nor h was found. See help file.")
-  if(!is.null(dots$R0)) R0 <- dots$R0 else {
-    R0 <- Assessment@R0
-    profile_par <- "h"
-  }
-  if(!is.null(dots$h)) h <- dots$h else {
-    h <- Assessment@h
-    profile_par <- "R0"
-  }
 
-  map <- Assessment@obj$env$map
-  params <- Assessment@info$params
-
-  profile_grid <- expand.grid(R0 = R0, h = h)
-  joint_profile <- !exists("profile_par")
-
-  profile_fn <- function(i, Assessment, params, map) {
-    params$log_R0 <- log(profile_grid[i, 1]  * Assessment@info$rescale)
-    if(Assessment@info$data$SR_type == "BH") {
-      params$transformed_h <- logit((profile_grid[i, 2] - 0.2)/0.8)
-    } else {
-      params$transformed_h <- log(profile_grid[i, 2] - 0.2)
-    }
-
-    if(joint_profile) {
-      map$log_R0 <- map$transformed_h <- factor(NA)
-    } else {
-      if(profile_par == "R0") map$log_R0 <- factor(NA) else map$transformed_h <- factor(NA)
-    }
-    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map,
-                      random = Assessment@obj$env$random, inner.control = Assessment@info$inner.control,
-                      DLL = "MSEtool", silent = TRUE)
-    opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
-    if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
-    return(nll)
-  }
-  nll <- vapply(1:nrow(profile_grid), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
-  profile_grid$nll <- nll
-
-  if(figure) {
-    R0.MLE <- Assessment@R0
-    h.MLE <- Assessment@h
-    if(joint_profile) {
-      z.mat <- acast(profile_grid, list("h", "R0"), value.var = "nll")
-      contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]), nlevels = 20)
-      points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
-    } else {
-      if(profile_par == "R0") xlab <- expression(R[0]) else xlab <- "h"
-      plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
-    }
-
-    if(save_figure) {
-      Model <- Assessment@Model
-      prepare_to_save_figure()
-
-      create_png(file.path(plot.dir, "profile_likelihood.png"))
-      if(joint_profile) {
-        z.mat <- acast(profile_grid, list("h", "R0"), value.var = "nll")
-        contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]), nlevels = 20)
-        points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
-        msg <- "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate."
-      } else {
-        if(profile_par == "R0") xlab <- expression(R[0]) else xlab <- "h"
-        plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
-        msg <- paste0("Profile likelihood of ", profile_par, ". Numbers indicate change in negative log-likelihood relative to the minimum.")
-
-      }
-      dev.off()
-
-      profile.file.caption <- c("profile_likelihood.png", msg)
-
-      html_report(plot.dir, model = "Stock Reduction Analysis (SRA)",
-                  captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Name, report_type = "Profile_Likelihood")
-      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
-    }
-  }
-  return(profile_grid)
-}
+profile_likelihood_SCA_Pope <- profile_likelihood_SCA
 
 
-
-
-retrospective_SCA_Pope <- function(Assessment, nyr, figure = TRUE) {
+retrospective_SCA_Pope <- function(Assessment, nyr) {
   assign_Assessment_slots(Assessment)
   n_y <- info$data$n_y
 
@@ -260,8 +178,7 @@ retrospective_SCA_Pope <- function(Assessment, nyr, figure = TRUE) {
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)
   attr(retro, "TS_lab") <- c("Harvest rate", expression(U/U[MSY]), "Spawning biomass", expression(SSB/SSB[MSY]), "Spawning depletion",
                              "Recruitment", "Vulnerable biomass")
-
-  if(figure) plot(retro)
+							 
   return(retro)
 }
 

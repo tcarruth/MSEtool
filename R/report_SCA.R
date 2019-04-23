@@ -104,8 +104,7 @@ rmd_SCA <- function(Assessment, SCA2 = FALSE) {
 }
 
 
-#' @importFrom reshape2 acast
-profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE, save_dir = tempdir(), ...) {
+profile_likelihood_SCA <- function(Assessment, ...) {
   dots <- list(...)
   if(!"R0" %in% names(dots) && !"h" %in% names(dots)) stop("Sequence of neither R0 nor h was found. See help file.")
   if(!is.null(dots$R0)) R0 <- dots$R0 else {
@@ -136,9 +135,8 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
     } else {
       if(profile_par == "R0") map$log_R0 <- factor(NA) else map$transformed_h <- factor(NA)
     }
-    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map,
-                      random = Assessment@obj$env$random, inner.control = Assessment@info$inner.control,
-                      DLL = "MSEtool", silent = TRUE)
+    obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random,
+                      inner.control = Assessment@info$inner.control, DLL = "MSEtool", silent = TRUE)
     opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
     if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
     return(nll)
@@ -146,49 +144,20 @@ profile_likelihood_SCA <- function(Assessment, figure = TRUE, save_figure = TRUE
   nll <- vapply(1:nrow(profile_grid), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
   profile_grid$nll <- nll
 
-  if(figure) {
-    R0.MLE <- Assessment@R0
-    h.MLE <- Assessment@h
-    if(joint_profile) {
-      z.mat <- acast(profile_grid, list("h", "R0"), value.var = "nll")
-      contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]), nlevels = 20)
-      points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
-    } else {
-      if(profile_par == "R0") xlab <- expression(R[0]) else xlab <- "h"
-      plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
-    }
-
-    if(save_figure) {
-      Model <- Assessment@Model
-      prepare_to_save_figure()
-
-      create_png(file.path(plot.dir, "profile_likelihood.png"))
-      if(joint_profile) {
-        z.mat <- acast(profile_grid, list("h", "R0"), value.var = "nll")
-        contour(x = h, y = R0, z = z.mat, xlab = "Steepness", ylab = expression(R[0]), nlevels = 20)
-        points(h.MLE, R0.MLE, col = "red", cex = 1.5, pch = 16)
-        msg <- "Joint profile likelihood of h and R0. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate."
-      } else {
-        if(profile_par == "R0") xlab <- expression(R[0]) else xlab <- "h"
-        plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
-        msg <- paste0("Profile likelihood of ", profile_par, ". Numbers indicate change in negative log-likelihood relative to the minimum.")
-
-      }
-      dev.off()
-
-      profile.file.caption <- c("profile_likelihood.png", msg)
-
-      html_report(plot.dir, model = "Statistical Catch-at-Age (SCA)",
-                  captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Name, report_type = "Profile_Likelihood")
-      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
-    }
+  if(joint_profile) {
+    pars <- c("R0", "h")
+    MLE <- vapply(pars, function(x, y) slot(y, x), y = Assessment, numeric(1))
+  } else {
+    pars <- profile_par
+    MLE <- slot(Assessment, pars)
   }
-  return(profile_grid)
+
+  output <- new("prof", Model = Assessment@Model, Name = Assessment@Name, Par = pars, MLE = MLE, grid = profile_grid)
+  return(output)
 }
 
 
-retrospective_SCA <- function(Assessment, nyr, figure = TRUE, SCA2 = FALSE) {
+retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
   assign_Assessment_slots(Assessment)
   n_y <- info$data$n_y
 
@@ -282,10 +251,51 @@ retrospective_SCA <- function(Assessment, nyr, figure = TRUE, SCA2 = FALSE) {
   attr(retro, "TS_lab") <- c("Fishing mortality", expression(F/F[MSY]), "Spawning biomass", expression(SSB/SSB[MSY]), "Spawning depletion",
                              "Recruitment", "Vulnerable biomass")
 
-  if(figure) plot(retro)
   return(retro)
 }
 
+
+summary_SCA2 <- function(Assessment) summary_SCA(Assessment, TRUE)
+
+rmd_SCA2 <- function(Assessment) rmd_SCA(Assessment, TRUE)
+
+
+profile_likelihood_SCA2 <- function(Assessment, ...) {
+  dots <- list(...)
+  if(!"meanR" %in% names(dots)) stop("Sequence of meanR was not found. See help file.")
+  meanR <- dots$meanR
+
+  params <- Assessment@info$params
+  map <- Assessment@obj$env$map
+  map$log_meanR <- factor(NA)
+
+  profile_fn <- function(i, Assessment, params, map) {
+
+    params$log_meanR <- log(meanR[i] * Assessment@info$rescale)
+    if(length(Assessment@opt$par) == 1) {
+      nll <- Assessment@obj$fn(params$log_meanR)
+    } else {
+
+      obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random,
+                        inner.control = Assessment@info$inner.control, DLL = "MSEtool", silent = TRUE)
+      opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
+      if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
+
+    }
+    return(nll)
+  }
+  nll <- vapply(1:length(meanR), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
+  profile_grid <- data.frame(meanR = meanR, nll = nll)
+
+  pars <- c("meanR")
+  MLE <- Assessment@SD$value["meanR"]
+
+  output <- new("prof", Model = Assessment@Model, Name = Assessment@Name, Par = pars, MLE = MLE, grid = profile_grid)
+  return(output)
+}
+
+
+retrospective_SCA2 <- function(Assessment, nyr) retrospective_SCA(Assessment, nyr, TRUE)
 
 
 plot_yield_SCA <- function(data, report, fmsy, msy, xaxis = c("F", "Biomass", "Depletion")) {

@@ -99,8 +99,7 @@ rmd_SP <- function(Assessment, state_space = FALSE) {
 
 
 
-#' @importFrom reshape2 acast
-profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE, save_dir = tempdir(), ...) {
+profile_likelihood_SP <- function(Assessment, ...) {
   dots <- list(...)
   if(!"FMSY" %in% names(dots) && !"MSY" %in% names(dots)) stop("Sequence of neither FMSY nor MSY was found. See help file.")
   if(!is.null(dots$FMSY)) FMSY <- dots$FMSY else {
@@ -125,8 +124,11 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
     if(joint_profile && length(Assessment@obj$par) == 2) {
       nll <- Assessment@obj$fn(x = c(params$log_FMSY, params$log_MSY))
     } else {
-      if(profile_par == "MSY") map$log_MSY <- factor(NA) else map$log_FMSY <- factor(NA)
-      obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, DLL = "MSEtool", silent = TRUE)
+      if(joint_profile) map$log_MSY <- map$log_FMSY <- factor(NA) else {
+        if(profile_par == "MSY") map$log_MSY <- factor(NA) else map$log_FMSY <- factor(NA)
+      }
+      obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map,
+                        random = Assessment@obj$env$random, DLL = "MSEtool", silent = TRUE)
       opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
       if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
     }
@@ -135,50 +137,22 @@ profile_likelihood_SP <- function(Assessment, figure = TRUE, save_figure = FALSE
   nll <- vapply(1:nrow(profile_grid), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
   profile_grid$nll <- nll
 
-  if(figure) {
-    FMSY.MLE <- Assessment@FMSY
-    MSY.MLE <- Assessment@MSY
-    if(joint_profile) {
-      z.mat <- acast(profile_grid, list("FMSY", "MSY"), value.var = "nll")
-      contour(x = FMSY, y = MSY, z = z.mat, xlab = expression(F[MSY]), ylab = "MSY", nlevels = 20)
-      points(FMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
-    } else {
-      if(profile_par == "FMSY") xlab <- expression(F[MSY]) else xlab <- "MSY"
-      plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
-    }
-
-    if(save_figure) {
-      Model <- Assessment@Model
-      prepare_to_save_figure()
-
-      create_png(file.path(plot.dir, "profile_likelihood.png"))
-      if(joint_profile) {
-        z.mat <- acast(profile_grid, list("FMSY", "MSY"), value.var = "nll")
-        contour(x = FMSY, y = MSY, z = z.mat, xlab = expression(F[MSY]), ylab = "MSY", nlevels = 20)
-        points(FMSY.MLE, MSY.MLE, col = "red", cex = 1.5, pch = 16)
-		msg <- "Joint profile likelihood of FMSY and MSY. Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate."
-      } else {
-        if(profile_par == "FMSY") xlab <- expression(F[MSY]) else xlab <- "MSY"
-        plot(getElement(profile_grid, profile_par), profile_grid$nll, xlab = xlab, ylab = "Change in neg. log-likeilhood value", typ = "o", pch = 16)
-		msg <- paste0("Profile likelihood of ", profile_par, ". Numbers indicate change in negative log-likelihood relative to the minimum. Red point indicates maximum likelihood estimate.")
-      }
-      dev.off()
-
-      profile.file.caption <- c("profile_likelihood.png", msg)
-
-      html_report(plot.dir, model = "Surplus Production", captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Name, report_type = "Profile_Likelihood")
-      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
-    }
+  if(joint_profile) {
+    pars <- c("FMSY", "MSY")
+    MLE <- vapply(pars, function(x, y) slot(y, x), y = Assessment, numeric(1))
+  } else {
+    pars <- profile_par
+    MLE <- slot(Assessment, pars)
   }
-  return(profile_grid)
+
+  output <- new("prof", Model = Assessment@Model, Name = Assessment@Name, Par = pars, MLE = MLE, grid = profile_grid)
+  return(output)
 }
 
 
 
 
-#' @importFrom gplots rich.colors
-retrospective_SP <- function(Assessment, nyr, figure = TRUE, state_space = FALSE) {
+retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
   assign_Assessment_slots(Assessment)
   ny <- info$data$ny
   Year <- info$Year
@@ -239,8 +213,8 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE, state_space = FALSE
       retro_ts[i+1, , ] <- cbind(FMort, F_FMSY, B, B_BMSY, B_B0)
 
       sumry <- summary(SD, "fixed")
-	  sumry <- sumry[rownames(sumry) != "log_B_dev", drop = FALSE]
-	  retro_est[i+1, , ] <- sumry
+      sumry <- sumry[rownames(sumry) != "log_B_dev", drop = FALSE]
+      retro_est[i+1, , ] <- sumry
 
     } else {
       message("Non-convergence when peel = ", i, " (years of data removed).")
@@ -252,71 +226,20 @@ retrospective_SP <- function(Assessment, nyr, figure = TRUE, state_space = FALSE
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)
   attr(retro, "TS_lab") <- c("Fishing mortality", expression(F/F[MSY]), "Biomass", expression(B/B[MSY]), expression(B/B[0]))
 
-  if(figure) plot(retro)
   return(retro)
 }
 
-plot_retro_SP <- function(retro_ts, retro_est, save_figure = FALSE,
-                          save_dir = tempdir(), nyr_label, color) {
-  n_tsplots <- dim(retro_ts)[3] - 1
-  ts_label <- c("Biomass", expression(B/B[MSY]), expression(B/B[0]), "Fishing mortality (F)", expression(F/F[MSY]))
-  Year <- retro_ts[1, , 1]
 
-  if(save_figure) {
-    Model <- "SP"
-    prepare_to_save_figure()
-  }
+summary_SP_SS <- function(Assessment) summary_SP(Assessment, TRUE)
 
-  for(i in 1:n_tsplots) {
-    y.max <- max(retro_ts[, , i+1], na.rm = TRUE)
-    plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i], ylim = c(0, 1.1 * y.max), col = color[1])
-    for(j in 2:length(nyr_label)) lines(Year, retro_ts[j, , i+1], col = color[j])
+rmd_SP_SS <- function(Assessment) rmd_SP(Assessment, TRUE)
 
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-    abline(h = 0, col = 'grey')
-    if(i %in% c(2, 5)) abline(h = 1, lty = 2)
+profile_likelihood_SP_SS <- profile_likelihood_SP
 
-    if(save_figure) {
-      create_png(filename = file.path(plot.dir, paste0("retrospective_", i, ".png")))
-      plot(Year, retro_ts[1, , i+1], typ = 'l', ylab = ts_label[i], ylim = c(0, 1.1 * y.max), col = color[1])
-      for(j in 2:length(nyr_label)) lines(Year, retro_ts[j, , i+1], col = color[j])
-      legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-      abline(h = 0, col = 'grey')
-      if(i %in% c(2, 5)) abline(h = 1, lty = 2)
-      dev.off()
-    }
-  }
+retrospective_SP_SS <- function(Assessment, nyr) retrospective_SP(Assessment, nyr, TRUE)
 
-  plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], logtransform = TRUE, label = expression(hat(F)[MSY]), color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 1, ".png")))
-    plot_lognormalvar(retro_est[, 1, 1], retro_est[, 1, 2], logtransform = TRUE, label = expression(hat(F)[MSY]), color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-    dev.off()
-  }
 
-  plot_lognormalvar(retro_est[, 2, 1], retro_est[, 2, 2], logtransform = TRUE, label = expression(widehat(MSY)), color = color)
-  legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-  if(save_figure) {
-    create_png(filename = file.path(plot.dir, paste0("retrospective_", n_tsplots + 2, ".png")))
-    plot_lognormalvar(retro_est[, 2, 1], retro_est[, 2, 2], logtransform = TRUE, label = expression(widehat(MSY)), color = color)
-    legend("topleft", legend = nyr_label, lwd = 1, col = color, bty = "n", title = "Years removed:")
-    dev.off()
-  }
 
-  if(save_figure) {
-    ret.file.caption <- data.frame(x1 = paste0("retrospective_", c(1:(n_tsplots+2)), ".png"),
-                                   x2 = paste0("Retrospective pattern in ",
-                                               c("biomass", "B/BMSY", "biomass depletion", "F", "F/FMSY", "FMSY estimate", "MSY estimate"), "."))
-
-    Assessment <- get("Assessment", envir = parent.frame())
-    html_report(plot.dir, model = "Surplus Production", captions = ret.file.caption, name = Assessment@Name, report_type = "Retrospective")
-    browseURL(file.path(plot.dir, "Retrospective.html"))
-  }
-
-  invisible()
-}
 
 
 plot_yield_SP <- function(data = NULL, report, fmsy, msy, xaxis = c("F", "Biomass", "Depletion"), relative_yaxis = FALSE) {
@@ -408,3 +331,17 @@ SP_production <- function(depletion, figure = TRUE) {
   }
   return(n_answer)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

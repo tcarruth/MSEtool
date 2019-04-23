@@ -117,33 +117,16 @@ profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE
   nll <- vapply(1:length(F_term), profile_fn, numeric(1), Assessment = Assessment, params = params, map = map) - Assessment@opt$objective
   profile_grid <- data.frame(F_term = F_term, nll = nll)
 
-  if(figure) {
-    plot(F_term, profile_grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
-    abline(v = Assessment@SD$value[names(Assessment@SD$value) == "F_term"], lty = 2)
+  pars <- "F_term"
+  MLE <- Assessment@SD$value["F_term"]
 
-    if(save_figure) {
-      Model <- Assessment@Model
-      prepare_to_save_figure()
-
-      create_png(file.path(plot.dir, "profile_likelihood.png"))
-      plot(F_term, profile_grid$nll, typ = 'o', pch = 16, xlab = "Terminal F", ylab = "Change in negative log-likelihood")
-      abline(v = Assessment@SD$value[names(Assessment@SD$value) == "F_term"], lty = 2)
-      dev.off()
-      profile.file.caption <- c("profile_likelihood.png",
-                                "Profile likelihood of terminal F. Vertical, dashed line indicates maximum likelihood estimate.")
-
-      html_report(plot.dir, model = "Virtual Population Analysis (VPA)",
-                  captions = matrix(profile.file.caption, nrow = 1),
-                  name = Assessment@Name, report_type = "Profile_Likelihood")
-      browseURL(file.path(plot.dir, "Profile_Likelihood.html"))
-    }
-  }
-  return(profile_grid)
+  output <- new("prof", Model = Assessment@Model, Name = Assessment@Name, Par = pars, MLE = MLE, grid = profile_grid)
+  return(output)
 }
 
 
 #' @importFrom gplots rich.colors
-retrospective_VPA <- function(Assessment, nyr, figure = TRUE) {
+retrospective_VPA <- function(Assessment, nyr) {
   assign_Assessment_slots(Assessment)
 
   n_y <- info$data$n_y
@@ -211,7 +194,6 @@ retrospective_VPA <- function(Assessment, nyr, figure = TRUE) {
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)
   attr(retro, "TS_lab") <- c("Apical fishing mortality", "Harvest rate", "Spawning biomass", "Recruitment", "Vulnerable biomass")
 
-  if(figure) plot(retro)
   return(retro)
 }
 

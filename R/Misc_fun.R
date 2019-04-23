@@ -46,7 +46,17 @@ get_sdreport <- function(obj, opt) {
   return(res)
 }
 
-# If there are fewer years of CAA/CAL than Year, add NAs to matrix
+# Call from inside generate_plots() and summary.Assessment
+assign_Assessment_slots <- function(Assessment = NULL) {
+  if(is.null(Assessment)) Assessment <- get("Assessment", envir = parent.frame(), inherits = FALSE)
+  Nslots <- length(slotNames(Assessment))
+  for(i in 1:Nslots) {
+    assign(slotNames(Assessment)[i], slot(Assessment, slotNames(Assessment)[i]), envir = parent.frame())
+  }
+  invisible()
+}
+
+# For SCA, if there are fewer years of CAA/CAL than Year, add NAs to matrix
 expand_comp_matrix <- function(Data, comp_type = c("CAA", "CAL")) {
   comp_type <- match.arg(comp_type)
   ny <- length(Data@Year)
