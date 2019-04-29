@@ -344,18 +344,18 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # Fleet parameters ============================================================================================================
   # Vulnerability --------------------------------------------
   ages <- growdat$Age
-  if(packageVersion("r4ss") >= 1.35) ages <- growdat$int_Age
+  if(is.null(ages) && packageVersion("r4ss") >= 1.35) ages <- growdat$int_Age
 
   cols <- match(ages, names(replist$Z_at_age))
 
   rows <- match(mainyrs, replist$Z_at_age$Year)
-  if(packageVersion("r4ss") >= 1.35) rows <- match(mainyrs, replist$Z_at_age$Yr)
+  if(all(is.na(rows)) && packageVersion("r4ss") >= 1.35) rows <- match(mainyrs, replist$Z_at_age$Yr)
 
   Z_at_age <- replist$Z_at_age[rows, ]
   M_at_age <- replist$M_at_age[rows, ]
 
   rows2 <- Z_at_age$Gender == 1 & Z_at_age$Bio_Pattern == 1
-  if(packageVersion("r4ss") >= 1.35) rows2 <- Z_at_age$Sex == 1 & Z_at_age$Bio_Pattern == 1
+  if((all(!rows2, na.rm = TRUE) | all(is.na(rows2))) && packageVersion("r4ss") >= 1.35) rows2 <- Z_at_age$Sex == 1 & Z_at_age$Bio_Pattern == 1
 
   F_at_age <- t(Z_at_age[rows2, cols] - M_at_age[rows2, cols])
   F_at_age[nrow(F_at_age), ] <- F_at_age[nrow(F_at_age) - 1, ] # assume F at maxage = F at maxage-1
@@ -432,7 +432,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
   # Observation model parameters ==============================================================================
   CSD <- replist$catch_error
-  if(packageVersion("r4ss") == 1.35) CSD <- replist$catch_se
+  if(all(is.na(CSD)) && packageVersion("r4ss") == 1.35) CSD <- replist$catch_se
   if(!all(is.na(CSD))) {
     OM@Cobs <- range(sqrt(exp(replist$catch_error^2) - 1), na.rm = TRUE)
     message("\nRange of error in catch (OM@Cobs) based on range of catch standard deviations: ",
