@@ -156,7 +156,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
 
       if(vulnerability == "logistic") params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul))
       if(vulnerability == "dome") {
-        params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(1/(max_age - Afull)), logit(0.5))
+        params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(0.1/(max_age - Afull)), logit(0.5))
       }
     }
   }
@@ -192,6 +192,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
     est_rec_dev[!is.na(est_rec_dev)] <- 1:n_est
     map$log_rec_dev <- factor(est_rec_dev)
   }
+  if(vulnerability == "dome") map$vul_par <- factor(c(1, 2, NA, 3))
 
   random <- NULL
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev")

@@ -1,3 +1,4 @@
+
 #' Statistical catch-at-age (SCA) model
 #'
 #' A generic statistical catch-at-age model (single fleet, single season) that uses catch, index, and catch-at-age composition
@@ -153,6 +154,9 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
                 control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
+
   max_age <- as.integer(min(max_age, Data@MaxAge))
   vulnerability <- match.arg(vulnerability)
   CAA_dist <- match.arg(CAA_dist)
@@ -304,7 +308,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
 
       if(vulnerability == "logistic") params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul))
       if(vulnerability == "dome") {
-        params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(1/(max_age - Afull)), logit(0.5))
+        params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(0.1/(max_age - Afull)), logit(0.5))
       }
     }
   }
@@ -355,6 +359,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     est_rec_dev[!is.na(est_rec_dev)] <- 1:n_est
     map$log_rec_dev <- factor(est_rec_dev)
   }
+  if(vulnerability == "dome") map$vul_par <- factor(c(1, 2, NA, 3))
 
   random <- NULL
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev")
