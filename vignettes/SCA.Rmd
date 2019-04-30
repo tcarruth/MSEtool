@@ -124,8 +124,8 @@ $$\log(Y_t) \sim N(\log[\hat{Y}_t], \omega^2).$$
 The likelihood of the observed index $I_t$, assuming a lognormal distribution, is
 $$\log(I_t) \sim N(\log[\hat{I}_t], \sigma^2)$$
 
-### Stock reduction analysis (SRA)
-A variant of the SCA is the SRA, which fixed the predicted catches to the observed catches and uses Pope's approximation to calculate the annual harvest rate in the midpoint of the year.
+### SCA with Pope's approximation (SCA_Pope)
+A variant of the SCA is the SCA_Pope function, which fixes the predicted catches to the observed catches and uses Pope's approximation to calculate the annual harvest rate in the midpoint of the year.
 
 The abundance at age is
 
