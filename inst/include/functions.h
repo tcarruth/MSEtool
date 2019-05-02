@@ -90,6 +90,15 @@ vector<Type> calc_NPR(Type F, vector<Type> vul, vector<Type> M, int max_age) {
   return NPR;
 }
 
+template<class Type>
+vector<Type> calc_NPR_U(Type U, vector<Type> vul, vector<Type> M, int max_age) {
+  vector<Type> NPR(max_age);
+  NPR(0) = 1.;
+  for(int a=1;a<max_age;a++) NPR(a) = NPR(a-1) * exp(-M(a-1)) * (1 - vul(a-1) * U);
+  NPR(max_age-1) /= 1 - exp(-M(max_age-1)) * (1 - vul(max_age-1) * U); // Plus-group
+  return NPR;
+}
+
 
 template<class Type>
 Type sum_EPR(vector<Type> NPR, vector<Type> weight, vector<Type> mat) {
@@ -344,16 +353,16 @@ Type cDD_F(Type U_start, Type C_hist, Type M, Type Winf, Type Kappa, Type wk, Ty
     BPRinf(tt) = cDD_BPR(F, M, wk, Kappa, Winf);
     Binf(tt) = BPRinf(tt) * R(tt);
     Ninf(tt) = R(tt)/Z_tt;
-	
+
 	Type Catch = B(tt) - Binf(tt) - (N(tt) - Ninf(tt)) * Kappa * Winf / (Z_tt + Kappa);
 	Catch *= 1 - exp(-Z_tt - Kappa);
-	Catch /= Z_tt + Kappa;		
+	Catch /= Z_tt + Kappa;
 	Catch += Binf(tt) + (N(tt) - Ninf(tt)) * Kappa * Winf / (Z_tt + Kappa);
 	Catch *= F;
-	
+
 	F *= C_hist/Catch;
 	if(i==nitF-1) Cpred(tt) = Catch;
   }
-  
+
   return F;
 }

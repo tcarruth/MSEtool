@@ -52,7 +52,7 @@
 
   ////// Equilibrium reference points and per-recruit quantities
   vector<Type> NPR_virgin(max_age);
-  NPR_virgin = calc_NPR(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
+  NPR_virgin = calc_NPR_U(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
 
   Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
 
@@ -98,7 +98,7 @@
 
   // Equilibrium quantities (leading into first year of model)
   vector<Type> NPR_equilibrium(max_age);
-  NPR_equilibrium = calc_NPR(U_equilibrium, vul, M, max_age);
+  NPR_equilibrium = calc_NPR_U(U_equilibrium, vul, M, max_age);
 
   Type EPR_eq = sum_EPR(NPR_equilibrium, weight, mat);
   Type R_eq;
@@ -130,7 +130,7 @@
   }
 
   // Loop over all other years
-  for(int y=0;y<n_y;y++) {	  							
+  for(int y=0;y<n_y;y++) {
     if(SR_type == "BH") {
       R(y+1) = BH_SR(E(y), h, R0, E0);
     } else {
@@ -141,10 +141,10 @@
       if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
     }
     N(y+1,0) = R(y+1);
-	
+
     U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
                             1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
-	
+
     for(int a=0;a<max_age;a++) {
       CAApred(y,a) = vul(a) * U(y) * N(y,a) * exp(-0.5 * M(a));
       CN(y) += CAApred(y,a);
