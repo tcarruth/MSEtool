@@ -1,7 +1,7 @@
 #' Continuous Delay-differential assessment model
 #'
 #' A catch and index-based assessment model. Compared to the discrete delay-difference (annual time-step in production and fishing), the
-#' the delay-differential model (cDD) is based on continuous recruitment and fishing mortality within a time-step. The continuous model works
+#' delay-differential model (cDD) is based on continuous recruitment and fishing mortality within a time-step. The continuous model works
 #' much better for populations with high turnover (e.g. high F or M, continuous reproduction). This model is conditioned on catch and fits
 #' to the observed index. In the state-space version (cDD_SS), recruitment deviations from the stock-recruit relationship are estimated.
 #'
@@ -12,7 +12,7 @@
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
-#' @param start Optional list of starting values. See details.
+#' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the assessment model.
 #' @param fix_F_equilibrium Logical, whether the equilibrium F prior to the first year of the model is
 #' estimated. If TRUE, F_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
@@ -22,7 +22,7 @@
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
-#' of the recruitment deviations (thus, treating it as a state-space variable).
+#' of the recruitment deviations (thus, treating it as a state-space variable). Otherwise, recruitment deviations are penalized parameters.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param n_itF Integer, the number of iterations to solve F conditional on the observed catch.
@@ -83,6 +83,8 @@ cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = 
                 control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
   SR <- match.arg(SR)
   Winf <- Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge
@@ -223,6 +225,8 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
                    control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
   SR <- match.arg(SR)
   Winf <- Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
   age <- 1:Data@MaxAge

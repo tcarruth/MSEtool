@@ -61,7 +61,7 @@ Output is re-converted back to original units.}
 
 \item{max_age}{Integer, the maximum age (plus-group) in the model.}
 
-\item{start}{Optional list of starting values. See details.}
+\item{start}{Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.}
 
 \item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the model for \code{SCA}. This only affects
 calculation of reference points for \code{SCA2}.}
@@ -89,7 +89,8 @@ By default, \code{"comp50"} uses the number of ages (smaller than the mode)
 for which the catch-at-age matrix has less than half the abundance than that at the mode.}
 
 \item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
-of the recruitment deviations (thus, treating it as a state-space variable).}
+of the recruitment deviations (thus, treating it as a random effects/state-space variable).
+Otherwise, recruitment deviations are penalized parameters.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}

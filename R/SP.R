@@ -12,7 +12,7 @@
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
-#' @param start Optional list of starting values. See details.
+#' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_dep Logical, whether to fix the initial depletion (ratio of biomass to carrying capacity in the
 #' first year of the model). If \code{TRUE}, uses the value in \code{start}, otherwise equal to 1
 #' (unfished conditions).
@@ -101,6 +101,8 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies = "Data@Cat, Data@Ind"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
   if(any(names(dots) == "yind")) {
     yind <- eval(dots$yind)
   } else {
@@ -207,6 +209,8 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
   early_dev <- match.arg(early_dev)
   if(any(names(dots) == "yind")) {
     yind <- eval(dots$yind)

@@ -17,7 +17,7 @@
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
-#' @param start Optional list of starting values. See details.
+#' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_Fratio Logical, whether the ratio of F of the plus-group to the previous age class is fixed in the model.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep}. This only affects
 #' calculation of reference points.
@@ -72,6 +72,8 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
                 control = list(iter.max = 2e5, eval.max = 4e5), ...) {
   dependencies <- "Data@Cat, Data@CAA, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
   vulnerability <- match.arg(vulnerability)
   SR <- match.arg(SR)
   I_type <- match.arg(I_type)

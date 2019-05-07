@@ -10,6 +10,8 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
                      control = list(iter.max = 2e5, eval.max = 4e5), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
+  start <- lapply(start, eval, envir = environment())
+
   max_age <- as.integer(min(c(max_age, Data@MaxAge)))
   vulnerability <- match.arg(vulnerability)
   CAA_dist <- match.arg(CAA_dist)

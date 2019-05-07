@@ -29,7 +29,7 @@ Otherwise, equals to 1 when running an assessment.}
 can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 Output is re-converted back to original units.}
 
-\item{start}{Optional list of starting values. See details.}
+\item{start}{Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.}
 
 \item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the assessment model.}
 
@@ -59,7 +59,8 @@ sigma is fixed to value provided in \code{start} (if provided), otherwise, value
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
 
 \item{integrate}{Logical, whether the likelihood of the model integrates over the likelihood
-of the recruitment deviations (thus, treating it as a state-space variable).}
+of the recruitment deviations (thus, treating it as a random effects/state-space variable).
+Otherwise, recruitment deviations are penalized parameters.}
 
 \item{inner.control}{A named list of arguments for optimization of the random effects, which
 is passed on to \code{\link[TMB]{newton}} via \code{\link[TMB]{MakeADFun}}.}

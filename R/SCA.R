@@ -23,7 +23,7 @@
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
 #' @param max_age Integer, the maximum age (plus-group) in the model.
-#' @param start Optional list of starting values. See details.
+#' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the model for \code{SCA}. This only affects
 #' calculation of reference points for \code{SCA2}.
 #' @param fix_F_equilibrium Logical, whether the equilibrium fishing mortality prior to the first year of the model
@@ -48,7 +48,8 @@
 #' By default, \code{"comp50"} uses the number of ages (smaller than the mode)
 #' for which the catch-at-age matrix has less than half the abundance than that at the mode.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
-#' of the recruitment deviations (thus, treating it as a state-space variable).
+#' of the recruitment deviations (thus, treating it as a random effects/state-space variable).
+#' Otherwise, recruitment deviations are penalized parameters.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param opt_hess Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
@@ -155,7 +156,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@L95, Data@CAA, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   start <- lapply(start, eval, envir = environment())
-
 
   max_age <- as.integer(min(max_age, Data@MaxAge))
   vulnerability <- match.arg(vulnerability)
