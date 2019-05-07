@@ -144,7 +144,7 @@
 #' }
 #' @author Q. Huynh
 #' @return An object of class \linkS4class{Assessment}.
-#' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+#' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
 SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial", "lognormal"),

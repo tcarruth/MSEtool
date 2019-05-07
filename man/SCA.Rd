@@ -218,7 +218,7 @@ Punt, A.E. and Kennedy, R.B. 1997. Population modelling of Tasmanian rock lobste
 Research 48:967-980.
 }
 \seealso{
-\link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+\link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 }
 \author{
 Q. Huynh

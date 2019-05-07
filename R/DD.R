@@ -84,7 +84,7 @@
 #' ### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
 #' res <- DD_SS(Data = Red_snapper, start = list(tau = 0.3))
 #' }
-#' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+#' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
 DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = FALSE,

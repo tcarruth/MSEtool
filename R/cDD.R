@@ -75,7 +75,7 @@
 #' ### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
 #' res <- cDD_SS(Data = Red_snapper, start = list(tau = 0.6))
 #' }
-#' @seealso \link{DD_TMB} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+#' @seealso \link{DD_TMB} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
 cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = FALSE,

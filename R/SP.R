@@ -87,7 +87,7 @@
 #' start <- list(dep = 0.875, n = 2)
 #' res <- SP(Data = swordfish, start = start)
 #' plot(res)
-#' profile_likelihood(res, FMSY = seq(0.1, 0.4, 0.01))
+#' profile(res, FMSY = seq(0.1, 0.4, 0.01))
 #' retrospective(res)
 #'
 #' #### State-space version
@@ -98,7 +98,7 @@
 #' #### Fox model
 #' res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
 #' }
-#' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+#' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool

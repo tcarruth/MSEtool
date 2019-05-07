@@ -123,7 +123,7 @@ res <- SP(Data = swordfish)
 start <- list(dep = 0.875, n = 2)
 res <- SP(Data = swordfish, start = start)
 plot(res)
-profile_likelihood(res, FMSY = seq(0.1, 0.4, 0.01))
+profile(res, FMSY = seq(0.1, 0.4, 0.01))
 retrospective(res)
 
 #### State-space version
@@ -147,7 +147,7 @@ Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model. In
 Prager, M. H. 1994. A suite of extensions to a nonequilibrium surplus-production model. Fishery Bulletin 92:374-389.
 }
 \seealso{
-\link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
+\link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 }
 \author{
 Q. Huynh
