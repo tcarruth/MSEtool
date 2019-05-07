@@ -7,7 +7,7 @@ For the new features described below, DLMtool version 5.3.1 is recommended.
 - The initial release for multi-fleet and multi-stock operating models and MSEs are released in this version, with `multiMSE` being the core function. The multiMSE vignette will be quite useful and can be accessed at `browseVignettes("MSEtool")`.
 
 ### Assessment models
-Quite a few additions and changes have been made to the Assessment models See the help manual and vignettes for descriptions of these new Assessment functions.
+Quite a few additions and changes have been made to the Assessment models. See the help manual and vignettes for descriptions of these new Assessment functions.
 - The continuous delay-differential model with deterministic and stochastic recruitment (`cDD` and `cDD_SS`, respectively) have been added as new Assessment models to the package. The continuous formulation should be more stable in high F situations.
 - A virtual population analysis `VPA` model has also been added to the package.
 - The surplus production model `SP` assumes continuous production and estimates continuous F's, similar to ASPIC. This formulation will be more stable in high F situations. The Fox model can be implemented by setting the production function exponent `n = 1`.

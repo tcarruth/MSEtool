@@ -47,53 +47,44 @@ pre { /* Code block */
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 knitr::opts_chunk$set(dpi=85)
 options(width = 650)
-library(MSEtool)
 ```
 
 <br>
 
-
+```{r, echo = FALSE, message = FALSE}
+library(MSEtool)
+```
 # Version Notes
 
 The package is subject to ongoing testing. If you find a bug or a problem please send a report to <t.carruthers@oceans.ubc.ca> so that it can be fixed!  
 
-## New additions to this version (1.0.0)
+## New additions to this version (1.2)
 
-* Assessment models (__Assess__ class functions)
-    * Statistical Catch at Age (`SCA` and `SCA2`)
-    * Delay Difference (`DD_TMB`)
-    * State-Space Delay Difference (`DD_SS`)
-    * Surplus Production (`SP`)
-    * State-Space Surplus Production (`SP_SS`)
+### multiMSE
+- The initial release for multi-fleet and multi-stock operating models and MSEs are released in this version, with `multiMSE` being the core function. The multiMSE vignette will be quite useful and can be accessed at `browseVignettes("MSEtool")`.
 
-* Visualization functions
-    * Standardized assessment reports (`plot` and `summary`)
-    * Diagnostics for assessment models (`profile_likelihood` and `retrospective`)
-    * Diagnostics for assessment models within closed-loop simulation (AM, assessment in MSE) (`prelim_AM`, `diagnostic_AM`, and `retrospective_AM`)
+### Assessment models
+Quite a few additions and changes have been made to the Assessment models. See the help manual and vignettes for descriptions of these new Assessment functions.
 
-* Other features 
-    * Harvest control rules (__HCR__ class functions: `HCR_MSY`, `HCR40_10`, and `HCR60_20`)
-    * `make_MP` function conveniently combines a __Assess__ and __HCR__ function to create a __MP__ function
-    * `simmov` function creates movement matrices for parameterizing multiple area operating models (age-independent)
-    * `iSCAM2OM` and `iSCAM2Data` functions import from iSCAM assessments. The MCMC outputs of iSCAM models are now used to characterise operating model uncertainty
-    * `SS2OM` and `SS2Data` functions import Stock Synthesis assessments using the r4ss package version 1.24.0 (latest CRAN version)
+- The continuous delay-differential model with deterministic and stochastic recruitment (`cDD` and `cDD_SS`, respectively) have been added as new Assessment models to the package. The continuous formulation should be more stable in high F situations.
+- A virtual population analysis `VPA` model has also been added to the package.
+- The surplus production model `SP` assumes continuous production and estimates continuous F's, similar to ASPIC. This formulation will be more stable in high F situations. The Fox model can be implemented by setting the production function exponent `n = 1`.
+- A wrapper function for `spict` (state-space surplus production model) has been written and is available in the `DLMextra` package (located on Github). While reporting functions are available in MSEtool, the output of the wrapper function can still be used with the diagnostic functions in the spict package.
+- `SCA` and `SCA2` estimate annual F's and include a likelihood function for the catch. In previous versions, `SCA` matched the predicted catch to observed catch. This feature has been transfered over to the `SCA_Pope` function.
+- Summary of assessment results can be obtained by the `plot` function which now generates a markdown report. This will be useful for diagnosing model fits and evaluating parameter estimates.
 
-## Coming soon 
-
-* More data-rich assessment models
-    * Virtual Population Analysis (VPA)
-    * Kalman filter assessment approximation
-
-* Stock projections for assessment models
-
-* Age-varying movement matrices for `simmov` to condition operating models
-
-* Multi-stock and multi-fleet operating models
+### Other minor edits and additions, including:
+- `profile` and `retrospective` functions for profiling the likelihood and retrospective analyses, respectively, of assessment models are now improved.
+- The `compare_models` function has been added to compare time series estimates, e.g. B/BMSY and F/FMSY, among different assessment models.
+- Manual starting values (the `start` argument) for parameters of assessment models can be expressions and subsequently evaluated in the assessment function. This can be very helpful when passing starting values in the `make_MP` function.
+- The `CASAL2OM` function can be used to generate an operating model from CASAL assessments.
+- The `SS2OM` and `SS2Data` functions are updated for the latest versions of r4ss on Github.
+- More options are provided to increase flexibility for ramped harvest control rules (`HCR_ramp`).
 
 # Introduction 
 MSEtool is an extension of the DLMtool package for implementing closed-loop simulation testing of management procedures, a process often referred to as management strategy evaluation (MSE). The components of the operating model for conducting MSEs for data-rich stocks is wholly contained within DLMtool, but MSEtool provides the tools for implementing additional features to facilitate such MSEs. Whereas DLMtool is primarily designed for testing data-limited management procedures, MSEtool provides an object-oriented framework for creating data-rich management procedures (MPs), which typically involve combining an assessment model with a harvest control rule to provide a fishery management recommendation. Management procedures created by MSEtool are designed to be used with the operating model of DLMtool through the `runMSE` function. 
 
-The user guide to the DLMtool package is accessible via
+The user guide to the DLMtool package is accessible via:
 
 ```{r, eval = FALSE}
 DLMtool::userguide()
@@ -153,11 +144,11 @@ summary(DD_result)
 plot(DD_result, save_figure = TRUE, save_dir = tempdir()) # By default, also saves figures in a temporary directory for viewing through a HTML browser. The directory can be changed to a user's filespace of choice.
 ```
 
-Two diagnostic functions are available: `retrospective` for retrospective analyses (re-running the model by sequentially removing terminal years of data) and `profile_likelihood` for profiling the likelihood function over a grid of parameters.
+Two diagnostic functions are available: `retrospective` for retrospective analyses (re-running the model by sequentially removing terminal years of data) and `profile` for profiling the likelihood function over a grid of parameters.
 
 ```{r, eval = FALSE}
 retrospective(DD_result, nyr = 5) # Retrospective analysis going back 5 years from current year
-profile_likelihood(DD_result, R0 = seq(0.75, 1.25, 0.025), h = seq(0.95, 1, 2.5e-3)) # Joint profile over grid of R0 and steepness
+profile(DD_result, R0 = seq(0.75, 1.25, 0.025), h = seq(0.95, 1, 2.5e-3)) # Joint profile over grid of R0 and steepness
 ```
 <img src="fig_assess/DD_profile.png" width=400>
 
