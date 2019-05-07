@@ -1,6 +1,7 @@
 #define TMB_LIB_INIT R_init_MSEtool
 #include <TMB.hpp>
 #include "../inst/include/functions.h"
+#include "../inst/include/SRA_scope_fn.h"
 
 template<class Type>
   Type objective_function<Type>::operator() ()
@@ -31,6 +32,8 @@ template<class Type>
     #include "../inst/include/cDD.h"
   } else if(model == "cDD_SS") {
 	#include "../inst/include/cDD_SS.h"
+  } else if(model == "SRA_scope") {
+	#include "../inst/include/SRA_scope.h"
   } else {
     error("No model found.");
   }
