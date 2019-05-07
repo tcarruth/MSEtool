@@ -47,5 +47,5 @@ diagnostic_AM(myMSE)
 
 }
 \seealso{
-\link{diagnostic_AM} \link{retrospective_AM}
+\link{HCR_ramp} \link{HCR_MSY} \link{diagnostic_AM} \link{retrospective_AM}
 }

@@ -19,7 +19,7 @@
 #' DD_MSY <- make_MP(DD_TMB, HCR_MSY)
 #' class(DD_MSY)
 #'
-#' # The same MP which fishes at 75\% of UMSY
+#' # The same MP which fishes at 75% of UMSY
 #' DD_75MSY <- make_MP(DD_TMB, HCR_MSY, MSY_frac = 0.75)
 #' class(DD_MSY)
 #'
@@ -93,8 +93,8 @@ class(HCR_MSY) <- "HCR"
 #' # An SCA with LRP and TRP at 0.4 and 0.8, respectively, of SSB/SSBMSY
 #' SCA_80_40 <- make_MP(SCA, HCR_ramp, LRP = 0.4, TRP = 0.8, RP_type = "SSB_SSBMSY")
 #'
-#' # A conservative HCR that fishes at 75\% of FMSY at B > 80\% BMSY but only reduces F
-#' # to 10\% of FMSY if B < 40\% BMSY.
+#' # A conservative HCR that fishes at 75% of FMSY at B > 80% BMSY but only reduces F
+#' # to 10% of FMSY if B < 40% BMSY.
 #' SCA_conservative <- make_MP(SCA, HCR_ramp, LRP = 0.4, TRP = 0.8, rel_max = 0.75,
 #' rel_min = 0.1, RP_type = "SSB_SSBMSY")
 #'

@@ -54,9 +54,13 @@
 #' @note The model uses the Fletcher (1978) formulation and is parameterized with FMSY and MSY as
 #' leading parameters. The default conditions assume unfished conditions in the first year of the time series
 #' and a symmetric production function (n = 2).
+#'
+#' Tip: to create the Fox model (Fox 1970), just fix n = 1. See example.
 #' @author Q. Huynh
 #' @references
 #' Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.
+#'
+#' Fox, W.W. 1970. An exponential surplus-yield model for optimizing exploited fish populations. Transactions of the American Fisheries Society 99:80–88.
 #'
 #' Pedersen, M. W. and Berg, C. W. 2017. A stochastic surplus production model in continuous time. Fish and Fisheries. 18:226-243.
 #'
@@ -90,6 +94,9 @@
 #' res <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1),
 #'              fix_tau = TRUE, fix_sigma = TRUE)
 #' plot(res)
+#'
+#' #### Fox model
+#' res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
 #' }
 #' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile_likelihood} \link{make_MP}
 #' @import TMB

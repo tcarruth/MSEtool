@@ -209,7 +209,7 @@ class(SP_4010) <- "MP"
 #' }
 #'
 #' @importFrom pryr make_function
-#' @seealso \link{diagnostic_AM} \link{retrospective_AM}
+#' @seealso \link{HCR_ramp} \link{HCR_MSY} \link{diagnostic_AM} \link{retrospective_AM}
 #' @export
 make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
   diagnostic <- match.arg(diagnostic)

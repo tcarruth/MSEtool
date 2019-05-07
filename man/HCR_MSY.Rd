@@ -28,7 +28,7 @@ product of current vulnerable biomass and UMSY.
 DD_MSY <- make_MP(DD_TMB, HCR_MSY)
 class(DD_MSY)
 
-# The same MP which fishes at 75\\\% of UMSY
+# The same MP which fishes at 75\% of UMSY
 DD_75MSY <- make_MP(DD_TMB, HCR_MSY, MSY_frac = 0.75)
 class(DD_MSY)
 
