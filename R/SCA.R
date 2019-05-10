@@ -6,8 +6,8 @@
 #' as deviations from the resulting stock-recruit relationship. In \code{SCA2}, the mean recruitment in the time series is estimated and
 #' recruitment deviations around this mean are estimated as penalized parameters (similar to Cadigan 2016). The standard deviation is set high
 #' so that the recruitment is almost like free parameters. Unfished and MSY reference points are inferred afterwards from the assessment output
-#' (SSB and recruitment estimates). \code{SCA_Pope} (stock reduction analysis) is a variant of \code{SCA} that fixes the expected catch to the observed
-#' catch, and Pope's approximation is used to calculate thh annual harvest rate (U).
+#' (SSB and recruitment estimates). \code{SCA_Pope} is a variant of \code{SCA} that fixes the expected catch to the observed
+#' catch, and Pope's approximation is used to calculate the annual harvest rate (U).
 #'
 #' @aliases SCA2 SCA_Pope
 #' @param x A position in the Data object (by default, equal to one for assessments).
@@ -112,7 +112,8 @@
 #' \code{a_50 = a_asc - exp(vul_par[2])}.
 #' \item \code{vul_par[3]}: \code{a_des}, the last age of full vulnerability (where the descending limb starts) via logit transformation
 #' to constrain between \code{a_asc} and \code{max_age},
-#' i.e., \code{a_des = (max_age - a_asc) * plogis(vul_par[3]) + a_asc}.
+#' i.e., \code{a_des = (max_age - a_asc) * plogis(vul_par[3]) + a_asc}. By default, fixed to a small value so that the dome is effectively
+#' a three-parameter function.
 #' \item \code{vul_par[4]}: \code{vul_max}, the vulnerability (in logit space) at the maximum age.
 #' }
 #' Vague priors of \code{vul_par[2] ~ N(0, sd = 3)} and \code{vul_par[3] ~ N(0, 3)} are used to aid convergence,
