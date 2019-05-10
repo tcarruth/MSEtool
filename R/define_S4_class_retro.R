@@ -8,6 +8,7 @@
 #' @param x An S4 object of class \linkS4class{Assessment}.
 #' @param nyr The maximum number of years to remove for the retrospective analysis.
 #' @param figure Indicates whether plots will be drawn.
+#' @param ... More arguments.
 #' @return A list with an array of model output and of model estimates from
 #' the retrospective analysis.
 #' @author Q. Huynh

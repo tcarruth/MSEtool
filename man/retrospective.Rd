@@ -13,6 +13,8 @@ retrospective(x, ...)
 \arguments{
 \item{x}{An S4 object of class \linkS4class{Assessment}.}
 
+\item{...}{More arguments.}
+
 \item{nyr}{The maximum number of years to remove for the retrospective analysis.}
 
 \item{figure}{Indicates whether plots will be drawn.}

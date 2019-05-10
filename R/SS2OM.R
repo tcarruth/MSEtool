@@ -21,7 +21,7 @@
 #' @note Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
 #' @details Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
 #' @return An object of class OM.
-#' @author T. Carruthers
+#' @author T. Carruthers and Q. Huynh
 #' @export
 #' @seealso \link{SS2Data}
 #' @importFrom stats acf
@@ -74,8 +74,8 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   mainyrs <- replist$startyr:replist$endyr
   OM@nyears <- nyears <- ceiling(length(mainyrs) / ifelse(season_as_years, nseas, 1))
 
-  seas1_yind_full <- expand.grid(nseas = 1:nseas, nyears = 1:nyears)
-  seas1_yind <- which(seas1_yind_full$nseas == 1)
+  seas1_yind_full <- expand.grid(nseas = 1:nseas, nyears = 1:nyears) # Convert assessment years to true years
+  seas1_yind <- which(seas1_yind_full$nseas == 1) # Assessment years that correspond to first season of a true year
 
   OM@maxF <- maxF
   OM@reps <- reps
@@ -99,9 +99,21 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   #Len_at_age <- aperm(Len_at_age, c(3, 1, 2))
   Len_age2 <- array(NA, dim = c(maxage, nsim, nyears+proyears))
   Len_age2[, , 1:nyears] <- Len_age
+
+  if(replist$growthvaries) {
+    message("Time-varying growth found.")
+    ages <- growdat$Age
+    if(is.null(ages) && packageVersion("r4ss") >= 1.35) ages <- growdat$int_Age
+
+    cols <- match(ages, names(replist$growthseries))
+    rows <- match(mainyrs[-length(mainyrs)], replist$growthseries$Yr)
+
+    hist_Len_age <- replist$growthseries[rows, cols]
+    for(i in 1:nsim) Len_age2[, i, 1:(nyears-1)] <- t(as.matrix(hist_Len_age))
+  }
   Len_age2[, , nyears + 1:proyears] <- Len_age2[, , nyears]
-  OM@cpars$Len_age <- aperm(Len_age2, c(2, 1, 3)) # dims = nsim, max_age, nyears+proyears
   message("Length-at-age found.")
+  OM@cpars$Len_age <- aperm(Len_age2, c(2, 1, 3)) # dims = nsim, max_age, nyears+proyears
 
   GP <- replist$Growth_Parameters   # Some growth parameters (presumably in endyr)
   if(nrow(GP)>1){
@@ -143,6 +155,11 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   OM@cpars$Wt_age <- aperm(Wt_age2, c(2, 1, 3)) # dims = nsim, max_age, nyears+proyears
   message("Weight-at-age found.")
 
+  OM@a <- GP$WtLen1[1]
+  OM@b <- GP$WtLen2[1]
+
+  if(replist$growthvaries) OM@cpars$Wt_age <- OM@a * OM@cpars$Len_age ^ OM@b
+
   # Maturity --------------------------------------
   if(min(growdat$Len_Mat < 1)) {                    # Condition to check for length-based maturity
     Mat <- growdat$Len_Mat/max(growdat$Len_Mat)
@@ -163,8 +180,6 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   L95 <- LinInterp(Mat, Len_age, 0.95)
   OM@L50_95 <- rep(L95-L50, 2)
 
-  OM@a <- GP$WtLen1[1]
-  OM@b <- GP$WtLen2[1]
 
   # M --------------------------------------
   M <- growdat$M
@@ -217,6 +232,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     hs <- rnorm(nsim, steep$Value, hs_sd)
     hs[hs < 0.2] <- 0.2
     hs[hs > 0.99] <- 0.99
+    message("Steepness sampled with range: ", paste(round(range(hs), 3), collapse = " - "))
   } else if(replist$SRRtype == 2) {
     SR <- "Ricker"
     OM@SRrel <- 2L
@@ -227,6 +243,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
     hs <- rnorm(nsim, steep$Value, hs_sd)
     hs[hs < 0.2] <- 0.2
+    message("Steepness sampled with range: ", paste(round(range(hs), 3), collapse = " - "))
   } else {
     message("Steepness value not found. Estimating steepness by re-sampling R and SSB estimates from assessment.\n")
     hs <- SRopt(nsim, SSB, rec, SpR0, plot = FALSE, type = SR)
@@ -434,9 +451,9 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   CSD <- replist$catch_error
   if(all(is.na(CSD)) && packageVersion("r4ss") == 1.35) CSD <- replist$catch_se
   if(!all(is.na(CSD))) {
-    OM@Cobs <- range(sqrt(exp(replist$catch_error^2) - 1), na.rm = TRUE)
+    OM@Cobs <- range(sqrt(exp(CSD[CSD > 0]^2) - 1), na.rm = TRUE)
     message("\nRange of error in catch (OM@Cobs) based on range of catch standard deviations: ",
-            paste(replist$catch_error[!is.na(replist$catch_error)], collapse = " "))
+            paste(CSD, collapse = " "))
   }
 
   # Index observations -------------------------------------------------------

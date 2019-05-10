@@ -52,5 +52,5 @@ Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Fun
 \link{SS2Data}
 }
 \author{
-T. Carruthers
+T. Carruthers and Q. Huynh
 }

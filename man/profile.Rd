@@ -3,6 +3,7 @@
 \docType{methods}
 \name{profile}
 \alias{profile}
+\alias{profile,Assessment-method}
 \alias{profile_likelihood}
 \title{Profile likelihood of assessment models}
 \usage{
@@ -46,8 +47,8 @@ output <- DD_TMB(Data = DLMtool::Red_snapper)
 pro <- profile(output, R0 = seq(0.75, 1.25, 0.025), h = seq(0.9, 0.99, 0.01))
 pro <- profile(output, R0 = seq(0.75, 1.25, 0.025)) # Profile R0 only
 
-# Ensure your grid is of proper resolution. A grid that is too coarse will likely distort the shape of
-# the likelihood surface.
+# Ensure your grid is of proper resolution. A grid that is too coarse
+# will likely distort the shape of the likelihood surface.
 }
 }
 \author{
