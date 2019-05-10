@@ -19,7 +19,9 @@
 #' @param Author Who did the assessment
 #' @param ... Arguments to pass to \link[r4ss]{SS_output}.
 #' @note Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
-#' @details Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
+#' @details The function generally uses values from the terminal year of the assessment for most life history parameters (maturity, M, etc). This function
+#' does detect time-varying growth in the assessment and uses annual length/weight-at-age for historical years.
+#' Selectivity is derived from the F-at-age matrix.
 #' @return An object of class OM.
 #' @author T. Carruthers and Q. Huynh
 #' @export

@@ -43,7 +43,9 @@ various slots of an operating model with MLE parameter estimates. The function m
 of the operating model; the user still needs to parameterize most of the observation and implementation portions of the operating model.
 }
 \details{
-Currently, the function uses values from the terminal year of the assessment for most life history parameters (growth, maturity, M, etc).
+The function generally uses values from the terminal year of the assessment for most life history parameters (maturity, M, etc). This function
+does detect time-varying growth in the assessment and uses annual length/weight-at-age for historical years.
+Selectivity is derived from the F-at-age matrix.
 }
 \note{
 Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.

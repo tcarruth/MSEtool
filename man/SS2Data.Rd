@@ -52,11 +52,11 @@ A function that uses the file location of a fitted SS3 model including input fil
 the various slots of an Data object.
 }
 \note{
-Currently supports the latest version of r4ss on CRAN (v.1.24) and Github (v.1.34). Function may be incompatible with other versions of r4ss.
+Currently supports the  version of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
 }
 \seealso{
 \link{SS2OM}
 }
 \author{
-T. Carruthers
+T. Carruthers and Q. Huynh
 }
