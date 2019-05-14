@@ -26,7 +26,7 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
     if(inherits(x, "OM")) {
       message("Generating Hist object from OM object via runMSE:")
       runHist <- runMSE(x, Hist = TRUE)
-      Data <- runHist$Data
+      Data <- runHist@Data
     } else
       if(inherits(x, "Data")) {
         Data <- x
