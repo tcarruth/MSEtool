@@ -10,7 +10,7 @@
 #' to generate potential depletion scenarios that could supported from sparse data.
 #'
 #' @param OM An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
-#' steepness, maturity parameters (L50 and L50_95), as well as catch/index uncertainty (Cobs, Iobs).
+#' steepness, maturity parameters (L50 and L50_95), recruitment variability (Perr), as well as catch/index uncertainty (Cobs, Iobs).
 #' @param Chist A vector of historical catch, should be of length OM@@nyears. Ideally, the first year of the catch series represents
 #' unfished conditions.
 #' @param Index A matrix of historical indices of abundances, with rows indexing years and columns indexing fleets.
