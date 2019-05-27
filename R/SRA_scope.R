@@ -212,18 +212,38 @@ SRA_scope <- function(OM, Chist, Index = NULL, CAA = NULL, CAL = NULL, ML = NULL
   U <- do.call(rbind, lapply(res, getElement, "U"))
   Find <- -log(1 - U)
   OM@cpars$Find <- Find
-  message("Historical F trends set in OM@cpars$Find.")
+
+  Eff <- apply(Find, 2, range)
+  OM@EffLower <- Eff[1, ]
+  OM@EffUpper <- Eff[2, ]
+  OM@EffYears <- 1:nyears
+
+  message("Historical effort trends set in OM@cpars$Find (also OM@EffLower and OM@EffUpper).")
 
   ### Rec devs
-  log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
-  log_early_rec_dev <- do.call(rbind, lapply(res, getElement, "log_early_rec_dev"))
-  message("Historical recruitment trends set in OM@cpars$Perr_y.")
 
   make_Perr <- function(x) exp(x$log_rec_dev - 0.5 * x$tau^2)
   Perr <- do.call(rbind, lapply(res, make_Perr))
+
+  make_early_Perr <- function(x) exp(x$log_early_rec_dev - 0.5 * x$tau^2)
+  early_Perr <- do.call(rbind, lapply(res, make_early_Perr))
+
   OM@cpars$Perr_y <- StockPars$Perr_y
-  OM@cpars$Perr_y[, 1:(OM@maxage - 1)] <- 1
+  OM@cpars$Perr_y[, 1:(OM@maxage - 1)] <- early_Perr
   OM@cpars$Perr_y[, OM@maxage:(OM@maxage + nyears - 1)] <- Perr
+
+  log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
+  log_early_rec_dev <- do.call(rbind, lapply(res, getElement, "log_early_rec_dev"))
+
+  OM@cpars$AC <- apply(log_rec_dev, 1, function(x) acf(x, lag.max = 1, plot = FALSE)$acf[2])
+  OM@AC <- range(OM@cpars$AC)
+
+  pro_Perr_y <- matrix(rnorm(proyears * nsim, rep(StockPars$procmu, proyears), rep(StockPars$procsd, proyears)),
+                       c(nsim, proyears))
+  for(y in 2:proyears) pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y - 1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
+  OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- exp(pro_Perr_y)
+
+  message("Historical recruitment trends set in OM@cpars$Perr_y.")
 
   ### Catch fits
   make_catch <- function(x, res, StockPars) {
