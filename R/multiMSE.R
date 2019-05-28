@@ -125,6 +125,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   allyears<-nyears+proyears
   Stocks<-MOM@Stocks
   Fleets<-MOM@Fleets
+  Obs<-MOM@Obs
+  Imps<-MOM@Imps
   Rel<-MOM@Rel
   SexPars<-MOM@SexPars
   Complexes<-MOM@Complexes
@@ -753,21 +755,21 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     if (!is.null(SampCpars[[p]][[f]][['hsim']])) {
       hsim <- SampCpars$hsim
       hbias <- hsim/hs  # back calculate the simulated bias
-      if (ObsPars[[p]][[f]]$hbiascv == 0) hbias <- rep(1, nsim)
+      if (Obs[[p]][[f]]@hbiascv == 0) hbias <- rep(1, nsim)
       ObsPars[[p]][[f]]$hbias <- hbias
 
     } else {
       if (is.null(SampCpars[[p]][[f]][['l_hbias']])) {
         hsim <- rep(NA, nsim)
         cond <- StockPars[[p]]$hs > 0.6
-        hsim[cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs > 0.6), alphaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8, (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * ObsPars[[p]][[f]]@hbiascv),
-                                  betaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8,  (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * ObsPars[[p]][[f]]@hbiascv)) * 0.8
+        hsim[cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs > 0.6), alphaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8, (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * Obs[[p]][[f]]@hbiascv),
+                                  betaconv((StockPars[[p]]$hs[cond] - 0.2)/0.8,  (1 - (StockPars[[p]]$hs[cond] - 0.2)/0.8) * Obs[[p]][[f]]@hbiascv)) * 0.8
 
-        hsim[!cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs <= 0.6), alphaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8,  (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * ObsPars[[p]][[f]]@hbiascv),
-                                   betaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8, (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * ObsPars[[p]][[f]]@hbiascv)) * 0.8
+        hsim[!cond] <- 0.2 + rbeta(sum(StockPars[[p]]$hs <= 0.6), alphaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8,  (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * Obs[[p]][[f]]@hbiascv),
+                                   betaconv((StockPars[[p]]$hs[!cond] - 0.2)/0.8, (StockPars[[p]]$hs[!cond] - 0.2)/0.8 * Obs[[p]][[f]]@hbiascv)) * 0.8
 
         hbias <- hsim/StockPars[[p]]$hs  # back calculate the simulated bias
-        if (ObsPars[[p]][[f]]@hbiascv == 0) hbias <- rep(1, nsim)
+        if (Obs[[p]][[f]]@hbiascv == 0) hbias <- rep(1, nsim)
         ObsPars[[p]][[f]]$hbias <- hbias
       } else {
         l_hbias <- sample(SampCpars[[p]][[f]]$l_hbias, nsim, replace=TRUE)
@@ -792,7 +794,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
     # --- Simulate observation error in BMSY/B0 ----
     ntest <- 20  # number of trials
-    BMSY_B0bias <- array(rlnorm(nsim * ntest, mconv(1, ObsPars[[p]][[f]]@BMSY_B0biascv), sdconv(1, ObsPars[[p]][[f]]@BMSY_B0biascv)), dim = c(nsim, ntest))  # trial samples of BMSY relative to unfished
+    BMSY_B0bias <- array(rlnorm(nsim * ntest, mconv(1, Obs[[p]][[f]]@BMSY_B0biascv), sdconv(1, Obs[[p]][[f]]@BMSY_B0biascv)), dim = c(nsim, ntest))  # trial samples of BMSY relative to unfished
     # test <- array(BMSY_B0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
     test <- array(StockPars[[p]]$SSBMSY_SSB0 * BMSY_B0bias, dim = c(nsim, ntest))  # the simulated observed BMSY_B0
     indy <- array(rep(1:ntest, each = nsim), c(nsim, ntest))  # index
