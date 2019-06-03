@@ -4,29 +4,6 @@ namespace SRA_scope {
 using namespace SCA;
 
 template<class Type>
-Type calc_q(vector<Type> I_y, vector<Type> B_y) {
-  Type num = 0.;
-  Type n_y = 0.;
-
-  for(int y=0;y<I_y.size();y++) {
-    if(!R_IsNA(asDouble(I_y(y))) && I_y(y)>0) {
-      num += log(I_y(y)/B_y(y));
-      n_y += 1.;
-    }
-  }
-  Type q = exp(num/n_y);
-  return q;
-}
-
-template<class Type>
-Type calc_q(matrix<Type> I_y, vector<Type> B_y, int ff) {
-  vector<Type> I_hist(B_y.size()-1);
-  for(int y=0;y<I_hist.size();y++) I_hist(y) = I_y(y,ff);
-
-  return calc_q(I_hist, B_y);
-}
-
-template<class Type>
 matrix<Type> generate_ALK(vector<Type> length_bin, matrix<Type> len_age, Type CV_LAA, int max_age, int nlbin, Type bin_width, int y) {
   matrix<Type> ALK(max_age, length_bin.size());
   for(int a=0;a<max_age;a++) {
@@ -43,7 +20,7 @@ matrix<Type> generate_ALK(vector<Type> length_bin, matrix<Type> len_age, Type CV
 }
 
 template<class Type>
-matrix<Type> calc_NPR(Type U, vector<Type> vul, int nlbin, matrix<Type> M, int max_age, matrix<Type> ALK, int y) {
+matrix<Type> calc_NPR0(int nlbin, matrix<Type> M, int max_age, matrix<Type> ALK, int y) {
   vector<Type> NPR(max_age);
   NPR.setZero();
   matrix<Type> NPR_full(max_age, nlbin);
@@ -51,16 +28,49 @@ matrix<Type> calc_NPR(Type U, vector<Type> vul, int nlbin, matrix<Type> M, int m
   NPR(0) = 1;
   for(int len=0;len<nlbin;len++) NPR_full(0,len) = NPR(0) * ALK(0,len);
   for(int a=1;a<max_age;a++) {
-	for(int len=0;len<nlbin;len++) NPR(a) += NPR_full(a-1,len) * exp(-M(y,a-1)) * (1 - vul(len) * U);
-	for(int len=0;len<nlbin;len++) NPR_full(a,len) = NPR(a) * ALK(a,len);
+    for(int len=0;len<nlbin;len++) NPR(a) += NPR_full(a-1,len) * exp(-M(y,a-1));
+    for(int len=0;len<nlbin;len++) NPR_full(a,len) = NPR(a) * ALK(a,len);
   }
   for(int len=0;len<nlbin;len++) {
-	NPR_full(max_age-1,len) /= 1 - exp(-M(y,max_age-1)) * (1 - vul(len) * U);
-	NPR(max_age-1) += NPR_full(max_age-1,len);
+    NPR_full(max_age-1,len) /= 1 - exp(-M(y,max_age-1));
+    NPR(max_age-1) += NPR_full(max_age-1,len);
   }
   return NPR_full;
 }
 
+
+template<class Type>
+matrix<Type> calc_NPR(vector<Type> F, vector<vector<Type> > vul, int nfleet, int nlbin, matrix<Type> M, int max_age, matrix<Type> ALK, int y) {
+  vector<Type> NPR(max_age);
+  NPR.setZero();
+  matrix<Type> NPR_full(max_age, nlbin);
+
+  NPR(0) = 1;
+  for(int len=0;len<nlbin;len++) NPR_full(0,len) = NPR(0) * ALK(0,len);
+  for(int a=1;a<max_age;a++) {
+    for(int len=0;len<nlbin;len++) {
+      Type Z_total = M(y,a-1);
+      for(int ff=0;ff<nfleet;ff++) Z_total += vul(ff)(len) * F(ff);
+      NPR(a) += NPR_full(a-1,len) * exp(-Z_total);
+    }
+    for(int len=0;len<nlbin;len++) NPR_full(a,len) = NPR(a) * ALK(a,len);
+  }
+
+  for(int len=0;len<nlbin;len++) {
+    Type Z_total = M(y,max_age-1);
+    for(int ff=0;ff<nfleet;ff++) Z_total += vul(ff)(len) * F(ff);
+    NPR_full(max_age-1,len) /= 1 - exp(-Z_total);
+    NPR(max_age-1) += NPR_full(max_age-1,len);
+  }
+  return NPR_full;
+}
+
+template<class Type>
+Type get_N_at_age(matrix<Type> NPR, int nlbin, int a) {
+  Type N = 0;
+  for(int len=0;len<nlbin;len++) N += NPR(a,len);
+  return N;
+}
 
 template<class Type>
 Type sum_EPR(matrix<Type> NPR, vector<Type> wt_at_len, matrix<Type> mat, int max_age, int nlbin, int y) {
@@ -73,9 +83,6 @@ Type sum_EPR(matrix<Type> NPR, vector<Type> wt_at_len, matrix<Type> mat, int max
 
 template<class Type>
 Type sum_BPR(matrix<Type> NPR, vector<Type> wt_at_len) {
-  //Type answer = 0.;
-  //for(int a=0;a<NPR.rows();a++) answer += NPR(a) * weight(y,a);
-  //return answer;
   Type BPR = (NPR * wt_at_len).sum();
   return BPR;
 }
@@ -87,20 +94,25 @@ Type sum_VBPR(matrix<Type> NPR, vector<Type> wt_at_len, vector<Type> vul, int ma
     for(int len=0;len<nlbin;len++) VBPR += NPR(a,len) * wt_at_len(len) * vul(len);
   }
   return VBPR;
-
-  //vector<Type> answer(nlbin);
-  //answer = NPR * wt_at_len;
-  //return (answer * vul).sum();
 }
 
 template<class Type>
-Type calc_C_eq(Type U, array<Type> N, vector<Type> vul, matrix<Type> M, vector<Type> wt_at_len, int nlbin, int max_age, int y) {
-  Type C_eq = 0;
+vector<Type> calc_C_eq(vector<Type> F, array<Type> N, vector<vector<Type> > vul, matrix<Type> M, vector<Type> wt_at_len, int nlbin,
+                       int nfleet, int max_age, int y) {
+  vector<Type> C_eq(nfleet);
+  C_eq.setZero();
   for(int a=0;a<max_age;a++) {
-    for(int len=0;len<nlbin;len++) C_eq += U * N(y,a,len) * exp(-0.5 * M(y,a)) * vul(len) * wt_at_len(len);
+    for(int len=0;len<nlbin;len++) {
+      Type Z_total = 0;
+      for(int ff=0;ff<nfleet;ff++) Z_total += vul(ff)(len) * F(ff) + M(y,a);
+      for(int ff=0;ff<nfleet;ff++) C_eq(ff) += vul(ff)(len) * F(ff) * N(y,a,len) * (1 - exp(-Z_total))/Z_total * wt_at_len(len);
+    }
   }
   return C_eq;
 }
+
+
+
 
 
 template<class Type>
@@ -159,5 +171,63 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int nlbin, vector<Type> len
   for(int len=0;len<nlbin;len++) vul(len) /= interim_vmax;
   return vul;
 }
+
+template<class Type>
+vector<vector<Type> > calc_vul(matrix<Type> vul_par, vector<int> vul_type, int nlbin, vector<Type> length_bin, Type &prior) {
+  vector<vector<Type> > vul(vul_type.size());
+
+  for(int ff=0;ff<vul_type.size();ff++) {
+    vector<Type> vul_par_ff(4);
+    vul_par_ff(0) = vul_par(0,ff);
+    vul_par_ff(1) = vul_par(1,ff);
+    vul_par_ff(2) = vul_par(2,ff);
+    vul_par_ff(3) = vul_par(3,ff);
+    if(vul_type(ff)) {
+      vul(ff) = calc_logistic_vul(vul_par_ff, nlbin, length_bin, prior);
+    } else {
+      vul(ff) = calc_dome_vul(vul_par_ff, nlbin, length_bin, prior);
+    }
+  }
+  return vul;
+}
+
+
+// Calculates analytical solution of catchability when conditioned on catch and
+// index is lognormally distributed.
+template<class Type>
+Type calc_q(matrix<Type> I_y, vector<Type> B_y, int sur, matrix<Type> &Ipred) {
+  Type num = 0.;
+  Type n_y = 0.;
+
+  for(int y=0;y<I_y.rows();y++) {
+    if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
+      num += log(I_y(y,sur)/B_y(y));
+      n_y += 1.;
+    }
+  }
+  Type q = exp(num/n_y);
+  for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q * B_y(y);
+  return q;
+}
+
+
+// Calculates analytical solution of catchability when conditioned on catch and
+// index is lognormally distributed.
+template<class Type>
+Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &Ipred) {
+  Type num = 0.;
+  Type n_y = 0.;
+
+  for(int y=0;y<I_y.size();y++) {
+    if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
+      num += log(I_y(y,sur)/B_y(y,ff));
+      n_y += 1.;
+    }
+  }
+  Type q = exp(num/n_y);
+  for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q * B_y(y,ff);
+  return q;
+}
+
 
 }

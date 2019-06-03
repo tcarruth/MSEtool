@@ -4,53 +4,94 @@
 \alias{SRA_scope}
 \title{Stock-reduction analysis (SRA) for conditioning operating models}
 \usage{
-SRA_scope(OM, Chist, Index = NULL, CAA = NULL, CAL = NULL,
-  ML = NULL, length_bin = NULL, I_type = NULL,
-  selectivity = c("logistic", "dome"), C_eq = 0, cores = 1L,
-  integrate = FALSE, figure = TRUE)
+SRA_scope(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL,
+  CAL = NULL, ML = NULL, length_bin = NULL, C_eq = 0,
+  ML_sd = NULL, selectivity = "logistic", I_type = NULL,
+  LWT = list(), ESS = c(30, 30), cores = 1L, integrate = FALSE,
+  figure = TRUE)
 }
 \arguments{
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
-steepness, maturity parameters (L50 and L50_95), recruitment variability (Perr), as well as catch/index uncertainty (Cobs, Iobs).}
+steepness, maturity parameters (L50 and L50_95), standard deviation of recruitment variability (Perr), as well as index uncertainty (Iobs).}
 
-\item{Chist}{A vector of historical catch, should be of length OM@nyears. Ideally, the first year of the catch series represents
-unfished conditions.}
+\item{Chist}{A vector of historical catch, should be of length OM@nyears. If there are multiple fleets: a matrix of OM@nyears rows and nfleet columns.
+Ideally, the first year of the catch series represents unfished conditions (see also \code{C_eq}).}
 
-\item{Index}{A matrix of historical indices of abundances, with rows indexing years and columns indexing fleets.}
+\item{Index}{A vector of values of an index (of length OM@nyears). If there are multiple surveys: a matrix of historical indices of abundances, with rows
+indexing years and columns indexing surveys.}
 
-\item{CAA}{Age compositions with nyears rows and OM@maxage columns.}
+\item{I_sd}{A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
+If NULL, this function will use values from OM@Iobs.}
 
-\item{CAL}{Length compositions with nyears rows and columns index the length bin.}
+\item{CAA}{Age composition matrix with nyears rows and OM@maxage columns. If multiple fleets: an array with dimension: nyears, OM@maxage, and nfleets.}
 
-\item{ML}{A vector of mean length observations (length OM@nyears).}
+\item{CAL}{Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
+length bins, and nfleets.}
 
-\item{length_bin}{A vector for the midpoints of the length bins in \code{CAL}. All length bin widths should be equal in size.}
+\item{ML}{A vector of mean length observations (length OM@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets.}
 
-\item{I_type}{A character vector of length \code{nrow(Index)} to indicate the type of biomass for which the index follows. Either \code{"B"} for
-total biomass, \code{"SSB"} for spawning biomass, or \code{"VB"} for vulnerable biomass. If \code{NULL}, "B" is used.}
+\item{length_bin}{A vector for the midpoints of the length bins for \code{CAL}. All length bin widths should be equal in size.}
 
-\item{selectivity}{Whether to use logistic or dome selectivity in the stock-reduction analysis.}
+\item{C_eq}{A numeric vector of length nfleet for the equilibrium catch for each fleet in \code{Chist} prior to the first year of the operating model.
+Zero implies unfished conditions in year one. Otherwise, this is used would estimate depletion in the first year of the data.}
 
-\item{C_eq}{Equilibrium catch prior to the first year of the operating model. Zero implies unfished conditions in year one. Otherwise, this is used
-would estimate depletion in year one.}
+\item{ML_sd}{The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets,. If \code{NULL}, default
+value is 0.1.}
 
-\item{cores}{Integer for the number of cores for the stock-reduction analysis.}
+\item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
+
+\item{I_type}{A character vector (length nsurvey) to indicate the type of biomass for which each index follows. Either \code{"B"} for
+total biomass, or \code{"SSB"} for spawning biomass. If \code{NULL}, "B" is used. Use numbers if the index corresponds to a fleet in \code{Chist}.}
+
+\item{LWT}{A named list of likelihood weights for the SRA model. See details.}
+
+\item{ESS}{A numeric vector of length two for the maximum effective samples size of the age and length compositions, respectively for the
+multinomial likelihood function. The annual sample size of an age or length composition sample is the minimum of ESS or the number of observations.}
+
+\item{cores}{Integer for the number of CPU cores for the stock reduction analysis.}
 
 \item{integrate}{Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).}
 
 \item{figure}{Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).}
 }
+\value{
+A named list containing the following:
+(1) "OM" - an updated operating model with depletion, F, selectivity, and recruitment deviations from the SRA fits.
+(2) "output" - A list of output, e.g. spawning biomass and predicted catch at age, from the SRA fits:
+\itemize{
+\item SSB - A matrix of \code{OM@nsim} rows and \code{OM@nyears+1} columns for estimated spawning biomass
+\item N - An array of dimension nsim, nyears+1, maxage for estimated abundance by simulation, year, and age.
+\item CAA - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at age by simulation, year, age, and fleet.
+\item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
+\item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
+}
+
+If \code{figure = TRUE}, a set of diagnostic plots for the fits to the SRA for each simulation as well histograms of operating model parameters,
+e.g., depletion.
+}
 \description{
 Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch, and potentially
 age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
-unfished recruitment (R0), historical fishing effort, and recruitment deviations. This is done by sampling life history parameters
-from an operating model provided by the user and fitting to the data in a statistical catch-at-age model. This function is intended
-to generate potential depletion scenarios that could supported from sparse data.
+unfished recruitment (R0), historical fishing effort, and recruitment deviations for the operating model. This is done by sampling life history parameters
+provided by the user and fitting to the data in a statistical catch-at-age model (with the predicted catch equal to the observed catch).
+This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data.
 }
 \details{
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
-Selectivity is fixed if no age or length compositions are provided.
+Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
+
+\code{LWT} is a named list containing the likelihood weights with the possible options:
+\itemize{
+\item Chist: A vector of length nfleet.
+\item Index: A vector of length nsurvey.
+\item CAA, CAL, ML, C_eq: A vector of length nfleet for each.
+}
+By default, all likelihood weights are equal to one if not specified by the user. Likelihood weights can also be adjusted by changing the
+sample size for CAA and CAL. See argument \code{ESS}.
 }
 \note{
 If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
+}
+\author{
+Q. Huynh
 }
