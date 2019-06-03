@@ -7,7 +7,8 @@
 #' age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
 #' unfished recruitment (R0), historical fishing effort, and recruitment deviations for the operating model. This is done by sampling life history parameters
 #' provided by the user and fitting to the data in a statistical catch-at-age model (with the predicted catch equal to the observed catch).
-#' This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data.
+#' This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data. A full catch time series
+#' is needed but missing data (as NAs) are allowed for all other data types.
 #'
 #' @param OM An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
 #' steepness, maturity parameters (L50 and L50_95), standard deviation of recruitment variability (Perr), as well as index uncertainty (Iobs).
@@ -473,7 +474,7 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   CAL_pred2 <- array(unlist(CAL_pred), c(nyears, length(length_bin), nfleet, nsim))
 
   output <- list(SSB = E, N = aperm(N_age2, c(3, 1, 2)),
-                 CAA_pred = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL_pred = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
+                 CAA = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
 
   ### Generate figures
   if(figure) {
@@ -491,21 +492,21 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
     hist(OM@cpars$D, main = "", xlab = "Depletion")
 
     # Perr
-    matplot(t(Perr), typ = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
+    matplot(t(Perr), type = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
     abline(h = 0, col = "grey")
 
     # Find
-    matplot(t(OM@cpars$Find), typ = "l", col = "black", xlab = "Year", ylab = "Apical F")
+    matplot(t(OM@cpars$Find), type = "l", col = "black", xlab = "Year", ylab = "Apical F")
     abline(h = 0, col = "grey")
 
     # Selectivity
     if(nfleet == 1) {
       vul <- do.call(cbind, lapply(res, getElement, "vul"))
-      matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, typ = "l", col = "black",
+      matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = "l", col = "black",
               xlab = "Length", ylab = "Selectivity", ylim = c(0, 1.1))
       abline(h = 0, col = "grey")
     } else {
-      matplot(matrix(1:maxage, ncol = nsim, nrow = maxage), t(OM@cpars$V[, , nyears]), typ = "l", col = "black",
+      matplot(matrix(1:maxage, ncol = nsim, nrow = maxage), t(OM@cpars$V[, , nyears]), type = "l", col = "black",
               xlab = "Age", ylab = "Selectivity (last historical year)", ylim = c(0, 1.1))
       abline(h = 0, col = "grey")
     }
@@ -517,31 +518,31 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
       par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
       # Selectivity
       vul_ff <- do.call(cbind, lapply(res, function(x) x$vul[, ff]))
-      matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, typ = "l", col = "black",
+      matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, type = "l", col = "black",
               xlab = "Length", ylab = paste("Selectivity of Fleet", ff))
       abline(h = 0, col = "grey")
 
       # Find
       FM <- do.call(cbind, lapply(res, function(x) x$F[, ff]))
-      matplot(FM, typ = "l", col = "black", xlab = "Year", ylab = paste("Fishing Mortality of Fleet", ff))
+      matplot(FM, type = "l", col = "black", xlab = "Year", ylab = paste("Fishing Mortality of Fleet", ff))
       abline(h = 0, col = "grey")
 
       # Sampled catches
       Cpred <- do.call(cbind, lapply(res, function(x) x$Cpred[, ff]))
-      matplot(Cpred, typ = "l", col = "black", xlab = "Year", ylab = paste("Catch of Fleet", ff))
+      matplot(Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Catch of Fleet", ff))
       lines(Chist[, ff], col = "red", lwd = 3)
       abline(h = 0, col = "grey")
 
       # ML fits
       MLpred <- do.call(cbind, lapply(res, function(x) x$mlen_pred[, ff]))
-      matplot(MLpred, typ = "l", col = "black", xlab = "Year", ylab = "Mean length")
+      matplot(MLpred, type = "l", col = "black", xlab = "Year", ylab = "Mean length")
       if(!all(is.na(CAL))) {
         lines(CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", lwd = 3)
       } else if(!all(is.na(ML))) lines(ML, col = "red", lwd = 3)
 
       # MA fits
       MApred <- do.call(cbind, lapply(res, function(x) x$CAApred[, , ff] %*% 1:maxage/x$CN[, ff]))
-      matplot(MApred, typ = "l", col = "black", xlab = "Year", ylab = "Mean age")
+      matplot(MApred, type = "l", col = "black", xlab = "Year", ylab = "Mean age")
       if(!all(is.na(CAA))) lines(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3)
 
       mtext(paste0("Fleet ", ff, ": observed (red) and predicted data (black) \nfrom SRA"), outer = TRUE, side = 3)
@@ -552,14 +553,14 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
 
       for(sur in 1:nsurvey) {
         Ipred <- do.call(cbind, lapply(res, function(x) x$Ipred[, sur]))
-        matplot(Ipred, typ = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
+        matplot(Ipred, type = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
         lines(Index[, sur], col = "red", lwd = 3)
         abline(h = 0, col = "grey")
       }
     } else {
       par(mfrow = c(1, 1))
       E <- do.call(cbind, lapply(res, getElement, "E"))
-      matplot(E, typ = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
+      matplot(E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
       abline(h = 0, col = "grey")
     }
 

@@ -74,7 +74,8 @@ Intended for conditioning operating models for data-limited stocks. From a histo
 age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
 unfished recruitment (R0), historical fishing effort, and recruitment deviations for the operating model. This is done by sampling life history parameters
 provided by the user and fitting to the data in a statistical catch-at-age model (with the predicted catch equal to the observed catch).
-This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data.
+This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data. A full catch time series
+is needed but missing data (as NAs) are allowed for all other data types.
 }
 \details{
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
