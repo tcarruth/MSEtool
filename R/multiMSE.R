@@ -931,7 +931,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
     Data@Misc <- list()
     HistData <- list(StockPars=StockPars, FleetPars=FleetPars, ObsPars=ObsPars, ImpPars=ImpPars,
                      TSdata=TSdata, AtAge=AtAge, Stocks=Stocks, Fleets=Fleets, Obs=Obs, Imps=Imps,
-                     Data=Data)
+                     Data=DataList)
     return(HistData)
   }
 
