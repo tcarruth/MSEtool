@@ -1,11 +1,28 @@
 
+namespace SRA_scope {
+
+using namespace SCA;
+
+template<class Type>
+Type calc_q(vector<Type> I_y, vector<Type> B_y) {
+  Type num = 0.;
+  Type n_y = 0.;
+
+  for(int y=0;y<I_y.size();y++) {
+    if(!R_IsNA(asDouble(I_y(y))) && I_y(y)>0) {
+      num += log(I_y(y)/B_y(y));
+      n_y += 1.;
+    }
+  }
+  Type q = exp(num/n_y);
+  return q;
+}
 
 template<class Type>
 Type calc_q(matrix<Type> I_y, vector<Type> B_y, int ff) {
-  
   vector<Type> I_hist(B_y.size()-1);
   for(int y=0;y<I_hist.size();y++) I_hist(y) = I_y(y,ff);
-  
+
   return calc_q(I_hist, B_y);
 }
 
@@ -30,7 +47,7 @@ matrix<Type> calc_NPR(Type U, vector<Type> vul, int nlbin, matrix<Type> M, int m
   vector<Type> NPR(max_age);
   NPR.setZero();
   matrix<Type> NPR_full(max_age, nlbin);
-  
+
   NPR(0) = 1;
   for(int len=0;len<nlbin;len++) NPR_full(0,len) = NPR(0) * ALK(0,len);
   for(int a=1;a<max_age;a++) {
@@ -41,7 +58,7 @@ matrix<Type> calc_NPR(Type U, vector<Type> vul, int nlbin, matrix<Type> M, int m
 	NPR_full(max_age-1,len) /= 1 - exp(-M(y,max_age-1)) * (1 - vul(len) * U);
 	NPR(max_age-1) += NPR_full(max_age-1,len);
   }
-  return NPR_full;  
+  return NPR_full;
 }
 
 
@@ -70,7 +87,7 @@ Type sum_VBPR(matrix<Type> NPR, vector<Type> wt_at_len, vector<Type> vul, int ma
     for(int len=0;len<nlbin;len++) VBPR += NPR(a,len) * wt_at_len(len) * vul(len);
   }
   return VBPR;
-  
+
   //vector<Type> answer(nlbin);
   //answer = NPR * wt_at_len;
   //return (answer * vul).sum();
@@ -80,16 +97,16 @@ template<class Type>
 Type calc_C_eq(Type U, array<Type> N, vector<Type> vul, matrix<Type> M, vector<Type> wt_at_len, int nlbin, int max_age, int y) {
   Type C_eq = 0;
   for(int a=0;a<max_age;a++) {
-    for(int len=0;len<nlbin;len++) C_eq += U * N(y,a,len) * exp(0.5 * M(y,a)) * vul(len) * wt_at_len(len);
+    for(int len=0;len<nlbin;len++) C_eq += U * N(y,a,len) * exp(-0.5 * M(y,a)) * vul(len) * wt_at_len(len);
   }
-  return C_eq;  
+  return C_eq;
 }
 
 
 template<class Type>
 vector<Type> calc_dome_vul(vector<Type> vul_par, int nlbin, vector<Type> length_bin, Type &prior) {
   vector<Type> vul(nlbin);
-  
+
   Type max_lenbin = length_bin(length_bin.size()-1);
 
   Type len_full = invlogit(vul_par(0)) * 0.75 * max_lenbin;
@@ -141,4 +158,6 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int nlbin, vector<Type> len
   Type interim_vmax = max(vul);
   for(int len=0;len<nlbin;len++) vul(len) /= interim_vmax;
   return vul;
+}
+
 }

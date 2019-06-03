@@ -1,17 +1,16 @@
 #define TMB_LIB_INIT R_init_MSEtool
 #include <TMB.hpp>
 #include "../inst/include/functions.h"
-#include "../inst/include/SRA_scope_fn.h"
 
 template<class Type>
-  Type objective_function<Type>::operator() ()
+Type objective_function<Type>::operator() ()
 {
   DATA_STRING(model);
 
   if(model == "DD") {
     #include "../inst/include/DD.h"
   } else if(model == "DD_SS") {
-	#include "../inst/include/DD_SS.h"
+	  #include "../inst/include/DD_SS.h"
   } else if(model =="SP") {
     #include "../inst/include/SP.h"
   } else if(model == "SP_SS") {
@@ -31,12 +30,12 @@ template<class Type>
   } else if(model == "cDD") {
     #include "../inst/include/cDD.h"
   } else if(model == "cDD_SS") {
-	#include "../inst/include/cDD_SS.h"
+	  #include "../inst/include/cDD_SS.h"
   } else if(model == "SRA_scope") {
-	#include "../inst/include/SRA_scope.h"
+	  #include "../inst/include/SRA_scope.h"
   } else {
     error("No model found.");
   }
-						  
+
   return 0;
 }

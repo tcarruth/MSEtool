@@ -2,6 +2,8 @@
 //template<class Type>
 //Type objective_function<Type>::operator() ()
 //{
+  using namespace VPA;
+
   DATA_VECTOR(I_hist);         // Index
   DATA_MATRIX(CAA_hist);       // Catch-at-age proportions
   DATA_INTEGER(n_y);           // Number of years in model

@@ -2,7 +2,6 @@
 //template<class Type>
 //Type objective_function<Type>::operator() ()
 //{
-  using namespace density;
 
   DATA_SCALAR(S0);
   DATA_SCALAR(Alpha);
@@ -66,10 +65,11 @@
   Type SprEq = (Seq * Alpha/(1 - Seq) + wk)/(1 - Rho * Seq);
   Type Req;
   if(SR_type == "BH") {
-    Req = (Arec * SprEq * (1 - U_equilibrium) - 1)/(Brec * SprEq * (1 - U_equilibrium));
+    Req = Arec * SprEq - 1;
   } else {
-    Req = log(Arec * SprEq * (1 - U_equilibrium))/(Brec * SprEq * (1 - U_equilibrium));
+    Req = log(Arec * SprEq);
   }
+  Req /= Brec * SprEq;
 
   B(0) = Req * SprEq;
   N(0) = Req/(1 - Seq);
@@ -85,9 +85,9 @@
     Sp(tt) = B(tt) - Cpred(tt);
 
     if(SR_type == "BH") {
-      R(tt + k) = Arec * B(tt)/(1 + Brec * B(tt));
+      R(tt+k) = BH_SR(B(tt), h, R0, B0);
     } else {
-      R(tt + k) = Arec * B(tt) * exp(-Brec * B(tt));
+      R(tt+k) = Ricker_SR(B(tt), h, R0, B0);
     }
     B(tt + 1) = Surv(tt) * (Alpha * N(tt) + Rho * B(tt)) + wk * R(tt + 1);
     N(tt + 1) = Surv(tt) * N(tt) + R(tt + 1);

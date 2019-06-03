@@ -2,6 +2,7 @@
 //template<class Type>
 //Type objective_function<Type>::operator() ()
 //{
+  using namespace SRA_scope;
 
   DATA_VECTOR(C_hist);    // Total catch
   DATA_SCALAR(C_eq);

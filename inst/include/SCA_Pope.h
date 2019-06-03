@@ -1,6 +1,7 @@
 //template<class Type>
-  //Type objective_function<Type>::operator() ()
+//Type objective_function<Type>::operator() ()
 //{
+  using namespace SCA;
 
   DATA_VECTOR(C_hist);    // Total catch
   DATA_VECTOR(I_hist);    // Index
