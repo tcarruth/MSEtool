@@ -247,14 +247,14 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   if(length(LWT$Index) != max(1, nsurvey)) stop("LWT$Index should be a vector of length ", nsurvey, ".")
 
   if(is.null(LWT$CAA)) {
-    LWT$CAA <- rep(0.1, nfleet)
+    LWT$CAA <- rep(1, nfleet)
   } else if(length(LWT$CAA) == 1 && nfleet > 1) {
     LWT$CAA <- rep(LWT$CAA, nfleet)
   }
   if(length(LWT$CAA) != nfleet) stop("LWT$CAA should be a vector of length ", nfleet, ".")
 
   if(is.null(LWT$CAL)) {
-    LWT$CAL <- rep(0.1, nfleet)
+    LWT$CAL <- rep(1, nfleet)
   } else if(length(LWT$CAL) == 1 && nfleet > 1) {
     LWT$CAL <- rep(LWT$CAL, nfleet)
   }
@@ -457,7 +457,6 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
 
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")
 
-
   ### Output list
   E <- do.call(rbind, lapply(res, getElement, "E"))
 
@@ -537,12 +536,16 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
       matplot(MLpred, type = "l", col = "black", xlab = "Year", ylab = "Mean length")
       if(!all(is.na(CAL))) {
         lines(CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", lwd = 3)
+        points(CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", pch = 16)
       } else if(!all(is.na(ML))) lines(ML, col = "red", lwd = 3)
 
       # MA fits
       MApred <- do.call(cbind, lapply(res, function(x) x$CAApred[, , ff] %*% 1:maxage/x$CN[, ff]))
       matplot(MApred, type = "l", col = "black", xlab = "Year", ylab = "Mean age")
-      if(!all(is.na(CAA))) lines(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3)
+      if(!all(is.na(CAA))) {
+        lines(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3)
+        points(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", pch = 16)
+      }
 
       mtext(paste0("Fleet ", ff, ": observed (red) and predicted data (black) \nfrom SRA"), outer = TRUE, side = 3)
     }
@@ -554,15 +557,16 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
         Ipred <- do.call(cbind, lapply(res, function(x) x$Ipred[, sur]))
         matplot(Ipred, type = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
         lines(Index[, sur], col = "red", lwd = 3)
+        points(Index[, sur], col = "red", pch = 16)
         abline(h = 0, col = "grey")
       }
     } else {
       par(mfrow = c(1, 1))
-      E <- do.call(cbind, lapply(res, getElement, "E"))
-      matplot(E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
-      abline(h = 0, col = "grey")
     }
 
+    E <- do.call(cbind, lapply(res, getElement, "E"))
+    matplot(E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
+    abline(h = 0, col = "grey")
   }
 
   message("Complete.")
