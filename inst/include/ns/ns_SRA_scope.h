@@ -218,7 +218,7 @@ Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &I
   Type num = 0.;
   Type n_y = 0.;
 
-  for(int y=0;y<I_y.size();y++) {
+  for(int y=0;y<I_y.rows();y++) {
     if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
       num += log(I_y(y,sur)/B_y(y,ff));
       n_y += 1.;

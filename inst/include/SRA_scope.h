@@ -252,7 +252,7 @@
   vector<Type> q(nsurvey);
   for(int sur=0;sur<nsurvey;sur++) {
     if(I_type(sur) > 0) { // VB.col(sur);
-      q(sur) = calc_q(I_hist, VB, sur, I_type(sur), Ipred);
+      q(sur) = calc_q(I_hist, VB, sur, I_type(sur) - 1, Ipred);
     } else if(I_type(sur) == -1) { // "B"
       q(sur) = calc_q(I_hist, B, sur, Ipred);
     } else {

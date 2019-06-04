@@ -80,7 +80,6 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   nfleet <- ncol(Chist)
   message(nfleet, " fleet(s) detected.")
 
-  if(is.null(I_type)) I_type <- rep(-1, max(nsurvey, 1))
 
   # Match number of historical years of catch to OM
   if(OM@nyears != nyears) {
@@ -245,7 +244,7 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   } else if(length(LWT$Index) == 1 && nsurvey > 1) {
     LWT$Index <- rep(LWT$Index, nsurvey)
   }
-  if(length(LWT$Index) != nsurvey) stop("LWT$Index should be a vector of length ", nsurvey, ".")
+  if(length(LWT$Index) != max(1, nsurvey)) stop("LWT$Index should be a vector of length ", nsurvey, ".")
 
   if(is.null(LWT$CAA)) {
     LWT$CAA <- rep(0.1, nfleet)
@@ -613,7 +612,7 @@ SRA_scope_est3 <- function(x, SRA_scope_est, Catch, Index = NULL, I_sd = NULL, C
 
   rescale <- 1/mean(Catch, na.rm = TRUE)
 
-  LWT_C <- matrix(c(LWT$Catch, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet)
+  LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
 
   TMB_data <- list(model = "SRA_scope",
                    C_hist = Catch * rescale, C_eq = C_eq * rescale, I_hist = Index, sigma_I = I_sd,
