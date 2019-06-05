@@ -8,7 +8,7 @@ SRA_scope(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL,
   CAL = NULL, ML = NULL, length_bin = NULL, C_eq = 0,
   ML_sd = NULL, selectivity = "logistic", I_type = NULL,
   LWT = list(), ESS = c(30, 30), cores = 1L, integrate = FALSE,
-  figure = TRUE)
+  figure = TRUE, report = FALSE)
 }
 \arguments{
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
@@ -28,15 +28,16 @@ If NULL, this function will use values from OM@Iobs.}
 \item{CAL}{Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 length bins, and nfleets.}
 
-\item{ML}{A vector of mean length observations (length OM@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets.}
+\item{ML}{A vector of mean length observations (length OM@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets. Generally, should not
+be used if \code{CAL} is also provided, unless mean length and length comps are independently sampled.}
 
 \item{length_bin}{A vector for the midpoints of the length bins for \code{CAL}. All length bin widths should be equal in size.}
 
 \item{C_eq}{A numeric vector of length nfleet for the equilibrium catch for each fleet in \code{Chist} prior to the first year of the operating model.
 Zero implies unfished conditions in year one. Otherwise, this is used would estimate depletion in the first year of the data.}
 
-\item{ML_sd}{The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets,. If \code{NULL}, default
-value is 0.1.}
+\item{ML_sd}{The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
+If \code{NULL}, default value is 0.1.}
 
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
 
@@ -53,6 +54,8 @@ multinomial likelihood function. The annual sample size of an age or length comp
 \item{integrate}{Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).}
 
 \item{figure}{Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).}
+
+\item{report}{Logical, whether to return all assessment output. See value section below.}
 }
 \value{
 A named list containing the following:
@@ -65,6 +68,8 @@ A named list containing the following:
 \item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
 \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
 }
+(3) "report" - If \code{report = TRUE}, a list of length \code{OM@nsim} containing all the assessment output from each model fit, otherwise returns NULL.
+Less organized than "output".
 
 If \code{figure = TRUE}, a set of diagnostic plots for the fits to the SRA for each simulation as well histograms of operating model parameters,
 e.g., depletion.
@@ -81,14 +86,14 @@ is needed but missing data (as NAs) are allowed for all other data types.
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 
-\code{LWT} is a named list containing the likelihood weights with the possible options:
+\code{LWT} is a named list containing the likelihood weights (values > 0) with the possible options:
 \itemize{
 \item Chist: A vector of length nfleet.
 \item Index: A vector of length nsurvey.
 \item CAA, CAL, ML, C_eq: A vector of length nfleet for each.
 }
-By default, all likelihood weights are equal to one if not specified by the user. Likelihood weights can also be adjusted by changing the
-sample size for CAA and CAL. See argument \code{ESS}.
+By default, all likelihood weights are equal to one if not specified by the user. Likelihoods for CAA and CAL can also be adjusted by changing the
+multinomial sample size. See argument \code{ESS}.
 }
 \note{
 If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.

@@ -21,12 +21,13 @@
 #' @param CAA Age composition matrix with nyears rows and OM@@maxage columns. If multiple fleets: an array with dimension: nyears, OM@@maxage, and nfleets.
 #' @param CAL Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 #' length bins, and nfleets.
-#' @param ML A vector of mean length observations (length OM@@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets.
+#' @param ML A vector of mean length observations (length OM@@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets. Generally, should not
+#' be used if \code{CAL} is also provided, unless mean length and length comps are independently sampled.
 #' @param length_bin A vector for the midpoints of the length bins for \code{CAL}. All length bin widths should be equal in size.
 #' @param C_eq A numeric vector of length nfleet for the equilibrium catch for each fleet in \code{Chist} prior to the first year of the operating model.
 #' Zero implies unfished conditions in year one. Otherwise, this is used would estimate depletion in the first year of the data.
-#' @param ML_sd The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets,. If \code{NULL}, default
-#' value is 0.1.
+#' @param ML_sd The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
+#' If \code{NULL}, default value is 0.1.
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
 #' @param I_type A character vector (length nsurvey) to indicate the type of biomass for which each index follows. Either \code{"B"} for
 #' total biomass, or \code{"SSB"} for spawning biomass. If \code{NULL}, "B" is used. Use numbers if the index corresponds to a fleet in \code{Chist}.
@@ -36,6 +37,7 @@
 #' @param cores Integer for the number of CPU cores for the stock reduction analysis.
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).
 #' @param figure Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).
+#' @param report Logical, whether to return all assessment output. See value section below.
 #' @return
 #' A named list containing the following:
 #' (1) "OM" - an updated operating model with depletion, F, selectivity, and recruitment deviations from the SRA fits.
@@ -47,6 +49,8 @@
 #' \item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
 #' \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
 #' }
+#' (3) "report" - If \code{report = TRUE}, a list of length \code{OM@@nsim} containing all the assessment output from each model fit, otherwise returns NULL.
+#' Less organized than "output".
 #'
 #' If \code{figure = TRUE}, a set of diagnostic plots for the fits to the SRA for each simulation as well histograms of operating model parameters,
 #' e.g., depletion.
@@ -54,21 +58,22 @@
 #' @details One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 #' Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 #'
-#' \code{LWT} is a named list containing the likelihood weights with the possible options:
+#' \code{LWT} is a named list containing the likelihood weights (values > 0) with the possible options:
 #' \itemize{
 #' \item Chist: A vector of length nfleet.
 #' \item Index: A vector of length nsurvey.
 #' \item CAA, CAL, ML, C_eq: A vector of length nfleet for each.
 #' }
-#' By default, all likelihood weights are equal to one if not specified by the user. Likelihood weights can also be adjusted by changing the
-#' sample size for CAA and CAL. See argument \code{ESS}.
+#' By default, all likelihood weights are equal to one if not specified by the user. Likelihoods for CAA and CAL can also be adjusted by changing the
+#' multinomial sample size. See argument \code{ESS}.
 #'
 #' @note If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
 #' @author Q. Huynh
 #'
 #' @export
 SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, length_bin = NULL, C_eq = 0, ML_sd = NULL,
-                      selectivity = "logistic", I_type = NULL, LWT = list(), ESS = c(30, 30), cores = 1L, integrate = FALSE, figure = TRUE) {
+                      selectivity = "logistic", I_type = NULL, LWT = list(), ESS = c(30, 30), cores = 1L,
+                      integrate = FALSE, figure = TRUE, report = FALSE) {
 
   # Convert single fleet inputs to multiple fleet, e.g. matrices to arrays
   if(!is.matrix(Chist)) Chist <- matrix(Chist, ncol = 1)
@@ -86,12 +91,6 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
     message("OM@nyears will be updated to length(Chist): ", nyears)
     OM@nyears <- nyears
   }
-
-  # Sample life history, selectivity, and obs parameters
-  set.seed(OM@seed)
-  StockPars <- SampleStockPars(OM, msg = FALSE)
-  ObsPars <- SampleObsPars(OM)
-  FleetPars <- SampleFleetPars(OM, msg = FALSE)
 
   # Interpolate missing catches
   if(any(is.na(Chist))) {
@@ -167,12 +166,17 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
     if(dim(CAA)[1] != nyears) {
       stop("Number of CAA rows (", dim(CAA)[1], ") does not equal nyears (", nyears, "). NAs are acceptable.", call. = FALSE)
     }
-    if(dim(CAA)[2] != OM@maxage) {
+    if(dim(CAA)[2] < OM@maxage) {
       message("Number of CAA columns (", dim(CAA)[2], ") does not equal OM@maxage (", OM@maxage, ").")
-      message("Assuming no CAA for ages greater than ", dim(CAA)[2], " and filling with NA")
-      addages <- OM@maxage - dim(CAA)[2]
-      CAA2 <- matrix(NA, nrow = nrow(CAA), ncol = addages)
-      CAA <- cbind(CAA, CAA2)
+      message("Assuming no CAA for ages greater than ", dim(CAA)[2], " and filling with zeros.")
+      add_ages <- OM@maxage - dim(CAA)[2]
+      CAA_new <- array(0, c(nyears, OM@maxage, nfleet))
+      CAA_new[, 1:dim(CAA)[2], ] <- CAA
+      CAA <- CAA_new
+    }
+    if(dim(CAA)[2] > OM@maxage) {
+      OM@maxage <- dim(CAA)[2]
+      message("Increasing OM@maxage to ", OM@maxage, ".")
     }
     if(dim(CAA)[3] != nfleet) {
       stop("Number of CAA slices (", dim(CAA)[3], ") does not equal nfleet (", nfleet, "). NAs are acceptable.", call. = FALSE)
@@ -181,6 +185,18 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   } else {
     CAA <- array(0, c(nyears, maxage, nfleet))
   }
+
+
+
+
+  # Sample life history, selectivity, and obs parameters
+  set.seed(OM@seed)
+  StockPars <- SampleStockPars(OM, msg = FALSE)
+  ObsPars <- SampleObsPars(OM)
+  FleetPars <- SampleFleetPars(OM, msg = FALSE)
+
+
+
 
   # Process length comps
   if(!is.null(CAL)) {
@@ -475,102 +491,10 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
                  CAA = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
 
   ### Generate figures
-  if(figure) {
-    old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par), add = TRUE)
-
-    ###### First figure OM summary
-    par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
-
-    # R0 histogram
-    hist(OM@cpars$R0, main = "", xlab = expression(R[0]))
-
-    # Depletion histograms
-    hist(OM@cpars$initD, main = "", xlab = "Initial depletion")
-    hist(OM@cpars$D, main = "", xlab = "Depletion")
-
-    # Perr
-    matplot(t(Perr), type = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
-    abline(h = 0, col = "grey")
-
-    # Find
-    matplot(t(OM@cpars$Find), type = "l", col = "black", xlab = "Year", ylab = "Apical F")
-    abline(h = 0, col = "grey")
-
-    # Selectivity
-    if(nfleet == 1) {
-      vul <- do.call(cbind, lapply(res, getElement, "vul"))
-      matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = "l", col = "black",
-              xlab = "Length", ylab = "Selectivity", ylim = c(0, 1.1))
-      abline(h = 0, col = "grey")
-    } else {
-      matplot(matrix(1:maxage, ncol = nsim, nrow = maxage), t(OM@cpars$V[, , nyears]), type = "l", col = "black",
-              xlab = "Age", ylab = "Selectivity (last historical year)", ylim = c(0, 1.1))
-      abline(h = 0, col = "grey")
-    }
-
-    mtext("Operating model parameter summary", outer = TRUE, side = 3)
-
-    ###### Next ff figures by fleet
-    for(ff in 1:nfleet) {
-      par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
-      # Selectivity
-      vul_ff <- do.call(cbind, lapply(res, function(x) x$vul[, ff]))
-      matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, type = "l", col = "black",
-              xlab = "Length", ylab = paste("Selectivity of Fleet", ff))
-      abline(h = 0, col = "grey")
-
-      # Find
-      FM <- do.call(cbind, lapply(res, function(x) x$F[, ff]))
-      matplot(FM, type = "l", col = "black", xlab = "Year", ylab = paste("Fishing Mortality of Fleet", ff))
-      abline(h = 0, col = "grey")
-
-      # Sampled catches
-      Cpred <- do.call(cbind, lapply(res, function(x) x$Cpred[, ff]))
-      matplot(Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Catch of Fleet", ff))
-      lines(Chist[, ff], col = "red", lwd = 3)
-      abline(h = 0, col = "grey")
-
-      # ML fits
-      MLpred <- do.call(cbind, lapply(res, function(x) x$mlen_pred[, ff]))
-      matplot(MLpred, type = "l", col = "black", xlab = "Year", ylab = "Mean length")
-      if(!all(is.na(CAL))) {
-        lines(CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", lwd = 3)
-        points(CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", pch = 16)
-      } else if(!all(is.na(ML))) lines(ML, col = "red", lwd = 3)
-
-      # MA fits
-      MApred <- do.call(cbind, lapply(res, function(x) x$CAApred[, , ff] %*% 1:maxage/x$CN[, ff]))
-      matplot(MApred, type = "l", col = "black", xlab = "Year", ylab = "Mean age")
-      if(!all(is.na(CAA))) {
-        lines(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3)
-        points(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", pch = 16)
-      }
-
-      mtext(paste0("Fleet ", ff, ": observed (red) and predicted data (black) \nfrom SRA"), outer = TRUE, side = 3)
-    }
-
-    if(nsurvey > 0) {
-      if(nsurvey > 1) par(mfrow = c(2, min(ceiling(0.5 * nsurvey), 3))) else par(mfrow = c(1, 1))
-
-      for(sur in 1:nsurvey) {
-        Ipred <- do.call(cbind, lapply(res, function(x) x$Ipred[, sur]))
-        matplot(Ipred, type = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
-        lines(Index[, sur], col = "red", lwd = 3)
-        points(Index[, sur], col = "red", pch = 16)
-        abline(h = 0, col = "grey")
-      }
-    } else {
-      par(mfrow = c(1, 1))
-    }
-
-    E <- do.call(cbind, lapply(res, getElement, "E"))
-    matplot(E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
-    abline(h = 0, col = "grey")
-  }
+  if(figure) plot_SRA_scope(OM, Chist, Index, CAA, CAL, ML, res)
 
   message("Complete.")
-  return(list(OM = OM, output = output))
+  return(list(OM = OM, output = output, report = if(report) res else NULL))
 }
 
 #### Parameters
@@ -691,3 +615,103 @@ SRA_scope_est3 <- function(x, SRA_scope_est, Catch, Index = NULL, I_sd = NULL, C
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
 
+plot_SRA_scope <- function(OM, Chist, Index = matrix(NA, 0, 0), CAA = NA, CAL = NA, ML = NA, report) {
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par), add = TRUE)
+
+  nsim <- OM@nsim
+  maxage <- OM@maxage
+  nyears <- OM@nyears
+  nfleet <- ncol(Chist)
+  nsurvey <- ncol(Index)
+  length_bin <- report[[1]]$length_bin
+
+  ###### First figure OM summary
+  par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
+
+  # R0 histogram
+  hist(OM@cpars$R0, main = "", xlab = expression(R[0]))
+
+  # Depletion histograms
+  hist(OM@cpars$initD, main = "", xlab = "Initial depletion")
+  hist(OM@cpars$D, main = "", xlab = "Depletion")
+
+  # Perr
+  Perr <- OM@cpars$Perr_y[, maxage:(maxage+nyears-1)]
+  matplot(t(Perr), type = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
+  abline(h = 0, col = "grey")
+
+  # Find
+  matplot(t(OM@cpars$Find), type = "l", col = "black", xlab = "Year", ylab = "Apical F")
+  abline(h = 0, col = "grey")
+
+  # Selectivity
+  if(nfleet == 1) {
+    vul <- do.call(cbind, lapply(report, getElement, "vul"))
+    matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = "l", col = "black",
+            xlab = "Length", ylab = "Selectivity", ylim = c(0, 1.1))
+    abline(h = 0, col = "grey")
+  } else {
+    matplot(matrix(1:maxage, ncol = nsim, nrow = maxage), t(OM@cpars$V[, , nyears]), type = "l", col = "black",
+            xlab = "Age", ylab = "Selectivity (last historical year)", ylim = c(0, 1.1))
+    abline(h = 0, col = "grey")
+  }
+
+  mtext("Operating model parameter summary", outer = TRUE, side = 3)
+
+  ###### Next ff figures by fleet
+  for(ff in 1:nfleet) {
+    par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
+    # Selectivity
+    vul_ff <- do.call(cbind, lapply(report, function(x) x$vul[, ff]))
+    matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, type = "l", col = "black",
+            xlab = "Length", ylab = paste("Selectivity of Fleet", ff))
+    abline(h = 0, col = "grey")
+
+    # Find
+    FM <- do.call(cbind, lapply(report, function(x) x$F[, ff]))
+    matplot(FM, type = "l", col = "black", xlab = "Year", ylab = paste("Fishing Mortality of Fleet", ff))
+    abline(h = 0, col = "grey")
+
+    # Sampled catches
+    Cpred <- do.call(cbind, lapply(report, function(x) x$Cpred[, ff]))
+    matplot(Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Catch of Fleet", ff))
+    lines(Chist[, ff], col = "red", lwd = 3)
+    abline(h = 0, col = "grey")
+
+    # ML fits
+    MLpred <- do.call(cbind, lapply(report, function(x) x$mlen_pred[, ff]))
+    matplot(MLpred, type = "l", col = "black", xlab = "Year", ylab = "Mean length")
+    if(!all(is.na(CAL))) {
+      lines(CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", lwd = 3, typ = "o", pch = 16)
+    } else if(!all(is.na(ML))) lines(ML, col = "red", lwd = 3, typ = "o", pch = 16)
+
+    # MA fits
+    MApred <- do.call(cbind, lapply(report, function(x) x$CAApred[, , ff] %*% 1:maxage/x$CN[, ff]))
+    matplot(MApred, type = "l", col = "black", xlab = "Year", ylab = "Mean age")
+    if(!all(is.na(CAA))) {
+      lines(CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3, typ = "o", pch = 16)
+    }
+
+    mtext(paste0("Fleet ", ff, ": observed (red) and predicted data (black) \nfrom SRA"), outer = TRUE, side = 3)
+  }
+
+  if(nsurvey > 0) {
+    if(nsurvey > 1) par(mfrow = c(2, min(ceiling(0.5 * nsurvey), 3))) else par(mfrow = c(1, 1))
+
+    for(sur in 1:nsurvey) {
+      Ipred <- do.call(cbind, lapply(report, function(x) x$Ipred[, sur]))
+      matplot(Ipred, type = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
+      lines(Index[, sur], col = "red", lwd = 3, typ = "o", pch = 16)
+      abline(h = 0, col = "grey")
+    }
+  } else {
+    par(mfrow = c(1, 1))
+  }
+
+  E <- do.call(cbind, lapply(report, getElement, "E"))
+  matplot(E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
+  abline(h = 0, col = "grey")
+
+  invisible()
+}

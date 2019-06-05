@@ -38,6 +38,6 @@ usethis::use_data(Albacore_TwoFleet, overwrite = TRUE)
 
 #plot(Albacore_TwoFleet_MOM)
 #Hist <- multiMSE(Albacore_TwoFleet_MOM, Hist = TRUE)
-#DataList <- Hist$DataList
+#DataList <- Hist$Data
 
 

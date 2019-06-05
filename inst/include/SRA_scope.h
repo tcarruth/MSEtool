@@ -339,6 +339,7 @@
   ADREPORT(q);
 
   REPORT(M);
+  REPORT(length_bin);
 
   REPORT(log_R0);
   REPORT(transformed_h);
