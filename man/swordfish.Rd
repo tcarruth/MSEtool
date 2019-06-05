@@ -4,7 +4,7 @@
 \name{swordfish}
 \alias{swordfish}
 \title{North Atlantic Swordfish dataset}
-\format{An object of class Data.}
+\format{An object of class \linkS4class{Data}.}
 \source{
 ASPIC Software at https://www.mhprager.com/aspic.html
 }
