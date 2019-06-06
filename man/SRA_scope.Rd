@@ -2,13 +2,17 @@
 % Please edit documentation in R/SRA_scope.R
 \name{SRA_scope}
 \alias{SRA_scope}
+\alias{plot_SRA_scope}
 \title{Stock-reduction analysis (SRA) for conditioning operating models}
 \usage{
 SRA_scope(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL,
   CAL = NULL, ML = NULL, length_bin = NULL, C_eq = 0,
   ML_sd = NULL, selectivity = "logistic", I_type = NULL,
   LWT = list(), ESS = c(30, 30), cores = 1L, integrate = FALSE,
-  figure = TRUE, report = FALSE)
+  figure = TRUE, Year = NULL, report = FALSE)
+
+plot_SRA_scope(OM, Chist, Index = matrix(NA, 0, 0), CAA = NA,
+  CAL = NA, ML = NA, report_list, Year = NULL)
 }
 \arguments{
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
@@ -55,12 +59,17 @@ multinomial likelihood function. The annual sample size of an age or length comp
 
 \item{figure}{Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).}
 
+\item{Year}{A vector of years for the historical period, used for plotting.}
+
 \item{report}{Logical, whether to return all assessment output. See value section below.}
+
+\item{report_list}{The list of assessment output returned by \code{SRA_scope} when \code{report = TRUE}.}
 }
 \value{
 A named list containing the following:
-(1) "OM" - an updated operating model with depletion, F, selectivity, and recruitment deviations from the SRA fits.
-(2) "output" - A list of output, e.g. spawning biomass and predicted catch at age, from the SRA fits:
+\enumerate{
+\item "OM" - an updated operating model with depletion, F, selectivity, and recruitment deviations from the SRA fits.
+\item "output" - A list of output, e.g. spawning biomass and predicted catch at age, from the SRA fits:
 \itemize{
 \item SSB - A matrix of \code{OM@nsim} rows and \code{OM@nyears+1} columns for estimated spawning biomass
 \item N - An array of dimension nsim, nyears+1, maxage for estimated abundance by simulation, year, and age.
@@ -68,9 +77,9 @@ A named list containing the following:
 \item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
 \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
 }
-(3) "report" - If \code{report = TRUE}, a list of length \code{OM@nsim} containing all the assessment output from each model fit, otherwise returns NULL.
+\item "report" - If \code{report = TRUE}, a list of length \code{OM@nsim} containing all the assessment output from each model fit, otherwise returns NULL.
 Less organized than "output".
-
+}
 If \code{figure = TRUE}, a set of diagnostic plots for the fits to the SRA for each simulation as well histograms of operating model parameters,
 e.g., depletion.
 }
@@ -83,6 +92,8 @@ This function is intended to generate a range of potential depletion scenarios t
 is needed but missing data (as NAs) are allowed for all other data types.
 }
 \details{
+\code{plot_SRA_scope} generates the plots from the SRA scope function.
+
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 
