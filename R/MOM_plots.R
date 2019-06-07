@@ -47,11 +47,12 @@ setMethod("plot", signature(x = "MOM", y = "missing"),
 
               for(Relno in 1:nRels)  plotRel(Stocks,Rel,Relno,Snams,leg=(Relno==1),extras=max(nIVs)-nIVs[Relno])
 
+              mtext("Independent variable(s)",1,line=1.5,outer=T,font=2)
+              mtext("Dependent variables",2,line=1.5,outer=T,font=2)
+              mtext("Inter-stock MICE relationships",3,line=0.3,outer=T,font=2)
+
             }
 
-            mtext("Independent variable(s)",1,line=1.5,outer=T,font=2)
-            mtext("Dependent variables",2,line=1.5,outer=T,font=2)
-            mtext("Inter-stock MICE relationships",3,line=0.3,outer=T,font=2)
 
 
             # --- Sample everything -----------------------------------------------------------------------------------------
