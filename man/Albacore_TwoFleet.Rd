@@ -20,7 +20,7 @@ ratio between the baitboat-longline fleets in the most recent historical year.
 plot(Albacore_TwoFleet)
 
 ## Generate data (e.g., catch, length comps) from the fleets
-Hist <- multiMSE(Albacore_TwoFleet Hist = TRUE)
+Hist <- multiMSE(Albacore_TwoFleet, Hist = TRUE)
 DataList <- Hist$Data
 
 # Fleet one

@@ -70,6 +70,7 @@ A named list containing the following:
 \enumerate{
 \item "OM" - an updated operating model with depletion, F, selectivity, and recruitment deviations from the SRA fits.
 \item "output" - A list of output, e.g. spawning biomass and predicted catch at age, from the SRA fits:
+
 \itemize{
 \item SSB - A matrix of \code{OM@nsim} rows and \code{OM@nyears+1} columns for estimated spawning biomass
 \item N - An array of dimension nsim, nyears+1, maxage for estimated abundance by simulation, year, and age.
@@ -77,6 +78,7 @@ A named list containing the following:
 \item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
 \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
 }
+
 \item "report" - If \code{report = TRUE}, a list of length \code{OM@nsim} containing all the assessment output from each model fit, otherwise returns NULL.
 Less organized than "output".
 }

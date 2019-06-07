@@ -15,7 +15,8 @@ Quite a few additions and changes have been made to the Assessment models. See t
 - `SCA` and `SCA2` estimate annual F's and include a likelihood function for the catch. In previous versions, `SCA` matched the predicted catch to observed catch. This feature has been transfered over to the `SCA_Pope` function.
 - Summary of assessment results can be obtained by the `plot` function which now generates a markdown report. This will be useful for diagnosing model fits and evaluating parameter estimates.
 
-### Other minor edits and additions, including:
+### Other edits and additions, including:
+- A scoping function `SRA_scope` fits an assessment model to catch, indices, and age/length comps to inform historical effort, recruitment deviations, and depletion for data-moderate operating models. Multiple fits are done based on the different life history parameters assumed in the operating model. This function is intended to be an alternative to `DLMtool::StochasticSRA`.
 - `profile` and `retrospective` functions for profiling the likelihood and retrospective analyses, respectively, of assessment models are now improved.
 - The `compare_models` function has been added to compare time series estimates, e.g. B/BMSY and F/FMSY, among different assessment models.
 - Manual starting values (the `start` argument) for parameters of assessment models can be expressions and subsequently evaluated in the assessment function. This can be very helpful when passing starting values in the `make_MP` function.
