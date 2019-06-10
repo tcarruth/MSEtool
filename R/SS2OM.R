@@ -246,9 +246,31 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     hs <- rnorm(nsim, steep$Value, hs_sd)
     hs[hs < 0.2] <- 0.2
     message("Steepness sampled with range: ", paste(round(range(hs), 3), collapse = " - "))
+  } else if(replist$SRRtype == 7) {
+    SR <- "BH"
+    OM@SRrel <- 1L
+
+    s_frac <- replist$parameters$Value[replist$parameters$Label == "SR_surv_Sfrac"]
+    Beta <- replist$parameters$Value[replist$parameters$Label == "SR_surv_Beta"]
+
+    s0 <- 1/SpR0
+    z0 <- -log(s0)
+    z_min <- z0 * (1 - s_frac)
+
+    hs <- 0.2 * exp(z0 * s_frac * (1 - 0.2 ^ Beta))
+
+    message("Survival-based stock-recruit relationship was detected with steepness = ", round(hs, 2), ".")
+    message("As an approximation, a Beverton-Holt relationship is used with the same steepness value.")
+
+    hs <- rep(hs, nsim)
+
   } else {
-    message("Steepness value not found. Estimating steepness by re-sampling R and SSB estimates from assessment.\n")
-    hs <- SRopt(nsim, SSB, rec, SpR0, plot = FALSE, type = SR)
+    SR <- OM@SRrel <- 1L
+    message("From r4ss, SRRtype = ", replist$SRRtype)
+    message("Steepness value not found. By default, estimating a range of Beverton-Holt steepness by re-sampling R and SSB estimates from assessment.\n")
+
+    hs <- SRopt(nsim, SSB, rec, SpR0, plot = FALSE, type = ifelse(SR == 1, "BH", "Ricker"))
+    message("Range of steepness is ", paste(round(range(hs), 2), collapse = " - "))
   }
 
   OM@cpars$hs <- hs
