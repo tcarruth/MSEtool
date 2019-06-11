@@ -499,7 +499,7 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
                  CAA = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
 
   ### Generate figures
-  if(figure) plot_SRA_scope(OM, Chist, Index, CAA, CAL, ML, res, Year)
+  if(figure) plot_SRA_scope(OM, Chist, Index, CAA, CAL, ML, res, OM@EffYears)
 
   message("Complete.")
   return(list(OM = OM, output = output, report = if(report) res else NULL))
@@ -638,7 +638,9 @@ plot_SRA_scope <- function(OM, Chist, Index = matrix(NA, 0, 0), CAA = NA, CAL = 
   nsim <- OM@nsim
   maxage <- OM@maxage
   nyears <- OM@nyears
-  if(is.null(Year)) Year <- 1:nyears
+  if(is.null(Year)) {
+    if(length(OM@EffYears) == nyears) Year <- OM@EffYears else Year <- 1:nyears
+  }
   Year_matrix <- matrix(Year, ncol = nsim, nrow = nyears)
   Yearplusone_matrix <- matrix(c(Year, max(Year) + 1), ncol = nsim, nrow = nyears+1)
   nfleet <- ncol(Chist)
