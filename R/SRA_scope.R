@@ -424,7 +424,7 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   Eff <- apply(OM@cpars$Find, 2, range)
   OM@EffLower <- Eff[1, ]
   OM@EffUpper <- Eff[2, ]
-  OM@EffYears <- 1:nyears
+  if(length(OM@EffYears) != nyears) OM@EffYears <- 1:nyears
   message("Historical effort trends set in OM@EffLower and OM@EffUpper.\n")
 
   ### Rec devs
