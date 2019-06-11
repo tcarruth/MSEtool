@@ -471,9 +471,9 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   OM@cpars$h <- StockPars$hs
 
   if(fix_sel) {
-    OM@cpars$L5 <- FleetPars$L5
-    OM@cpars$LFS <- FleetPars$LFS
-    OM@cpars$Vmaxlen <- FleetPars$Vmaxlen
+    OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ] else FleetPars$L5
+    OM@cpars$LFS <- if(is.matrix(FleetPars$LFS)) FleetPars$LFS[nyears, ] else FleetPars$LFS
+    OM@cpars$Vmaxlen <- if(is.matrix(FleetPars$Vmaxlen)) FleetPars$Vmaxlen[nyears, ] else FleetPars$Vmaxlen
     OM@cpars$V <- FleetPars$V
   }
 
