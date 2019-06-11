@@ -330,7 +330,6 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   #  message("For non-converged iterations, values were re-sampled from converged iterations.\n")
   #}
 
-
   ### R0
   OM@cpars$R0 <- vapply(res, getElement, numeric(1), name = "R0")
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
@@ -613,8 +612,9 @@ SRA_scope_est3 <- function(x, SRA_scope_est, Catch, Index = NULL, I_sd = NULL, C
   report <- obj$report(obj$env$last.par.best)
   report$vul <- do.call(cbind, report$vul)
 
-  vars_div <- c("B", "E", "Cat", "CAApred", "CALpred", "CN", "Cpred", "N", "N_full", "VB", "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0")
-  vars_mult <- "Brec"
+  vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "CN", "Cpred", "N", "N_full", "VB",
+                "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0")
+  vars_mult <- c("Brec", "q")
   var_trans <- c("R0", "q")
   fun_trans <- c("/", "*")
   fun_fixed <- c("log", NA)

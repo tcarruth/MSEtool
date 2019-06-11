@@ -87,7 +87,6 @@
   }
 
   array<Type> Z_total(n_y, max_age, nlbin);
-  //Z_total.setZero();
 
   ////// Equilibrium reference points and per-recruit quantities
   matrix<Type> NPR_unfished(max_age, nlbin);
