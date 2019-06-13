@@ -73,9 +73,9 @@ A named list containing the following:
 
 \itemize{
 \item SSB - A matrix of \code{OM@nsim} rows and \code{OM@nyears+1} columns for estimated spawning biomass
-\item N - An array of dimension nsim, nyears+1, maxage for estimated abundance by simulation, year, and age.
-\item CAA - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at age by simulation, year, age, and fleet.
-\item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
+\item N - An array of dimension \code{c(nsim, nyears+1, maxage)} for estimated abundance by simulation, year, and age.
+\item CAA - An array of dimension \code{c(nsim, nyears+1, maxage, and nfleet)} for estimated catch at age by simulation, year, age, and fleet.
+\item CAL - An array of dimension \code{c(nsim, nyears+1, maxage, and nfleet)} for estimated catch at length by simulation, year, length bin, and fleet.
 \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
 }
 
@@ -110,6 +110,12 @@ multinomial sample size. See argument \code{ESS}.
 }
 \note{
 If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
+Time-varying life history parameters create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
+See section D.5 of \code{DLMtool::userguide()}.
+
+Here, the initial depletion (OM@cpars$initD) is calculated based on unfished spawning biomass using growth and M in the first year.
+
+The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <- OM@Linfsd <- OM@Ksd <- c(0, 0)}.
 }
 \author{
 Q. Huynh

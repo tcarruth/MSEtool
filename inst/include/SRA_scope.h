@@ -101,6 +101,17 @@
   Type E0 = R0 * EPR0;
   //Type VB0 = R0 * sum_VBPR(NPR_unfished, wt_at_len, vul, max_age, nlbin);
 
+  matrix<Type> NPR_unfished_year1(max_age, nlbin);
+  matrix<Type> ALK_unfished_year1(max_age, nlbin);
+  ALK_unfished_year1 = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
+  NPR_unfished_year1 = calc_NPR0(nlbin, M, max_age, ALK_unfished, 0);
+
+  Type EPR0_year1 = sum_EPR(NPR_unfished_year1, wt_at_len, mat, max_age, nlbin, 0);
+
+  //Type B0 = R0 * sum_BPR(NPR_unfished, wt_at_len);
+  //Type N0 = R0 * NPR_unfished.sum();
+  Type E0_year1 = R0 * EPR0_year1;
+
   Type Arec;
   Type Brec;
 
@@ -367,6 +378,11 @@
   REPORT(B0);
   REPORT(E0);
   REPORT(N0);
+
+  REPORT(NPR_unfished_year1);
+  REPORT(ALK_unfished_year1);
+  REPORT(EPR0_year1);
+  REPORT(E0_year1);
 
   REPORT(Arec);
   REPORT(Brec);

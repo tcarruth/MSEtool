@@ -48,9 +48,9 @@
 #'
 #' \itemize{
 #' \item SSB - A matrix of \code{OM@@nsim} rows and \code{OM@@nyears+1} columns for estimated spawning biomass
-#' \item N - An array of dimension nsim, nyears+1, maxage for estimated abundance by simulation, year, and age.
-#' \item CAA - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at age by simulation, year, age, and fleet.
-#' \item CAL - An array of dimension nsim, nyears+1, maxage, and nfleet for estimated catch at length by simulation, year, length bin, and fleet.
+#' \item N - An array of dimension \code{c(nsim, nyears+1, maxage)} for estimated abundance by simulation, year, and age.
+#' \item CAA - An array of dimension \code{c(nsim, nyears+1, maxage, and nfleet)} for estimated catch at age by simulation, year, age, and fleet.
+#' \item CAL - An array of dimension \code{c(nsim, nyears+1, maxage, and nfleet)} for estimated catch at length by simulation, year, length bin, and fleet.
 #' \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
 #' }
 #'
@@ -76,6 +76,14 @@
 #' multinomial sample size. See argument \code{ESS}.
 #'
 #' @note If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
+#' Time-varying life history parameters create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
+#' See section D.5 of \code{DLMtool::userguide()}.
+#'
+#' Here, the initial depletion (OM@@cpars$initD) is calculated based on unfished spawning biomass using growth and M in the first year. If growth/M varies,
+#' then this reference point may no longer be relevant at the end of the historical period and in the projection period.
+#'
+#' The easiest way to turn off time-varying growth/M is by setting: \code{OM@@Msd <- OM@@Linfsd <- OM@@Ksd <- c(0, 0)}.
+#'
 #' @author Q. Huynh
 #'
 #' @export
@@ -335,7 +343,7 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
-  OM@cpars$initD <- vapply(res, function(x) x$E[1]/x$E0, numeric(1))
+  OM@cpars$initD <- vapply(res, function(x) x$E[1]/x$E0_year1, numeric(1))
   message("Range of initial spawning depletion (OM@cpars$initD): ", paste(round(range(OM@cpars$initD), 2), collapse = " - "))
 
   OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0, numeric(1))
@@ -473,7 +481,10 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
     OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ] else FleetPars$L5
     OM@cpars$LFS <- if(is.matrix(FleetPars$LFS)) FleetPars$LFS[nyears, ] else FleetPars$LFS
     OM@cpars$Vmaxlen <- if(is.matrix(FleetPars$Vmaxlen)) FleetPars$Vmaxlen[nyears, ] else FleetPars$Vmaxlen
-    OM@cpars$V <- FleetPars$V
+    V <- FleetPars$V
+    maxV <- apply(FleetPars$V, c(1, 3), max)
+    for(i in 1:maxage) V[,i,] <- V[,i,]/maxV
+    OM@cpars$V <- V
   }
 
   OM@cpars$Iobs <- ObsPars$Iobs
@@ -613,7 +624,7 @@ SRA_scope_est3 <- function(x, SRA_scope_est, Catch, Index = NULL, I_sd = NULL, C
   report$vul <- do.call(cbind, report$vul)
 
   vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "CN", "Cpred", "N", "N_full", "VB",
-                "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0")
+                "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_year1")
   vars_mult <- c("Brec", "q")
   var_trans <- c("R0", "q")
   fun_trans <- c("/", "*")
