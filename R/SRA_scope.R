@@ -655,7 +655,7 @@ plot_SRA_scope <- function(OM, Chist, Index = matrix(NA, 0, 0), CAA = NA, CAL = 
   Year_matrix <- matrix(Year, ncol = nsim, nrow = nyears)
   Yearplusone_matrix <- matrix(c(Year, max(Year) + 1), ncol = nsim, nrow = nyears+1)
   nfleet <- ncol(Chist)
-  nsurvey <- ncol(Index)
+  nsurvey <- ifelse(all(is.na(Index)), 0, ncol(Index))
   length_bin <- report_list[[1]]$length_bin
 
   ###### First figure OM summary
