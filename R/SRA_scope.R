@@ -669,7 +669,7 @@ plot_SRA_scope <- function(OM, Chist, Index = matrix(NA, 0, 0), CAA = NA, CAL = 
   hist(OM@cpars$D, main = "", xlab = "Depletion")
 
   # Perr
-  Perr <- OM@cpars$Perr_y[, maxage:(maxage+nyears-1)]
+  Perr <- OM@cpars$Perr_y[, maxage:(maxage+nyears-1), drop = FALSE]
   matplot(Year_matrix, t(Perr), type = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
   abline(h = 0, col = "grey")
 
