@@ -409,7 +409,7 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
 
       } else {
         sd_asc <- sqrt((L50 - LFS)^2/log(4))
-        L5 <- sd_asc * sqrt(-log(0.05)/0.5) + LFS
+        L5 <- LFS - sd_asc * sqrt(-log(0.05)/0.5)
 
         OM@cpars$L5 <- L5
         message("Range of OM@cpars$L5: ", paste(round(range(OM@cpars$L5), 2), collapse = " - "))
