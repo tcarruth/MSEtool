@@ -361,7 +361,7 @@ rmd_SR <- function(Bvec, expectedR, Rpoints, fig.cap = "Stock-recruit relationsh
   if(conv_check) conv <- "if(conv) " else conv <- ""
   ans <- c(paste0("```{r fig.cap=\"", fig.cap, "\"}"),
            paste0(conv, "plot_SR(", Bvec, ", ", expectedR, ", rec_dev = ", Rpoints, ","),
-           paste0("R0 = R0, S0 = B0, ylab = \"", ylab, "\", trajectory = ", as.character(trajectory), ")"),
+           paste0("R0 = R0, S0 = SSB0, ylab = \"", ylab, "\", trajectory = ", as.character(trajectory), ")"),
            "```\n")
   if(!is.null(header)) ans <- c(header, ans)
   return(ans)
