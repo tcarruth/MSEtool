@@ -436,11 +436,17 @@ SRA_scope <- function(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NU
 
   ### Rec devs
   OM@cpars$Perr <- StockPars$procsd
-  make_Perr <- function(x) exp(x$log_rec_dev - 0.5 * x$tau^2)
-  Perr <- do.call(rbind, lapply(res, make_Perr))
+  make_Perr <- function(x) {
+    bias_corr <- ifelse(is.na(x$obj$env$data$est_rec_dev), 1, exp(-0.5 * x$report$tau^2))
+    exp(x$report$log_rec_dev) * bias_corr
+  }
+  Perr <- do.call(rbind, lapply(mod, make_Perr))
 
-  make_early_Perr <- function(x) exp(x$log_early_rec_dev - 0.5 * x$tau^2)
-  early_Perr <- do.call(rbind, lapply(res, make_early_Perr))
+  make_early_Perr <- function(x) {
+    bias_corr <- ifelse(is.na(x$obj$env$data$est_early_rec_dev), 1, exp(-0.5 * x$report$tau^2))
+    exp(x$report$log_early_rec_dev) * bias_corr
+  }
+  early_Perr <- do.call(rbind, lapply(mod, make_early_Perr))
 
   OM@cpars$Perr_y <- StockPars$Perr_y
   OM@cpars$Perr_y[, 1:(OM@maxage - 1)] <- early_Perr
