@@ -33,6 +33,8 @@ Type objective_function<Type>::operator() ()
 	  #include "../inst/include/cDD_SS.h"
   } else if(model == "SRA_scope") {
 	  #include "../inst/include/SRA_scope.h"
+  } else if(model == "SRA_scope_Effort") {
+    #include "../inst/include/SRA_scope_Effort.h"
   } else {
     error("No model found.");
   }

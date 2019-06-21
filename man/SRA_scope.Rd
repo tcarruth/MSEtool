@@ -5,14 +5,15 @@
 \alias{plot_SRA_scope}
 \title{Stock-reduction analysis (SRA) for conditioning operating models}
 \usage{
-SRA_scope(OM, Chist, Index = NULL, I_sd = NULL, CAA = NULL,
-  CAL = NULL, ML = NULL, length_bin = NULL, C_eq = 0,
-  ML_sd = NULL, selectivity = "logistic", I_type = NULL,
-  LWT = list(), ESS = c(30, 30), cores = 1L, integrate = FALSE,
+SRA_scope(OM, Chist = NULL, Ehist = NULL, condition = c("catch",
+  "effort"), Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL,
+  ML = NULL, length_bin = NULL, C_eq = 0, E_eq = 0, ML_sd = NULL,
+  selectivity = "logistic", I_type = NULL, LWT = list(),
+  ESS = c(30, 30), fix_dome = FALSE, cores = 1L, integrate = FALSE,
   figure = TRUE, Year = NULL, report = FALSE)
 
-plot_SRA_scope(OM, Chist, Index = matrix(NA, 0, 0), CAA = NA,
-  CAL = NA, ML = NA, report_list, Year = NULL)
+plot_SRA_scope(OM, Chist = NULL, Ehist = NULL, Index = matrix(NA, 0,
+  0), CAA = NA, CAL = NA, ML = NA, report_list, Year = NULL)
 }
 \arguments{
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
@@ -20,6 +21,10 @@ steepness, maturity parameters (L50 and L50_95), standard deviation of recruitme
 
 \item{Chist}{A vector of historical catch, should be of length OM@nyears. If there are multiple fleets: a matrix of OM@nyears rows and nfleet columns.
 Ideally, the first year of the catch series represents unfished conditions (see also \code{C_eq}).}
+
+\item{Ehist}{A vector of historical effort, should be of length OM@nyears (see also \code{E_eq}).}
+
+\item{condition}{String to indicate whether the SRA model is conditioned on catch or effort.}
 
 \item{Index}{A vector of values of an index (of length OM@nyears). If there are multiple surveys: a matrix of historical indices of abundances, with rows
 indexing years and columns indexing surveys.}
@@ -38,7 +43,10 @@ be used if \code{CAL} is also provided, unless mean length and length comps are 
 \item{length_bin}{A vector for the midpoints of the length bins for \code{CAL}. All length bin widths should be equal in size.}
 
 \item{C_eq}{A numeric vector of length nfleet for the equilibrium catch for each fleet in \code{Chist} prior to the first year of the operating model.
-Zero implies unfished conditions in year one. Otherwise, this is used would estimate depletion in the first year of the data.}
+Zero implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.}
+
+\item{E_eq}{The equilibrium effort for each fleet in \code{Ehist} prior to the first year of the operating model.
+Zero implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.}
 
 \item{ML_sd}{The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
 If \code{NULL}, default value is 0.1.}
@@ -52,6 +60,8 @@ total biomass, or \code{"SSB"} for spawning biomass. If \code{NULL}, "B" is used
 
 \item{ESS}{A numeric vector of length two for the maximum effective samples size of the age and length compositions, respectively for the
 multinomial likelihood function. The annual sample size of an age or length composition sample is the minimum of ESS or the number of observations.}
+
+\item{fix_dome}{Logical, if \code{selectivity = "dome"}, determines whether the descending limb of selectivity is fixed or not.}
 
 \item{cores}{Integer for the number of CPU cores for the stock reduction analysis.}
 
@@ -86,12 +96,12 @@ If \code{figure = TRUE}, a set of diagnostic plots for the fits to the SRA for e
 e.g., depletion.
 }
 \description{
-Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch, and potentially
+Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch or effort, and potentially
 age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
 unfished recruitment (R0), historical fishing effort, and recruitment deviations for the operating model. This is done by sampling life history parameters
 provided by the user and fitting to the data in a statistical catch-at-age model (with the predicted catch equal to the observed catch).
-This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data. A full catch time series
-is needed but missing data (as NAs) are allowed for all other data types.
+This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data.
+Either a full catch (conditioned on catch) or effort (conditioned on effort) time series is needed but missing data (as NAs) are allowed for all other data types.
 }
 \details{
 \code{plot_SRA_scope} generates the plots from the SRA scope function.
