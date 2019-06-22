@@ -353,45 +353,31 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     DLMtool::setup(as.integer(cores))
     on.exit(snowfall::sfStop())
 
-    if(condition == "catch") {
-      mod <- snowfall::sfLapply(1:nsim, SRA_scope_est, Catch = Chist, Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
-                                ML_sd = ML_sd, length_bin = length_bin,
-                                wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, selectivity = sel,
-                                fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
-                                integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
-    } else {
-      mod <- snowfall::sfLapply(1:nsim, SRA_scope_Effort, Effort = Ehist, Catch = Chist, Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
-                                ML_sd = ML_sd, length_bin = length_bin,
-                                wt_at_len = weight_at_length, I_type = I_type2, E_eq = E_eq, selectivity = sel,
-                                fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
-                                integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
-    }
+    mod <- snowfall::sfLapply(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
+                              Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
+                              ML_sd = ML_sd, length_bin = length_bin,
+                              wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
+                              fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
+                              integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
 
   } else {
-
-    if(condition == "catch") {
-      mod <- lapply(1:nsim, SRA_scope_est, Catch = Chist, Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
-                    ML_sd = ML_sd, length_bin = length_bin,
-                    wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, selectivity = sel,
-                    fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
-                    integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
-    } else {
-      mod <- lapply(1:nsim, SRA_scope_Effort, Effort = Ehist, Catch = Chist, Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
-                    ML_sd = ML_sd, length_bin = length_bin,
-                    wt_at_len = weight_at_length, I_type = I_type2, E_eq = E_eq, selectivity = sel,
-                    fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
-                    integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
-    }
+    mod <- lapply(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
+                  Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
+                  ML_sd = ML_sd, length_bin = length_bin,
+                  wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
+                  fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
+                  integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
   assign('mod', mod, envir = globalenv())
   res <- lapply(mod, getElement, "report")
   conv <- vapply(res, getElement, logical(1), name = "conv")
-  message(sum(conv), " out of ", nsim , " iterations converged (", 100*sum(conv)/nsim, "%).\n")
-  #if(sum(conv) < nsim) {
-  #  no_conv_ind <- !conv
-  #  #no_conv <- (conv)
-  #  message("For non-converged iterations, values were re-sampled from converged iterations.\n")
-  #}
+  message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
+  if(sum(conv) < nsim) {
+    message("Non-converged iterations: ", paste(which(!conv), collapse = " "), "\n")
+    #no_conv_ind <- !conv
+    #no_conv <- (conv)
+    #message("For non-converged iterations, values were re-sampled from converged iterations.\n")
+  }
 
   ### R0
   OM@cpars$R0 <- vapply(res, getElement, numeric(1), name = "R0")
@@ -601,15 +587,19 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 # SR type
 # selectivity type
 # maxage integer
-SRA_scope_est <- function(x, Catch, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, ML_sd = NULL, length_bin,
-                          I_type, C_eq = 0, SR_type = c("BH", "Ricker"), LWT = list(), ESS = c(30, 30),
+SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, condition = c("catch", "effort"),
+                          I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, ML_sd = NULL, length_bin,
+                          I_type, C_eq = 0, E_eq = 0, SR_type = c("BH", "Ricker"), LWT = list(), ESS = c(30, 30),
                           StockPars, ObsPars, FleetPars, wt_at_len, integrate = FALSE, selectivity, fix_selectivity = TRUE,
                           fix_dome = FALSE, control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
+  condition <- match.arg(condition)
   SR_type <- match.arg(SR_type)
 
   nyears <- nrow(Catch)
-  max_age <- dim(CAA)[2]
+  if(is.null(nyears)) nyears <- nrow(Effort)
   nfleet <- ncol(Catch)
+  if(is.null(nfleet)) nfleet <- ncol(Effort)
+  max_age <- dim(CAA)[2]
   nsurvey <- ncol(Index)
 
   if(is.null(I_sd)) I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
@@ -617,19 +607,28 @@ SRA_scope_est <- function(x, Catch, Index = NULL, I_sd = NULL, CAA = NULL, CAL =
   CAA_n <- t(rowSums(aperm(CAA, c(3, 1, 2)), dims = 2, na.rm = TRUE))
   CAL_n <- t(rowSums(aperm(CAL, c(3, 1, 2)), dims = 2, na.rm = TRUE))
 
-  rescale <- 1/mean(Catch, na.rm = TRUE)
-
   LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
 
-  TMB_data <- list(model = "SRA_scope",
-                   C_hist = Catch * rescale, C_eq = C_eq * rescale, I_hist = Index, sigma_I = I_sd,
-                   CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
-                   CAL_hist = CAL, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
-                   n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
-                   M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
-                   CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
-                   vul_type = selectivity, I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT$Index,
-                   est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(NA, nyears-1), NA))
+  TMB_data_all <- list(condition = condition, I_hist = Index, sigma_I = I_sd,
+                       CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
+                       CAL_hist = CAL, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
+                       n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
+                       M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
+                       CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
+                       vul_type = selectivity, I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT$Index,
+                       est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(1, nyears-1), NA))
+  if(condition == "catch") {
+    rescale <- 1/mean(Catch, na.rm = TRUE)
+
+    TMB_data <- list(model = "SRA_scope", C_hist = Catch * rescale, C_eq = C_eq * rescale,
+                     E_hist = matrix(0, nyears, nfleet), E_eq = rep(0, nfleet))
+
+  } else {
+    rescale_effort <- 1/mean(Effort, na.rm = TRUE)
+
+    TMB_data <- list(model = "SRA_scope", C_hist = matrix(1, nyears, nfleet), C_eq = rep(0, nfleet),
+                     E_hist = Effort * rescale_effort, E_eq = E_eq * rescale_effort)
+  }
 
   if(SR_type == "BH") {
     transformed_h <- logit((StockPars$hs[x] - 0.2)/0.8)
@@ -656,18 +655,26 @@ SRA_scope_est <- function(x, Catch, Index = NULL, I_sd = NULL, CAA = NULL, CAL =
     map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
   }
 
-  TMB_params <- list(log_R0 = 3, transformed_h = transformed_h, vul_par = vul_par,
+  TMB_params <- list(log_R0 = ifelse(condition == "catch", 3, log(1e3)), transformed_h = transformed_h, vul_par = vul_par,
+                     log_q_effort = rep(log(0.1), nfleet),
                      log_F = matrix(log(0.05), nyears, nfleet), log_F_equilibrium = rep(log(0.05), nfleet),
                      log_sigma_mlen = log(ML_sd), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
   map <- list()
+  if(condition == "effort") map$log_R0 <- factor(NA)
   map$transformed_h <- map$log_tau <- factor(NA)
   map$vul_par <- factor(map_vul_par)
-  if(any(C_eq == 0)) {
-    map_log_F_equilibrium <- rep(NA, nfleet)
-    map_log_F_equilibrium[C_eq > 0] <- 1:sum(C_eq > 0)
-    map$log_F_equilibrium <- factor(map_log_F_equilibrium)
+  if(condition == "catch") {
+    map$log_q_effort <- factor(rep(NA, nfleet))
+    if(any(C_eq == 0)) {
+      map_log_F_equilibrium <- rep(NA, nfleet)
+      map_log_F_equilibrium[C_eq > 0] <- 1:sum(C_eq > 0)
+      map$log_F_equilibrium <- factor(map_log_F_equilibrium)
+    }
+  } else {
+    map$log_F <- factor(matrix(NA, nyears, nfleet))
+    map$log_F_equilibrium <- factor(rep(NA, nfleet))
   }
 
   map$log_sigma_mlen <- factor(rep(NA, nfleet))
@@ -676,10 +683,10 @@ SRA_scope_est <- function(x, Catch, Index = NULL, I_sd = NULL, CAA = NULL, CAL =
 
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
 
-  obj <- MakeADFun(data = TMB_data, parameters = TMB_params, map = map, random = random, inner.control = inner.control,
-                   DLL = "MSEtool", silent = TRUE)
+  obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
+                   inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 
-  mod <- optimize_TMB_model(obj, control, restart = 1)
+  mod <- optimize_TMB_model(obj, control, restart = 0)
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
@@ -690,109 +697,23 @@ SRA_scope_est <- function(x, Catch, Index = NULL, I_sd = NULL, CAA = NULL, CAL =
   vars_mult <- c("Brec", "q")
   var_trans <- c("R0", "q")
   fun_trans <- c("/", "*")
-  fun_fixed <- c("log", NA)
-  rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
 
-  return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
-}
-
-
-SRA_scope_Effort <- function(x, Effort, Catch = NULL, Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, ML_sd = NULL, length_bin,
-                             I_type, E_eq = 0, SR_type = c("BH", "Ricker"), LWT = list(), ESS = c(30, 30),
-                             StockPars, ObsPars, FleetPars, wt_at_len, integrate = FALSE, selectivity, fix_selectivity = TRUE,
-                             fix_dome = FALSE, control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
-  SR_type <- match.arg(SR_type)
-
-  nyears <- nrow(Effort)
-  max_age <- dim(CAA)[2]
-  nfleet <- ncol(Effort)
-  nsurvey <- ncol(Index)
-
-  if(is.null(I_sd)) I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
-
-  CAA_n <- t(rowSums(aperm(CAA, c(3, 1, 2)), dims = 2, na.rm = TRUE))
-  CAL_n <- t(rowSums(aperm(CAL, c(3, 1, 2)), dims = 2, na.rm = TRUE))
-
-  #rescale <- 1/mean(Catch, na.rm = TRUE)
-  rescale_effort <- 1/mean(Effort, na.rm = TRUE)
-
-  LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
-
-  TMB_data <- list(model = "SRA_scope_Effort", C_hist = matrix(0,1,1),
-                   E_hist = Effort * rescale_effort, E_eq = E_eq * rescale_effort, I_hist = Index, sigma_I = I_sd,
-                   CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
-                   CAL_hist = CAL, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
-                   n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
-                   M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
-                   CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
-                   vul_type = selectivity, I_type = I_type,
-                   SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT$Index,
-                   est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(NA, nyears-1), NA))
-
-  if(SR_type == "BH") {
-    transformed_h <- logit((StockPars$hs[x] - 0.2)/0.8)
-  } else transformed_h <- log(StockPars$hs[x] - 0.2)
-
-  L95 <- FleetPars$LFS[nyears, x]
-  L50 <- mean(c(FleetPars$LFS[nyears, x], FleetPars$L5[nyears, x]))
-
-  vul_par <- matrix(0, 4, nfleet)
-  map_vul_par <- matrix(ifelse(fix_selectivity, NA, 0), 4, nfleet)
-
-  for(ff in 1:nfleet) {
-    if(selectivity[ff]) { #logistic
-      vul_par[1:2, ff] <- c(logit(L95/max(length_bin)/0.75), log(L95 - L50))
-      map_vul_par[3:4, ff] <- NA
-    } else {
-      vul_par[, ff] <- c(logit(L95/max(length_bin)/0.75), log(L95 - L50), -20, logit(FleetPars$Vmaxlen[nyears, x]))
-      map_vul_par[3, ff] <- NA
-      if(fix_dome) map_ful_par[4, ff] <- NA
-    }
+  if(condition == "catch") {
+    fun_fixed <- c("log", NA)
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
-
-  if(!fix_selectivity) {
-    map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
-  }
-
-  TMB_params <- list(log_R0 = log(1e3), transformed_h = transformed_h, vul_par = vul_par,
-                     log_q_effort = rep(log(0.1), nfleet),
-                     #log_F = matrix(log(0.05), nyears, nfleet), log_F_equilibrium = rep(log(0.05), nfleet),
-                     log_sigma_mlen = log(ML_sd), log_tau = log(StockPars$procsd[x]),
-                     log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
-
-  map <- list(log_R0 = factor(NA))
-  map$transformed_h <- map$log_tau <- factor(NA)
-  map$vul_par <- factor(map_vul_par)
-
-  map$log_sigma_mlen <- factor(rep(NA, nfleet))
-  map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
-  map$log_rec_dev <- factor(c(1:(nyears-1), NA))
-
-  if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
-  obj <- MakeADFun(data = TMB_data, parameters = TMB_params, map = map, random = random, inner.control = inner.control,
-                   DLL = "MSEtool", silent = TRUE)
-
-  mod <- optimize_TMB_model(obj, control, restart = 1)
-  opt <- mod[[1]]
-  SD <- mod[[2]]
-  report <- obj$report(obj$env$last.par.best)
-  report$vul <- do.call(cbind, report$vul)
-
-  if(!is.null(Catch) && nfleet == 1) {
+  if(condition == "effort" && !is.null(Catch) && nfleet == 1) {
     rescale <- mean(report$Cpred[, 1]/Catch, na.rm = TRUE)
 
-    vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "CN", "Cpred", "N", "N_full", "VB",
-                  "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_year1")
-    vars_mult <- c("Brec", "q")
-    var_trans <- c("R0", "q")
-    fun_trans <- c("/", "*")
     fun_fixed <- c(NA, NA)
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
 
-
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
+
+
+
 
 
 #' @rdname SRA_scope

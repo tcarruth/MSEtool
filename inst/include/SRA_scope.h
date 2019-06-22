@@ -7,6 +7,11 @@
   DATA_MATRIX(C_hist);    // Total catch by year and fleet
   DATA_VECTOR(C_eq);      // Equilibrium catch by fleet
 
+  DATA_MATRIX(E_hist);    // Effort by year and fleet
+  DATA_VECTOR(E_eq);      // Equilibrium effort by fleet
+
+  DATA_STRING(condition); // Indicates whether the model will condition on effort or catch
+
   DATA_MATRIX(I_hist);    // Index by year and survey
   DATA_MATRIX(sigma_I);   // Standard deviation of index by year and survey
 
@@ -43,6 +48,7 @@
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
+  PARAMETER_VECTOR(log_q_effort);
   //PARAMETER_VECTOR(log_mean_F);
   PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
@@ -65,28 +71,38 @@
   h += 0.2;
 
   Type tau = exp(log_tau);
-  vector<Type> sigma_mlen(nfleet);
-  vector<Type> F_equilibrium(nfleet);
-  F_equilibrium.setZero();
-  for(int ff=0;ff<nfleet;ff++) {
-    sigma_mlen(ff) = exp(log_sigma_mlen(ff));
-    if(C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
-  }
 
+
+  // Vulnerability (length-based) and F parameters
   Type penalty = 0;
   Type prior = 0.;
 
-  // Vulnerability (length-based)
   vector<vector<Type> > vul(nfleet);
   vul = calc_vul(vul_par, vul_type, nlbin, length_bin, prior);
 
+  vector<Type> q_effort(nfleet);
+  vector<Type> sigma_mlen(nfleet);
+  vector<Type> F_equilibrium(nfleet);
+  F_equilibrium.setZero();
+
   matrix<Type> F(n_y,nfleet);
+  array<Type> Z_total(n_y, max_age, nlbin);
+
   for(int ff=0;ff<nfleet;ff++) {
-    //for(int y=0;y<n_y;y++) F(y,ff) = exp(log_mean_F(ff) + log_F_dev(y,ff));
-    for(int y=0;y<n_y;y++) F(y,ff) = exp(log_F(y,ff));
+    sigma_mlen(ff) = exp(log_sigma_mlen(ff));
+    q_effort(ff) = exp(log_q_effort(ff));
+    if(condition == "catch" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
+    if(condition == "effort" && E_eq(ff)>0) F_equilibrium(ff) = q_effort(ff) * E_eq(ff);
+
+    for(int y=0;y<n_y;y++) {
+      if(condition == "catch") {
+        F(y,ff) = exp(log_F(y,ff));
+      } else {
+        F(y,ff) = q_effort(ff) * E_hist(y,ff);
+      }
+    }
   }
 
-  array<Type> Z_total(n_y, max_age, nlbin);
 
   ////// Equilibrium reference points and per-recruit quantities
   matrix<Type> NPR_unfished(max_age, nlbin);
@@ -284,7 +300,7 @@
   nll_CAA.setZero();
   nll_CAL.setZero();
   nll_ML.setZero();
-  //nll_Ceq.setZero();
+  nll_Ceq.setZero();
 
   for(int sur=0;sur<nsurvey;sur++) {
     for(int y=0;y<n_y;y++) {
@@ -297,7 +313,7 @@
     for(int y=0;y<n_y;y++) {
       if(C_hist(y,ff)>0) {
 
-        nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
+        if(condition == "catch") nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
 
         if(!R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
           vector<Type> loglike_CAAobs(max_age);
@@ -327,7 +343,7 @@
     nll_CAA(ff) *= LWT_C(ff,1);
     nll_CAL(ff) *= LWT_C(ff,2);
     nll_ML(ff) *= LWT_C(ff,3);
-    if(C_eq(ff) > 0) nll_Ceq(ff) = LWT_C(ff,4) * dnorm(log(C_eq(ff)), log(C_eq_pred(ff)), Type(0.01), true);
+    if(condition == "catch" && C_eq(ff) > 0) nll_Ceq(ff) = LWT_C(ff,4) * dnorm(log(C_eq(ff)), log(C_eq_pred(ff)), Type(0.01), true);
 
   }
 
@@ -346,6 +362,7 @@
   ADREPORT(R0);
   ADREPORT(h);
   ADREPORT(tau);
+  ADREPORT(q_effort);
   ADREPORT(q);
 
   REPORT(M);
@@ -354,6 +371,7 @@
   REPORT(log_R0);
   REPORT(transformed_h);
   REPORT(vul_par);
+  REPORT(log_q_effort);
   //REPORT(log_mean_F);
   REPORT(log_F);
   REPORT(log_F_equilibrium);
