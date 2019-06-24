@@ -16,7 +16,7 @@ optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, resta
   }
   opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control), lower = low, error = as.character))
   if(is.character(opt) && all(is.na(obj$gr()))) {
-    opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, he = h, control = control), lower = low, error = as.character))
+    opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, hessian = h, control = control), lower = low, error = as.character))
   }
   SD <- get_sdreport(obj, opt)
 

@@ -27,8 +27,10 @@
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
 
-  Type n_term = CppAD::CondExpEq(n, Type(1), Type(exp(1)), pow(n, n/(n-1)));
-  Type n_term2 = CppAD::CondExpEq(n, Type(1), Type(1/exp(1)), pow(n, 1/(1-n)));
+  Type euler = exp(Type(1.0));
+
+  Type n_term = CppAD::CondExpEq(n, Type(1), euler, pow(n, n/(n-1)));
+  Type n_term2 = CppAD::CondExpEq(n, Type(1), Type(1/euler), pow(n, 1/(1-n)));
 
   Type BMSY = MSY/FMSY;
   Type K = BMSY / n_term2;
