@@ -47,8 +47,6 @@ pre { /* Code block */
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 knitr::opts_chunk$set(dpi=85)
 options(width = 650)
-library(DLMtool)
-library(MSEtool)
 ```
 
 <br>
@@ -80,6 +78,7 @@ For general help, Adrian Hordyk has produced a comprehensive guide for DLMtool i
 ```{r, eval = FALSE}
 DLMtool::userguide()
 DLMtool::cheatsheets()
+
 MSEtool::userguide()
 ```
 
@@ -88,13 +87,17 @@ MSEtool::userguide()
 
 The `MOM` object is not terribly different from a standard DLMtool/MSEtool OM object. 
 
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 library(DLMtool)    # load DLMtool library
-# DLMextra()        # download lots of cool DLMtool/MSEtool objects from GitHub
-# library(DLMextra) # load all those objects
+DLMextra()          # download lots of cool DLMtool/MSEtool objects from GitHub
+library(DLMextra)   # load all those objects
 library(MSEtool)    # load MSEtool (data rich MPs, MOM object class etc)
 setup()             # set up a cluster for parallel processing
-
+```
+```{r, echo = FALSE, eval = TRUE, message = FALSE}
+library(MSEtool)
+```
+```{r, eval = TRUE}
 slotNames('MOM')    # what slots are there in an MOM object
 class?MOM           # check out the help file on MOM objects
 
@@ -225,7 +228,7 @@ However for the purposes of this demonstration we're just going to cook somethin
 Here goes:
 
 
-```{r, eval = TRUE, fig.width=5, fig.height=5}
+```{r, eval = TRUE}
 ages <- 1:60
 bf_M <- mean(Bluefin_tuna@M)          # natural mortality rate
 bf_Linf <- mean(Bluefin_tuna@Linf)    # asymptotic length
@@ -245,13 +248,13 @@ dat <- data.frame(M_2,B_1)
 bfB_hM <- lm(M_2~B_1,dat=dat) # a linear model predicting M for stock 2 from biomass B for stock 1
 summary(bfB_hM)
 
-plot(dat$B_1, dat$M_2,pch=19)
-lines(dat$B_1, predict(bfB_hM,newdat=dat),col='red')
-points(dat$B_1, simulate(bfB_hM,nsim=1,newdat=dat)[,1],col='green')
-legend('topleft',legend=c("made up data","best fit","simulated"),text.col=c('black','red','green'))
-
 Rel <- list(bfB_hM)
-
+```
+```{r, eval = TRUE, fig.width=6, fig.height=5}
+plot(dat$B_1, dat$M_2,pch=19, xlab = "Bluefin biomass", ylab = "Herring natural mortality")
+lines(dat$B_1, predict(bfB_hM,newdat=dat), col = 'red', lwd = 2)
+points(dat$B_1, simulate(bfB_hM,nsim=1,newdat=dat)[, 1], col = 'green')
+legend('topleft',legend = c("made up data", "best fit", "simulated"), text.col = c('black','red','green'))
 ```
 
 That is a lot to take in. 
@@ -313,15 +316,18 @@ Now we have six lists:
 * Rel
 
 We can construct an object of class MOM and see what it looks like:
-
-```{r, eval = TRUE,  fig.width=9, fig.height=7}
-
+```{r, echo = FALSE}
 MOM_BH <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel=Rel, nsim=nsim)
-plot(MOM_BH)
-
 ```
 
-
+```{r, eval = FALSE,  fig.width=9, fig.height=7}
+MOM_BH <- new('MOM', Stocks, Fleets, Obs, Imps, CatchFrac, Rel = Rel, nsim = nsim)
+plot(MOM_BH)
+```
+<img src = "fig_multiMSE/MICE.png">
+<img src = "fig_multiMSE/MICE_F.png">
+<img src = "fig_multiMSE/MICE_sel.png">
+<img src = "fig_multiMSE/MICE_stock.png">
 ## Single Stock MOM
 
 If you wish to specify only a single stock but multiple fleets (e.g. just bluefin above) that is pretty easy:
