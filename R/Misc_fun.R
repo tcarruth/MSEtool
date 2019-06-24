@@ -16,7 +16,7 @@ optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, resta
   }
   opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, obj$gr, h, control = control), lower = low, error = as.character))
   if(is.character(opt) && all(is.na(obj$gr()))) {
-    opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, he = h, control = control), lower = low, error = as.character))
+    opt <- suppressWarnings(tryCatch(nlminb(obj$par, obj$fn, hessian = h, control = control), lower = low, error = as.character))
   }
   SD <- get_sdreport(obj, opt)
 
@@ -31,15 +31,14 @@ optimize_TMB_model <- function(obj, control = list(), use_hessian = FALSE, resta
 
 #' @importFrom stats optimHess
 get_sdreport <- function(obj, opt) {
-  if(is.character(opt)) {
-    res <- "nlminb() optimization returned an error. Could not run TMB::sdreport()."
-  } else {
-    if(is.null(obj$env$random)) h <- obj$he(opt$par) else h <- NULL
-    res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h, getReportCovariance = FALSE), error = as.character)
-    if(!is.character(res) && !is.null(h) && !res$pdHess) {
-      h <- optimHess(opt$par, obj$fn, obj$gr)
-      res <- tryCatch(sdreport(obj, par.fixed = opt$par, hessian.fixed = h, getReportCovariance = FALSE), error = as.character)
-    }
+  if(is.character(opt)) par.fixed <- NULL else par.fixed <- opt$par
+  if(is.null(obj$env$random) && !is.character(opt)) h <- obj$he(opt$par) else h <- NULL
+
+  res <- tryCatch(sdreport(obj, par.fixed = par.fixed, hessian.fixed = h, getReportCovariance = FALSE), error = as.character)
+
+  if(!is.character(res) && !is.character(opt) && !is.null(h) && !res$pdHess) {
+    h <- optimHess(opt$par, obj$fn, obj$gr)
+    res <- tryCatch(sdreport(obj, par.fixed = par.fixed, hessian.fixed = h, getReportCovariance = FALSE), error = as.character)
   }
 
   if(inherits(res, "sdreport") && res$pdHess && all(is.nan(res$cov.fixed))) {

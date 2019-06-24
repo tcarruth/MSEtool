@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.2.1
+- Fixed error in Solaris build.
+
 ## MSEtool 1.2.0
 For the new features described below, DLMtool version 5.3.1 is recommended.
 
