@@ -1037,7 +1037,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
   TAE_A<-array(NA,c(nsim,np,nf)) # Temporary store of the TAE
   MPrecs_A_blank<-list() # Temporary Hierarcical list of MPrec objects
   for(p in 1:np)MPrecs_A_blank[[p]]<-list()
-  LastEi<-LastAllocat<-LastCatch<-TACused<-array(NA,c(nsim,np,nf))
+  LastTAE<- histTAE<- Effort_pot<-LastAllocat<-LastCatch<-TACused<-array(NA,c(nsim,np,nf))
   LastSpatial<-array(NA,c(nareas,np,nf,nsim))
   V_Pt<-array(NA,c(nsim,nf,maxage,nyears+proyears)) # temporary vulnerability for MSY calcs combined over fleets
 
@@ -1289,13 +1289,17 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
         checkNA[p,f,y] <- sum(is.na(TACused[,p,f]))
 
-        LastEi[,p,f] <- rep(1,nsim) # no effort adjustment
+        # LastEi[,p,f] <- rep(1,nsim) # no effort adjustment
+        LastTAE[,p,f] <-histTAE[,p,f] <-  rep(NA, nsim) # no current TAE exists
         LastSpatial[,p,f,] <- array(MPA[p,f,nyears,], dim=c(nareas, nsim)) #
         LastAllocat[,p,f] <- rep(1, nsim) # default assumption of reallocation of effort to open areas
         LastCatch[,p,f] <- apply(CB[,p,f,,nyears,], 1, sum)
 
+        Effort_pot[,p,f] <- rep(NA, nsim) # No bio-economic model
+
         MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
-                                  LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
+                                           LastTAE=LastTAE[,p,f], histTAE=histTAE[,p,f],
+                                           LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastTAC=LastCatch[,p,f],
                                   TACused=TACused[,p,f], maxF=maxF,
                                   LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,
                                   retL_P=FleetPars[[p]][[f]]$retL_P, retA_P=FleetPars[[p]][[f]]$retA_P,
@@ -1311,15 +1315,17 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                   CAL_binsmid=StockPars[[p]]$CAL_binsmid, Linf=StockPars[[p]]$Linf, Len_age=StockPars[[p]]$Len_age,
                                   maxage=StockPars[[p]]$maxage, nareas=StockPars[[p]]$nareas, Asize=StockPars[[p]]$Asize,
                                   nCALbins=StockPars[[p]]$nCALbins,
-                                  qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
+                                  qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc,
+                                  Effort_pot=Effort_pot[,p,f])
 
         if(length(SexPars)>0)MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
 
         TACa[,p,f, mm, y] <- TACused[,p,f]#MPCalcs$TACrec # recommended TAC
         LastSpatial[,p,f,] <- MPCalcs$Si
         LastAllocat[,p,f] <- MPCalcs$Ai
-        LastEi[,p,f] <- MPCalcs$Ei # adjustment to effort
-        LastCatch[,p,f] <- MPCalcs$TACrec
+
+        LastTAE[,p,f] <- MPCalcs$TAE # TAE set by MP
+        LastCatch[,p,f] <- MPCalcs$TACrec # TAC et by MP
 
         Effort[,p,f, mm, y] <- rep(MPCalcs$Effort,nsim)[1:nsim]
         FleetPars[[p]][[f]]$CB_P <- MPCalcs$CB_P # removals
@@ -1673,31 +1679,35 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
 
             checkNA[p,f,y] <-checkNA[p,f,y] + sum(is.na(TACused[,p,f]))
 
+
             MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
-                                      LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
-                                      TACused=TACused[,p,f], maxF=maxF,
-                                      LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,
-                                      retL_P=FleetPars[[p]][[f]]$retL_P, retA_P=FleetPars[[p]][[f]]$retA_P,
-                                      L5_P=FleetPars[[p]][[f]]$L5_P, LFS_P=FleetPars[[p]][[f]]$LFS_P, Vmaxlen_P=FleetPars[[p]][[f]]$Vmaxlen_P,
-                                      SLarray_P=FleetPars[[p]][[f]]$SLarray_P, V_P=FleetPars[[p]][[f]]$V_P,
-                                      Fdisc_P=StockPars[[p]]$Fdisc_P, DR_P=FleetPars[[p]][[f]]$DR_P,
-                                      M_ageArray=StockPars[[p]]$M_ageArray,
-                                      FM_P=FleetPars[[p]][[f]]$FM_P, FM_Pret=FleetPars[[p]][[f]]$FM_Pret,
-                                      Z_P=FleetPars[[p]][[f]]$Z_P, CB_P=FleetPars[[p]][[f]]$CB_P, CB_Pret=FleetPars[[p]][[f]]$CB_Pret,
-                                      TAC_f=ImpPars[[p]][[f]]$TAC_f, E_f=ImpPars[[p]][[f]]$E_f, SizeLim_f=ImpPars[[p]][[f]]$SizeLim_f,
-                                      VBiomass_P=StockPars[[p]]$VBiomass_P, Biomass_P=StockPars[[p]]$Biomass_P, FinF=FleetPars[[p]][[f]]$FinF,
-                                      Spat_targ=FleetPars[[p]][[f]]$Spat_targ,
-                                      CAL_binsmid=StockPars[[p]]$CAL_binsmid, Linf=StockPars[[p]]$Linf, Len_age=StockPars[[p]]$Len_age,
-                                      maxage=StockPars[[p]]$maxage, nareas=StockPars[[p]]$nareas, Asize=StockPars[[p]]$Asize,
-                                      nCALbins=StockPars[[p]]$nCALbins,
-                                      qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
+                                               LastTAE=LastTAE[,p,f], histTAE=histTAE[,p,f],
+                                               LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastTAC=LastCatch[,p,f],
+                                               TACused=TACused[,p,f], maxF=maxF,
+                                               LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,
+                                               retL_P=FleetPars[[p]][[f]]$retL_P, retA_P=FleetPars[[p]][[f]]$retA_P,
+                                               L5_P=FleetPars[[p]][[f]]$L5_P, LFS_P=FleetPars[[p]][[f]]$LFS_P, Vmaxlen_P=FleetPars[[p]][[f]]$Vmaxlen_P,
+                                               SLarray_P=FleetPars[[p]][[f]]$SLarray_P, V_P=FleetPars[[p]][[f]]$V_P,
+                                               Fdisc_P=StockPars[[p]]$Fdisc_P, DR_P=FleetPars[[p]][[f]]$DR_P,
+                                               M_ageArray=StockPars[[p]]$M_ageArray,
+                                               FM_P=FleetPars[[p]][[f]]$FM_P, FM_Pret=FleetPars[[p]][[f]]$FM_Pret,
+                                               Z_P=FleetPars[[p]][[f]]$Z_P, CB_P=FleetPars[[p]][[f]]$CB_P, CB_Pret=FleetPars[[p]][[f]]$CB_Pret,
+                                               TAC_f=ImpPars[[p]][[f]]$TAC_f, E_f=ImpPars[[p]][[f]]$E_f, SizeLim_f=ImpPars[[p]][[f]]$SizeLim_f,
+                                               VBiomass_P=StockPars[[p]]$VBiomass_P, Biomass_P=StockPars[[p]]$Biomass_P, FinF=FleetPars[[p]][[f]]$FinF,
+                                               Spat_targ=FleetPars[[p]][[f]]$Spat_targ,
+                                               CAL_binsmid=StockPars[[p]]$CAL_binsmid, Linf=StockPars[[p]]$Linf, Len_age=StockPars[[p]]$Len_age,
+                                               maxage=StockPars[[p]]$maxage, nareas=StockPars[[p]]$nareas, Asize=StockPars[[p]]$Asize,
+                                               nCALbins=StockPars[[p]]$nCALbins,
+                                               qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc,
+                                               Effort_pot=Effort_pot[,p,f])
 
             if(length(SexPars)>0) MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
 
             TACa[,p,f, mm, y] <- MPCalcs$TACrec # recommended TAC
             LastSpatial[,p,f,] <- MPCalcs$Si
             LastAllocat[,p,f] <- MPCalcs$Ai
-            LastEi[,p,f] <- MPCalcs$Ei # adjustment to effort
+
+            LastTAE[,p,f] <- MPCalcs$TAE # adjustment to TAE
             LastCatch[,p,f] <- MPCalcs$TACrec
 
             Effort[,p,f, mm, y] <- rep(MPCalcs$Effort,nsim)[1:nsim]
@@ -1735,7 +1745,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             NoMPRecs$Spatial <- NA
 
             MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=NoMPRecs, y=y, nyears=nyears, proyears=proyears, nsim=nsim,
-                                      LastEi=LastEi[,p,f], LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastCatch=LastCatch[,p,f],
+                                               LastTAE=LastTAE[,p,f], histTAE=histTAE[,p,f],
+                                               LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastTAC=LastCatch[,p,f],
                                       TACused=TACused[,p,f], maxF=maxF,
                                       LR5_P=FleetPars[[p]][[f]]$LR5_P, LFR_P=FleetPars[[p]][[f]]$LFR_P, Rmaxlen_P=FleetPars[[p]][[f]]$Rmaxlen_P,
                                       retL_P=FleetPars[[p]][[f]]$retL_P, retA_P=FleetPars[[p]][[f]]$retA_P,
@@ -1751,7 +1762,8 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                       CAL_binsmid=StockPars[[p]]$CAL_binsmid, Linf=StockPars[[p]]$Linf, Len_age=StockPars[[p]]$Len_age,
                                       maxage=StockPars[[p]]$maxage, nareas=StockPars[[p]]$nareas, Asize=StockPars[[p]]$Asize,
                                       nCALbins=StockPars[[p]]$nCALbins,
-                                      qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc)
+                                      qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc,
+                                      Effort_pot=Effort_pot[,p,f])
 
             if(length(SexPars)>0) MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
 
@@ -1759,7 +1771,9 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             #TACa[,p,f, mm, y] <- MPCalcs$TACrec # recommended TAC
             LastSpatial[,p,f,] <- MPCalcs$Si
             LastAllocat[,p,f] <- MPCalcs$Ai
-            LastEi[,p,f] <- MPCalcs$Ei # adjustment to effort
+
+            LastTAE[,p,f] <- MPCalcs$TAE
+            # LastEi[,p,f] <- MPCalcs$Ei # adjustment to effort
             LastCatch[,p,f] <- MPCalcs$TACrec
 
             Effort[,p,f, mm, y] <- rep(MPCalcs$Effort,nsim)[1:nsim]
