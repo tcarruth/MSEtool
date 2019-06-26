@@ -1290,14 +1290,15 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         checkNA[p,f,y] <- sum(is.na(TACused[,p,f]))
 
         # LastEi[,p,f] <- rep(1,nsim) # no effort adjustment
-        LastTAE[,p,f] <-histTAE[,p,f] <-  rep(NA, nsim) # no current TAE exists
+        LastTAE[,p,f] <-  rep(NA, nsim) # no current TAE exists
+        histTAE[,p,f] <- rep(NA, nsim) # no existing TAE
         LastSpatial[,p,f,] <- array(MPA[p,f,nyears,], dim=c(nareas, nsim)) #
         LastAllocat[,p,f] <- rep(1, nsim) # default assumption of reallocation of effort to open areas
         LastCatch[,p,f] <- apply(CB[,p,f,,nyears,], 1, sum)
 
         Effort_pot[,p,f] <- rep(NA, nsim) # No bio-economic model
 
-        MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
+        MPCalcs <-  DLMtool::CalcMPDynamics(MPRecs=MPRecs_A[[p]][[f]], y=y, nyears=nyears, proyears=proyears, nsim=nsim,
                                            LastTAE=LastTAE[,p,f], histTAE=histTAE[,p,f],
                                            LastSpatial=LastSpatial[,p,f,], LastAllocat=LastAllocat[,p,f], LastTAC=LastCatch[,p,f],
                                   TACused=TACused[,p,f], maxF=maxF,
@@ -1318,7 +1319,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
                                   qs=FleetPars[[p]][[f]]$qs, qvar=FleetPars[[p]][[f]]$qvar, qinc=FleetPars[[p]][[f]]$qinc,
                                   Effort_pot=Effort_pot[,p,f])
 
-        if(length(SexPars)>0)MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
+        if(length(SexPars)>0) MPCalcs<-MPCalcsNAs(MPCalcs) # Zeros caused by SexPars
 
         TACa[,p,f, mm, y] <- TACused[,p,f]#MPCalcs$TACrec # recommended TAC
         LastSpatial[,p,f,] <- MPCalcs$Si
