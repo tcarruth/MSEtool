@@ -99,38 +99,42 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   condition <- match.arg(condition)
   if(is.null(Chist) && !is.null(Ehist)) condition <- "effort"
+  message("SRA model is conditioned on ", condition)
 
-  if(condition == "catch" && !is.null(Chist)) {
+  if(condition == "catch") {
+    if(is.null(Chist)) {
+      stop("Full time series of catch is needed.")
+    } else {
+      if(any(is.na(Chist))) {
+        stop("One or more of the historical annual catch observations is missing. Suggestion: use linear interpolation to fill these data.")
+      }
+      if(any(Chist < 0)) stop("All catch values should be zero or greater.")
 
-    message("Conditioned on catch.")
-    if(any(is.na(Chist))) {
-      stop("One or more of the historical annual catch observations is missing. Suggestion: use linear interpolation to fill these data.")
+      # Convert single fleet inputs to multiple fleet, e.g. matrices to arrays
+      if(!is.matrix(Chist)) Chist <- matrix(Chist, ncol = 1)
+
+      nyears <- nrow(Chist)
+      nfleet <- ncol(Chist)
+      Ehist <- matrix(0, nyears, nfleet)
     }
-    if(any(Chist < 0)) stop("All catch values should be zero or greater.")
-
-    # Convert single fleet inputs to multiple fleet, e.g. matrices to arrays
-    if(!is.matrix(Chist)) Chist <- matrix(Chist, ncol = 1)
-
-    nyears <- nrow(Chist)
-    nfleet <- ncol(Chist)
-
   }
 
-  if(condition == "effort" && !is.null(Ehist)) {
+  if(condition == "effort") {
+    if(is.null(Ehist)) {
+      stop("Full time series of effort is needed.")
+    } else {
+      if(any(is.na(Ehist))) stop("Effort time series is not complete (contains NA's")
+      if(any(Ehist < 0)) stop("All effort values should be positive.")
 
-    message("Conditioned on effort.")
-    if(any(is.na(Ehist))) stop("Effort time series is not complete (contains NA's")
-    if(any(Ehist < 0)) stop("All effort values should be positive.")
+      if(!is.matrix(Ehist)) Ehist <- matrix(Ehist, ncol = 1)
 
-    if(!is.matrix(Ehist)) Ehist <- matrix(Ehist, ncol = 1)
+      nyears <- nrow(Ehist)
+      nfleet <- ncol(Ehist)
 
-    nyears <- nrow(Ehist)
-    nfleet <- ncol(Ehist)
-
-    condition <- "effort"
+      if(!is.null(Chist) && !is.matrix(Chist)) Chist <- matrix(Chist, ncol = 1)
+      if(is.null(Chist)) Chist <- matrix(0, nyears, nfleet)
+    }
   }
-
-  if(is.null(Ehist) && is.null(Chist)) stop("A full catch or effort time series is needed.", call. = FALSE)
 
   nsim <- OM@nsim
   proyears <- OM@proyears
@@ -379,38 +383,32 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     #message("For non-converged iterations, values were re-sampled from converged iterations.\n")
   }
 
+  ### Fit to means if report = TRUE
+  if(report) {
+    message("Generating additional model fit from mean values of parameters in the operating model...\n")
+    mean_fit <- SRA_scope_est(Catch = Chist, Effort = Ehist, condition = condition,
+                              Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
+                              ML_sd = ML_sd, length_bin = length_bin,
+                              wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
+                              fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"),
+                              LWT = LWT, ESS = ESS, mean_fit = TRUE,
+                              integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
+  }
+
   ### R0
   OM@cpars$R0 <- vapply(res, getElement, numeric(1), name = "R0")
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
-  OM@cpars$initD <- vapply(res, function(x) x$E[1]/x$E0_year1, numeric(1))
+  OM@cpars$initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))
   message("Range of initial spawning depletion (OM@cpars$initD): ", paste(round(range(OM@cpars$initD), 2), collapse = " - "))
 
-  OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0, numeric(1))
+  OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0[length(x$E0)], numeric(1))
   message("Range of spawning depletion (OM@cpars$D): ", paste(round(range(OM@cpars$D), 2), collapse = " - "), "\n")
 
   ### Selectivity and F
   ### Find
-  get_F_at_age <- function(report) {
-    N <- report$N
-    max_age <- ncol(N)
-    nyears <- nrow(N) - 1
-
-    surv_matrix <- N[2:(nyears+1), 2:max_age]/N[1:nyears, 1:(max_age-1)]
-    surv_plusgroup <- N[2:(nyears+1), max_age]/(N[1:nyears, max_age-1] + N[1:nyears, max_age])
-
-    Z_matrix <- -log(surv_matrix)
-    Z_matrix[, max_age-1] <- -log(surv_plusgroup)
-
-    Z_matrix <- cbind(Z_matrix, -log(surv_plusgroup))
-
-    F_matrix <- Z_matrix - report$M
-    F_matrix[F_matrix < 0] <- 0
-
-    return(F_matrix)
-  }
-  F_matrix <- lapply(res, get_F_at_age)
+  F_matrix <- lapply(res, getElement, "F_at_age")
   apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
   Find <- do.call(rbind, apical_F)
 
@@ -556,10 +554,14 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                  CAA = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
 
   ### Generate figures
-  if(figure) plot_SRA_scope(OM, Chist, Ehist, Index, CAA, CAL, ML, res, OM@EffYears)
+  if(figure) {
+    plot_SRA_scope(OM, Chist, Ehist, Index, CAA, CAL, ML, res, OM@EffYears)
+    SRA_scope_rmd(OM, report_list = list(mean_fit = mean_fit, report = res),
+                  dir = tempdir(), Year = OM@EffYears, open_file = TRUE, quiet = TRUE)
+  }
 
   message("Complete.")
-  return(list(OM = OM, output = output, report = if(report) res else NULL))
+  return(list(OM = OM, output = output, report = if(report) list(mean_fit = mean_fit, report = res) else NULL))
 }
 
 #### Parameters
@@ -587,11 +589,34 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 # SR type
 # selectivity type
 # maxage integer
-SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, condition = c("catch", "effort"),
+
+get_F_at_age <- function(report) {
+  N <- report$N
+  max_age <- ncol(N)
+  nyears <- nrow(N) - 1
+
+  surv_matrix <- N[2:(nyears+1), 2:max_age]/N[1:nyears, 1:(max_age-1)]
+  surv_plusgroup <- N[2:(nyears+1), max_age]/(N[1:nyears, max_age-1] + N[1:nyears, max_age])
+
+  Z_matrix <- -log(surv_matrix)
+  Z_matrix[, max_age-1] <- -log(surv_plusgroup)
+
+  Z_matrix <- cbind(Z_matrix, -log(surv_plusgroup))
+
+  F_matrix <- Z_matrix - report$M
+  F_matrix[F_matrix < 0] <- 0
+
+  report$Z_at_age <- Z_matrix
+  report$F_at_age <- F_matrix
+
+  return(report)
+}
+
+SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, condition = c("catch", "effort"),
                           I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, ML_sd = NULL, length_bin,
                           I_type, C_eq = 0, E_eq = 0, SR_type = c("BH", "Ricker"), LWT = list(), ESS = c(30, 30),
                           StockPars, ObsPars, FleetPars, wt_at_len, integrate = FALSE, selectivity, fix_selectivity = TRUE,
-                          fix_dome = FALSE, control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
+                          fix_dome = FALSE, mean_fit = FALSE, control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
   condition <- match.arg(condition)
   SR_type <- match.arg(SR_type)
 
@@ -602,12 +627,38 @@ SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, conditio
   max_age <- dim(CAA)[2]
   nsurvey <- ncol(Index)
 
-  if(is.null(I_sd)) I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
-
   CAA_n <- t(rowSums(aperm(CAA, c(3, 1, 2)), dims = 2, na.rm = TRUE))
   CAL_n <- t(rowSums(aperm(CAL, c(3, 1, 2)), dims = 2, na.rm = TRUE))
 
   LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
+
+  if(mean_fit) {
+    # Average across simulations for arrays: M_ageArray, Len_age, Mat_age (mean across index 1)
+    # Matrices: L5, LFS, Vmaxlen (mean across rows)
+    # Vectors: Isd, Len_CV, hs, R0 (effort only)
+    mean_vector <- function(x) rep(mean(x), length(x))
+    mean_matrix <- function(x) matrix(apply(x, 1, mean), nrow(x), ncol(x))
+    mean_array <- function(x) {
+      means <- apply(x, c(2, 3), mean)
+      new_output <- array(means, dim(x)[c(2,3,1)])
+      return(aperm(new_output, c(3,1,2)))
+    }
+
+    StockPars_ind <- match(c("M_ageArray", "Len_age", "Mat_age"), names(StockPars))
+    StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_array)
+
+    StockPars_ind <- match(c("hs", "LenCV", "procsd"), names(StockPars))
+    StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_vector)
+
+    if(condition == "effort") StockPars$R0 <- mean_vector(StockPars$R0)
+
+    FleetPars_ind <- match(c("L5", "LFS", "Vmaxlen"), names(FleetPars))
+    FleetPars[FleetPars_ind] <- lapply(FleetPars[FleetPars_ind], mean_matrix)
+
+    ObsPars$Isd <- mean_vector(ObsPars$Isd)
+  }
+
+  if(is.null(I_sd)) I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
 
   TMB_data_all <- list(condition = condition, I_hist = Index, sigma_I = I_sd,
                        CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
@@ -617,6 +668,7 @@ SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, conditio
                        CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
                        vul_type = selectivity, I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT$Index,
                        est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(1, nyears-1), NA))
+
   if(condition == "catch") {
     rescale <- 1/mean(Catch, na.rm = TRUE)
 
@@ -624,6 +676,7 @@ SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, conditio
                      E_hist = matrix(0, nyears, nfleet), E_eq = rep(0, nfleet))
 
   } else {
+    rescale <- 1
     rescale_effort <- 1/mean(Effort, na.rm = TRUE)
 
     TMB_data <- list(model = "SRA_scope", C_hist = matrix(1, nyears, nfleet), C_eq = rep(0, nfleet),
@@ -651,9 +704,7 @@ SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, conditio
     }
   }
 
-  if(!fix_selectivity) {
-    map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
-  }
+  if(!fix_selectivity) map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
 
   TMB_params <- list(log_R0 = ifelse(condition == "catch", 3, log(1e3)), transformed_h = transformed_h, vul_par = vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
@@ -708,6 +759,8 @@ SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, conditio
     fun_fixed <- c(NA, NA)
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
+  report <- get_F_at_age(report)
+  report$rescale <- rescale
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
@@ -719,6 +772,8 @@ SRA_scope_est <- function(x, Catch = NULL, Effort = NULL, Index = NULL, conditio
 #' @rdname SRA_scope
 #' @export
 plot_SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, Index = matrix(NA, 0, 0), CAA = NA, CAL = NA, ML = NA, report_list, Year = NULL) {
+  if(length(report_list) == 2) report_list <- report_list[[2]]
+
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par), add = TRUE)
 
@@ -728,7 +783,6 @@ plot_SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, Index = matrix(NA, 0,
   if(is.matrix(CAA)) CAA <- array(CAA, c(dim(CAA), 1))
   if(is.matrix(CAL)) CAL <- array(CAL, c(dim(CAL), 1))
   if(is.vector(ML)) ML <- matrix(ML, ncol = 1)
-
 
   nsim <- OM@nsim
   maxage <- OM@maxage

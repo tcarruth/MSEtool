@@ -104,47 +104,39 @@
   }
 
 
-  ////// Equilibrium reference points and per-recruit quantities
-  matrix<Type> NPR_unfished(max_age, nlbin);
-  matrix<Type> ALK_unfished(max_age, nlbin);
-  ALK_unfished = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, n_y-1);
-  NPR_unfished = calc_NPR0(nlbin, M, max_age, ALK_unfished, n_y-1);
+  ////// Equilibrium reference points and per-recruit quantities - calculate annually
+  vector<Type> EPR0(n_y);
+  vector<Type> E0(n_y);
+  vector<Type> B0(n_y);
+  vector<Type> N0(n_y);
 
-  Type EPR0 = sum_EPR(NPR_unfished, wt_at_len, mat, max_age, nlbin, n_y-1);
+  vector<Type> Arec(n_y);
+  vector<Type> Brec(n_y);
 
-  Type B0 = R0 * sum_BPR(NPR_unfished, wt_at_len);
-  Type N0 = R0 * NPR_unfished.sum();
-  Type E0 = R0 * EPR0;
-  //Type VB0 = R0 * sum_VBPR(NPR_unfished, wt_at_len, vul, max_age, nlbin);
+  for(int y=0;y<n_y;y++) {
+    matrix<Type> NPR_unfished(max_age, nlbin);
+    matrix<Type> ALK_unfished(max_age, nlbin);
+    ALK_unfished = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
+    NPR_unfished = calc_NPR0(nlbin, M, max_age, ALK_unfished, y);
 
-  matrix<Type> NPR_unfished_year1(max_age, nlbin);
-  matrix<Type> ALK_unfished_year1(max_age, nlbin);
-  ALK_unfished_year1 = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
-  NPR_unfished_year1 = calc_NPR0(nlbin, M, max_age, ALK_unfished, 0);
+    EPR0(y) = sum_EPR(NPR_unfished, wt_at_len, mat, max_age, nlbin, y);
+    E0(y) = R0 * EPR0(y);
+    B0(y) = R0 * sum_BPR(NPR_unfished, wt_at_len);
+    N0(y) = R0 * NPR_unfished.sum();
 
-  Type EPR0_year1 = sum_EPR(NPR_unfished_year1, wt_at_len, mat, max_age, nlbin, 0);
-
-  //Type B0 = R0 * sum_BPR(NPR_unfished, wt_at_len);
-  //Type N0 = R0 * NPR_unfished.sum();
-  Type E0_year1 = R0 * EPR0_year1;
-
-  Type Arec;
-  Type Brec;
-
-  if(SR_type == "BH") {
-    Arec = 4 *h;
-    Arec /= 1-h;
-    Arec /= EPR0;
-    Brec = 5*h - 1;
-    Brec /= (1-h) * E0;
-  } else {
-    Arec = pow(5*h, 1.25);
-    Arec /= EPR0;
-    Brec = 1.25;
-    Brec *= log(5*h);
-    Brec /= E0;
+    if(SR_type == "BH") {
+      Arec(y) = 4 *h;
+      Arec(y) /= 1-h;
+      Brec(y) = 5*h - 1;
+      Brec(y) /= (1-h) * E0(y);
+    } else {
+      Arec(y) = pow(5*h, 1.25);
+      Brec(y) = 1.25;
+      Brec(y) *= log(5*h);
+      Brec(y) /= E0(y);
+    }
+    Arec(y) /= EPR0(y);
   }
-  Type CR = Arec * EPR0;
 
   ////// During time series year = 1, 2, ..., n_y
   vector<matrix<Type> > ALK(n_y+1);
@@ -191,11 +183,11 @@
   Type R_eq;
 
   if(SR_type == "BH") {
-    R_eq = Arec * EPR_eq - 1;
+    R_eq = Arec(0) * EPR_eq - 1;
   } else {
-    R_eq = log(Arec * EPR_eq);
+    R_eq = log(Arec(0) * EPR_eq);
   }
-  R_eq /= Brec * EPR_eq;
+  R_eq /= Brec(0) * EPR_eq;
 
   R(0) = R_eq;
   if(!R_IsNA(asDouble(est_rec_dev(0)))) {
@@ -227,9 +219,9 @@
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
     if(SR_type == "BH") {
-      R(y+1) = BH_SR(E(y), h, R0, E0);
+      R(y+1) = BH_SR(E(y), h, R0, E0(y));
     } else {
-      R(y+1) = Ricker_SR(E(y), h, R0, E0);
+      R(y+1) = Ricker_SR(E(y), h, R0, E0(y));
     }
 
     if(y<n_y-1) {
@@ -390,21 +382,13 @@
   REPORT(F);
   REPORT(Z_total);
 
-  REPORT(NPR_unfished);
-  REPORT(ALK_unfished);
   REPORT(EPR0);
   REPORT(B0);
   REPORT(E0);
   REPORT(N0);
 
-  REPORT(NPR_unfished_year1);
-  REPORT(ALK_unfished_year1);
-  REPORT(EPR0_year1);
-  REPORT(E0_year1);
-
   REPORT(Arec);
   REPORT(Brec);
-  REPORT(CR);
 
   REPORT(N_full);
   REPORT(ALK);
