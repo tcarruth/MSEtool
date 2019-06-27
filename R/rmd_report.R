@@ -1,5 +1,6 @@
-rmd_head <- function(name) {
-   nametag <- c("---", paste0("title: \"Assessment summary for ", name, "\""))
+rmd_head <- function(name, assessment = TRUE) {
+   if(assessment) name <- paste("Assessment summary for", name)
+   nametag <- c("---", paste0("title: \"", name, "\""))
    ans <- c(nametag,
             "subtitle: Tables and Figures",
             "date: \"`r Sys.Date()`\"",
@@ -68,7 +69,7 @@ rmd_LW <- function(LAA, WAA) {
   LAA_char <- paste0("c(", paste0(LAA, collapse = ", "), ")")
   WAA_char <- paste0("c(", paste0(WAA, collapse = ", "), ")")
 
-  return(c("```{r, fig.cap=\"Length-weight relationship from Data object.\"}",
+  return(c("```{r, fig.cap=\"Length-weight relationship.\"}",
            paste0("plot(", LAA_char, ", ", WAA_char, ", typ = \"o\", xlab = \"Length\", ylab = \"Weight\")"),
            "abline(h = 0, col = \"grey\")",
            "```\n"))
@@ -285,9 +286,9 @@ rmd_fit_age_comps <- function(type = c("bubble", "annual"), ages = "NULL", match
     "```\n")
 }
 
-rmd_bubble <- function(year, par, fig.cap) {
+rmd_bubble <- function(year, par, CAL_bins = "NULL", ages = "NULL", fig.cap) {
   c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
-    paste0("plot_composition(", year, ", ", par, ", plot_type = \"bubble_data\")"),
+    paste0("plot_composition(", year, ", ", par, ", CAL_bins = ", CAL_bins, ", ages = ", ages, ", plot_type = \"bubble_data\")"),
     "```\n")
 }
 
@@ -332,9 +333,9 @@ rmd_R <- function() rmd_assess_timeseries("R", "recruitment", "\"Recruitment (R)
 
 rmd_N <- function() rmd_assess_timeseries("N", "abundance", "\"Abundance (N)\"")
 
-rmd_N_at_age <- function() rmd_bubble("c(info$Year, max(info$Year)+1)", "N_at_age", "Abundance-at-age bubble plot.")
+rmd_N_at_age <- function() rmd_bubble("c(info$Year, max(info$Year)+1)", "N_at_age", fig.cap = "Abundance-at-age bubble plot.")
 
-rmd_C_at_age <- function() rmd_bubble("info$Year", "C_at_age", "Predicted catch-at-age bubble plot.")
+rmd_C_at_age <- function() rmd_bubble("info$Year", "C_at_age", fig.cap = "Predicted catch-at-age bubble plot.")
 
 rmd_C_mean_age <- function() {
   c(paste0("```{r, fig.cap=\"Observed (black) and predicted (red) mean age of the composition data.\"}"),

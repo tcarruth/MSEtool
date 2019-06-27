@@ -128,7 +128,7 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 })
 
 
-setMethod("show", signature(object = "Assessment"), function(object) print(summary(object)))
+#setMethod("show", signature(object = "Assessment"), function(object) print(summary(object)))
 
 #' @name plot.Assessment
 #' @aliases plot,Assessment,missing-method
