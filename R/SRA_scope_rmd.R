@@ -3,7 +3,7 @@
 #' @importFrom rmarkdown render
 #' @export
 report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = tempdir(), Year = NULL,
-                             open_file = TRUE, quiet = TRUE) {
+                             open_file = TRUE, quiet = TRUE, ...) {
 
   # Generate markdown report
   filename_html <- paste0(filename, ".html")
@@ -47,10 +47,9 @@ report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = temp
 
   ####### Output from all simulations {.tabset}
   fleet_output <- lapply(1:nfleet, rmd_SRA_fleet_output)
-  fleet_output <- do.call(c, fleet_output)
+
   if(any(data$I_hist > 0)) {
     survey_output <- lapply(1:nsurvey, rmd_SRA_survey_output)
-    survey_output <- do.call(c, survey_output)
   } else survey_output <- NULL
 
   all_sims_output <- c(fleet_output, survey_output, "### Model output\n",
@@ -99,7 +98,7 @@ report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = temp
     comps <- match.arg(comps)
     obs2 <- paste(obs, "[, , ", i, "]")
     pred2 <- paste(pred, "[, , ", i, "]")
-    fig.cap2 <- paste0("Observed (black) and predicted (red) ", comps, " composition from fleet", i, ".")
+    fig.cap2 <- paste0("Observed (black) and predicted (red) ", comps, " composition from fleet ", i, ".")
     if(comps == "age") {
       rmd_fit_comps("Year", obs2, pred2, type = "annual", fig.cap = fig.cap2)
     } else rmd_fit_comps("Year", obs2, pred2, type = "annual", CAL_bins = "data$length_bin", fig.cap = fig.cap2)
@@ -111,7 +110,7 @@ report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = temp
 
     if(data$condition == "effort" || ncol(data$C_hist) > 1) {
       C_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data$C_hist", pred = "report$Cpred",
-                        fig.cap = "fleet", label = "Fleet")
+                        fig.cap = "catch from fleet", label = "Fleet")
     } else C_plots <- NULL
   } else C_matplot <- C_plots <- NULL
 
@@ -122,8 +121,7 @@ report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = temp
 
   if(!all(is.na(report$Ipred))) {
     I_plots <- lapply(1:nsurvey, individual_matrix_fn, obs = "data$I_hist", pred = "report$Ipred",
-                      fig.cap = "survey", label = "Survey")
-    I_plots <- do.call(c, I_plots)
+                      fig.cap = "index from survey", label = "Survey")
   } else I_plots <- NULL
 
   if(any(data$CAA_hist > 0)) {
@@ -184,12 +182,12 @@ report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = temp
 
 
   rmd <- c(header, OM_update, all_sims_output, sumry, LH_section, data_section, ts_output, rmd_footer())
-  #rmd <- c(rmd_head(name), rmd_model, rmd_ret, rmd_footer())
+  if(is.list(rmd)) rmd <- do.call(c, rmd)
+
   write(rmd, file = file.path(dir, filename_rmd))
 
   # Rendering markdown file
   message("Rendering markdown file to HTML: ", file.path(dir, filename_html))
-  assign_Assessment_slots(Assessment)
 
   output <- rmarkdown::render(file.path(dir, filename_rmd), "html_document", filename_html, dir,
                               output_options = list(df_print = "paged"), quiet = quiet, ...)
