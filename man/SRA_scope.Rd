@@ -3,6 +3,7 @@
 \name{SRA_scope}
 \alias{SRA_scope}
 \alias{plot_SRA_scope}
+\alias{Sub_cpars}
 \alias{report_SRA_scope}
 \title{Stock-reduction analysis (SRA) for conditioning operating models}
 \usage{
@@ -16,9 +17,11 @@ SRA_scope(OM, Chist = NULL, Ehist = NULL, condition = c("catch",
 
 plot_SRA_scope(...)
 
-report_SRA_scope(OM, report_list, filename = "SRA_scope",
-  dir = tempdir(), Year = NULL, open_file = TRUE, quiet = TRUE,
-  ...)
+Sub_cpars(OM, sims = 1:OM@nsim)
+
+report_SRA_scope(OM, report_list, sims = 1:OM@nsim,
+  filename = "SRA_scope", dir = tempdir(), Year = NULL,
+  open_file = TRUE, quiet = TRUE, ...)
 }
 \arguments{
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
@@ -84,6 +87,8 @@ multinomial likelihood function. The annual sample size of an age or length comp
 
 \item{...}{Other arguments to add in the future.}
 
+\item{sims}{A logical vector of length \code{OM@nsim} or a numberic vector indicating which simulations to keep.}
+
 \item{report_list}{The list of assessment output returned by \code{SRA_scope} when \code{report = TRUE}.}
 
 \item{quiet}{Logical, whether to silence the markdown rendering function.}
@@ -119,9 +124,6 @@ This function is intended to generate a range of potential depletion scenarios t
 Either a full catch (conditioned on catch) or effort (conditioned on effort) time series is needed but missing data (as NAs) are allowed for all other data types.
 }
 \details{
-\code{report_SRA_scope} generates the plots from the SRA scope function and puts them in a markdown HTML document.
-\code{plot_SRA_scope} is now deprecated.
-
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 
@@ -133,6 +135,12 @@ Selectivity is fixed to values sampled from \code{OM} if no age or length compos
 }
 By default, all likelihood weights are equal to one if not specified by the user. Likelihoods for CAA and CAL can also be adjusted by changing the
 multinomial sample size. See argument \code{ESS}.
+
+\code{report_SRA_scope} generates the plots from the SRA scope function and puts them in a markdown HTML document.
+\code{plot_SRA_scope} is now deprecated.
+
+Output from \code{SRA_scope} is placed in objects in \code{OM@cpars}. \code{Sub_cpars} is a convenient function to subset simulations
+for the operating model, for example, to remove simulations from unconverged model fits or outlier simulations.
 }
 \note{
 If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.

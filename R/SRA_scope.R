@@ -49,6 +49,7 @@
 #' @param dir The directory in which the markdown and HTML files will be saved.
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
+#' @param sims A logical vector of length \code{OM@@nsim} or a numberic vector indicating which simulations to keep.
 #' @param ... Other arguments to add in the future.
 #' @return
 #' A named list containing the following:
@@ -71,9 +72,6 @@
 #' e.g., depletion.
 #'
 #' @details
-#' \code{report_SRA_scope} generates the plots from the SRA scope function and puts them in a markdown HTML document.
-#' \code{plot_SRA_scope} is now deprecated.
-#'
 #' One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 #' Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 #'
@@ -85,6 +83,12 @@
 #' }
 #' By default, all likelihood weights are equal to one if not specified by the user. Likelihoods for CAA and CAL can also be adjusted by changing the
 #' multinomial sample size. See argument \code{ESS}.
+#'
+#' \code{report_SRA_scope} generates the plots from the SRA scope function and puts them in a markdown HTML document.
+#' \code{plot_SRA_scope} is now deprecated.
+#'
+#' Output from \code{SRA_scope} is placed in objects in \code{OM@@cpars}. \code{Sub_cpars} is a convenient function to subset simulations
+#' for the operating model, for example, to remove simulations from unconverged model fits or outlier simulations.
 #'
 #' @note If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
 #' Time-varying life history parameters create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
@@ -899,3 +903,36 @@ plot_SRA_scope <- function(...) {
 #
 #  invisible()
 #}
+
+
+#' @rdname SRA_scope
+#' @export
+Sub_cpars <- function(OM, sims = 1:OM@nsim) {
+
+  if(is.numeric(sims)) {
+    sims2 <- logical(OM@nsim)
+    sims2[sims] <- TRUE
+  } else if(is.logical(sims) && length(sims) == OM@nsim) {
+    sims2 <- sims
+  } else stop("Logical vector sims need to be of length ", OM@nsim)
+
+  if(any(!sims2)) {
+    message("Removing simulations: ", paste0(which(!sims2), collapse = " "))
+    cpars <- OM@cpars
+    subset_function <- function(x, sims) {
+      if(is.matrix(x)) {
+        return(x[sims, , drop = FALSE])
+      } else if(is.array(x)) {
+        return(x[sims, , , drop = FALSE])
+      } else return(x[sims])
+    }
+
+    cpars2 <- lapply(cpars, subset_function, sims = sims2)
+    OM@cpars <- cpars2
+    OM@nsim <- sum(sims2)
+
+    message("Set OM@nsim = ", OM@nsim)
+  }
+
+  return(OM)
+}

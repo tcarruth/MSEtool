@@ -2,8 +2,12 @@
 #' @rdname SRA_scope
 #' @importFrom rmarkdown render
 #' @export
-report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = tempdir(), Year = NULL,
+report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_scope", dir = tempdir(), Year = NULL,
                              open_file = TRUE, quiet = TRUE, ...) {
+
+  # Subset cpars
+  OM <- Sub_cpars(OM, sims)
+  report_list[[2]] <- report_list[[2]][sims]
 
   # Generate markdown report
   filename_html <- paste0(filename, ".html")
