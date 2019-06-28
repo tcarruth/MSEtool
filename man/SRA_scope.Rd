@@ -17,7 +17,8 @@ SRA_scope(OM, Chist = NULL, Ehist = NULL, condition = c("catch",
 plot_SRA_scope(...)
 
 report_SRA_scope(OM, report_list, filename = "SRA_scope",
-  dir = tempdir(), Year = NULL, open_file = TRUE, quiet = TRUE)
+  dir = tempdir(), Year = NULL, open_file = TRUE, quiet = TRUE,
+  ...)
 }
 \arguments{
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
