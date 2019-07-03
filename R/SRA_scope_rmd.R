@@ -25,7 +25,8 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
   SD <- report_list[[1]]$SD
   report <- report_list[[1]]$report
   data <- report_list[[1]]$obj$env$data
-  data$C_hist <- data$C_hist/report$rescale
+  data$C_hist <- report$C_hist
+  #data$C_hist <- data$C_hist/report$rescale
 
   conv <- report$conv
   length_bin <- report$length_bin
@@ -215,7 +216,7 @@ rmd_matplot <- function(x, y, col, xlab, ylab, legend.lab = "Fleet", type = "l",
   ans <- c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
            paste0("x <- ", x, "; y <- ", y),
            paste0("matplot(x, y, type = \"", type, "\", lty = ", lty, ", col = ", col,
-                  ", ylim = c(0, 1.1 * max(y)), xlab = \"", xlab, "\", ylab = \"", ylab, "\")"),
+                  ", ylim = c(0, 1.1 * max(y, na.rm = TRUE)), xlab = \"", xlab, "\", ylab = \"", ylab, "\")"),
            "abline(h = 0, col = \"grey\")",
            paste0("if(ncol(x) > 1) legend(\"topleft\", paste(\"", legend.lab, "\", 1:ncol(x)), text.col = ", col, ")"),
            " ```\n")
@@ -325,7 +326,7 @@ rmd_SRA_fleet_output <- function(ff) {
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean ages of fleet ", ff, ".\"}"),
            paste0("MApred <- do.call(cbind, lapply(report_list[[2]], function(x) x$CAApred[, , ", ff, "] %*% age/x$CN[, ", ff, "]))"),
            "matplot(Year_matrix, MApred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean age\")",
-           "if(any(data$CAA_hist[, , ", ff, "] > 0)) {",
+           paste0("if(any(data$CAA_hist[, , ", ff, "] > 0)) {"),
            paste0("  lines(Year, (data$CAA_hist[, , ", ff, "] %*% age)/rowSums(data$CAA_hist[, , ", ff, "], na.rm = TRUE),",
            "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "}",
@@ -344,7 +345,7 @@ rmd_SRA_fleet_output <- function(ff) {
 rmd_SRA_survey_output <- function(sur) {
   if(sur == 1) header <- "### Surveys\n" else header <- NULL
   ans <- c(paste0("```{r, fig.cap = \"Observed (red) and predicted (black) index values in survey ", sur, ".\"}"),
-           "Ipred <- do.call(cbind, lapply(report_list[[2]], function(x) x$Ipred[, ", sur, "]))",
+           paste0("Ipred <- do.call(cbind, lapply(report_list[[2]], function(x) x$Ipred[, ", sur, "]))"),
            paste0("matplot(Year_matrix, Ipred, type = \"l\", col = \"black\", ylim = c(0, 1.1 * max(c(Ipred, data$I_hist[, ", sur, "]), na.rm = TRUE)), xlab = \"Year\", ylab = \"Survey ", sur, "\")"),
            paste0("lines(Year, data$I_hist[, ", sur, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "abline(h = 0, col = \"grey\")",
