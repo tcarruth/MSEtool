@@ -385,7 +385,9 @@ expandHerm<-function(Herm,maxage,np,nsim){
 #' @export
 MPCalcsNAs<-function(MPCalcs){
 
-  for(i in 1:length(MPCalcs))MPCalcs[[i]][is.na(MPCalcs[[i]])]<-0
+  for(i in 1:length(MPCalcs)){
+    if (names(MPCalcs)[i] != "TAE") MPCalcs[[i]][is.na(MPCalcs[[i]])]<-0  # TAE can be NA
+  }
   MPCalcs
 
 }
