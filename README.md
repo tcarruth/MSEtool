@@ -12,7 +12,7 @@ The released version of `MSEtool` can be downloaded from CRAN:
 install.packages("MSEtool")
 ```
 
-This GitHub repository contains the development version of MSEtool, which can be installed via:
+The GitHub repository contains the development version of MSEtool, which can be installed via:
 
 ```
 devtools::install_github("tcarruth/MSEtool")
@@ -27,8 +27,6 @@ Vignettes describing the features of MSEtool can be obtained via:
 ```
 browseVignettes("MSEtool")
 ```
-
-The vignette can also be viewed [here](https://htmlpreview.github.io/?https://github.com/tcarruth/MSEtool/blob/master/inst/doc/MSEtool.html).
 
 A User Guide for the DLMtool package also available at [https://dlmtool.github.io/DLMtool/userguide/introduction.html](https://dlmtool.github.io/DLMtool/userguide/introduction.html). 
 
