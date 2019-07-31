@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.2.2
+- Set F = 0 when Catch is very small in cDD and cDD_SS. This is especially important in combination with 40-10 harvest control rules.
+
 ## MSEtool 1.2.1
 - Fixed error in Solaris build.
 

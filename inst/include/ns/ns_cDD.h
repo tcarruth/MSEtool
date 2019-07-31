@@ -22,9 +22,10 @@ Type cDD_R(Type BPR, Type Arec, Type Brec, int SR_type) {
 }
 
 template<class Type>
-Type cDD_F(Type U_start, Type C_hist, Type M, Type Winf, Type Kappa, Type wk, Type Arec, Type Brec, int SR_type2, vector<Type> &N, vector<Type> &B, vector<Type> &Cpred,
+Type cDD_F(Type F_start, Type C_hist, Type M, Type Winf, Type Kappa, Type wk, Type Arec, Type Brec, int SR_type2, vector<Type> &N, vector<Type> &B, vector<Type> &Cpred,
            vector<Type> &BPRinf, vector<Type> &Binf, vector<Type> &R, vector<Type> &Ninf, int nitF, int tt) {
-  Type F = -log(1 - U_start);
+  Type F = F_start;
+
   for(int i=0;i<nitF;i++) {
     Type Z_tt = F + M;
     BPRinf(tt) = cDD_BPR(F, M, wk, Kappa, Winf);
@@ -37,8 +38,11 @@ Type cDD_F(Type U_start, Type C_hist, Type M, Type Winf, Type Kappa, Type wk, Ty
     Catch += Binf(tt) + (N(tt) - Ninf(tt)) * Kappa * Winf / (Z_tt + Kappa);
     Catch *= F;
 
-    F *= C_hist/Catch;
-    if(i==nitF-1) Cpred(tt) = Catch;
+    if(i==nitF-1) {
+      Cpred(tt) = Catch;
+    } else {
+      F *= C_hist/Catch;
+    }
   }
 
   return F;
