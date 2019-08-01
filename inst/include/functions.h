@@ -106,10 +106,11 @@ Type SP_F(Type U_start, Type C_hist, Type MSY, Type K, Type n, Type nterm, Type 
         B_next += SP;
       }
 
-      F *= C_hist/Catch;
       if(i==nitF-1) {
         B(y+1) = B_next;
         Cpred(y) = Catch;
+      } else {
+        F *= C_hist/Catch;
       }
     }
   } else {
