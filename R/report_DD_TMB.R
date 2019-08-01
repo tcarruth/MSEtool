@@ -26,7 +26,7 @@ summary_DD_TMB <- function(Assessment, state_space = FALSE) {
   if("transformed_h" %in% names(obj$env$map)) {
     Value <- c(Value, h)
     Description <- c(Description, "Stock-recruit steepness")
-    rownam <- c(rownam, "tau")
+    rownam <- c(rownam, "h")
   }
   input_parameters <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(input_parameters) <- rownam
