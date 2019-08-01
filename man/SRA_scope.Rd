@@ -113,7 +113,8 @@ If the operating model \code{OM} uses time-varying growth or M, then those trend
 Time-varying life history parameters create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
 See section D.5 of \code{DLMtool::userguide()}.
 
-Here, the initial depletion (OM@cpars$initD) is calculated based on unfished spawning biomass using growth and M in the first year.
+Here, the initial depletion (OM@cpars$initD) is calculated based on unfished spawning biomass using growth and M in the first year. If growth/M varies,
+then this reference point may no longer be relevant at the end of the historical period and in the projection period.
 
 The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <- OM@Linfsd <- OM@Ksd <- c(0, 0)}.
 }
