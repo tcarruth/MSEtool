@@ -1,26 +1,32 @@
 summary_spict <- function(Assessment) {
   assign_Assessment_slots(Assessment)
 
-  current_status <- data.frame(Value = c(F_FMSY[length(F_FMSY)], B_BMSY[length(B_BMSY)],
-                                         B_B0[length(B_B0)]))
-  rownames(current_status) <- c("F/FMSY", "B/BMSY", "B/B0")
-
   input_parameters <- data.frame()
 
-  derived <- data.frame(Value = c(SD$value["r"], TMB_report$Bmsy, TMB_report$Fmsy, exp(SD$value["logalpha"]), exp(SD$value["logbeta"]),
-                                  BMSY/B0),
-                        Description = c("Intrinsic rate of population increase", "Fishing mortality at MSY", "Biomass at MSY",
-                                        "Ratio of index and biomass standard deviations", "Ratio of catch and F standard deviations",
-                                        "Depletion at MSY"),
-                        stringsAsFactors = FALSE)
-  rownames(derived) <- c("r", "K", "BMSY", "alpha", "beta", "BMSY/B0")
+  if(conv) {
+    current_status <- data.frame(Value = c(F_FMSY[length(F_FMSY)], B_BMSY[length(B_BMSY)],
+                                           B_B0[length(B_B0)]))
+    rownames(current_status) <- c("F/FMSY", "B/BMSY", "B/B0")
+  } else current_status <- data.frame()
 
-  model_estimates <- summary(SD, "fixed")
-  SD_exp <- model_estimates
-  SD_exp[, 1] <- exp(SD_exp[, 1])
-  SD_exp[, 2] <- SD_exp[, 1] * SD_exp[, 2]
-  rownames(SD_exp) <- c("MSY", "K", "q", "n", "sd_b", "sd_f", "sd_i", "sd_c")
-  model_estimates <- rbind(model_estimates, SD_exp)
+  if(!is.character(SD)) {
+    derived <- data.frame(Value = c(SD$value["r"], TMB_report$Bmsy, TMB_report$Fmsy, exp(SD$value["logalpha"]), exp(SD$value["logbeta"]),
+                                    BMSY/B0),
+                          Description = c("Intrinsic rate of population increase", "Fishing mortality at MSY", "Biomass at MSY",
+                                          "Ratio of index and biomass standard deviations", "Ratio of catch and F standard deviations",
+                                          "Depletion at MSY"),
+                          stringsAsFactors = FALSE)
+    rownames(derived) <- c("r", "K", "BMSY", "alpha", "beta", "BMSY/B0")
+
+    model_estimates <- summary(SD, "fixed")
+    SD_exp <- model_estimates
+    SD_exp[, 1] <- exp(SD_exp[, 1])
+    SD_exp[, 2] <- SD_exp[, 1] * SD_exp[, 2]
+    rownames(SD_exp) <- c("MSY", "K", "q", "n", "sd_b", "sd_f", "sd_i", "sd_c")
+    model_estimates <- rbind(model_estimates, SD_exp)
+  } else {
+    current_status <- derived <- model_estimates <- data.frame()
+  }
 
   output <- list(model = "SPiCT", current_status = current_status,
                  input_parameters = input_parameters, derived_quantities = derived,
