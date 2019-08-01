@@ -379,9 +379,11 @@ rmd_yield_F <- function(model, conv_check = TRUE, header = NULL) {
   return(ans)
 }
 
-rmd_yield_U <- function(model, header = NULL) {
+rmd_yield_U <- function(model, conv_check = TRUE, header = NULL) {
+  if(conv_check) conv <- "if(conv) " else conv <- ""
+
   ans <- c("```{r, fig.cap=\"Yield plot relative to harvest rate.\"}",
-           paste0("plot_yield_", model, "(info$data, TMB_report, UMSY, MSY, xaxis = \"U\")"),
+           paste0(conv, "plot_yield_", model, "(info$data, TMB_report, UMSY, MSY, xaxis = \"U\")"),
            "```\n")
   if(!is.null(header)) ans <- c(header, ans)
   return(ans)
