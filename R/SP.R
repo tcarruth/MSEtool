@@ -3,7 +3,8 @@
 #' A surplus production model that uses only a time-series of catches and a relative abundance index
 #' and coded in TMB. The base model, \code{SP}, is conditioned on catch and estimates a predicted index.
 #' Continuous surplus production and fishing is modeled with sub-annual time steps which should approximate
-#' the behavior of ASPIC (Prager 1994). The state-space version, \code{SP_SS} estimates annual deviates in biomass.
+#' the behavior of ASPIC (Prager 1994). The Fox model, \code{SP_Fox}, fixes BMSY/K = 0.37 (1/e).
+#' The state-space version, \code{SP_SS} estimates annual deviates in biomass.
 #' The function for the \code{spict} model (Pedersen and Berg, 2016) is available in \link[DLMtool]{DLMextra}.
 #'
 #' @param x An index for the objects in \code{Data} when running in \link[DLMtool]{runMSE}.
@@ -42,7 +43,7 @@
 #' \code{\link[stats]{nlminb}}.
 #' @param inner.control A named list of arguments for optimization of the random effects, which
 #' is passed on to \link[TMB]{newton} via \code{\link[TMB]{MakeADFun}}.
-#' @param ... Additional arguments (not currently used).
+#' @param ... For \code{SP_Fox}, additional arguments to pass to \code{SP}.
 #' @details
 #' To provide starting values for the \code{SP}, a named list can be provided for \code{FMSY},
 #' \code{MSY}, \code{dep}, and \code{n} via the start argument (see example).
@@ -97,6 +98,7 @@
 #'
 #' #### Fox model
 #' res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
+#' res_Fox2 <- SP_Fox(Data = swordfish)
 #' }
 #' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @import TMB
@@ -346,3 +348,14 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   return(Assessment)
 }
 class(SP_SS) <- "Assess"
+
+#' @rdname SP
+#' @export
+SP_Fox <- function(x = 1, Data, ...) {
+  SP_args <- c(x = x, Data = Data, list(...))
+  SP_args$start$n <- 1
+  SP_args$fix_n <- TRUE
+
+  do.call(SP, SP_args)
+}
+class(SP_Fox) <- "Assess"

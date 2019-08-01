@@ -3,6 +3,7 @@
 \name{SP}
 \alias{SP}
 \alias{SP_SS}
+\alias{SP_Fox}
 \title{Surplus production model with FMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
@@ -16,6 +17,8 @@ SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   integrate = FALSE, silent = TRUE, opt_hess = FALSE,
   n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
   eval.max = 10000), inner.control = list(), ...)
+
+SP_Fox(x = 1, Data, ...)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in \link[DLMtool]{runMSE}.
@@ -55,7 +58,7 @@ hasn't converged. The optimization continues from the parameters from the previo
 \item{control}{A named list of parameters regarding optimization to be passed to
 \code{\link[stats]{nlminb}}.}
 
-\item{...}{Additional arguments (not currently used).}
+\item{...}{For \code{SP_Fox}, additional arguments to pass to \code{SP}.}
 
 \item{fix_sigma}{Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
@@ -80,7 +83,8 @@ An object of \code{\linkS4class{Assessment}} containing objects and output from 
 A surplus production model that uses only a time-series of catches and a relative abundance index
 and coded in TMB. The base model, \code{SP}, is conditioned on catch and estimates a predicted index.
 Continuous surplus production and fishing is modeled with sub-annual time steps which should approximate
-the behavior of ASPIC (Prager 1994). The state-space version, \code{SP_SS} estimates annual deviates in biomass.
+the behavior of ASPIC (Prager 1994). The Fox model, \code{SP_Fox}, fixes BMSY/K = 0.37 (1/e).
+The state-space version, \code{SP_SS} estimates annual deviates in biomass.
 The function for the \code{spict} model (Pedersen and Berg, 2016) is available in \link[DLMtool]{DLMextra}.
 }
 \details{
@@ -133,6 +137,7 @@ plot(res)
 
 #### Fox model
 res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
+res_Fox2 <- SP_Fox(Data = swordfish)
 }
 }
 \references{
