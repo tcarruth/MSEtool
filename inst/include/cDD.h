@@ -75,7 +75,7 @@
 
   for(int tt=0; tt<ny; tt++) {
     Type F_start = CppAD::CondExpLe(C_hist(tt), Type(1e-8), Type(0), -log(1 - C_hist(tt)/B(tt)));
-    F(tt) = cDD_F(F_start, C_hist(tt), M, Winf, Kappa, wk, Arec, Brec, SR_type2, N, B, Cpred, BPRinf, Binf, R, Ninf,
+    F(tt) = cDD_F(F_start, C_hist(tt), M, Winf, Kappa, wk, N, B, Cpred, BPRinf, Binf, R, Ninf,
       CppAD::Integer(CppAD::CondExpLe(C_hist(tt), Type(1e-8), Type(1), Type(nitF))), tt);
     Z(tt) = F(tt) + M;
 

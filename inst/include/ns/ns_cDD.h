@@ -22,7 +22,7 @@ Type cDD_R(Type BPR, Type Arec, Type Brec, int SR_type) {
 }
 
 template<class Type>
-Type cDD_F(Type F_start, Type C_hist, Type M, Type Winf, Type Kappa, Type wk, Type Arec, Type Brec, int SR_type2, vector<Type> &N, vector<Type> &B, vector<Type> &Cpred,
+Type cDD_F(Type F_start, Type C_hist, Type M, Type Winf, Type Kappa, Type wk, vector<Type> &N, vector<Type> &B, vector<Type> &Cpred,
            vector<Type> &BPRinf, vector<Type> &Binf, vector<Type> &R, vector<Type> &Ninf, int nitF, int tt) {
   Type F = F_start;
 

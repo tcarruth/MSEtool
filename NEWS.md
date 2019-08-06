@@ -1,7 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
 ## MSEtool 1.2.2
-- Set F = 0 when Catch is very small in cDD and cDD_SS. This is especially important in combination with 40-10 harvest control rules.
+- `SS2OM` now has an option for selecting male or female life history parameters.
+- Set F = 0 when Catch is very small in `cDD` and `cDD_SS`. This is especially important for management procedures that shut down fishing.
 
 ## MSEtool 1.2.1
 - Fixed error in Solaris build.

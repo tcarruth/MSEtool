@@ -82,7 +82,7 @@
 
   for(int tt=0; tt<ny; tt++) {
     Type F_start = CppAD::CondExpLe(C_hist(tt), Type(1e-8), Type(0), -log(1 - C_hist(tt)/B(tt)));
-    F(tt) = cDD_F(F_start, C_hist(tt), M, Winf, Kappa, wk, Arec, Brec, SR_type2, N, B, Cpred, BPRinf, Binf, R, Ninf,
+    F(tt) = cDD_F(F_start, C_hist(tt), M, Winf, Kappa, wk, N, B, Cpred, BPRinf, Binf, R, Ninf,
       CppAD::Integer(CppAD::CondExpLe(C_hist(tt), Type(1e-8), Type(1), Type(nitF))), tt);
     Z(tt) = F(tt) + M;
 
@@ -111,10 +111,6 @@
   vector<Type> nll_comp(2);
   nll_comp.setZero();
 
-  //for(int tt=0;tt<ny;tt++) {
-  //  if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
-  //  if(tt+k<ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
-  //}
   for(int tt=0;tt<ny;tt++) if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
   for(int tt=0;tt<log_rec_dev.size();tt++) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
 
