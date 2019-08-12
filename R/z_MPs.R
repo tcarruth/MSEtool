@@ -75,7 +75,7 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
     })
   }
 
-  custom_MP <- make_function(args = alist(x = , Data = , reps = 1, ... = ), body = MP_body)
+  custom_MP <- make_function(args = alist(x = , Data = , reps = 1), body = MP_body)
   formals(custom_MP) <- c(formals(custom_MP), list(...))
   class(custom_MP) <- "MP"
   return(custom_MP)
