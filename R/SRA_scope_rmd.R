@@ -26,7 +26,7 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
   report <- report_list[[1]]$report
   data <- report_list[[1]]$obj$env$data
   data$C_hist <- report$C_hist
-  #data$C_hist <- data$C_hist/report$rescale
+  data$E_hist <- report$E_hist
 
   conv <- report$conv
   length_bin <- report$length_bin

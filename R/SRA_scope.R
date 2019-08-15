@@ -762,6 +762,8 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   report <- obj$report(obj$env$last.par.best)
   report$vul <- do.call(cbind, report$vul)
   report$C_hist <- TMB_data$C_hist/rescale
+  report$E_hist <- TMB_data$E_hist/rescale_effort
+>>>>>>> Fix catch/R0 rescaling with effort conditioning
 
   vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "CN", "Cpred", "N", "N_full", "VB",
                 "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0")
