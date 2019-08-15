@@ -17,7 +17,7 @@
 #' prelim_AM(DLMtool::testOM, DD_TMB)
 #' }
 #' @export
-prelim_AM <- function(x, Assess, ncpus = 1, ...) {
+prelim_AM <- function(x, Assess, ncpus = NULL, ...) {
 
   # is Hist?
   if(is.list(x) && any(names(x) == "Data")) {
@@ -34,22 +34,27 @@ prelim_AM <- function(x, Assess, ncpus = 1, ...) {
         stop("x does not appear to be either a Hist, Data, or OM object.")
       }
 
-  DLMtool::setup(cpus = ncpus)
-  on.exit(snowfall::sfStop())
+  if(is.numeric(ncpus) && !snowfall::sfIsRunning()) {
+    DLMtool::setup(cpus = ncpus)
+    on.exit(snowfall::sfStop())
+  }
   nsim <- nrow(Data@Cat)
-  message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
   dots <- list(...)
-  if(length(dots) > 0) message(paste0("\nAdditional arguments to be provided to ", deparse(substitute(Assess)), ":\n", paste(names(dots), collapse = "\n")))
+  if(length(dots) > 0) message("\nAdditional arguments to be provided to ", deparse(substitute(Assess)), ":\n", paste(names(dots), collapse = "\n"))
   Assess <- match.fun(Assess)
   if(!inherits(Assess, "Assess")) stop(paste(deparse(substitute(Assess))), "does not appear to be an Assess function.")
 
-  if(snowfall::sfParallel()) snowfall::sfExport(list = c("Assess", "Data"))
+  if(snowfall::sfIsRunning()) snowfall::sfExport(list = c("Assess", "Data"))
   timing <- proc.time()
-  res <- snowfall::sfClusterApplyLB(1:nsim, Assess, Data = Data, ...)
+  if(sfIsRunning()) {
+    message("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), " on ", snowfall::sfCpus(), " CPUs.")
+    res <- snowfall::sfClusterApplyLB(1:nsim, Assess, Data = Data, ...)
+  } else {
+    message(paste0("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), "."))
+    res <- lapply(1:nsim, Assess, Data = Data, ...)
+  }
   timing2 <- (proc.time() - timing)[3]
   message("Assessments complete.")
-
-  snowfall::sfStop()
 
   message(paste0("Total time to run ", nsim, " assessments: ", round(timing2, 1), " seconds"))
 
