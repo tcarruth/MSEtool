@@ -1,6 +1,9 @@
 
-SRA_scope_rmd <- function(OM, report_list, filename = "SRA_scope", dir = tempdir(), Year = NULL,
-                          open_file = TRUE, quiet = TRUE, ...) {
+#' @rdname SRA_scope
+#' @importFrom rmarkdown render
+#' @export
+report_SRA_scope <- function(OM, report_list, filename = "SRA_scope", dir = tempdir(), Year = NULL,
+                             open_file = TRUE, quiet = TRUE) {
 
   # Generate markdown report
   filename_html <- paste0(filename, ".html")
@@ -195,7 +198,6 @@ SRA_scope_rmd <- function(OM, report_list, filename = "SRA_scope", dir = tempdir
   if(open_file) browseURL(file.path(dir, filename_html))
   invisible(output)
 }
-environment(SRA_scope_rmd) <- asNamespace("MSEtool")
 
 
 rmd_persp_plot <- function(x, y, z, xlab, ylab, zlab, phi, theta, expand, fig.cap, header = NULL) {

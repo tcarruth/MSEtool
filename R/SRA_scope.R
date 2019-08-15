@@ -43,8 +43,13 @@
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).
 #' @param figure Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).
 #' @param Year A vector of years for the historical period, used for plotting.
-#' @param report Logical, whether to return all assessment output. See value section below.
+#' @param report Logical, whether to return all assessment output and generate a markdown report. ue section below.
 #' @param report_list The list of assessment output returned by \code{SRA_scope} when \code{report = TRUE}.
+#' @param filename Character string for the file name of the HTML markdown report.
+#' @param dir The directory in which the markdown and HTML files will be saved.
+#' @param open_file Logical, whether the HTML document is opened after it is rendered.
+#' @param quiet Logical, whether to silence the markdown rendering function.
+#' @param ... Other arguments to add in the future.
 #' @return
 #' A named list containing the following:
 #' \enumerate{
@@ -66,7 +71,8 @@
 #' e.g., depletion.
 #'
 #' @details
-#' \code{plot_SRA_scope} generates the plots from the SRA scope function.
+#' \code{report_SRA_scope} generates the plots from the SRA scope function and puts them in a markdown HTML document.
+#' \code{plot_SRA_scope} is now deprecated.
 #'
 #' One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 #' Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
@@ -94,8 +100,8 @@
 #' @export
 SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "effort"), Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, length_bin = NULL,
                       C_eq = 0, E_eq = 0, ML_sd = NULL, selectivity = "logistic", I_type = NULL, LWT = list(), ESS = c(30, 30),
-                      fix_dome = FALSE, cores = 1L,
-                      integrate = FALSE, figure = TRUE, Year = NULL, report = FALSE) {
+                      fix_dome = FALSE, cores = 1L, integrate = FALSE, Year = NULL, report = TRUE,
+                      filename = "SRA_scope", dir = tempdir(), open_file = TRUE, ...) {
 
   condition <- match.arg(condition)
   if(is.null(Chist) && !is.null(Ehist)) condition <- "effort"
@@ -554,10 +560,9 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                  CAA = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
 
   ### Generate figures
-  if(figure) {
-    plot_SRA_scope(OM, Chist, Ehist, Index, CAA, CAL, ML, res, OM@EffYears)
-    SRA_scope_rmd(OM, report_list = list(mean_fit = mean_fit, report = res),
-                  dir = tempdir(), Year = OM@EffYears, open_file = TRUE, quiet = TRUE)
+  if(report) {
+    report_SRA_scope(OM, report_list = list(mean_fit = mean_fit, report = res), dir = tempdir(),
+                     Year = OM@EffYears, open_file = open_file)
   }
 
   message("Complete.")
@@ -766,131 +771,131 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
 }
 
 
-
-
-
 #' @rdname SRA_scope
 #' @export
-plot_SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, Index = matrix(NA, 0, 0), CAA = NA, CAL = NA, ML = NA, report_list, Year = NULL) {
-  if(length(report_list) == 2) report_list <- report_list[[2]]
-
-  old_par <- par(no.readonly = TRUE)
-  on.exit(par(old_par), add = TRUE)
-
-  if(is.vector(Chist)) Chist <- matrix(Chist, ncol = 1)
-  if(is.vector(Ehist)) Ehist <- matrix(Chist, ncol = 1)
-  if(is.vector(Index)) Index <- matrix(Index, ncol = 1)
-  if(is.matrix(CAA)) CAA <- array(CAA, c(dim(CAA), 1))
-  if(is.matrix(CAL)) CAL <- array(CAL, c(dim(CAL), 1))
-  if(is.vector(ML)) ML <- matrix(ML, ncol = 1)
-
-  nsim <- OM@nsim
-  maxage <- OM@maxage
-  nyears <- OM@nyears
-  if(is.null(Year)) {
-    if(length(OM@EffYears) == nyears) Year <- OM@EffYears else Year <- 1:nyears
-  }
-  Year_matrix <- matrix(Year, ncol = nsim, nrow = nyears)
-  Yearplusone_matrix <- matrix(c(Year, max(Year) + 1), ncol = nsim, nrow = nyears+1)
-
-  nfleet <- ncol(Chist)
-  if(is.null(nfleet)) nfleet <- ncol(Ehist)
-
-  nsurvey <- ifelse(all(is.na(Index)), 0, ncol(Index))
-  length_bin <- report_list[[1]]$length_bin
-
-  ###### First figure OM summary
-  par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
-
-  # R0 histogram
-  hist(OM@cpars$R0, main = "", xlab = expression(R[0]))
-
-  # Depletion histograms
-  hist(OM@cpars$initD, main = "", xlab = "Initial depletion")
-  hist(OM@cpars$D, main = "", xlab = "Depletion")
-
-  # Perr
-  Perr <- OM@cpars$Perr_y[, maxage:(maxage+nyears-1), drop = FALSE]
-  matplot(Year_matrix, t(Perr), type = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
-  abline(h = 0, col = "grey")
-
-  # Find
-  matplot(Year_matrix, t(OM@cpars$Find), type = "l", col = "black", xlab = "Year", ylab = "Apical F")
-  abline(h = 0, col = "grey")
-
-  # Selectivity
-  if(nfleet == 1) {
-    vul <- do.call(cbind, lapply(report_list, getElement, "vul"))
-    matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = "l", col = "black",
-            xlab = "Length", ylab = "Selectivity", ylim = c(0, 1.1))
-    abline(h = 0, col = "grey")
-  } else {
-    matplot(matrix(1:maxage, ncol = nsim, nrow = maxage), t(OM@cpars$V[, , nyears]), type = "l", col = "black",
-            xlab = "Age", ylab = "Selectivity (last historical year)", ylim = c(0, 1.1))
-    abline(h = 0, col = "grey")
-  }
-
-  mtext("Operating model parameter summary", outer = TRUE, side = 3)
-
-  ###### Next ff figures by fleet
-  for(ff in 1:nfleet) {
-    par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
-    # Selectivity
-    vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul[, ff]))
-    matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, type = "l", col = "black",
-            xlab = "Length", ylab = paste("Selectivity of Fleet", ff))
-    abline(h = 0, col = "grey")
-
-    # Find
-    FM <- do.call(cbind, lapply(report_list, function(x) x$F[, ff]))
-    matplot(Year_matrix, FM, type = "l", col = "black", xlab = "Year", ylab = paste("Fishing Mortality of Fleet", ff))
-    abline(h = 0, col = "grey")
-
-    # Sampled catches
-    if(!is.null(Chist) && !all(is.na(Chist[, ff]))) {
-      Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ff]))
-      matplot(Year_matrix, Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Catch of Fleet", ff))
-      lines(Year, Chist[, ff], col = "red", lwd = 3)
-      abline(h = 0, col = "grey")
-    } else {
-      Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ff]/mean(x$Cpred[, ff])))
-      matplot(Year_matrix, Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Relative catch of Fleet", ff))
-      abline(h = 0, col = "grey")
-    }
-
-    # ML fits
-    MLpred <- do.call(cbind, lapply(report_list, function(x) x$mlen_pred[, ff]))
-    matplot(Year_matrix, MLpred, type = "l", col = "black", xlab = "Year", ylab = "Mean length")
-    if(!all(is.na(CAL))) {
-      lines(Year, CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", lwd = 3, typ = "o", pch = 16)
-    } else if(!all(is.na(ML))) lines(Year, ML, col = "red", lwd = 3, typ = "o", pch = 16)
-
-    # MA fits
-    MApred <- do.call(cbind, lapply(report_list, function(x) x$CAApred[, , ff] %*% 1:maxage/x$CN[, ff]))
-    matplot(Year_matrix, MApred, type = "l", col = "black", xlab = "Year", ylab = "Mean age")
-    if(!all(is.na(CAA))) {
-      lines(Year, CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3, typ = "o", pch = 16)
-    }
-
-    mtext(paste0("Fleet ", ff, ": observed (red) and predicted data (black) \nfrom SRA"), outer = TRUE, side = 3)
-  }
-
-  if(nsurvey > 0) {
-    if(nsurvey > 1) par(mfrow = c(2, min(ceiling(0.5 * nsurvey), 3))) else par(mfrow = c(1, 1))
-
-    for(sur in 1:nsurvey) {
-      Ipred <- do.call(cbind, lapply(report_list, function(x) x$Ipred[, sur]))
-      matplot(Year_matrix, Ipred, type = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
-      lines(Year, Index[, sur], col = "red", lwd = 3, typ = "o", pch = 16)
-      abline(h = 0, col = "grey")
-    }
-  } else {
-    par(mfrow = c(1, 1))
-  }
-
-  E <- do.call(cbind, lapply(report_list, getElement, "E"))
-  matplot(Yearplusone_matrix, E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
-  abline(h = 0, col = "grey")
-
-  invisible()
+plot_SRA_scope <- function(...) {
+  .Deprecated("report_SRA_scope", msg = "plot_SRA_scope is now deprecated in favor of report_SRA_scope which generates a markdown report.")
 }
+#plot_SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, Index = matrix(NA, 0, 0), CAA = NA, CAL = NA, ML = NA, report_list, Year = NULL) {
+#  if(length(report_list) == 2) report_list <- report_list[[2]]
+#
+#  old_par <- par(no.readonly = TRUE)
+#  on.exit(par(old_par), add = TRUE)
+#
+#  if(is.vector(Chist)) Chist <- matrix(Chist, ncol = 1)
+#  if(is.vector(Ehist)) Ehist <- matrix(Chist, ncol = 1)
+#  if(is.vector(Index)) Index <- matrix(Index, ncol = 1)
+#  if(is.matrix(CAA)) CAA <- array(CAA, c(dim(CAA), 1))
+#  if(is.matrix(CAL)) CAL <- array(CAL, c(dim(CAL), 1))
+#  if(is.vector(ML)) ML <- matrix(ML, ncol = 1)
+#
+#  nsim <- OM@nsim
+#  maxage <- OM@maxage
+#  nyears <- OM@nyears
+#  if(is.null(Year)) {
+#    if(length(OM@EffYears) == nyears) Year <- OM@EffYears else Year <- 1:nyears
+#  }
+#  Year_matrix <- matrix(Year, ncol = nsim, nrow = nyears)
+#  Yearplusone_matrix <- matrix(c(Year, max(Year) + 1), ncol = nsim, nrow = nyears+1)
+#
+#  nfleet <- ncol(Chist)
+#  if(is.null(nfleet)) nfleet <- ncol(Ehist)
+#
+#  nsurvey <- ifelse(all(is.na(Index)), 0, ncol(Index))
+#  length_bin <- report_list[[1]]$length_bin
+#
+#  ###### First figure OM summary
+#  par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
+#
+#  # R0 histogram
+#  hist(OM@cpars$R0, main = "", xlab = expression(R[0]))
+#
+#  # Depletion histograms
+#  hist(OM@cpars$initD, main = "", xlab = "Initial depletion")
+#  hist(OM@cpars$D, main = "", xlab = "Depletion")
+#
+#  # Perr
+#  Perr <- OM@cpars$Perr_y[, maxage:(maxage+nyears-1), drop = FALSE]
+#  matplot(Year_matrix, t(Perr), type = "l", col = "black", xlab = "Year", ylab = "Recruitment deviations", ylim = c(0, 1.1 * max(Perr)))
+#  abline(h = 0, col = "grey")
+#
+#  # Find
+#  matplot(Year_matrix, t(OM@cpars$Find), type = "l", col = "black", xlab = "Year", ylab = "Apical F")
+#  abline(h = 0, col = "grey")
+#
+#  # Selectivity
+#  if(nfleet == 1) {
+#    vul <- do.call(cbind, lapply(report_list, getElement, "vul"))
+#    matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = "l", col = "black",
+#            xlab = "Length", ylab = "Selectivity", ylim = c(0, 1.1))
+#    abline(h = 0, col = "grey")
+#  } else {
+#    matplot(matrix(1:maxage, ncol = nsim, nrow = maxage), t(OM@cpars$V[, , nyears]), type = "l", col = "black",
+#            xlab = "Age", ylab = "Selectivity (last historical year)", ylim = c(0, 1.1))
+#    abline(h = 0, col = "grey")
+#  }
+#
+#  mtext("Operating model parameter summary", outer = TRUE, side = 3)
+#
+#  ###### Next ff figures by fleet
+#  for(ff in 1:nfleet) {
+#    par(mfrow = c(2, 3), mar = c(5, 4, 1, 1), oma = c(0, 0, 3, 0))
+#    # Selectivity
+#    vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul[, ff]))
+#    matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, type = "l", col = "black",
+#            xlab = "Length", ylab = paste("Selectivity of Fleet", ff))
+#    abline(h = 0, col = "grey")
+#
+#    # Find
+#    FM <- do.call(cbind, lapply(report_list, function(x) x$F[, ff]))
+#    matplot(Year_matrix, FM, type = "l", col = "black", xlab = "Year", ylab = paste("Fishing Mortality of Fleet", ff))
+#    abline(h = 0, col = "grey")
+#
+#    # Sampled catches
+#    if(!is.null(Chist) && !all(is.na(Chist[, ff]))) {
+#      Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ff]))
+#      matplot(Year_matrix, Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Catch of Fleet", ff))
+#      lines(Year, Chist[, ff], col = "red", lwd = 3)
+#      abline(h = 0, col = "grey")
+#    } else {
+#      Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ff]/mean(x$Cpred[, ff])))
+#      matplot(Year_matrix, Cpred, type = "l", col = "black", xlab = "Year", ylab = paste("Relative catch of Fleet", ff))
+#      abline(h = 0, col = "grey")
+#    }
+#
+#    # ML fits
+#    MLpred <- do.call(cbind, lapply(report_list, function(x) x$mlen_pred[, ff]))
+#    matplot(Year_matrix, MLpred, type = "l", col = "black", xlab = "Year", ylab = "Mean length")
+#    if(!all(is.na(CAL))) {
+#      lines(Year, CAL[, , ff] %*% length_bin/rowSums(CAL[, , ff], na.rm = TRUE), col = "red", lwd = 3, typ = "o", pch = 16)
+#    } else if(!all(is.na(ML))) lines(Year, ML, col = "red", lwd = 3, typ = "o", pch = 16)
+#
+#    # MA fits
+#    MApred <- do.call(cbind, lapply(report_list, function(x) x$CAApred[, , ff] %*% 1:maxage/x$CN[, ff]))
+#    matplot(Year_matrix, MApred, type = "l", col = "black", xlab = "Year", ylab = "Mean age")
+#    if(!all(is.na(CAA))) {
+#      lines(Year, CAA[,,ff] %*% c(1:ncol(CAA[,,ff]))/rowSums(CAA[,,ff], na.rm = TRUE), col = "red", lwd = 3, typ = "o", pch = 16)
+#    }
+#
+#    mtext(paste0("Fleet ", ff, ": observed (red) and predicted data (black) \nfrom SRA"), outer = TRUE, side = 3)
+#  }
+#
+#  if(nsurvey > 0) {
+#    if(nsurvey > 1) par(mfrow = c(2, min(ceiling(0.5 * nsurvey), 3))) else par(mfrow = c(1, 1))
+#
+#    for(sur in 1:nsurvey) {
+#      Ipred <- do.call(cbind, lapply(report_list, function(x) x$Ipred[, sur]))
+#      matplot(Year_matrix, Ipred, type = "l", col = "black", xlab = "Year", ylab = paste("Index #", sur))
+#      lines(Year, Index[, sur], col = "red", lwd = 3, typ = "o", pch = 16)
+#      abline(h = 0, col = "grey")
+#    }
+#  } else {
+#    par(mfrow = c(1, 1))
+#  }
+#
+#  E <- do.call(cbind, lapply(report_list, getElement, "E"))
+#  matplot(Yearplusone_matrix, E, type = "l", col = "black", xlab = "Year", ylab = "Spawning biomass")
+#  abline(h = 0, col = "grey")
+#
+#  invisible()
+#}
