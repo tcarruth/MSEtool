@@ -561,7 +561,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   ### Generate figures
   if(report) {
-    report_SRA_scope(OM, report_list = list(mean_fit = mean_fit, report = res), dir = tempdir(),
+    report_SRA_scope(OM, report_list = list(mean_fit = mean_fit, report = res), filename = filename, dir = dir,
                      Year = OM@EffYears, open_file = open_file)
   }
 
