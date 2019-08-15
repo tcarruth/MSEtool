@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.2.3
+- Users can choose to use `SRA_scope` while conditioning on either catch or effort. Function will also return a markdown report of model fits.
+
 ## MSEtool 1.2.2
 - `SS2OM` now has an option for selecting male or female life history parameters.
 - Set F = 0 when Catch is very small in `cDD` and `cDD_SS`. This is especially important for management procedures that shut down fishing.
