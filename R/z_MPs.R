@@ -58,21 +58,46 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
     stop(paste(.HCR, "does not belong to class 'HCR.' Use: avail('HCR') to find eligible objects."))
   }
 
+  dots <- list(...)
+
   if(diagnostic == "none") {
-    MP_body <- bquote({
-      dependencies <- .(get_dependencies(Assess_char, list(...)))
-      do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
-      Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
-      return(Rec)
-    })
+
+    if(length(dots) > 0) {
+      MP_body <- bquote({
+        dependencies <- .(get_dependencies(Assess_char, dots))
+        do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
+        Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
+        return(Rec)
+      })
+    } else {
+      MP_body <- bquote({
+        dependencies <- .(get_dependencies(Assess_char, dots))
+        do_Assessment <- .(.Assess)(x = x, Data = Data)
+        Rec <- .(.HCR)(do_Assessment, reps = reps)
+        return(Rec)
+      })
+    }
+
   } else {
-    MP_body <- bquote({
-      dependencies <- .(get_dependencies(Assess_char, list(...)))
-      do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
-      Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
-      Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
-      return(Rec)
-    })
+
+    if(length(dots) > 0) {
+      MP_body <- bquote({
+        dependencies <- .(get_dependencies(Assess_char, dots))
+        do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
+        Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
+        Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
+        return(Rec)
+      })
+    } else {
+      MP_body <- bquote({
+        dependencies <- .(get_dependencies(Assess_char, dots))
+        do_Assessment <- .(.Assess)(x = x, Data = Data)
+        Rec <- .(.HCR)(do_Assessment, reps = reps)
+        Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
+        return(Rec)
+      })
+    }
+
   }
 
   custom_MP <- make_function(args = alist(x = , Data = , reps = 1), body = MP_body)
@@ -89,9 +114,11 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
 #' ramped harvest control rules can be created with \link{make_MP} and the available Assess and HCR objects.
 #'
 #' @name Data-rich-MP
+#' @aliases MP
 #' @param x A position in the Data object.
 #' @param Data An object of class Data
 #' @param reps Numeric, the number of stochastic replicates for the management advice.
+#' @param MSY_frac The fraction of FMSY that is used for calculating the TAC. See \link{HCR_MSY}.
 #' @param ... Additional arguments passed to the Assessment model.
 #'
 #' @examples

@@ -41,9 +41,8 @@
 #' multinomial likelihood function. The annual sample size of an age or length composition sample is the minimum of ESS or the number of observations.
 #' @param cores Integer for the number of CPU cores for the stock reduction analysis.
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).
-#' @param figure Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).
 #' @param Year A vector of years for the historical period, used for plotting.
-#' @param report Logical, whether to return all assessment output and generate a markdown report. ue section below.
+#' @param report Logical, whether to return all assessment output and generate a markdown report (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.)
 #' @param report_list The list of assessment output returned by \code{SRA_scope} when \code{report = TRUE}.
 #' @param filename Character string for the file name of the HTML markdown report.
 #' @param dir The directory in which the markdown and HTML files will be saved.

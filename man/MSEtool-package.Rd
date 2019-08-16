@@ -10,14 +10,34 @@ Simulation tools for management strategy evaluation are provided for the DLMtool
 MSEtool provides complementary assessment models of varying complexity with standardized reporting, diagnostic tools for evaluating
 assessment models within closed-loop simulation, and helper functions for building more complex operating models and management procedures.
 }
-\section{Additional Information}{
+\section{How to use MSEtool}{
 
-See the package vignettes with \code{browseVignettes("MSEtool")}.
+The main features of MSEtool are the assessment models and the ability to make management procedures by combining
+assessment models with harvest control rules. Such MPs can be used and tested in management strategy evaluation
+with DLMtool operating models. An overview of these features is available in the \href{../doc/MSEtool.html}{MSEtool vignette}.
+
+The following assessment models are available:
+\itemize{
+\item \href{../doc/Surplus_production.html}{Surplus production} (\link{SP}, \link{SP_SS}, \link{SP_Fox}, and \code{spict})
+\item \href{../doc/Delay_difference.html}{Delay difference} (\link{DD}, \link{cDD}, \link{DD_SS}, and \link{cDD_SS})
+\item \href{../doc/SCA.html}{Statistical catch-at-age} (\link{SCA}, \link{SCA2}, and \link{SCA_Pope})
+\item \href{../doc/VPA.html}{Virtual population analysis} (\link{VPA})
+}
+
+MSEtool also contains \link{multiMSE}, a platform for multi-stock and multi-fleet operating models based on components
+from DLMtool. An overview of multiMSE is available in the \href{../doc/multiMSE.html}{multiMSE vignette}.
+
+All MSEtool vignettes can also be viewed by typing \code{browseVignettes("MSEtool")} into the R console or through the
+MSEtool webpage on \href{https://cran.r-project.org/package=MSEtool}{CRAN}.
+}
+
+\section{Additional links}{
+
 
 See the \href{https://dlmtool.github.io/DLMtool/userguide/introduction.html}{DLMtool User Guide} for
 a detailed description of how to use the DLMtool package.
 
-See the \href{http://www.datalimitedtoolkit.org/}{Data-Limited Toolkit Website} for more information on the DLMtool,
+See the \href{http://www.datalimitedtoolkit.org/}{Data-Limited Toolkit Website} for more information on DLMtool,
 including an interactive demo of the main features of the toolkit, information on case studies where the toolkit has
 been applied, and more about the history and development of the DLMtool.
 }

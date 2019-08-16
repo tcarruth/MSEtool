@@ -77,7 +77,7 @@ multinomial likelihood function. The annual sample size of an age or length comp
 
 \item{Year}{A vector of years for the historical period, used for plotting.}
 
-\item{report}{Logical, whether to return all assessment output and generate a markdown report. ue section below.}
+\item{report}{Logical, whether to return all assessment output and generate a markdown report (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.)}
 
 \item{filename}{Character string for the file name of the HTML markdown report.}
 
@@ -92,8 +92,6 @@ multinomial likelihood function. The annual sample size of an age or length comp
 \item{report_list}{The list of assessment output returned by \code{SRA_scope} when \code{report = TRUE}.}
 
 \item{quiet}{Logical, whether to silence the markdown rendering function.}
-
-\item{figure}{Logical, whether to plot diagnostic figures (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.).}
 }
 \value{
 A named list containing the following:

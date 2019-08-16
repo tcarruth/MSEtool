@@ -2,6 +2,7 @@
 % Please edit documentation in R/z_MPs.R
 \name{Data-rich-MP}
 \alias{Data-rich-MP}
+\alias{MP}
 \alias{SCA_MSY}
 \alias{SCA_75MSY}
 \alias{SCA_4010}
@@ -13,23 +14,23 @@
 \alias{SP_4010}
 \title{Data-rich management procedures}
 \usage{
-SCA_MSY(x, Data, reps = 1, ...)
+SCA_MSY(x, Data, reps = 1)
 
-SCA_75MSY(x, Data, reps = 1, ..., MSY_frac = 0.75)
+SCA_75MSY(x, Data, reps = 1, MSY_frac = 0.75)
 
-SCA_4010(x, Data, reps = 1, ...)
+SCA_4010(x, Data, reps = 1)
 
-DDSS_MSY(x, Data, reps = 1, ...)
+DDSS_MSY(x, Data, reps = 1)
 
-DDSS_75MSY(x, Data, reps = 1, ..., MSY_frac = 0.75)
+DDSS_75MSY(x, Data, reps = 1, MSY_frac = 0.75)
 
-DDSS_4010(x, Data, reps = 1, ...)
+DDSS_4010(x, Data, reps = 1)
 
-SP_MSY(x, Data, reps = 1, ...)
+SP_MSY(x, Data, reps = 1)
 
-SP_75MSY(x, Data, reps = 1, ..., MSY_frac = 0.75)
+SP_75MSY(x, Data, reps = 1, MSY_frac = 0.75)
 
-SP_4010(x, Data, reps = 1, ...)
+SP_4010(x, Data, reps = 1)
 }
 \arguments{
 \item{x}{A position in the Data object.}
@@ -37,6 +38,8 @@ SP_4010(x, Data, reps = 1, ...)
 \item{Data}{An object of class Data}
 
 \item{reps}{Numeric, the number of stochastic replicates for the management advice.}
+
+\item{MSY_frac}{The fraction of FMSY that is used for calculating the TAC. See \link{HCR_MSY}.}
 
 \item{...}{Additional arguments passed to the Assessment model.}
 }

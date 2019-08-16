@@ -4,7 +4,7 @@
 \alias{prelim_AM}
 \title{Preliminary Assessments in MSE}
 \usage{
-prelim_AM(x, Assess, ncpus = 1, ...)
+prelim_AM(x, Assess, ncpus = NULL, ...)
 }
 \arguments{
 \item{x}{Either a \code{Hist}, \code{Data} or \code{OM} object.}

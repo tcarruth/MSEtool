@@ -29,7 +29,7 @@ Vignettes describing the features of MSEtool can be obtained via:
 browseVignettes("MSEtool")
 ```
 
-The vignette can also be viewed [here](https://cran.r-project.org/web/packages/MSEtool/vignettes/MSEtool.html).
+The vignettes can also be viewed on the MSEtool page on [CRAN](https://cran.r-project.org/package=MSEtool).
 
 A User Guide for the DLMtool package also available at [https://dlmtool.github.io/DLMtool/userguide/introduction.html](https://dlmtool.github.io/DLMtool/userguide/introduction.html). 
 

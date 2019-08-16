@@ -46,7 +46,7 @@ prelim_AM <- function(x, Assess, ncpus = NULL, ...) {
 
   if(snowfall::sfIsRunning()) snowfall::sfExport(list = c("Assess", "Data"))
   timing <- proc.time()
-  if(sfIsRunning()) {
+  if(snowfall::sfIsRunning()) {
     message("Running ", deparse(substitute(Assess)), " with ", nsim, " simulations for ", deparse(substitute(x)), " on ", snowfall::sfCpus(), " CPUs.")
     res <- snowfall::sfClusterApplyLB(1:nsim, Assess, Data = Data, ...)
   } else {
