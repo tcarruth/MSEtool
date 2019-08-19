@@ -119,7 +119,7 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
     } else C_plots <- NULL
   } else C_matplot <- C_plots <- NULL
 
-  if(any(data$E_hist > 0)) {
+  if(!all(is.na(data$E_hist)) && any(data$E_hist > 0)) {
     E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$E_hist", col = "rich.colors(nfleet)",
                              xlab = "Year", ylab = "Effort", fig.cap = "Effort time series.")
   } else E_matplot <- NULL
