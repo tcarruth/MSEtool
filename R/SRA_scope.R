@@ -386,7 +386,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   conv <- vapply(res, getElement, logical(1), name = "conv")
   message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
   if(sum(conv) < nsim) {
-    message("Non-converged iterations: ", paste(which(!conv), collapse = " "), "\n")
+    message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
     #no_conv_ind <- !conv
     #no_conv <- (conv)
     #message("For non-converged iterations, values were re-sampled from converged iterations.\n")
@@ -677,7 +677,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                        vul_type = selectivity, I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT$Index,
                        est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(1, nyears-1), NA))
 
-  if(!is.null(Catch) && any(!is.na(Catch))) {
+  if(!is.null(Catch) && any(!is.na(Catch)) && any(Catch > 0)) {
     rescale <- 1/mean(Catch, na.rm = TRUE)
     C_hist <- Catch * rescale
   } else {
@@ -773,7 +773,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     fun_fixed <- c("log", NA)
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
-  if(condition == "effort" && !is.null(Catch) && nfleet == 1) {
+  if(condition == "effort" && !is.null(Catch) && nfleet == 1 && any(Catch > 0)) {
     #rescale <- mean(report$Cpred[, 1]/Catch, na.rm = TRUE)
     rescale <- 1/exp(mean(log(Catch/report$Cpred), na.rm = TRUE))
 
