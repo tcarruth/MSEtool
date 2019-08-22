@@ -257,11 +257,14 @@ multiData<-function(MSElist,StockPars,p,mm,nf){
 #' @export
 multiDataS<-function(MSElist,StockPars,np,mm,nf,realVB){
 
-  nsim<-dim(MSElist[[1]][[1]][[1]]@Cat)[1]
-  nyears<-dim(MSElist[[1]][[1]][[1]]@Cat)[2]
-  na<-dim(MSElist[[1]][[1]][[1]]@CAA)[3]
-  nl<-dim(MSElist[[1]][[1]][[1]]@CAL)[3]
+  nsim<-dim(MSElist[[1]][[1]][[mm]]@Cat)[1]
+  nyears<-dim(MSElist[[1]][[1]][[mm]]@Cat)[2]
+  na<-dim(MSElist[[1]][[1]][[mm]]@CAA)[3]
+  nl<-dim(MSElist[[1]][[1]][[mm]]@CAL)[3]
   ni<-np*nf
+
+  #### BUG FIX - AH - the dimensions of realVB are switched
+  realVB <- aperm(realVB, c(1,3,2))
 
   if(realVB[1,1,1]==0)realVB[,,1]<-realVB[,,2] # impute vulnerable biomass for year 1 if missing (a negligible issue to be fixed in popdyn_MICE)
 

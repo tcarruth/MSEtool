@@ -435,7 +435,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       Nprob <- length(probQ)
       MOM2@nsim <- Nprob
 
-      SampCpars2<-list()
+      SampCpars2 <- vector("list", nf)
 
       for(p in 1:np){
 
@@ -463,7 +463,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
       } # end of P
       # Re-sample historical fishing effort
 
-      ResampFleetPars<-list()
+      ResampFleetPars<- vector("list", nf)
       for(p in 1:np){
         for(f in 1:nf){
           ResampFleetPars <- SampleFleetPars(MOM2@Fleets[[p]][[f]], Stock=ResampStockPars, nsim=Nprob, nyears=nyears, proyears=proyears, cpars=SampCpars2[[f]])
@@ -473,7 +473,13 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
         }
       }
 
-      out2<-snowfall::sfLapply(probQ,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF, MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
+      if(snowfall::sfIsRunning()){
+        out2<-snowfall::sfLapply(probQ,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
+                                MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
+      }else{
+        out2<-lapply(probQ,getq_multi_MICE,StockPars, FleetPars, np,nf, nareas, maxage, nyears, N, VF, FretA, maxF=MOM@maxF,
+                    MPA,CatchFrac, bounds= bounds,tol=1E-6,Rel,SexPars)
+      }
 
       qs2<-t(matrix(NIL(out2,"qtot"),nrow=np))
       qout2<-array(NIL(out2,"qfrac"),c(np,nf,nsim))
@@ -1717,7 +1723,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
             FleetPars[[p]][[f]]$FM_P <- MPCalcs$FM_P # fishing mortality
             FM_P[,p,f,,,]<- MPCalcs$FM_P
             FleetPars[[p]][[f]]$FM_Pret <- MPCalcs$FM_Pret # retained fishing mortality
-            FretA[,p,f,,]<- MPCalcs$FM_Pret
+            # FretA[,p,f,,]<- MPCalcs$FM_Pret
             FleetPars[[p]][[f]]$Z_P <- MPCalcs$Z_P # total mortality
             FleetPars[[p]][[f]]$retA_P <- MPCalcs$retA_P # retained-at-age
 
@@ -1742,7 +1748,7 @@ multiMSE_int <- function(MOM, MPs=list(c("AvC","DCAC"),c("FMSYref","curE")),
           for(f in 1:nf){
 
             NoMPRecs <- MPRecs_A[[p]][[f]]
-            NoMPRecs[lapply(NoMPRecs, length) > 0 ] <- NULL
+            # NoMPRecs[lapply(NoMPRecs, length) > 0 ] <- NULL
             NoMPRecs$Spatial <- NA
 
             MPCalcs <- DLMtool::CalcMPDynamics(MPRecs=NoMPRecs, y=y, nyears=nyears, proyears=proyears, nsim=nsim,
