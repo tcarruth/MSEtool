@@ -6,10 +6,9 @@
 #' @import utils
 #' @import methods
 setOldClass("sdreport")
-setOldClass("spictcls")
 setClassUnion("sdreportAssess", members = c("character", "sdreport"))
 setClassUnion("optAssess", members = c("list", "character"))
-setClassUnion("listspict", members = c("list", "spictcls"))
+
 
 
 #' Class-\code{Assessment}
@@ -108,7 +107,7 @@ Assessment <- setClass("Assessment",
                                  SE_B_BMSY_final = "numeric", SE_B_B0_final = "numeric",
                                  SE_SSB_SSBMSY_final = "numeric", SE_SSB_SSB0_final = "numeric",
                                  SE_VB_VBMSY_final = "numeric", SE_VB_VB0_final = "numeric",
-                                 SE_Dev = "numeric", info = "listspict", obj = "list", opt = "optAssess", SD = "sdreportAssess",
+                                 SE_Dev = "numeric", info = "ANY", obj = "list", opt = "optAssess", SD = "sdreportAssess",
                                  TMB_report = "list", dependencies = "character"))
 
 #' @name summary.Assessment
