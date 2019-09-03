@@ -53,7 +53,7 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
   ####### Output from all simulations {.tabset}
   fleet_output <- lapply(1:nfleet, rmd_SRA_fleet_output)
 
-  if(any(data$I_hist > 0)) {
+  if(all(!is.na(data$I_hist)) && any(data$I_hist > 0)) {
     survey_output <- lapply(1:nsurvey, rmd_SRA_survey_output)
   } else survey_output <- NULL
 

@@ -31,7 +31,7 @@
 #' @param E_eq The equilibrium effort for each fleet in \code{Ehist} prior to the first year of the operating model.
 #' Zero implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
 #' @param ML_sd The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
-#' If \code{NULL}, default value is 0.1.
+#' If \code{NULL}, default value is \code{0.1 * mean(ML)}.
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
 #' @param fix_dome Logical, if \code{selectivity = "dome"}, determines whether the descending limb of selectivity is fixed or not.
 #' @param I_type A character vector (length nsurvey) to indicate the type of biomass for which each index follows. Either \code{"B"} for
@@ -294,7 +294,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     if(ncol(ML) != nfleet) stop("Number of ML columns (", ncol(ML), ") does not equal nfleet (", nfleet, "). NAs are acceptable.", call. = FALSE)
 
     if(is.null(ML_sd)) {
-      ML_sd <- rep(0.1, nfleet)
+      ML_sd <- apply(ML, 2, mean, na.rm = TRUE)
     } else if(length(ML_sd) == 1) ML_sd <- rep(ML_sd, nfleet)
     if(length(ML_sd) != nfleet) stop("Mean length SD vector (ML_sd) must be of length ", nfleet, ".", call. = FALSE)
 
@@ -752,7 +752,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   map$log_rec_dev <- factor(c(1:(nyears-1), NA))
 
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
-
+  browser()
   obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 

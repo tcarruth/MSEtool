@@ -57,7 +57,7 @@ Zero implies unfished conditions in year one. Otherwise, this is used to estimat
 Zero implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.}
 
 \item{ML_sd}{The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
-If \code{NULL}, default value is 0.1.}
+If \code{NULL}, default value is \code{0.1 * mean(ML)}.}
 
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
 
