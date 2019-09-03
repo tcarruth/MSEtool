@@ -42,6 +42,8 @@
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
   DATA_VECTOR(LWT_Index); // LIkelihood weights for the index
 
+  DATA_SCALAR(max_F);
+
   DATA_VECTOR(est_early_rec_dev);
   DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
@@ -96,9 +98,11 @@
 
     for(int y=0;y<n_y;y++) {
       if(condition == "catch") {
-        F(y,ff) = exp(log_F(y,ff));
+        F(y,ff) = CppAD::CondExpLt(max_F - exp(log_F(y)), Type(0), max_F - posfun(max_F - exp(log_F(y,ff)), Type(0), penalty),
+          exp(log_F(y,ff)));
       } else {
-        F(y,ff) = q_effort(ff) * E_hist(y,ff);
+        F(y,ff) = CppAD::CondExpLt(max_F - q_effort(ff) * E_hist(y,ff), Type(0), max_F - posfun(max_F - q_effort(ff) * E_hist(y,ff), Type(0), penalty),
+          q_effort(ff) * E_hist(y,ff));
       }
     }
   }

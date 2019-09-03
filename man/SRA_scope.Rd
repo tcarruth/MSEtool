@@ -11,9 +11,9 @@ SRA_scope(OM, Chist = NULL, Ehist = NULL, condition = c("catch",
   "effort"), Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL,
   ML = NULL, length_bin = NULL, C_eq = 0, E_eq = 0, ML_sd = NULL,
   selectivity = "logistic", I_type = NULL, LWT = list(),
-  ESS = c(30, 30), fix_dome = FALSE, cores = 1L, integrate = FALSE,
-  Year = NULL, report = TRUE, filename = "SRA_scope",
-  dir = tempdir(), open_file = TRUE, ...)
+  ESS = c(30, 30), fix_dome = FALSE, max_F = 3, cores = 1L,
+  integrate = FALSE, Year = NULL, report = TRUE,
+  filename = "SRA_scope", dir = tempdir(), open_file = TRUE, ...)
 
 plot_SRA_scope(...)
 
@@ -70,6 +70,8 @@ total biomass, or \code{"SSB"} for spawning biomass. If \code{NULL}, "B" is used
 multinomial likelihood function. The annual sample size of an age or length composition sample is the minimum of ESS or the number of observations.}
 
 \item{fix_dome}{Logical, if \code{selectivity = "dome"}, determines whether the descending limb of selectivity is fixed or not.}
+
+\item{max_F}{The maximum F for any fleet in the scoping model (higher F's in the model are penalized in the objective function).}
 
 \item{cores}{Integer for the number of CPU cores for the stock reduction analysis.}
 

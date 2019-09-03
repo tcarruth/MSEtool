@@ -39,6 +39,7 @@
 #' @param LWT A named list of likelihood weights for the SRA model. See details.
 #' @param ESS A numeric vector of length two for the maximum effective samples size of the age and length compositions, respectively for the
 #' multinomial likelihood function. The annual sample size of an age or length composition sample is the minimum of ESS or the number of observations.
+#' @param max_F The maximum F for any fleet in the scoping model (higher F's in the model are penalized in the objective function).
 #' @param cores Integer for the number of CPU cores for the stock reduction analysis.
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).
 #' @param Year A vector of years for the historical period, used for plotting.
@@ -103,7 +104,7 @@
 #' @export
 SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "effort"), Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, length_bin = NULL,
                       C_eq = 0, E_eq = 0, ML_sd = NULL, selectivity = "logistic", I_type = NULL, LWT = list(), ESS = c(30, 30),
-                      fix_dome = FALSE, cores = 1L, integrate = FALSE, Year = NULL, report = TRUE,
+                      fix_dome = FALSE, max_F = 3, cores = 1L, integrate = FALSE, Year = NULL, report = TRUE,
                       filename = "SRA_scope", dir = tempdir(), open_file = TRUE, ...) {
 
   condition <- match.arg(condition)
@@ -362,16 +363,14 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   # Fit model
   message("Fitting model (", nsim, " simulations) ...")
 
-  if(cores > 1) {
-    DLMtool::setup(as.integer(cores))
-    on.exit(snowfall::sfStop())
-
-    mod <- snowfall::sfLapply(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
+  if(cores > 1 && !snowfall::sfIsRunning()) DLMtool::setup(as.integer(cores))
+  if(snowfall::sfIsRunning()) {
+    mod <- snowfall::sfClusterApplyLB(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
                               Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
                               ML_sd = ML_sd, length_bin = length_bin,
                               wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
                               fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
-                              integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
+                              max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
 
   } else {
     mod <- lapply(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
@@ -379,7 +378,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                   ML_sd = ML_sd, length_bin = length_bin,
                   wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
                   fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
-                  integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
+                  max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
   #assign('mod', mod, envir = globalenv())
   res <- lapply(mod, getElement, "report")
@@ -400,7 +399,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                               ML_sd = ML_sd, length_bin = length_bin,
                               wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
                               fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"),
-                              LWT = LWT, ESS = ESS, mean_fit = TRUE,
+                              LWT = LWT, ESS = ESS, max_F = max_F, mean_fit = TRUE,
                               integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
 
@@ -624,7 +623,8 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                           I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, ML_sd = NULL, length_bin,
                           I_type, C_eq = 0, E_eq = 0, SR_type = c("BH", "Ricker"), LWT = list(), ESS = c(30, 30),
                           StockPars, ObsPars, FleetPars, wt_at_len, integrate = FALSE, selectivity, fix_selectivity = TRUE,
-                          fix_dome = FALSE, mean_fit = FALSE, control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
+                          fix_dome = FALSE, mean_fit = FALSE, max_F = 3,
+                          control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
   condition <- match.arg(condition)
   SR_type <- match.arg(SR_type)
 
@@ -674,7 +674,8 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                        n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
                        CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
-                       vul_type = selectivity, I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT$Index,
+                       vul_type = selectivity, I_type = I_type, SR_type = SR_type, max_F = max_F,
+                       LWT_C = LWT_C, LWT_Index = LWT$Index,
                        est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(1, nyears-1), NA))
 
   if(!is.null(Catch) && any(!is.na(Catch)) && any(Catch > 0)) {
