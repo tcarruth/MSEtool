@@ -299,7 +299,7 @@ Assess_diagnostic <- function(x, Data, Assessment, include_assessment = TRUE) {
   }
 
   # Assign report objects to output
-  if(length(Data@Misc) == 0) Data@Misc <- vector("list", 1)
+  if(length(Data@Misc) == 0) Data@Misc <- vector("list", length(Data@Mort))
   diagnostic <- Data@Misc[[x]]$diagnostic
   len_diag <- length(diagnostic)
   diagnostic[[len_diag + 1]] <- dg
