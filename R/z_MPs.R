@@ -59,44 +59,30 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
   }
 
   dots <- list(...)
+  dots_in_Assess <- dots[match(names(formals(eval(.Assess))), names(dots), nomatch = 0)]
+  dots_in_HCR <- dots[match(names(formals(eval(.HCR))), names(dots), nomatch = 0)]
+
+  Assess_call <- as.call(c(.Assess, x = quote(x), Data = quote(Data), dots_in_Assess))
+  HCR_call <- as.call(c(.HCR, Assessment = quote(do_Assessment), reps = quote(reps), dots_in_HCR))
 
   if(diagnostic == "none") {
 
-    if(length(dots) > 0) {
-      MP_body <- bquote({
-        dependencies <- .(get_dependencies(Assess_char, dots))
-        do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
-        Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
-        return(Rec)
-      })
-    } else {
-      MP_body <- bquote({
-        dependencies <- .(get_dependencies(Assess_char, dots))
-        do_Assessment <- .(.Assess)(x = x, Data = Data)
-        Rec <- .(.HCR)(do_Assessment, reps = reps)
-        return(Rec)
-      })
-    }
+    MP_body <- bquote({
+      dependencies <- .(get_dependencies(Assess_char, dots))
+      do_Assessment <- .(Assess_call)
+      Rec <- .(HCR_call)
+      return(Rec)
+    })
 
   } else {
 
-    if(length(dots) > 0) {
-      MP_body <- bquote({
-        dependencies <- .(get_dependencies(Assess_char, dots))
-        do_Assessment <- .(.Assess)(x = x, Data = Data, ...)
-        Rec <- .(.HCR)(do_Assessment, reps = reps, ...)
-        Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
-        return(Rec)
-      })
-    } else {
-      MP_body <- bquote({
-        dependencies <- .(get_dependencies(Assess_char, dots))
-        do_Assessment <- .(.Assess)(x = x, Data = Data)
-        Rec <- .(.HCR)(do_Assessment, reps = reps)
-        Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
-        return(Rec)
-      })
-    }
+    MP_body <- bquote({
+      dependencies <- .(get_dependencies(Assess_char, dots))
+      do_Assessment <- .(Assess_call)
+      Rec <- .(HCR_call)
+      Rec@Misc <- Assess_diagnostic(x, Data, do_Assessment, include_assessment = .(diagnostic == "full"))
+      return(Rec)
+    })
 
   }
 
