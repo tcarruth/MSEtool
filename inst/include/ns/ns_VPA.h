@@ -62,7 +62,7 @@ Type deriv_VPA_F_plus(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2) {
   Type a = Z1/(1 - exp(-Z1));
   Type a_deriv = 1 - exp(-Z1) - Z1 * exp(-Z1);
   a_deriv *= F1;
-  a_deriv /= pow(1 - exp(-Z1), 2);
+  a_deriv /= (1 - exp(-Z1)) * (1 - exp(-Z1));
 
   Type b = C1/F1;
   Type b_deriv = -C1/F1;
@@ -70,7 +70,7 @@ Type deriv_VPA_F_plus(Type logF, Type phi, Type M1, Type M2, Type C1, Type C2) {
   Type cc = Z2/(1 - exp(-Z2));
   Type cc_deriv = 1 - exp(-Z2) - Z2 * exp(-Z2);
   cc_deriv *= F2;
-  cc_deriv /= pow(1 - exp(-Z2), 2);
+  cc_deriv /= (1 - exp(-Z2)) * (1 - exp(-Z2));
 
   Type d = C2/F2;
   Type d_deriv = -C2/F2;

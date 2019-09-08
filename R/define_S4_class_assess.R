@@ -167,8 +167,6 @@ if(getRversion() >= "2.15.1") {
   # Define global variables for Assessment objects
   utils::globalVariables(slotNames("Assessment"))
 
-  utils::globalVariables("plot.dir")
-
   # For Awatea2OM - Quang assumes these variables are loaded in from .rda files
   utils::globalVariables(c("Bmcmc", "currentMCMC", "currentRes"))
 }

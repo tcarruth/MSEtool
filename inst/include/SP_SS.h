@@ -46,7 +46,7 @@
 
   B(0) = dep * K;
   for(int y=0;y<ny;y++) {
-    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y) *= exp(log_B_dev(y) - 0.5 * pow(tau, 2));
+    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y) *= exp(log_B_dev(y) - 0.5 * tau * tau);
     F(y) = SP_F(C_hist(y)/(C_hist(y) + B(y)), C_hist(y), MSY, K, n, n_term,
       CppAD::CondExpLe(C_hist(y), Type(1e-8), Type(1), dt), nstep, nitF, Cpred, B, y, penalty);
     SP(y) = B(y+1) - B(y) + Cpred(y);

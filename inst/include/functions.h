@@ -9,7 +9,7 @@ Type posfun(Type x, Type eps, Type &penalty) {
   Type denom = 2;
   denom -= x/eps;
   Type ans = CppAD::CondExpGe(x, eps, x, eps/denom);
-  penalty += CppAD::CondExpGe(x, eps, Type(0), 0.01 * pow(x - eps, 2));
+  penalty += CppAD::CondExpGe(x, eps, Type(0), 0.01 * (x - eps) * (x - eps));
   return ans;
 }
 
@@ -37,7 +37,7 @@ Type calc_sigma(vector<Type> I_y, vector<Type> Ipred_y) {
 
   for(int y=0;y<I_y.size();y++) {
     if(!R_IsNA(asDouble(I_y(y))) && I_y(y)>0) {
-      sum_square += pow(log(I_y(y)/Ipred_y(y)), 2);
+      sum_square += (log(I_y(y)/Ipred_y(y))) * (log(I_y(y)/Ipred_y(y)));
       n_y += 1.;
     }
   }

@@ -53,10 +53,9 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior) {
   for(int a=0;a<max_age;a++) {
     Type aa = a;
     aa += 1;
-    vul(a) = pow(1 + exp(-log(Type(19.0)) * (aa - a_50)/(a_95 - a_50)), -1);
+    vul(a) = 1/(1 + exp(-log(Type(19.0)) * (aa - a_50)/(a_95 - a_50)));
   }
-  Type interim_vmax = max(vul);
-  for(int a=0;a<max_age;a++) vul(a) /= interim_vmax;
+  vul /= max(vul);
 
   return vul;
 }
@@ -64,8 +63,8 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior) {
 template<class Type>
 Type dnorm_vul(Type x, Type mu, Type sd) {
   Type res = -0.5;
-  res *= pow(x - mu, 2);
-  res /= pow(sd, 2);
+  Type resid = (x-mu)/sd;
+  res *= resid * resid;
   return exp(res);
 }
 
@@ -86,10 +85,10 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
   prior -= dnorm(vul_par(2), Type(0), Type(3), true);
   //prior -= dnorm(vul_par(3), Type(0), Type(3), true);
 
-  Type var_asc = pow(a_50 - a_full, 2);
+  Type var_asc =(a_50 - a_full) * (a_50 - a_full);
   var_asc /= log(Type(4));
 
-  Type var_des = pow(maxage - a_full2, 2);
+  Type var_des = (maxage - a_full2) * (maxage - a_full2);
   var_des /= -2 * log(vul_max);
 
   Type sd_asc = pow(var_asc, 0.5);
@@ -103,9 +102,7 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
 
     vul(a) = CppAD::CondExpLe(aa, a_full, vul_asc, CppAD::CondExpLe(aa, a_full2, Type(1), vul_des));
   }
-  Type interim_vmax = max(vul);
-  for(int a=0;a<max_age;a++) vul(a) /= interim_vmax;
-
+  vul /= max(vul);
 
   return vul;
 }
@@ -113,7 +110,7 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
 template<class Type>
 Type dlnorm_comp(vector<Type> obs, vector<Type> pred) {
   Type log_lik = 0.;
-  for(int a=0;a<obs.size();a++) log_lik += dnorm(log(obs(a)), log(pred(a)), pow(0.01/pred(a), 0.5), true);
+  for(int a=0;a<obs.size();a++) log_lik += dnorm(log(obs(a)), log(pred(a)), 0.1/pow(pred(a), 0.5), true);
   return log_lik;
 }
 

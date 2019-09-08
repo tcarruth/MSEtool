@@ -97,7 +97,7 @@
       R(tt+k) = Ricker_SR(B(tt), h, R0, B0);
     }
     if(tt+k<ny) {
-      Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau, 2));
+      Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * tau * tau);
       R(tt+k) *= Rec_dev(tt);
     }
   }

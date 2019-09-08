@@ -119,13 +119,13 @@
   R_eq /= Brec * EPR_eq;
 
   R(0) = R_eq;
-  if(!R_IsNA(asDouble(est_rec_dev(0)))) R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
+  if(!R_IsNA(asDouble(est_rec_dev(0)))) R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
   for(int a=0;a<max_age;a++) {
     if(a == 0) {
       N(0,a) = R(0) * NPR_equilibrium(a);
     } else {
       R_early(a-1) = R_eq;
-      if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
       N(0,a) = R_early(a-1) * NPR_equilibrium(a);
     }
     B(0) += N(0,a) * weight(a);
@@ -142,7 +142,7 @@
     }
 
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
     }
     N(y+1,0) = R(y+1);
 
@@ -179,15 +179,15 @@
   for(int y=0;y<n_y;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
     if(C_hist(y) > 0) {
-      vector<Type> loglike_CAAobs(max_age);
-      vector<Type> loglike_CAApred(max_age);
-      for(int a=0;a<max_age;a++) loglike_CAApred(a) = CAApred(y,a)/CN(y);
       if(!R_IsNA(asDouble(CAA_n(y)))) {
+        vector<Type> loglike_CAAobs(max_age);
+        vector<Type> loglike_CAApred(max_age);
+        loglike_CAApred = CAApred.row(y)/CN(y);
+        for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a), Type(1e-8), Type(1e-8), CAA_hist(y,a));
         if(CAA_dist == "multinomial") {
-          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a), Type(1e-8), Type(1e-8), CAA_hist(y,a)) * CAA_n(y);
+          loglike_CAAobs *= CAA_n(y);
           nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
         } else {
-          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a), Type(1e-8), Type(1e-8), CAA_hist(y,a));
           nll_comp(1) -= dlnorm_comp(loglike_CAAobs, loglike_CAApred);
         }
       }

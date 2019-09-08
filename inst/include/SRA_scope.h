@@ -45,7 +45,7 @@
   DATA_SCALAR(max_F);
 
   DATA_VECTOR(est_early_rec_dev);
-  DATA_VECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
+  DATA_VECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
@@ -74,13 +74,11 @@
 
   Type tau = exp(log_tau);
 
-
   // Vulnerability (length-based) and F parameters
   Type penalty = 0;
   Type prior = 0.;
 
-  vector<vector<Type> > vul(nfleet);
-  vul = calc_vul(vul_par, vul_type, nlbin, length_bin, prior);
+  matrix<Type> vul = calc_vul(vul_par, vul_type, nlbin, length_bin, prior);
 
   vector<Type> q_effort(nfleet);
   vector<Type> sigma_mlen(nfleet);
@@ -118,10 +116,8 @@
   vector<Type> Brec(n_y);
 
   for(int y=0;y<n_y;y++) {
-    matrix<Type> NPR_unfished(max_age, nlbin);
-    matrix<Type> ALK_unfished(max_age, nlbin);
-    ALK_unfished = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
-    NPR_unfished = calc_NPR0(nlbin, M, max_age, ALK_unfished, y);
+    matrix<Type> ALK_unfished = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
+    matrix<Type> NPR_unfished = calc_NPR0(nlbin, M, max_age, ALK_unfished, y);
 
     EPR0(y) = sum_EPR(NPR_unfished, wt_at_len, mat, max_age, nlbin, y);
     E0(y) = R0 * EPR0(y);
@@ -178,10 +174,8 @@
   E.setZero();
 
   // Equilibrium quantities (leading into first year of model)
-  matrix<Type> NPR_equilibrium(max_age, nlbin);
-  matrix<Type> ALK_equilibrium(max_age, nlbin);
-  ALK_equilibrium = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
-  NPR_equilibrium = calc_NPR(F_equilibrium, vul, nfleet, nlbin, M, max_age, ALK_equilibrium, 0);
+  matrix<Type> ALK_equilibrium = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
+  matrix<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, nfleet, nlbin, M, max_age, ALK_equilibrium, 0);
 
   Type EPR_eq = sum_EPR(NPR_equilibrium, wt_at_len, mat, max_age, nlbin, 0);
   Type R_eq;
@@ -195,30 +189,29 @@
 
   R(0) = R_eq;
   if(!R_IsNA(asDouble(est_rec_dev(0)))) {
-    R(0) *= exp(log_rec_dev(0) - 0.5 * pow(tau, 2));
+    R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
   }
 
   ALK(0) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
   for(int a=0;a<max_age;a++) {
     if(a == 0) {
-      N(0,a) = R(0) * get_N_at_age(NPR_equilibrium, nlbin, a);
+      N(0,a) = R(0) * NPR_equilibrium.row(a).sum();
     } else {
       R_early(a-1) = R_eq;
       if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) {
-        R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * pow(tau, 2));
+        R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
       }
-      N(0,a) = R_early(a-1) * get_N_at_age(NPR_equilibrium, nlbin, a);
+      N(0,a) = R_early(a-1) * NPR_equilibrium.row(a).sum();
     }
     for(int len=0;len<nlbin;len++) {
       N_full(0,a,len) = N(0,a) * ALK(0)(a,len);
-      for(int ff=0;ff<nfleet;ff++) VB(0,ff) += N_full(0,a,len) * wt_at_len(len) * vul(ff)(len);
+      for(int ff=0;ff<nfleet;ff++) VB(0,ff) += N_full(0,a,len) * wt_at_len(len) * vul(len,ff);
       B(0) += N_full(0,a,len) * wt_at_len(len);
       E(0) += N_full(0,a,len) * wt_at_len(len) * mat(0,a);
     }
   }
 
-  vector<Type> C_eq_pred(nfleet);
-  C_eq_pred = calc_C_eq(F_equilibrium, N_full, vul, M, wt_at_len, nlbin, nfleet, max_age, 0);
+  vector<Type> C_eq_pred = calc_C_eq(F_equilibrium, N_full, vul, M, wt_at_len, nlbin, nfleet, max_age, 0);
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
@@ -229,7 +222,7 @@
     }
 
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * pow(tau, 2));
+      if(!R_IsNA(asDouble(est_rec_dev(y+1)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
     }
     N(y+1,0) = R(y+1);
 
@@ -239,15 +232,12 @@
 
     for(int a=0;a<max_age;a++) {
       for(int len=0;len<nlbin;len++) {
-        Z_total(y,a,len) = M(y,a);
-        for(int ff=0;ff<nfleet;ff++) Z_total(y,a,len) += vul(ff)(len) * F(y,ff);
-
+        Z_total(y,a,len) = M(y,a) + (vul.row(len) * F.row(y)).sum();
         Type mean_N = N_full(y,a,len) * (1 - exp(-Z_total(y,a,len)));
         mean_N /= Z_total(y,a,len);
 
         for(int ff=0;ff<nfleet;ff++) {
-          Type Cat_yalf = vul(ff)(len) * F(y,ff) * mean_N;
-
+          Type Cat_yalf = vul(len,ff) * F(y,ff) * mean_N;
           CAApred(y,a,ff) += Cat_yalf;
           CALpred(y,len,ff) += Cat_yalf;
           Cat(y,a,len) += Cat_yalf;
@@ -262,13 +252,14 @@
 
       for(int len=0;len<nlbin;len++) {
         N_full(y+1,a,len) = N(y+1,a) * ALK(y+1)(a,len);
-        for(int ff=0;ff<nfleet;ff++) VB(y+1,ff) += vul(ff)(len) * N_full(y+1,a,len) * wt_at_len(len);
+        for(int ff=0;ff<nfleet;ff++) VB(y+1,ff) += vul(len,ff) * N_full(y+1,a,len) * wt_at_len(len);
         B(y+1) += N_full(y+1,a,len) * wt_at_len(len);
         E(y+1) += N_full(y+1,a,len) * wt_at_len(len) * mat(x,a);
       }
     }
     for(int ff=0;ff<nfleet;ff++) mlen_pred(y,ff) /= CN(y,ff);
   }
+
 
   // Calculate nuisance parameters and likelihood
   vector<Type> q(nsurvey);
@@ -314,18 +305,22 @@
         if(!R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
           vector<Type> loglike_CAAobs(max_age);
           vector<Type> loglike_CAApred(max_age);
-          for(int a=0;a<max_age;a++) loglike_CAApred(a) = CAApred(y,a,ff)/CN(y,ff);
-
-          for(int a=0;a<max_age;a++) loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a,ff), Type(1e-8), Type(1e-8), CAA_hist(y,a,ff)) * CAA_n(y,ff);
+          for(int a=0;a<max_age;a++) {
+            loglike_CAApred(a) = CAApred(y,a,ff)/CN(y,ff);
+            loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a,ff), Type(1e-8), Type(1e-8), CAA_hist(y,a,ff));
+          }
+          loglike_CAAobs *= CAA_n(y,ff);
           nll_CAA(ff) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
         }
 
         if(!R_IsNA(asDouble(CAL_n(y,ff))) && CAL_n(y,ff) > 0) {
           vector<Type> loglike_CALobs(nlbin);
           vector<Type> loglike_CALpred(nlbin);
-          for(int len=0;len<nlbin;len++) loglike_CALpred(len) = CALpred(y,len,ff)/CN(y,ff);
-
-          for(int len=0;len<nlbin;len++) loglike_CALobs(len) = CppAD::CondExpLt(CAL_hist(y,len,ff), Type(1e-8), Type(1e-8), CAL_hist(y,len,ff)) * CAL_n(y,ff);
+          for(int len=0;len<nlbin;len++) {
+            loglike_CALpred(len) = CALpred(y,len,ff)/CN(y,ff);
+            loglike_CALobs(len) = CppAD::CondExpLt(CAL_hist(y,len,ff), Type(1e-8), Type(1e-8), CAL_hist(y,len,ff));
+          }
+          loglike_CALobs *= CAL_n(y,ff);
           nll_CAL(ff) -= dmultinom(loglike_CALobs, loglike_CALpred, true);
         }
 
@@ -339,6 +334,7 @@
     nll_CAA(ff) *= LWT_C(ff,1);
     nll_CAL(ff) *= LWT_C(ff,2);
     nll_ML(ff) *= LWT_C(ff,3);
+
     if(condition == "catch" && C_eq(ff) > 0) nll_Ceq(ff) = LWT_C(ff,4) * dnorm(log(C_eq(ff)), log(C_eq_pred(ff)), Type(0.01), true);
 
   }

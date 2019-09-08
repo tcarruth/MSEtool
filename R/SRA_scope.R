@@ -386,9 +386,6 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
   if(sum(conv) < nsim) {
     message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
-    #no_conv_ind <- !conv
-    #no_conv <- (conv)
-    #message("For non-converged iterations, values were re-sampled from converged iterations.\n")
   }
 
   ### Fit to means if report = TRUE
@@ -484,13 +481,13 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   ### Rec devs
   OM@cpars$Perr <- StockPars$procsd
   make_Perr <- function(x) {
-    bias_corr <- ifelse(is.na(x$obj$env$data$est_rec_dev), 1, exp(-0.5 * x$report$tau^2))
+    bias_corr <- ifelse(is.na(x$obj$env$map$log_rec_dev), 1, exp(-0.5 * x$report$tau^2))
     exp(x$report$log_rec_dev) * bias_corr
   }
   Perr <- do.call(rbind, lapply(mod, make_Perr))
 
   make_early_Perr <- function(x) {
-    bias_corr <- ifelse(is.na(x$obj$env$data$est_early_rec_dev), 1, exp(-0.5 * x$report$tau^2))
+    bias_corr <- ifelse(is.na(x$obj$env$map$log_early_rec_dev), 1, exp(-0.5 * x$report$tau^2))
     exp(x$report$log_early_rec_dev) * bias_corr
   }
   early_Perr <- do.call(rbind, lapply(mod, make_early_Perr))
@@ -638,6 +635,13 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   CAA_n <- t(rowSums(aperm(CAA, c(3, 1, 2)), dims = 2, na.rm = TRUE))
   CAL_n <- t(rowSums(aperm(CAL, c(3, 1, 2)), dims = 2, na.rm = TRUE))
 
+  CAA2 <- CAA
+  CAL2 <- CAL
+  for(ff in 1:nfleet) {
+    CAA2[,,ff] <- CAA[,,ff]/CAA_n[,ff]
+    CAL2[,,ff] <- CAL[,,ff]/CAL_n[,ff]
+  }
+
   LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
 
   if(mean_fit) {
@@ -669,16 +673,16 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   if(is.null(I_sd)) I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
 
   TMB_data_all <- list(condition = condition, I_hist = Index, sigma_I = I_sd,
-                       CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
-                       CAL_hist = CAL, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
+                       CAA_hist = CAA2, CAA_n = pmin(CAA_n, ESS[1]),
+                       CAL_hist = CAL2, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
                        n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
                        CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
-                       vul_type = selectivity, I_type = I_type, SR_type = SR_type, max_F = max_F,
-                       LWT_C = LWT_C, LWT_Index = LWT$Index,
-                       est_early_rec_dev = rep(NA, max_age - 1), est_rec_dev = c(rep(1, nyears-1), NA))
+                       vul_type = selectivity, I_type = I_type, SR_type = SR_type,
+                       LWT_C = LWT_C, LWT_Index = LWT$Index, max_F = max_F,
+                       est_early_rec_dev = rep(NA, max_age-1), est_rec_dev = c(rep(1, nyears-1), NA))
 
-  if(!is.null(Catch) && any(!is.na(Catch)) && any(Catch > 0)) {
+  if(!is.null(Catch) && any(Catch > 0, na.rm = TRUE)) {
     rescale <- 1/mean(Catch, na.rm = TRUE)
     C_hist <- Catch * rescale
   } else {
@@ -686,7 +690,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     C_hist <- matrix(0, nyears, nfleet)
   }
 
-  if(!is.null(Effort)) {
+  if(!is.null(Effort) && any(Effort > 0, na.rm = TRUE)) {
     rescale_effort <- 1/mean(Effort, na.rm = TRUE)
     E_hist <- Effort * rescale_effort
   } else {
@@ -752,7 +756,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   map$log_rec_dev <- factor(c(1:(nyears-1), NA))
 
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
-  browser()
+
   obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 
@@ -760,7 +764,6 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
-  report$vul <- do.call(cbind, report$vul)
   report$C_hist <- TMB_data$C_hist/rescale
   report$E_hist <- TMB_data$E_hist/rescale_effort
 
@@ -775,7 +778,6 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
   if(condition == "effort" && !is.null(Catch) && nfleet == 1 && any(Catch > 0)) {
-    #rescale <- mean(report$Cpred[, 1]/Catch, na.rm = TRUE)
     rescale <- 1/exp(mean(log(Catch/report$Cpred), na.rm = TRUE))
 
     fun_fixed <- c(NA, NA)

@@ -53,7 +53,7 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
   ####### Output from all simulations {.tabset}
   fleet_output <- lapply(1:nfleet, rmd_SRA_fleet_output)
 
-  if(all(!is.na(data$I_hist)) && any(data$I_hist > 0)) {
+  if(any(data$I_hist > 0, na.rm = TRUE)) {
     survey_output <- lapply(1:nsurvey, rmd_SRA_survey_output)
   } else survey_output <- NULL
 
@@ -109,7 +109,7 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
     } else rmd_fit_comps("Year", obs2, pred2, type = "annual", CAL_bins = "data$length_bin", fig.cap = fig.cap2)
   }
 
-  if(any(data$C_hist > 0)) {
+  if(any(data$C_hist > 0, na.rm = TRUE)) {
     C_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$C_hist", col = "rich.colors(nfleet)",
                              xlab = "Year", ylab = "Catch", fig.cap = "Catch time series.", header = "### Data and Fit\n")
 
@@ -119,25 +119,25 @@ report_SRA_scope <- function(OM, report_list, sims = 1:OM@nsim, filename = "SRA_
     } else C_plots <- NULL
   } else C_matplot <- C_plots <- NULL
 
-  if(!all(is.na(data$E_hist)) && any(data$E_hist > 0)) {
+  if(any(data$E_hist > 0, na.rm = TRUE)) {
     E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$E_hist", col = "rich.colors(nfleet)",
                              xlab = "Year", ylab = "Effort", fig.cap = "Effort time series.")
   } else E_matplot <- NULL
 
-  if(!all(is.na(report$Ipred))) {
+  if(any(report$Ipred > 0, na.rm = TRUE)) {
     I_plots <- lapply(1:nsurvey, individual_matrix_fn, obs = "data$I_hist", pred = "report$Ipred",
                       fig.cap = "index from survey", label = "Survey")
   } else I_plots <- NULL
 
-  if(any(data$CAA_hist > 0)) {
+  if(any(data$CAA_hist > 0, na.rm = TRUE)) {
     CAA_plots <- lapply(1:nfleet, individual_array_fn, obs = "data$CAA_hist", pred = "report$CAApred", comps = "age")
   } else CAA_plots <- NULL
 
-  if(any(data$CAL_hist > 0)) {
+  if(any(data$CAL_hist > 0, na.rm = TRUE)) {
     CAL_plots <- lapply(1:nfleet, individual_array_fn, obs = "data$CAL_hist", pred = "report$CALpred", comps = "length")
   } else CAL_plots <- NULL
 
-  if(any(data$mlen > 0)) {
+  if(any(data$mlen > 0, na.rm = TRUE)) {
     ML_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data$mlen", pred = "report$Ipred",
                        fig.cap = "Mean Length from Fleet", label = "mean lengths from fleet")
   } else ML_plots <- NULL
@@ -326,7 +326,7 @@ rmd_SRA_fleet_output <- function(ff) {
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean ages of fleet ", ff, ".\"}"),
            paste0("MApred <- do.call(cbind, lapply(report_list[[2]], function(x) x$CAApred[, , ", ff, "] %*% age/x$CN[, ", ff, "]))"),
            "matplot(Year_matrix, MApred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean age\")",
-           paste0("if(any(data$CAA_hist[, , ", ff, "] > 0)) {"),
+           paste0("if(any(data$CAA_hist[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  lines(Year, (data$CAA_hist[, , ", ff, "] %*% age)/rowSums(data$CAA_hist[, , ", ff, "], na.rm = TRUE),",
            "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "}",
@@ -334,7 +334,7 @@ rmd_SRA_fleet_output <- function(ff) {
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean lengths of fleet ", ff, ".\"}"),
            paste0("MLpred <- do.call(cbind, lapply(report_list[[2]], function(x) x$mlen_pred[, ", ff, "]))"),
            "matplot(Year_matrix, MLpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean length\")",
-           paste0("if(any(data$CAL_hist[, , ", ff, "] > 0)) {"),
+           paste0("if(any(data$CAL_hist[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  lines(Year, (data$CAL_hist[, , ", ff, "] %*% length_bin)/rowSums(data$CAL_hist[, , ", ff, "], na.rm = TRUE),",
                   "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            paste0("} else if(any(data$mlen[, ", ff, "] > 0)) lines(Year, data$mlen[, ", ff, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
