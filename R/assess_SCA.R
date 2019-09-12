@@ -212,7 +212,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     ind1 <- which(!is.na(CAA_n_nominal))[1] - max_age
     if(ind1 < 0) {
       early_start <- max_age + ind1
-      est_early_rec_dev <- ifelse(c(1:(max_age-1)) < early_start, NA, 1)
+      est_early_rec_dev <- rev(ifelse(c(1:(max_age-1)) < early_start, NA, 1))
       est_rec_dev <- rep(1, n_y)
     } else {
       est_early_rec_dev <- rep(NA, max_age-1)
