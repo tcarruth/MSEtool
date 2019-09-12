@@ -2,7 +2,11 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 
 ## MSEtool 1.2.3
 - Users can choose to use `SRA_scope` while conditioning on either catch or effort. Function will also return a markdown report of model fits.
+- Update defaults to `SRA_scope` so that it is more robust (set maximum F in model, higher std. dev. for mean lengths).
 - Vignette links are now available through the `?MSEtool` help page.
+- Minor fixes to `multiMSE`.
+- Minor updates to simplify TMB code.
+- Update `make_MP` to pass CRAN check.
 
 ## MSEtool 1.2.2
 - `SS2OM` now has an option for selecting male or female life history parameters.

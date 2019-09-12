@@ -298,7 +298,7 @@
 
   for(int ff=0;ff<nfleet;ff++) {
     for(int y=0;y<n_y;y++) {
-      if(C_hist(y,ff)>0) {
+      if(C_hist(y,ff)>0 || E_hist(y,ff)>0) {
 
         if(condition == "catch") nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
 
