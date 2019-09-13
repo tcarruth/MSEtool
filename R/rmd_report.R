@@ -268,7 +268,7 @@ rmd_residual <- function(par, se = "NULL", fig.cap, label, conv_check = FALSE, b
 rmd_fit_age_comps <- function(type = c("bubble", "annual"), ages = "NULL", match = FALSE)  {
   type <- match.arg(type)
   if(type == "bubble") {
-    arg <- "\"bubble_data\""
+    arg <- "\"bubble_residuals\", bubble_adj = 20"
     fig.cap = "Pearson residual bubble plot of age compositions (grey bubbles are negative, white are positive)."
   } else {
     arg <- paste("\"annual\", ages =", ages)
