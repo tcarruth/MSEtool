@@ -44,8 +44,8 @@
 
   DATA_SCALAR(max_F);
 
-  DATA_VECTOR(est_early_rec_dev);
-  DATA_VECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
+  DATA_IVECTOR(est_early_rec_dev);
+  DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
@@ -188,7 +188,7 @@
   R_eq /= Brec(0) * EPR_eq;
 
   R(0) = R_eq;
-  if(!R_IsNA(asDouble(est_rec_dev(0)))) {
+  if(est_rec_dev(0)) {
     R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
   }
 
@@ -198,7 +198,7 @@
       N(0,a) = R(0) * NPR_equilibrium.row(a).sum();
     } else {
       R_early(a-1) = R_eq;
-      if(!R_IsNA(asDouble(est_early_rec_dev(a-1)))) {
+      if(est_early_rec_dev(a-1)) {
         R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
       }
       N(0,a) = R_early(a-1) * NPR_equilibrium.row(a).sum();
@@ -222,7 +222,7 @@
     }
 
     if(y<n_y-1) {
-      if(!R_IsNA(asDouble(est_rec_dev(y+1)))) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
+      if(est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
     }
     N(y+1,0) = R(y+1);
 
@@ -307,7 +307,7 @@
           vector<Type> loglike_CAApred(max_age);
           for(int a=0;a<max_age;a++) {
             loglike_CAApred(a) = CAApred(y,a,ff)/CN(y,ff);
-            loglike_CAAobs(a) = CppAD::CondExpLt(CAA_hist(y,a,ff), Type(1e-8), Type(1e-8), CAA_hist(y,a,ff));
+            loglike_CAAobs(a) = CAA_hist(y,a,ff);
           }
           loglike_CAAobs *= CAA_n(y,ff);
           nll_CAA(ff) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
@@ -318,7 +318,7 @@
           vector<Type> loglike_CALpred(nlbin);
           for(int len=0;len<nlbin;len++) {
             loglike_CALpred(len) = CALpred(y,len,ff)/CN(y,ff);
-            loglike_CALobs(len) = CppAD::CondExpLt(CAL_hist(y,len,ff), Type(1e-8), Type(1e-8), CAL_hist(y,len,ff));
+            loglike_CALobs(len) = CAL_hist(y,len,ff);
           }
           loglike_CALobs *= CAL_n(y,ff);
           nll_CAL(ff) -= dmultinom(loglike_CALobs, loglike_CALpred, true);
@@ -340,10 +340,10 @@
   }
 
   for(int y=0;y<n_y;y++) {
-    if(!R_IsNA(asDouble(est_rec_dev(y)))) nll_log_rec_dev -= dnorm(log_rec_dev(y), Type(0), tau, true);
+    if(est_rec_dev(y)) nll_log_rec_dev -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
-    if(!R_IsNA(asDouble(est_early_rec_dev(a)))) nll_log_rec_dev -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
+    if(est_early_rec_dev(a)) nll_log_rec_dev -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
   }
 
   Type nll = nll_Catch.sum() + nll_Index.sum();

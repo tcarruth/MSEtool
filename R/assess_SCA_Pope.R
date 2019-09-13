@@ -57,19 +57,29 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
     est_rec_dev <- rep(1, n_y)
   }
   if(early_dev == "comp") {
-    est_early_rec_dev <- rep(NA, max_age-1)
+    est_early_rec_dev <- rep(0, max_age-1)
     ind1 <- which(!is.na(CAA_n_nominal))[1]
-    est_rec_dev <- ifelse(c(1:n_y) < ind1, NA, 1)
+    est_rec_dev <- ifelse(1:n_y < ind1, 0, 1)
   }
   if(early_dev == "comp_onegen") {
     ind1 <- which(!is.na(CAA_n_nominal))[1] - max_age
     if(ind1 < 0) {
       early_start <- max_age + ind1
-      est_early_rec_dev <- rev(ifelse(c(1:(max_age-1)) < early_start, NA, 1))
+      est_early_rec_dev <- rev(ifelse(c(1:(max_age-1)) < early_start, 0, 1))
       est_rec_dev <- rep(1, n_y)
     } else {
-      est_early_rec_dev <- rep(NA, max_age-1)
-      est_rec_dev <- ifelse(c(1:n_y) < ind1, NA, 1)
+      est_early_rec_dev <- rep(0, max_age-1)
+      est_rec_dev <- ifelse(1:n_y < ind1, 0, 1)
+    }
+  }
+  if(is.numeric(early_dev)) {
+    if(early_dev > 1) {
+      est_early_rec_dev <- rep(0, max_age-1)
+      est_rec_dev <- ifelse(1:n_y >= early_dev, 1, 0)
+    } else {
+      ind1 <- early_dev - 1
+      est_early_rec_dev <- c(rep(1, ind1), rep(NA, max_age-ind1-1))
+      est_rec_dev <- rep(1, n_y)
     }
   }
   if(is.character(late_dev) && late_dev == "comp50") {
@@ -82,7 +92,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
   if(is.numeric(late_dev) && late_dev > 0) {
     if(late_dev > length(est_rec_dev)) late_dev <- length(est_rec_dev)
     ind_late <- (length(est_rec_dev) - late_dev + 1):length(est_rec_dev)
-    est_rec_dev[ind_late] <- NA
+    est_rec_dev[ind_late] <- 0
   }
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
@@ -91,6 +101,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
                SR_type = SR, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev, est_rec_dev = est_rec_dev)
+  data$CAA_hist[data$CAA_hist < 1e-8] <- 1e-8
 
   # Starting values
   params <- list()
@@ -130,8 +141,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
   }
 
   if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]), log(mean(data$C_hist)) + 4,
-                            log(1.5 * rescale * Data@OM$N0[x] * (1 - exp(-Data@Mort[x]))))
+    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 4, log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(!fix_h && is.na(Data@steep[x]), 0.9, Data@steep[x])
@@ -181,19 +191,8 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
-  if(any(is.na(est_early_rec_dev))) {
-    n_est <- sum(!is.na(est_early_rec_dev))
-    if(n_est == 0) map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
-    else {
-      est_early_rec_dev[!is.na(est_early_rec_dev)] <- 1:n_est
-      map$log_early_rec_dev <- factor(est_early_rec_dev)
-    }
-  }
-  if(any(is.na(est_rec_dev))) {
-    n_est <- sum(!is.na(est_rec_dev))
-    est_rec_dev[!is.na(est_rec_dev)] <- 1:n_est
-    map$log_rec_dev <- factor(est_rec_dev)
-  }
+  if(any(!est_early_rec_dev)) map$log_early_rec_dev <- factor(ifelse(est_early_rec_dev, 1:sum(est_early_rec_dev), NA))
+  if(any(!est_rec_dev)) map$log_rec_dev <- factor(ifelse(est_rec_dev, 1:sum(est_rec_dev), NA))
   if(vulnerability == "dome") map$vul_par <- factor(c(1, 2, NA, 3))
 
   random <- NULL
@@ -239,8 +238,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
   YearR <- c(YearDev, max(YearDev) + 1)
   R <- c(rev(report$R_early), report$R)
 
-  Dev <- c(rev(report$log_early_rec_dev), report$log_rec_dev)
-  Dev_out <- structure(Dev, names = YearDev)
+  Dev <- structure(c(rev(report$log_early_rec_dev), report$log_rec_dev), names = YearDev)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
   Assessment <- new("Assessment", Model = "SCA_Pope", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
@@ -264,8 +262,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
                     Catch = structure(colSums(t(report$CAApred) * Wa), names = Year),
                     Index = structure(report$Ipred, names = Year),
                     C_at_age = report$CAApred,
-                    Dev = Dev_out,
-                    Dev_type = "log-Recruitment deviations",
+                    Dev = Dev, Dev_type = "log-Recruitment deviations",
                     NLL = structure(c(nll_report, report$nll_comp, report$penalty),
                                     names = c("Total", "Index", "CAA", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
@@ -276,25 +273,18 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
     report <- c(report, ref_pt)
 
     if(integrate) {
-      if(!all(is.na(est_early_rec_dev))) SE_Early <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_early_rec_dev"])
-      SE_Main <- sqrt(SD$diag.cov.random[names(SD$par.random) == "log_rec_dev"])
+      SE_Early <- ifelse(est_early_rec_dev, sqrt(SD$diag.cov.random[names(SD$par.random) == "log_early_rec_dev"]), NA)
+      SE_Main <- ifelse(est_rec_dev, sqrt(SD$diag.cov.random[names(SD$par.random) == "log_rec_dev"]), NA)
     } else {
-      if(!all(is.na(est_early_rec_dev))) SE_Early <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_early_rec_dev"])
-      SE_Main <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+      SE_Early <- ifelse(est_early_rec_dev, sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_early_rec_dev"]), NA)
+      SE_Main <- ifelse(est_rec_dev, sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"]), NA)
     }
 
-    SE_Early2 <- est_early_rec_dev
-    if(!all(is.na(est_early_rec_dev))) {
-      SE_Early2[!is.na(SE_Early2)] <- SE_Early
-    }
-    SE_Main2 <- est_rec_dev
-    SE_Main2[!is.na(SE_Main2)] <- SE_Main
-
-    SE_Dev <- structure(c(rev(SE_Early2), SE_Main2), names = YearDev)
+    SE_Dev <- structure(c(rev(SE_Early), SE_Main), names = YearDev)
 
     first_non_zero <- which(!is.na(SE_Dev))[1]
     if(!is.na(first_non_zero) && first_non_zero > 1) {
-      Dev_out <- Dev_out[-c(1:(first_non_zero - 1))]
+      Dev <- Dev[-c(1:(first_non_zero - 1))]
       SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
       SE_Dev[is.na(SE_Dev)] <- 0
     }
@@ -308,7 +298,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
     Assessment@B_BMSY <- structure(report$B/report$BMSY, names = Yearplusone)
     Assessment@SSB_SSBMSY <- structure(report$E/report$EMSY, names = Yearplusone)
     Assessment@VB_VBMSY <- structure(report$VB/report$VBMSY, names = Yearplusone)
-    Assessment@Dev <- Dev_out
+    Assessment@Dev <- Dev
     Assessment@SE_Dev <- SE_Dev
     Assessment@TMB_report <- report
   }

@@ -237,7 +237,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   if(early_dev == "all") est_B_dev <- rep(1, ny)
   if(early_dev == "index") {
-    est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], NA, 1)
+    est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], 0, 1)
   }
   data <- list(model = "SP_SS", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
                est_B_dev = est_B_dev, nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
@@ -269,12 +269,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   params$log_B_dev <- rep(0, ny)
 
   map <- list()
-  if(any(is.na(est_B_dev))) {
-    nest <- sum(!is.na(est_B_dev))
-    map_log_B_dev <- est_B_dev
-    map_log_B_dev[!is.na(est_B_dev)] <- 1:nest
-    map$log_B_dev <- factor(map_log_B_dev)
-  }
+  if(any(!est_B_dev)) map$log_B_dev <- factor(ifelse(est_B_dev, 1:sum(est_B_dev), NA))
   if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
@@ -328,13 +323,10 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
 
   if(Assessment@conv) {
     if(integrate) {
-      SE_Dev <- sqrt(SD$diag.cov.random)
+      SE_Dev <- ifelse(est_B_dev, sqrt(SD$diag.cov.random), 0)
     } else {
-      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"])
+      SE_Dev <- ifelse(est_B_dev, sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"]), 0)
     }
-    SE_Dev_out <- est_B_dev
-    SE_Dev_out[is.na(SE_Dev_out)] <- 0
-    SE_Dev_out[!is.na(SE_Dev_out)] <- SE_Dev
 
     Assessment@SE_FMSY <- SD$sd[names(SD$value) == "FMSY"]
     Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
@@ -343,7 +335,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     Assessment@SE_B_B0_final <- SD$sd[names(SD$value) == "B_K_final"]
     Assessment@SE_VB_VBMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
     Assessment@SE_VB_VB0_final <- SD$sd[names(SD$value) == "B_K_final"]
-    Assessment@SE_Dev <- structure(SE_Dev_out, names = Year)
+    Assessment@SE_Dev <- structure(SE_Dev, names = Year)
   }
   return(Assessment)
 }

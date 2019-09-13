@@ -481,13 +481,13 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   ### Rec devs
   OM@cpars$Perr <- StockPars$procsd
   make_Perr <- function(x) {
-    bias_corr <- ifelse(is.na(x$obj$env$map$log_rec_dev), 1, exp(-0.5 * x$report$tau^2))
+    bias_corr <- ifelse(x$obj$env$data$est_rec_dev, exp(-0.5 * x$report$tau^2), 1)
     exp(x$report$log_rec_dev) * bias_corr
   }
   Perr <- do.call(rbind, lapply(mod, make_Perr))
 
   make_early_Perr <- function(x) {
-    bias_corr <- ifelse(is.na(x$obj$env$map$log_early_rec_dev), 1, exp(-0.5 * x$report$tau^2))
+    bias_corr <- ifelse(x$obj$env$data$est_early_rec_dev, exp(-0.5 * x$report$tau^2), 1)
     exp(x$report$log_early_rec_dev) * bias_corr
   }
   early_Perr <- do.call(rbind, lapply(mod, make_early_Perr))
@@ -680,7 +680,9 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                        CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
                        vul_type = selectivity, I_type = I_type, SR_type = SR_type,
                        LWT_C = LWT_C, LWT_Index = LWT$Index, max_F = max_F,
-                       est_early_rec_dev = rep(NA, max_age-1), est_rec_dev = c(rep(1, nyears-1), NA))
+                       est_early_rec_dev = rep(0, max_age-1), est_rec_dev = c(rep(1, nyears-1), 0))
+  TMB_data_all$CAA_hist[TMB_data_all$CAA_hist < 1e-8] <- 1e-8
+  TMB_data_all$CAL_hist[TMB_data_all$CAL_hist < 1e-8] <- 1e-8
 
   if(!is.null(Catch) && any(Catch > 0, na.rm = TRUE)) {
     rescale <- 1/mean(Catch, na.rm = TRUE)

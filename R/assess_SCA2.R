@@ -56,6 +56,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
                vul_type = vulnerability, I_type = I_type, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev,
                est_rec_dev = est_rec_dev)
+  data$CAA_hist[data$CAA_hist < 1e-8] <- 1e-8
 
   # Starting values
   params <- list()
@@ -89,7 +90,9 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
 
-  if(is.null(params$log_meanR)) params$log_meanR <- log(mean(C_hist * rescale)) + 2
+  if(is.null(params$log_meanR)) {
+    params$log_meanR <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 2, log(1.5 * rescale * Data@OM$R0[x]))
+  }
   if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
   if(is.null(params$vul_par)) {
     CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))

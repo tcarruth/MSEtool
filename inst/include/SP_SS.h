@@ -6,7 +6,7 @@
   DATA_VECTOR(C_hist);
   DATA_VECTOR(I_hist);
   DATA_INTEGER(ny);
-  DATA_VECTOR(est_B_dev);
+  DATA_IVECTOR(est_B_dev);
   DATA_INTEGER(nstep);
   DATA_SCALAR(dt);
   DATA_INTEGER(nitF);
@@ -46,7 +46,7 @@
 
   B(0) = dep * K;
   for(int y=0;y<ny;y++) {
-    if(!R_IsNA(asDouble(est_B_dev(y)))) B(y) *= exp(log_B_dev(y) - 0.5 * tau * tau);
+    if(est_B_dev(y)) B(y) *= exp(log_B_dev(y) - 0.5 * tau * tau);
     F(y) = SP_F(C_hist(y)/(C_hist(y) + B(y)), C_hist(y), MSY, K, n, n_term,
       CppAD::CondExpLe(C_hist(y), Type(1e-8), Type(1), dt), nstep, nitF, Cpred, B, y, penalty);
     SP(y) = B(y+1) - B(y) + Cpred(y);
@@ -60,7 +60,7 @@
 
   for(int y=0;y<ny;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= keep(y) * dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
-    if(!R_IsNA(asDouble(est_B_dev(y)))) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
+    if(est_B_dev(y)) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
   }
 
   Type nll = nll_comp.sum() + penalty;
