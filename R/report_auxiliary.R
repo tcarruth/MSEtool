@@ -572,7 +572,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
     if(is.null(res_lower)) res_lower <- res + qnorm(0.5*(1-res_sd_CI)) * res_sd
     res.lim <- max(abs(c(res_lower, res_upper, res)), na.rm = TRUE)
 
-    if(is.null(res_ind_blue)) {
+    if(is.null(res_ind_blue) || all(!res_ind_blue)) {
       plot(Year, res, typ = 'o', ylab = label, ylim = c(-res.lim, res.lim))
       arrows(Year, res_lower, Year, res_upper, length = 0.025, angle = 90,
              code = 3, col = 'grey30')
