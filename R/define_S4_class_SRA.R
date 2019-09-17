@@ -8,9 +8,9 @@
 #'
 #' @slot OM An updated operating model, class \linkS4class{OM}.
 #' @slot SSB An matrix of estimated spawning biomass with \code{OM@@nsim} rows and \code{OM@@nyears+1} columns.
-#' @slot NAA An array for numbers at age with dimension \code{OM@@nsim}, \code{OM@@nyears+1}, and \code{OM@@maxage}.
-#' @slot CAA An array for catch at age with dimension \code{OM@@nsim}, \code{OM@@nyears}, \code{OM@@maxage}, and nfleet.
-#' @slot CAL An array for catch at length with dimension \code{OM@@nsim}, \code{OM@@nyears}, length bins, and nfleet.
+#' @slot NAA An array for the predicted numbers at age with dimension \code{OM@@nsim}, \code{OM@@nyears+1}, and \code{OM@@maxage}.
+#' @slot CAA An array for the predicted catch at age with dimension \code{OM@@nsim}, \code{OM@@nyears}, \code{OM@@maxage}, and nfleet.
+#' @slot CAL An array for the predicted catch at length with dimension \code{OM@@nsim}, \code{OM@@nyears}, length bins, and nfleet.
 #' @slot conv A logical vector of length \code{OM@@nsim} indicating convergence of the SRA scoping model in the i-th simulation.
 #' @slot Misc A list of length \code{OM@@nsim} with more output from the fitted SRA scoping model.
 #' @slot mean_fit A list of output from fit to mean values of life history parameters in the operating model.

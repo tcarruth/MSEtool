@@ -15,11 +15,11 @@ An S4 class for the output from \link{SRA_scope}.
 
 \item{\code{SSB}}{An matrix of estimated spawning biomass with \code{OM@nsim} rows and \code{OM@nyears+1} columns.}
 
-\item{\code{NAA}}{An array for numbers at age with dimension \code{OM@nsim}, \code{OM@nyears+1}, and \code{OM@maxage}.}
+\item{\code{NAA}}{An array for the predicted numbers at age with dimension \code{OM@nsim}, \code{OM@nyears+1}, and \code{OM@maxage}.}
 
-\item{\code{CAA}}{An array for catch at age with dimension \code{OM@nsim}, \code{OM@nyears}, \code{OM@maxage}, and nfleet.}
+\item{\code{CAA}}{An array for the predicted catch at age with dimension \code{OM@nsim}, \code{OM@nyears}, \code{OM@maxage}, and nfleet.}
 
-\item{\code{CAL}}{An array for catch at length with dimension \code{OM@nsim}, \code{OM@nyears}, length bins, and nfleet.}
+\item{\code{CAL}}{An array for the predicted catch at length with dimension \code{OM@nsim}, \code{OM@nyears}, length bins, and nfleet.}
 
 \item{\code{conv}}{A logical vector of length \code{OM@nsim} indicating convergence of the SRA scoping model in the i-th simulation.}
 
