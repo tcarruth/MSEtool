@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.2.4
+- `SRA_scope` returns an S4 object of class `SRA` with a `plot()` method.
+
 ## MSEtool 1.2.3
 - Users can choose to use `SRA_scope` while conditioning on either catch or effort. Function will also return a markdown report of model fits.
 - Update defaults to `SRA_scope` so that it is more robust (set maximum F in model, higher std. dev. for mean lengths).

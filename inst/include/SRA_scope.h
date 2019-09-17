@@ -11,14 +11,15 @@
   DATA_VECTOR(E_eq);      // Equilibrium effort by fleet
 
   DATA_STRING(condition); // Indicates whether the model will condition on effort or catch
+  DATA_INTEGER(nll_C);    // Indicates whether there is a likelihood for the catch if condition = "effort"
 
   DATA_MATRIX(I_hist);    // Index by year and survey
   DATA_MATRIX(sigma_I);   // Standard deviation of index by year and survey
 
-  DATA_ARRAY(CAA_hist);   // Catch-at-age proportions by year, age, fleet
+  DATA_ARRAY(CAA_hist);   // Catch-at-age re-weighted by year, age, fleet
   DATA_MATRIX(CAA_n);     // Annual samples in CAA by year and fleet
 
-  DATA_ARRAY(CAL_hist);   // Catch-at-length proportions by year, length_bin, fleet
+  DATA_ARRAY(CAL_hist);   // Catch-at-length re-weighted by year, length_bin, fleet
   DATA_MATRIX(CAL_n);     // Annual samples in CAL by year and fleet
 
   DATA_VECTOR(length_bin);// Vector of length bins
@@ -198,9 +199,7 @@
       N(0,a) = R(0) * NPR_equilibrium.row(a).sum();
     } else {
       R_early(a-1) = R_eq;
-      if(est_early_rec_dev(a-1)) {
-        R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
-      }
+      if(est_early_rec_dev(a-1)) R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
       N(0,a) = R_early(a-1) * NPR_equilibrium.row(a).sum();
     }
     for(int len=0;len<nlbin;len++) {
@@ -300,7 +299,7 @@
     for(int y=0;y<n_y;y++) {
       if(C_hist(y,ff)>0 || E_hist(y,ff)>0) {
 
-        if(condition == "catch") nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
+        if(condition == "catch" || nll_C) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
 
         if(!R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
           vector<Type> loglike_CAAobs(max_age);
@@ -309,7 +308,6 @@
             loglike_CAApred(a) = CAApred(y,a,ff)/CN(y,ff);
             loglike_CAAobs(a) = CAA_hist(y,a,ff);
           }
-          loglike_CAAobs *= CAA_n(y,ff);
           nll_CAA(ff) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
         }
 
@@ -320,7 +318,6 @@
             loglike_CALpred(len) = CALpred(y,len,ff)/CN(y,ff);
             loglike_CALobs(len) = CAL_hist(y,len,ff);
           }
-          loglike_CALobs *= CAL_n(y,ff);
           nll_CAL(ff) -= dmultinom(loglike_CALobs, loglike_CALpred, true);
         }
 
@@ -420,6 +417,7 @@
   REPORT(nll_CAL);
   REPORT(nll_ML);
   REPORT(nll_Ceq);
+  REPORT(nll_log_rec_dev);
 
   REPORT(nll);
   REPORT(penalty);

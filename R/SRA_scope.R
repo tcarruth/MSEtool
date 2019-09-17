@@ -42,34 +42,10 @@
 #' @param max_F The maximum F for any fleet in the scoping model (higher F's in the model are penalized in the objective function).
 #' @param cores Integer for the number of CPU cores for the stock reduction analysis.
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).
-#' @param Year A vector of years for the historical period, used for plotting.
-#' @param report Logical, whether to return all assessment output and generate a markdown report (histograms of estimated depletion and unfished recruitment, SRA outputs, model fits, etc.)
-#' @param report_list The list of assessment output returned by \code{SRA_scope} when \code{report = TRUE}.
-#' @param filename Character string for the file name of the HTML markdown report.
-#' @param dir The directory in which the markdown and HTML files will be saved.
-#' @param open_file Logical, whether the HTML document is opened after it is rendered.
-#' @param quiet Logical, whether to silence the markdown rendering function.
+#' @param mean_fit Logical, whether to run an additional with mean values of life history parameters from the OM.
 #' @param sims A logical vector of length \code{OM@@nsim} or a numberic vector indicating which simulations to keep.
 #' @param ... Other arguments to add in the future.
-#' @return
-#' A named list containing the following:
-#' \enumerate{
-#' \item "OM" - an updated operating model with depletion, F, selectivity, and recruitment deviations from the SRA fits.
-#' \item "output" - A list of output, e.g. spawning biomass and predicted catch at age, from the SRA fits:
-#'
-#' \itemize{
-#' \item SSB - A matrix of \code{OM@@nsim} rows and \code{OM@@nyears+1} columns for estimated spawning biomass
-#' \item N - An array of dimension \code{c(nsim, nyears+1, maxage)} for estimated abundance by simulation, year, and age.
-#' \item CAA - An array of dimension \code{c(nsim, nyears+1, maxage, and nfleet)} for estimated catch at age by simulation, year, age, and fleet.
-#' \item CAL - An array of dimension \code{c(nsim, nyears+1, maxage, and nfleet)} for estimated catch at length by simulation, year, length bin, and fleet.
-#' \item conv - A logical vector of length nsim indicating convergence of the SRA in the i-th simulation.
-#' }
-#'
-#' \item "report" - If \code{report = TRUE}, a list of length \code{OM@@nsim} containing all the assessment output from each model fit, otherwise returns NULL.
-#' Less organized than "output".
-#' }
-#' If \code{figure = TRUE}, a set of diagnostic plots for the fits to the SRA for each simulation as well histograms of operating model parameters,
-#' e.g., depletion.
+#' @return An object of class \linkS4class{SRA} (see link for output dimensions).
 #'
 #' @details
 #' One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
@@ -84,8 +60,7 @@
 #' By default, all likelihood weights are equal to one if not specified by the user. Likelihoods for CAA and CAL can also be adjusted by changing the
 #' multinomial sample size. See argument \code{ESS}.
 #'
-#' \code{report_SRA_scope} generates the plots from the SRA scope function and puts them in a markdown HTML document.
-#' \code{plot_SRA_scope} is now deprecated.
+#' \code{plot_SRA_scope} is now deprecated in favor of \link{plot.SRA}
 #'
 #' Output from \code{SRA_scope} is placed in objects in \code{OM@@cpars}. \code{Sub_cpars} is a convenient function to subset simulations
 #' for the operating model, for example, to remove simulations from unconverged model fits or outlier simulations.
@@ -100,12 +75,11 @@
 #' The easiest way to turn off time-varying growth/M is by setting: \code{OM@@Msd <- OM@@Linfsd <- OM@@Ksd <- c(0, 0)}.
 #'
 #' @author Q. Huynh
-#'
+#' @seealso \link{plot.SRA} \linkS4class{SRA}
 #' @export
 SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "effort"), Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, length_bin = NULL,
                       C_eq = 0, E_eq = 0, ML_sd = NULL, selectivity = "logistic", I_type = NULL, LWT = list(), ESS = c(30, 30),
-                      fix_dome = FALSE, max_F = 3, cores = 1L, integrate = FALSE, Year = NULL, report = TRUE,
-                      filename = "SRA_scope", dir = tempdir(), open_file = TRUE, ...) {
+                      fix_dome = FALSE, max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, ...) {
 
   condition <- match.arg(condition)
   if(is.null(Chist) && !is.null(Ehist)) condition <- "effort"
@@ -126,6 +100,12 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
       nyears <- nrow(Chist)
       nfleet <- ncol(Chist)
       Ehist <- matrix(0, nyears, nfleet)
+
+      if(is.null(Index) && is.null(CAA) && is.null(CAL) && is.null(ML) && is.null(Ehist)) {
+        condition <- "effort"
+        message("No data other than Chist is provided. Model will switch to conditioning on equilibrium effort.")
+        Ehist <- matrix(1, nyears, nfleet)
+      }
     }
   }
 
@@ -217,11 +197,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   # Process age comps
   if(!is.null(CAA)) {
 
-    if(is.matrix(CAA)) {
-      CAA2 <- array(NA, c(dim(CAA), 1))
-      CAA2[,,1] <- CAA
-      CAA <- CAA2
-    }
+    if(is.matrix(CAA)) CAA <- array(CAA, c(dim(CAA), 1))
 
     if(dim(CAA)[1] != nyears) {
       stop("Number of CAA rows (", dim(CAA)[1], ") does not equal nyears (", nyears, "). NAs are acceptable.", call. = FALSE)
@@ -246,21 +222,14 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     CAA <- array(0, c(nyears, maxage, nfleet))
   }
 
-
-
-
   # Sample life history, selectivity, and obs parameters
   set.seed(OM@seed)
   StockPars <- SampleStockPars(OM, msg = FALSE)
   ObsPars <- SampleObsPars(OM)
   FleetPars <- SampleFleetPars(OM, msg = FALSE)
 
-
-
-
   # Process length comps
   if(!is.null(CAL)) {
-
     if(is.matrix(CAL)) {
       CAL2 <- array(NA, c(dim(CAL), 1))
       CAL2[,,1] <- CAL
@@ -299,7 +268,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     if(length(ML_sd) != nfleet) stop("Mean length SD vector (ML_sd) must be of length ", nfleet, ".", call. = FALSE)
 
   } else {
-    ML <- matrix(0, nrow = nyears, ncol = nfleet)
+    ML <- matrix(NA, nrow = nyears, ncol = nfleet)
     ML_sd <- rep(0.1, nfleet)
   }
 
@@ -357,8 +326,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   if(length(LWT$C_eq) != nfleet) stop("LWT$C_eq should be a vector of length ", nfleet, ".")
 
   # SR
-  SR <- ifelse(OM@SRrel == 1, "Beverton-Holt", "Ricker")
-  message(SR, " stock-recruitment relationship used.")
+  message(ifelse(OM@SRrel == 1, "Beverton-Holt", "Ricker"), " stock-recruitment relationship used.")
 
   # Fit model
   message("Fitting model (", nsim, " simulations) ...")
@@ -389,19 +357,19 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   }
 
   ### Fit to means if report = TRUE
-  if(report) {
+  if(mean_fit) {
     message("Generating additional model fit from mean values of parameters in the operating model...\n")
-    mean_fit <- SRA_scope_est(Catch = Chist, Effort = Ehist, condition = condition,
-                              Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
-                              ML_sd = ML_sd, length_bin = length_bin,
-                              wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
-                              fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"),
-                              LWT = LWT, ESS = ESS, max_F = max_F, mean_fit = TRUE,
-                              integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
+    mean_fit_output <- SRA_scope_est(Catch = Chist, Effort = Ehist, condition = condition,
+                                     Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
+                                     ML_sd = ML_sd, length_bin = length_bin, wt_at_len = weight_at_length,
+                                     I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
+                                     fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"),
+                                     LWT = LWT, ESS = ESS, max_F = max_F, mean_fit = TRUE,
+                                     integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
 
   ### R0
-  OM@cpars$R0 <- vapply(res, getElement, numeric(1), name = "R0")
+  OM@cpars$R0 <- vapply(1:nsim, function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
@@ -543,29 +511,21 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   ### Output list
   E <- do.call(rbind, lapply(res, getElement, "E"))
+  N <- array(lapply(res, getElement, "N"), c(nyears+1, maxage, nsim))
+  CAA_pred <- array(lapply(res, getElement, "CAApred"), c(nyears, maxage, nfleet, nsim))
+  CAL_pred <- array(lapply(res, getElement, "CALpred"), c(nyears, length(length_bin), nfleet, nsim))
 
-  #N <- lapply(res, getElement, "N_full")
-  #N_length <- lapply(N, function(x) rowSums(aperm(x, c(1, 3, 2)), dims = 2))
-  N_age <- lapply(res, getElement, "N")
-  N_age2 <- array(unlist(N_age), c(nyears+1, maxage, nsim))
+  dat <- list(C_hist = res[[1]]$report$C_hist, E_hist = res[[1]]$report$E_hist, Index = res[[1]]$obj$env$data$I_hist,
+              CAA = res[[1]]$obj$env$data$CAA_hist, CAL = res[[1]]$obj$env$data$CAL_hist, ML = res[[1]]$obj$env$data$mlen,
+              nfleet = nfleet, nsurvey = nsurvey, length_bin = length_bin)
 
-  CAA_pred <- lapply(res, getElement, "CAApred")
-  CAA_pred2 <- array(unlist(CAA_pred), c(nyears, maxage, nfleet, nsim))
-
-  CAL_pred <- lapply(res, getElement, "CALpred")
-  CAL_pred2 <- array(unlist(CAL_pred), c(nyears, length(length_bin), nfleet, nsim))
-
-  output <- list(SSB = E, N = aperm(N_age2, c(3, 1, 2)),
-                 CAA = aperm(CAA_pred2, c(4, 1, 2, 3)), CAL = aperm(CAL_pred2, c(4, 1, 2, 3)), conv = conv)
-
-  ### Generate figures
-  if(report) {
-    report_SRA_scope(OM, report_list = list(mean_fit = mean_fit, report = res), filename = filename, dir = dir,
-                     Year = OM@EffYears, open_file = open_file)
-  }
+  output <- new("SRA", OM = OM, SSB = E, NAA = aperm(N, c(3, 1, 2)), CAA = aperm(CAA_pred, c(4, 1:3)),
+                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv, data = dat, Misc = lapply(res, function(x) return(x[-1])))
+  if(mean_fit) output@mean_fit <- mean_fit_output
 
   message("Complete.")
-  return(list(OM = OM, output = output, report = if(report) list(mean_fit = mean_fit, report = res) else NULL))
+
+  return(output)
 }
 
 #### Parameters
@@ -635,11 +595,9 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   CAA_n <- t(rowSums(aperm(CAA, c(3, 1, 2)), dims = 2, na.rm = TRUE))
   CAL_n <- t(rowSums(aperm(CAL, c(3, 1, 2)), dims = 2, na.rm = TRUE))
 
-  CAA2 <- CAA
-  CAL2 <- CAL
   for(ff in 1:nfleet) {
-    CAA2[,,ff] <- CAA[,,ff]/CAA_n[,ff]
-    CAL2[,,ff] <- CAL[,,ff]/CAL_n[,ff]
+    CAA[,,ff] <- CAA[,,ff]/CAA_n[,ff] * pmin(CAA_n[,ff], ESS[1])
+    CAL[,,ff] <- CAL[,,ff]/CAL_n[,ff] * pmin(CAL_n[,ff], ESS[2])
   }
 
   LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
@@ -672,9 +630,10 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
 
   if(is.null(I_sd)) I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
 
-  TMB_data_all <- list(condition = condition, I_hist = Index, sigma_I = I_sd,
-                       CAA_hist = CAA2, CAA_n = pmin(CAA_n, ESS[1]),
-                       CAL_hist = CAL2, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
+  TMB_data_all <- list(condition = condition,
+                       nll_C = as.integer((all(CAA_n <= 0) & all(CAL_n <= 0) & all(is.na(ML)) & all(is.na(Index))) || nfleet > 1), # if condition = "effort"
+                       I_hist = Index, sigma_I = I_sd, CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
+                       CAL_hist = CAL, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
                        n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
                        CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
@@ -731,14 +690,14 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
 
   if(!fix_selectivity) map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
 
-  TMB_params <- list(log_R0 = ifelse(condition == "catch", 3, log(1e3)), transformed_h = transformed_h, vul_par = vul_par,
-                     log_q_effort = rep(log(0.1), nfleet),
+  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 3, log(StockPars$R0[x])),
+                     transformed_h = transformed_h, vul_par = vul_par, log_q_effort = rep(log(0.1), nfleet),
                      log_F = matrix(log(0.05), nyears, nfleet), log_F_equilibrium = rep(log(0.05), nfleet),
                      log_sigma_mlen = log(ML_sd), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
   map <- list()
-  if(condition == "effort") map$log_R0 <- factor(NA)
+  if(condition == "effort" && !TMB_data_all$nll_C) map$log_R0 <- factor(NA)
   map$transformed_h <- map$log_tau <- factor(NA)
   map$vul_par <- factor(map_vul_par)
   if(condition == "catch") {
@@ -775,11 +734,10 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   var_trans <- c("R0", "q")
   fun_trans <- c("/", "*")
 
-  if(condition == "catch") {
+  if(condition == "catch" || TMB_data_all$nll_C) {
     fun_fixed <- c("log", NA)
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
-  if(condition == "effort" && !is.null(Catch) && nfleet == 1 && any(Catch > 0)) {
+  } else if(any(Catch > 0, na.rm = TRUE)) {
     rescale <- 1/exp(mean(log(Catch/report$Cpred), na.rm = TRUE))
 
     fun_fixed <- c(NA, NA)
@@ -795,7 +753,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
 #' @rdname SRA_scope
 #' @export
 plot_SRA_scope <- function(...) {
-  .Deprecated("report_SRA_scope", msg = "plot_SRA_scope is now deprecated in favor of report_SRA_scope which generates a markdown report.")
+  .Deprecated("report_SRA_scope", msg = "plot_SRA_scope is now deprecated in favor of plot() which generates a markdown report.")
 }
 
 #' @rdname SRA_scope
