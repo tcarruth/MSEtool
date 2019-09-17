@@ -16,19 +16,19 @@
 \usage{
 SCA_MSY(x, Data, reps = 1)
 
-SCA_75MSY(x, Data, reps = 1, MSY_frac = 0.75)
+SCA_75MSY(x, Data, reps = 1)
 
 SCA_4010(x, Data, reps = 1)
 
 DDSS_MSY(x, Data, reps = 1)
 
-DDSS_75MSY(x, Data, reps = 1, MSY_frac = 0.75)
+DDSS_75MSY(x, Data, reps = 1)
 
 DDSS_4010(x, Data, reps = 1)
 
 SP_MSY(x, Data, reps = 1)
 
-SP_75MSY(x, Data, reps = 1, MSY_frac = 0.75)
+SP_75MSY(x, Data, reps = 1)
 
 SP_4010(x, Data, reps = 1)
 }
@@ -38,10 +38,6 @@ SP_4010(x, Data, reps = 1)
 \item{Data}{An object of class Data}
 
 \item{reps}{Numeric, the number of stochastic replicates for the management advice.}
-
-\item{MSY_frac}{The fraction of FMSY that is used for calculating the TAC. See \link{HCR_MSY}.}
-
-\item{...}{Additional arguments passed to the Assessment model.}
 }
 \value{
 An object of class Rec which contains the management recommendation.

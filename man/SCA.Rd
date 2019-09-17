@@ -80,9 +80,10 @@ sigma is fixed to value provided in \code{start} (if provided), otherwise, value
 \item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@sigmaR}.}
 
-\item{early_dev}{Character string describing the years for which recruitment deviations are estimated in \code{SCA}. By default, \code{"comp_onegen"}
-rec devs are estimated one full generation prior to the first year when catch-at-age (CAA) data are available. With \code{"comp"}, rec devs are
-estimated starting in the first year with CAA. With \code{"all"}, rec devs start at the beginning of the model.}
+\item{early_dev}{Numeric or character string describing the years for which recruitment deviations are estimated in \code{SCA}. By default,
+equal to \code{"comp_onegen"}, where rec devs are estimated one full generation prior to the first year when catch-at-age (CAA) data are available.
+With \code{"comp"}, rec devs are estimated starting in the first year with CAA. With \code{"all"}, rec devs start at the beginning of the model.
+If numeric, the number of years after the first year of the model for which to start estimating rec devs. Use negative numbers for years prior to the first year.}
 
 \item{late_dev}{Typically, a numeric for the number of most recent years in which recruitment deviations will
 not be estimated in \code{SCA} (recruitment in these years will be based on the mean predicted by stock-recruit relationship).

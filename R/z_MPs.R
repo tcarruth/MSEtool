@@ -102,8 +102,6 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
 #' @param x A position in the Data object.
 #' @param Data An object of class Data
 #' @param reps Numeric, the number of stochastic replicates for the management advice.
-#' @param MSY_frac The fraction of FMSY that is used for calculating the TAC. See \link{HCR_MSY}.
-#' @param ... Additional arguments passed to the Assessment model.
 #'
 #' @examples
 #' avail("MP", all_avail = FALSE)
