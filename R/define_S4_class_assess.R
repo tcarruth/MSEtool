@@ -169,6 +169,9 @@ if(getRversion() >= "2.15.1") {
 
   # For Awatea2OM - Quang assumes these variables are loaded in from .rda files
   utils::globalVariables(c("Bmcmc", "currentMCMC", "currentRes"))
+
+  # For dplyr functions in SS2OM
+  utils::globalVariables(c("Year", "Age", "M"))
 }
 
 

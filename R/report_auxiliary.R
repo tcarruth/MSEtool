@@ -642,9 +642,6 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
                              N = rowSums(obs), CAL_bins = NULL, ages = NULL, ind = 1:nrow(obs),
                              annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
                              bubble_adj = 5, fit_linewidth = 3, fit_color = "red") {
-  old_par <- par(no.readonly = TRUE)
-  on.exit(par(old_par))
-
   plot_type <- match.arg(plot_type)
   annual_yscale <- match.arg(annual_yscale)
   if(is.null(CAL_bins)) data_type <- "age" else data_type <- "length"
@@ -659,7 +656,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     data_val <- if(is.null(ages)) 1:ncol(obs) else ages
     data_lab <- "Age"
   }
-  N <- round(N, 1)
+  if(!is.null(N)) N <- round(N, 1)
 
   if(annual_yscale == "proportions") {
     obs_prob_all <- obs/rowSums(obs, na.rm = TRUE)
@@ -677,7 +674,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
   Year <- Year[ind]
   obs <- obs[ind, , drop = FALSE]
   if(!is.null(fit)) fit <- fit[ind, , drop = FALSE]
-  N <- N[ind]
+  if(!is.null(N)) N <- N[ind]
 
   # Bubble plot (obs)
   if('bubble_data' %in% plot_type) {
@@ -736,7 +733,8 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
 
   # Annual comps (obs vs. fitted if available)
   if('annual' %in% plot_type) {
-
+    old_par <- par(no.readonly = TRUE)
+    on.exit(par(old_par))
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
     ylim <- c(0, 1.1 * max(obs_prob_all, fit_prob_all, na.rm = TRUE))
 
@@ -782,7 +780,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
           fit.vec <- fit_prob[i, ]
           lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
         }
-        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
+        legend('topright', legend = c(Year[i], ifelse(is.null(N), "", paste0("N = ", N[i]))), bty = 'n', xjust = 1)
       }
 
       if(i == length(Year)) {
@@ -795,7 +793,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
           fit.vec <- fit_prob[i, ]
           lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
         }
-        legend('topright', legend = c(Year[i], paste0("N = ", N[i])), bty = 'n', xjust = 1)
+        legend('topright', legend = c(Year[i], ifelse(is.null(N), "", paste0("N = ", N[i]))), bty = 'n', xjust = 1)
       }
       if(i %% 16 == 0 || i == length(Year)) {
         mtext(data_lab, side = 1, line = 3, outer = TRUE)

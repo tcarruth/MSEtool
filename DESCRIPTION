@@ -16,7 +16,7 @@ Depends:
   R (>= 3.3.0),
   DLMtool (>= 5.3.1)
 Imports:
-  MASS, TMB, coda, corpcor, gplots, grDevices, graphics, methods, mvtnorm,
+  MASS, TMB, coda, corpcor, dplyr, gplots, grDevices, graphics, methods, mvtnorm,
   reshape2, snowfall, stats, utils, abind, rmarkdown
 LinkingTo: TMB, RcppEigen
 LazyData: yes
