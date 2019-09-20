@@ -61,23 +61,21 @@
   Type E0 = R0 * EPR0;
   Type VB0 = R0 * sum_VBPR(NPR_virgin, weight, vul);
 
-  Type Arec;
-  Type Brec;
+  Type Arec, Brec;
 
   if(SR_type == "BH") {
-    Arec = 4 *h;
-    Arec /= 1-h;
-    Arec /= EPR0;
+    Arec = 4 * h;
+    Arec /= 1-h;		
     Brec = 5*h - 1;
-    Brec /= (1-h) * E0;
+    Brec /= (1-h);	
   } else {
-    Arec = pow(5*h, 1.25);
-    Arec /= EPR0;
+    Arec = pow(5*h, 1.25);	
     Brec = 1.25;
     Brec *= log(5*h);
-    Brec /= E0;
   }
-  Type CR = Arec * EPR0;
+  Type CR = Arec;
+  Arec /= EPR0;
+  Brec /= E0;
 
   ////// During time series year = 1, 2, ..., n_y
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
