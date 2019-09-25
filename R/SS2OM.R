@@ -201,6 +201,12 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   } else {
     ages <- unique(growdat$Age)
   }
+
+  if(replist$nsexes == 1) {
+    growdat$Len_Mat[growdat$Len_Mat < 0] <- 1
+    growdat$Age_Mat[growdat$Age_Mat < 0] <- 1
+  }
+
   maxage <- floor(max(ages)/ifelse(season_as_years, nseas, 1))
 
   seas1_aind_full <- expand.grid(nseas = 1:nseas, true_age = 0:maxage)[1:length(ages), ] # Group assessment ages to true ages
@@ -208,6 +214,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   seas1_aind <- which(seas1_aind_full$nseas == 1 & seas1_aind_full$true_age >= age_rec) # Age indices that correspond to season 1
 
   OM@maxage <- maxage
+  OM@cpars$plusgroup <- 1L
   if(!silent) message("Max age is ", maxage, ".")
 
   # ---- Growth ----
@@ -220,7 +227,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
     Len_age_terminal <- summarise(group_by(growdat, int_Age), LAA = mean(Len_Beg))[, 2]
     Wt_age_terminal <- summarise(group_by(growdat, int_Age), WAA = mean(Wt_Beg))[, 2]
-    Mat_age_terminal <- summarise(group_by(growdat, int_Age), MAA = mean(Len_Mat[Len_Mat>=0] * Age_Mat[Age_Mat>=0]))[, 2]
+    Mat_age_terminal <- summarise(group_by(growdat, int_Age), MAA = mean(Len_Mat[Len_Mat >= 0] * Age_Mat[Age_Mat >= 0]))[, 2]
 
   } else {
 
@@ -231,8 +238,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
     Len_age_terminal <- unlist(summarise(group_by(growdat, Age), LAA = mean(Len_Beg))[, 2])
     Wt_age_terminal <- unlist(summarise(group_by(growdat, Age), WAA = mean(Wt_Beg))[, 2])
-    Mat_age_terminal <- unlist(summarise(group_by(growdat, Age), MAA = mean(Len_Mat[Len_Mat>=0] * Age_Mat[Age_Mat>=0]))[, 2])
-
+    Mat_age_terminal <- unlist(summarise(group_by(growdat, Age), MAA = mean(Len_Mat[Len_Mat >= 0] * Age_Mat[Age_Mat >= 0]))[, 2])
   }
 
 
@@ -998,8 +1004,3 @@ someplot<-function (replist, yrs = "all", Ftgt = NA, ylab = "Summary Fishing Mor
   return(invisible(plotinfo))
 }
 
-
-SS2OM_plots <- function(replist, OM, silent = FALSE, age_rec = 1) {
-  Hist <- runMSE(OM, Hist = TRUE, parallel = snowfall::sfIsRunning())
-  return(invisible())
-}
