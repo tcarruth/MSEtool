@@ -23,7 +23,7 @@
 #' @param fix_sigma Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Ind}.
 #' @param fix_tau Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
-#' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 0.2.
+#' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 0.1.
 #' @param early_dev Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
 #' By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
 #' once index data are available (\code{"index"}).
@@ -49,7 +49,7 @@
 #' \code{MSY}, \code{dep}, and \code{n} via the start argument (see example).
 #'
 #' For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
-#' of the index and log-biomass deviates, respectively. Default for tau is 0.2. Deviations are estimated beginning in the year when index
+#' of the index and log-biomass deviates, respectively. Default for tau is 0.1. Deviations are estimated beginning in the year when index
 #' data are available.
 #' @return An object of \code{\linkS4class{Assessment}} containing objects and output from TMB.
 #' @note The model uses the Fletcher (1978) formulation and is parameterized with FMSY and MSY as
@@ -265,7 +265,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
     params$log_sigma <- log(sigmaI)
   }
-  if(is.null(params$log_tau)) params$log_tau <- log(0.2)
+  if(is.null(params$log_tau)) params$log_tau <- log(0.1)
   params$log_B_dev <- rep(0, ny)
 
   map <- list()

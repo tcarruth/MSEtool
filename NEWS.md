@@ -2,6 +2,7 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 
 ## MSEtool 1.2.4
 - `SRA_scope` returns an S4 object of class `SRA` with a `plot()` method.
+- Default process error standard deviation for `SP_SS` is reduced to 0.1.
 
 ## MSEtool 1.2.3
 - Users can choose to use `SRA_scope` while conditioning on either catch or effort. Function will also return a markdown report of model fits.

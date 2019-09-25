@@ -64,7 +64,7 @@ hasn't converged. The optimization continues from the parameters from the previo
 sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Ind}.}
 
 \item{fix_tau}{Logical, the standard deviation of the biomass deviations is fixed. If \code{TRUE},
-tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 0.2.}
+tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 0.1.}
 
 \item{early_dev}{Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
 By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
@@ -92,7 +92,7 @@ To provide starting values for the \code{SP}, a named list can be provided for \
 \code{MSY}, \code{dep}, and \code{n} via the start argument (see example).
 
 For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
-of the index and log-biomass deviates, respectively. Default for tau is 0.2. Deviations are estimated beginning in the year when index
+of the index and log-biomass deviates, respectively. Default for tau is 0.1. Deviations are estimated beginning in the year when index
 data are available.
 }
 \note{
