@@ -116,14 +116,14 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # R0 is unfished recruits at age = age_rec
   if(all(match(c("Gender", "Year"), names(replist$natage_annual_1_no_fishery), nomatch = 0))) { # SS 3.24
 
-    N_at_age <- melt(replist$natage_annual_1_no_fishery, id.vars = c("Bio_Pattern", "Gender", "Year"),
+    N_at_age <- reshape2::melt(replist$natage_annual_1_no_fishery, id.vars = c("Bio_Pattern", "Gender", "Year"),
                      variable.name = "Age", value.name = "N")
     N_at_age <- N_at_age[N_at_age$Year == mainyrs[1] & N_at_age$Age == age_rec * ifelse(season_as_years, nseas, 1), ]
     N_at_age <- N_at_age[vapply(N_at_age$Gender, "%in%", logical(1), table = gender), ]
 
   } else { # SS 3.30
 
-    N_at_age <- melt(replist$natage_annual_1_no_fishery, id.vars = c("Bio_Pattern", "Sex", "Yr"),
+    N_at_age <- reshape2::melt(replist$natage_annual_1_no_fishery, id.vars = c("Bio_Pattern", "Sex", "Yr"),
                      variable.name = "Age", value.name = "N")
     N_at_age <- N_at_age[N_at_age$Yr == mainyrs[1] & N_at_age$Age == age_rec * ifelse(season_as_years, nseas, 1), ]
     N_at_age <- N_at_age[vapply(N_at_age$Sex, "%in%", logical(1), table = gender), ]
@@ -221,7 +221,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
     Len_age_terminal <- summarise(group_by(growdat, int_Age), LAA = mean(Len_Beg))[, 2]
     Wt_age_terminal <- summarise(group_by(growdat, int_Age), WAA = mean(Wt_Beg))[, 2]
-    Mat_age_terminal <- summarise(group_by(growdat, int_Age), MAA = mean(Len_Mat * Age_Mat))[, 2]
+    Mat_age_terminal <- summarise(group_by(growdat, int_Age), MAA = mean(Len_Mat[Len_Mat>=0] * Age_Mat[Age_Mat>=0]))[, 2]
 
   } else {
 
@@ -232,7 +232,8 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
     Len_age_terminal <- unlist(summarise(group_by(growdat, Age), LAA = mean(Len_Beg))[, 2])
     Wt_age_terminal <- unlist(summarise(group_by(growdat, Age), WAA = mean(Wt_Beg))[, 2])
-    Mat_age_terminal <- unlist(summarise(group_by(growdat, Age), MAA = mean(Len_Mat * Age_Mat))[, 2])
+    Mat_age_terminal <- unlist(summarise(group_by(growdat, Age), MAA = mean(Len_Mat[Len_Mat>=0] * Age_Mat[Age_Mat>=0]))[, 2])
+
   }
 
 
@@ -243,7 +244,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     }
     if(season_as_years) stop("Can't deal with season_as_years yet when growth is time-varying.")
 
-    Len_age <- melt(replist$growthseries, id.vars = c("Morph", "Yr", "Seas", "SubSeas"), variable.name = "Age",
+    Len_age <- reshape2::melt(replist$growthseries, id.vars = c("Morph", "Yr", "Seas", "SubSeas"), variable.name = "Age",
                     value.name = "LAA")
     Len_age <- Len_age[vapply(Len_age$Yr, "%in%", logical(1), table = mainyrs), ] # Subset by year
     Len_age <- Len_age[as.numeric(Len_age$Age)-1 >= age_rec, ] # Subset by age >= age_rec
@@ -252,7 +253,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     Len_age <- Len_age[vapply(Len_age$Morph, "%in%", logical(1), table = gender), ] # Subset by gender
 
     Len_age <- summarise(group_by(Len_age, Yr, Age), LAA = mean(LAA))
-    Len_age_timevarying <- acast(Len_age, list("Age", "Yr"), value.var = "LAA")
+    Len_age_timevarying <- reshape2::acast(Len_age, list("Age", "Yr"), value.var = "LAA")
 
     Len_age <- as.matrix(cbind(Len_age_timevarying, Len_age_terminal))
     Len_age2 <- array(NA, dim = c(maxage, nyears+proyears, nsim))
@@ -314,7 +315,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # ---- M-at-Age ----
   if(all(match(c("Gender", "Year"), names(replist$M_at_age), nomatch = 0))) { # SS 3.24
 
-    M_at_age <- melt(replist$M_at_age, id.vars = c("Bio_Pattern", "Gender", "Year"), variable.name = "Age",
+    M_at_age <- reshape2::melt(replist$M_at_age, id.vars = c("Bio_Pattern", "Gender", "Year"), variable.name = "Age",
                      value.name = "M")
     M_at_age <- M_at_age[as.numeric(M_at_age$Age)-1 >= age_rec * ifelse(season_as_years, nseas, 1), ]  # Subset by age >= age_rec
     M_at_age <- M_at_age[vapply(M_at_age$Year, "%in%", logical(1), mainyrs), ]  # Subset by year
@@ -327,15 +328,15 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
       M_at_age$true_Year <- seas1_yind_full$true_year[match(M_at_age$Year, seas1_yind_full$assess_year)]
       M_at_age <- summarise(group_by(M_at_age, Gender, true_Year, true_Age), M = sum(M))
 
-      M_ageArray <- acast(M_at_age, list("true_Age", "true_Year"), value.var = "M")
+      M_ageArray <- reshape2::acast(M_at_age, list("true_Age", "true_Year"), value.var = "M")
     } else {
       M_at_age <- summarise(group_by(M_at_age, Year, Age), M = mean(M))
-      M_ageArray <- acast(M_at_age, list("Age", "Year"), value.var = "M")
+      M_ageArray <- reshape2::acast(M_at_age, list("Age", "Year"), value.var = "M")
     }
 
 
   } else { # SS 3.30
-    M_at_age <- melt(replist$M_at_age, id.vars = c("Bio_Pattern", "Sex", "Yr"), variable.name = "Age",
+    M_at_age <- reshape2::melt(replist$M_at_age, id.vars = c("Bio_Pattern", "Sex", "Yr"), variable.name = "Age",
                      value.name = "M")
     M_at_age <- M_at_age[vapply(M_at_age$Yr, "%in%", logical(1), table = mainyrs), ] # Subset by year
     M_at_age <- M_at_age[vapply(M_at_age$Sex, "%in%", logical(1), table = gender), ] # Subset by gender
@@ -343,7 +344,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     M_at_age <- M_at_age[as.numeric(M_at_age$Age)-1 >= age_rec * ifelse(season_as_years, nseas, 1), ]  # Subset by age >= age_rec
 
     M_at_age <- summarise(group_by(M_at_age, Yr, Age), M = mean(M))
-    M_ageArray <- acast(M_at_age, list("Age", "Yr"), value.var = "M")
+    M_ageArray <- reshape2::acast(M_at_age, list("Age", "Yr"), value.var = "M")
 
   }
 
@@ -443,7 +444,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # ---- Vulnerability ----
   if(all(match(c("Gender", "Year"), names(replist$Z_at_age), nomatch = 0))) { # SS 3.24
 
-    Z_at_age <- melt(replist$Z_at_age, id.vars = c("Bio_Pattern", "Gender", "Year"), variable.name = "Age",
+    Z_at_age <- reshape2::melt(replist$Z_at_age, id.vars = c("Bio_Pattern", "Gender", "Year"), variable.name = "Age",
                      value.name = "Z")
     Z_at_age <- Z_at_age[as.numeric(Z_at_age$Age)-1 >= age_rec * ifelse(season_as_years, nseas, 1), ]  # Subset by age >= age_rec
     Z_at_age <- Z_at_age[vapply(Z_at_age$Year, "%in%", logical(1), table = mainyrs), ]  # Subset by year
@@ -456,21 +457,21 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
       Z_at_age$true_Year <- seas1_yind_full$true_year[match(Z_at_age$Year, seas1_yind_full$assess_year)]
       Z_at_age <- summarise(group_by(Z_at_age, Gender, true_Year, true_Age), Z = sum(Z))
 
-      Z_ageArray <- acast(Z_at_age, list("true_Age", "true_Year"), value.var = "Z")
+      Z_ageArray <- reshape2::acast(Z_at_age, list("true_Age", "true_Year"), value.var = "Z")
     } else {
       Z_at_age <- summarise(group_by(Z_at_age, Year, Age), Z = mean(Z))
-      Z_ageArray <- acast(Z_at_age, list("Age", "Year"), value.var = "Z")
+      Z_ageArray <- reshape2::acast(Z_at_age, list("Age", "Year"), value.var = "Z")
     }
 
   } else { # SS 3.30
-    Z_at_age <- melt(replist$Z_at_age, id.vars = c("Bio_Pattern", "Sex", "Yr"), variable.name = "Age",
+    Z_at_age <- reshape2::melt(replist$Z_at_age, id.vars = c("Bio_Pattern", "Sex", "Yr"), variable.name = "Age",
                      value.name = "Z")
     Z_at_age <- Z_at_age[vapply(Z_at_age$Yr, "%in%", logical(1), table = mainyrs), ] # Subset by year
     Z_at_age <- Z_at_age[as.numeric(Z_at_age$Age)-1 >= age_rec, ]                    # Subset by age >= age_rec
     Z_at_age <- Z_at_age[vapply(Z_at_age$Sex, "%in%", logical(1), table = gender), ] # Subset by gender
 
     Z_at_age <- summarise(group_by(Z_at_age, Yr, Age), Z = mean(Z))
-    Z_ageArray <- acast(Z_at_age, list("Age", "Yr"), value.var = "Z")
+    Z_ageArray <- reshape2::acast(Z_at_age, list("Age", "Yr"), value.var = "Z")
   }
 
   if(ncol(Z_ageArray) < nyears) Z_ageArray <- cbind(Z_ageArray, Z_ageArray[, ncol(Z_ageArray)])
