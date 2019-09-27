@@ -147,7 +147,8 @@ get_dependencies <- function(Assess, arg = list()) {
   return(dep)
 }
 
-dep_args <- list(fix_h = "Data@steep", fix_sigma = "Data@CV_Ind", fix_tau = "Data@sigmaR", fix_omega = "Data@CV_Cat")
+dep_args <- list(fix_h = "Data@steep", fix_sigma = "Data@CV_Ind", fix_tau = "Data@sigmaR", fix_omega = "Data@CV_Cat",
+                 r_prior = "Data@Mort, Data@CV_Mort, Data@steep, Data@CV_steep, Data@vbLinf, Data@vbK, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge, Data@L50, Data@L95")
 
 
 

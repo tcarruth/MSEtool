@@ -101,9 +101,47 @@ where $\delta_t \sim N(0, \tau^2)$ are biomass deviations in lognormal space and
 The log-likelihood of the estimated deviations $\hat{\delta}_t$ is
 $$\hat{\delta}_t \sim N(0, \tau^2).$$
 
+## Prior for r
+To generate the prior for the intrinsic rate of increase, natural mortality $M_a$ and steepness $h$ are sampled from a distribution. Natural mortality is modelled to be age-invariant and is sampled from a lognormal distribution.
+Assuming either a Beverton-Holt or Ricker stock-recruit relationship, steepness is sampled from a transformed beta or transformed lognormal distribution, respectively.
+
+For each pair of sampled M and h values, the corresponding value of $r$ is obtained by solving a modified Euler-Lotka equation:
+$$\alpha \Sigma_{a=1}^A l_a m_a w_a \exp(-ra) = 1.$$
+
+Equation 12 is modified to include the $\alpha$ term from the stock-recruit relationship (Stanley et al. 2009).
+
+The numbers-per-recruit at age $a$ is
+$$
+l_a =
+\begin{cases}
+      1 & a = 1\\
+      l_{a-1} \exp(-M_{a-1}) & a = 2, \ldots, A-1\\
+      \dfrac{l_{a-1} \exp(-M_{a-1})}{1 - \exp(-M_a)} & a = A \\
+\end{cases}.
+$$
+
+Maturity at age $m_a$ is
+$$m_a = \left[1 + \exp\left(-\log(19) \dfrac{a - \tilde{a}_{50}}{\tilde{a}_{95} - \tilde{a}_{50}}\right)\right]^{-1}, $$
+where $\tilde{a}_{50}$ and $\tilde{a}_{95}$ are the ages of 50% and 95% maturity, respectively.
+
+Weight-at-age $w_a$ is
+$$w_a = W_{\infty}(1 - \exp[K\{a-a_0\}])^b.$$
+
+The recruits per spawner at the origin of the stock-recruit relationship $alpha$ is 
+$$\alpha = \dfrac{4h}{(1-h)\phi_0}, $$
+or
+$$\alpha = \dfrac{(5h)^{1.25}}{\phi_0},$$
+for a Beverton-Holt and Ricker stock-recruit relationship, respectively, where unfished recruits-per-spawner $\phi_0$
+is
+$$\phi_0 = \Sigma_{a=1}^A l_a w_a m_a.$$
+
+A normal distribution is assumed for the prior with the mean and standard deviation calculated from the values of $r$ calculated using the above procedure.
 
 # References
-
 Fletcher, R.I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515-521.
 
 Meyer, R., and Millar, R.B. 1999. BUGS in Bayesian stock assessments. Canadian Journal of Fisheries and Aquatic Science 56:1078-1086.
+
+Stanley, R.D., M. McAllister, P. Starr and N. Olsen. 2009. Stock assessment for bocaccio (Sebastes
+paucispinis) in British Columbia waters. DFO Can. Sci. Advis. Sec. Res. Doc. 2009/055.
+xiv + 200 p. 

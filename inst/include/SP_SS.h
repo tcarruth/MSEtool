@@ -10,6 +10,7 @@
   DATA_INTEGER(nstep);
   DATA_SCALAR(dt);
   DATA_INTEGER(nitF);
+  DATA_VECTOR(r_prior);
   DATA_VECTOR_INDICATOR(keep, I_hist);
 
   PARAMETER(log_FMSY);
@@ -43,6 +44,9 @@
   vector<Type> F(ny);
 
   Type penalty = 0;
+  Type prior = 0;
+
+  if(r_prior(0) > 0) prior -= dnorm(r, r_prior(0), r_prior(1), true);
 
   B(0) = dep * K;
   for(int y=0;y<ny;y++) {
@@ -63,7 +67,7 @@
     if(est_B_dev(y)) nll_comp(1) -= dnorm(log_B_dev(y), Type(0), tau, true);
   }
 
-  Type nll = nll_comp.sum() + penalty;
+  Type nll = nll_comp.sum() + penalty + prior;
 
   Type F_FMSY_final = F(F.size()-1)/FMSY;
   Type B_BMSY_final = B(B.size()-1)/BMSY;
@@ -99,6 +103,7 @@
   REPORT(nll_comp);
   REPORT(nll);
   REPORT(penalty);
+  REPORT(prior);
 
   return nll;
 

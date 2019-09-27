@@ -7,13 +7,15 @@
 \title{Surplus production model with FMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, n_seas = 4L, n_itF = 3L, silent = TRUE,
+  fix_n = TRUE, n_seas = 4L, n_itF = 3L, r_prior = FALSE,
+  r_reps = 100, SR_type = c("BH", "Ricker"), silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 5000, eval.max = 10000), ...)
 
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE,
   early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
+  r_prior = FALSE, r_reps = 100, SR_type = c("BH", "Ricker"),
   integrate = FALSE, silent = TRUE, opt_hess = FALSE,
   n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
   eval.max = 10000), inner.control = list(), ...)
@@ -44,6 +46,14 @@ is half of carrying capacity.}
 
 \item{n_itF}{Integer, the number of iterations to solve F conditional on the observed catch given multiple seasons within an annual time step.
 Ignored if \code{n_seas} = 1.}
+
+\item{r_prior}{Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.}
+
+\item{r_reps}{If \code{r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
+mean and standard deviation of the r prior.}
+
+\item{SR_type}{If \code{r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner.
+to calculate the r prior.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
@@ -84,7 +94,8 @@ A surplus production model that uses only a time-series of catches and a relativ
 and coded in TMB. The base model, \code{SP}, is conditioned on catch and estimates a predicted index.
 Continuous surplus production and fishing is modeled with sub-annual time steps which should approximate
 the behavior of ASPIC (Prager 1994). The Fox model, \code{SP_Fox}, fixes BMSY/K = 0.37 (1/e).
-The state-space version, \code{SP_SS} estimates annual deviates in biomass.
+The state-space version, \code{SP_SS} estimates annual deviates in biomass. An option allows for setting a
+prior for the intrinsic rate of increase.
 The function for the \code{spict} model (Pedersen and Berg, 2016) is available in \link[DLMtool]{DLMextra}.
 }
 \details{
@@ -94,6 +105,11 @@ To provide starting values for the \code{SP}, a named list can be provided for \
 For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
 of the index and log-biomass deviates, respectively. Default for tau is 0.1. Deviations are estimated beginning in the year when index
 data are available.
+
+If \code{r_prior = TRUE}, a prior is created using the Euler-Lotka method (Equation 15a of McAllister et al. 2001).
+The Euler-Lotka method is modified to multiply the left-hand side of equation 15a by the alpha parameter of the
+stock-recruit relationship (Stanley et al. 2009). Natural mortality and steepness are sampled in order to generate
+a prior distribution for r. See \code{vignette("Surplus_production")} for more details.
 }
 \note{
 The model uses the Fletcher (1978) formulation and is parameterized with FMSY and MSY as
@@ -145,11 +161,18 @@ Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fisher
 
 Fox, W.W. 1970. An exponential surplus-yield model for optimizing exploited fish populations. Transactions of the American Fisheries Society 99:80-88.
 
+McAllister, M.K., Pikitch, E.K., and Babcock, E.A. 2001. Using demographic methods to construct Bayesian priors
+for the intrinsic rate of increase in the Schaefer model and implications for stock rebuilding. Can. J. Fish.
+Aquat. Sci. 58: 1871-1890.
+
 Pedersen, M. W. and Berg, C. W. 2017. A stochastic surplus production model in continuous time. Fish and Fisheries. 18:226-243.
 
 Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model. Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 
 Prager, M. H. 1994. A suite of extensions to a nonequilibrium surplus-production model. Fishery Bulletin 92:374-389.
+
+Stanley, R.D., M. McAllister, P. Starr and N. Olsen. 2009. Stock assessment for bocaccio (Sebastes
+paucispinis) in British Columbia waters. DFO Can. Sci. Advis. Sec. Res. Doc. 2009/055. xiv + 200 p.
 }
 \seealso{
 \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}

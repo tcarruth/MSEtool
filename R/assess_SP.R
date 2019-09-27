@@ -4,7 +4,8 @@
 #' and coded in TMB. The base model, \code{SP}, is conditioned on catch and estimates a predicted index.
 #' Continuous surplus production and fishing is modeled with sub-annual time steps which should approximate
 #' the behavior of ASPIC (Prager 1994). The Fox model, \code{SP_Fox}, fixes BMSY/K = 0.37 (1/e).
-#' The state-space version, \code{SP_SS} estimates annual deviates in biomass.
+#' The state-space version, \code{SP_SS} estimates annual deviates in biomass. An option allows for setting a
+#' prior for the intrinsic rate of increase.
 #' The function for the \code{spict} model (Pedersen and Berg, 2016) is available in \link[DLMtool]{DLMextra}.
 #'
 #' @param x An index for the objects in \code{Data} when running in \link[DLMtool]{runMSE}.
@@ -32,6 +33,11 @@
 #' Ignored if \code{n_seas} = 1.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the biomass deviations (thus, treating it as a state-space variable).
+#' @param r_prior Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.
+#' @param r_reps If \code{r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
+#' mean and standard deviation of the r prior.
+#' @param SR_type If \code{r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner.
+#' to calculate the r prior.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param opt_hess Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
@@ -51,6 +57,11 @@
 #' For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{tau}, the standard deviation
 #' of the index and log-biomass deviates, respectively. Default for tau is 0.1. Deviations are estimated beginning in the year when index
 #' data are available.
+#'
+#' If \code{r_prior = TRUE}, a prior is created using the Euler-Lotka method (Equation 15a of McAllister et al. 2001).
+#' The Euler-Lotka method is modified to multiply the left-hand side of equation 15a by the alpha parameter of the
+#' stock-recruit relationship (Stanley et al. 2009). Natural mortality and steepness are sampled in order to generate
+#' a prior distribution for r. See \code{vignette("Surplus_production")} for more details.
 #' @return An object of \code{\linkS4class{Assessment}} containing objects and output from TMB.
 #' @note The model uses the Fletcher (1978) formulation and is parameterized with FMSY and MSY as
 #' leading parameters. The default conditions assume unfished conditions in the first year of the time series
@@ -63,12 +74,18 @@
 #'
 #' Fox, W.W. 1970. An exponential surplus-yield model for optimizing exploited fish populations. Transactions of the American Fisheries Society 99:80-88.
 #'
+#' McAllister, M.K., Pikitch, E.K., and Babcock, E.A. 2001. Using demographic methods to construct Bayesian priors
+#' for the intrinsic rate of increase in the Schaefer model and implications for stock rebuilding. Can. J. Fish.
+#' Aquat. Sci. 58: 1871-1890.
+#'
 #' Pedersen, M. W. and Berg, C. W. 2017. A stochastic surplus production model in continuous time. Fish and Fisheries. 18:226-243.
 #'
 #' Pella, J. J. and Tomlinson, P. K. 1969. A generalized stock production model. Inter-Am. Trop. Tuna Comm., Bull. 13:419-496.
 #'
 #' Prager, M. H. 1994. A suite of extensions to a nonequilibrium surplus-production model. Fishery Bulletin 92:374-389.
 #'
+#' Stanley, R.D., M. McAllister, P. Starr and N. Olsen. 2009. Stock assessment for bocaccio (Sebastes
+#' paucispinis) in British Columbia waters. DFO Can. Sci. Advis. Sec. Res. Doc. 2009/055. xiv + 200 p.
 #' @section Required Data:
 #' \itemize{
 #' \item \code{SP}: Cat, Ind
@@ -106,7 +123,8 @@
 #' @useDynLib MSEtool
 #' @export
 SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
-               n_seas = 4L, n_itF = 3L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+               n_seas = 4L, n_itF = 3L, r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"),
+               silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies = "Data@Cat, Data@Ind"
   dots <- list(...)
@@ -125,9 +143,13 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   I_hist[I_hist < 0] <- NA
   ny <- length(C_hist)
 
+  if(r_prior) {
+    rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
+  } else rp <- 0
+
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SP", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
-               nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
+               nstep = n_seas, dt = 1/n_seas, nitF = n_itF, r_prior = c(mean(rp), max(0.1 * mean(rp), sd(rp))))
 
   params <- list()
   if(!is.null(start)) {
@@ -147,11 +169,13 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   if(is.null(params$log_dep)) params$log_dep <- log(1)
   if(is.null(params$log_n)) params$log_n <- log(2)
 
-  info <- list(Year = Year, data = data, params = params, rescale = rescale, control = control)
+  info <- list(Year = Year, data = data, params = params, rp = rp, rescale = rescale, control = control)
 
   map <- list()
   if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n = factor(NA)
+
+
   obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, DLL = "MSEtool", silent = silent)
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
@@ -188,8 +212,8 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
                     Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year),
                     Index = structure(report$Ipred, names = Year),
-                    NLL = structure(c(nll_report, report$nll - report$penalty, report$penalty),
-                                    names = c("Total", "Index", "Penalty")),
+                    NLL = structure(c(nll_report, report$nll - report$penalty - report$prior, report$penalty, report$prior),
+                                    names = c("Total", "Index", "Penalty", "Prior")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
@@ -214,7 +238,8 @@ class(SP) <- "Assess"
 #' @useDynLib MSEtool
 SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                   fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
-                  integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                  r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
+                  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind"
   dots <- list(...)
@@ -239,8 +264,14 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   if(early_dev == "index") {
     est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], 0, 1)
   }
+
+  if(r_prior) {
+    rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
+  } else rp <- 0
+
   data <- list(model = "SP_SS", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
-               est_B_dev = est_B_dev, nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
+               est_B_dev = est_B_dev, nstep = n_seas, dt = 1/n_seas, nitF = n_itF,
+               r_prior = c(mean(rp), max(0.1 * mean(rp), sd(rp))))
 
   params <- list()
   if(!is.null(start)) {
@@ -278,7 +309,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   random <- NULL
   if(integrate) random <- "log_B_dev"
 
-  info <- list(Year = Year, data = data, params = params, rescale = rescale, control = control,
+  info <- list(Year = Year, data = data, params = params, rp = rp, rescale = rescale, control = control,
                inner.control = inner.control)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
@@ -316,8 +347,8 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                     Obs_Catch = structure(C_hist, names = Year), Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year), Index = structure(report$Ipred, names = Year),
                     Dev = structure(report$log_B_dev, names = Year), Dev_type = "log-Biomass deviations",
-                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
-                                    names = c("Total", "Index", "Dev", "Penalty")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty, report$prior),
+                                    names = c("Total", "Index", "Dev", "Penalty", "Prior")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
@@ -351,3 +382,44 @@ SP_Fox <- function(x = 1, Data, ...) {
   do.call(SP, SP_args)
 }
 class(SP_Fox) <- "Assess"
+
+
+r_prior_fn <- function(x = 1, Data, r_reps = 1e2, SR_type = c("BH", "Ricker"), seed = x) {
+  SR_type <- match.arg(SR_type)
+
+  set.seed(x)
+  M <- trlnorm(r_reps, Data@Mort[x], Data@CV_Mort[x])
+  steep <- sample_steepness3(r_reps, Data@steep[x], Data@CV_steep[x], SR_type)
+
+  max_age <- Data@MaxAge
+  a <- Data@wla[x]
+  b <- Data@wlb[x]
+  Linf <- Data@vbLinf[x]
+  K <- Data@vbK[x]
+  t0 <- Data@vbt0[x]
+  La <- Linf * (1 - exp(-K * (c(1:max_age) - t0)))
+  Wa <- a * La ^ b
+
+  A50 <- min(0.5 * max_age, iVB(t0, K, Linf, Data@L50[x]))
+  A95 <- max(A50+0.5, iVB(t0, K, Linf, Data@L95[x]))
+  mat_age <- 1/(1 + exp(-log(19) * (c(1:max_age) - A50)/(A95 - A50)))
+  mat_age <- mat_age/max(mat_age)
+
+  log_r <- vapply(1:r_reps, function(y) uniroot(Euler_Lotka_fn, c(-6, 2), M = M[y], h = steep[y], weight = Wa,
+                                                mat = mat_age, maxage = max_age, SR_type = SR_type)$root, numeric(1))
+  return(exp(log_r))
+}
+
+Euler_Lotka_fn <- function(log_r, M, h, weight, mat, maxage, SR_type) {
+  M <- rep(M, maxage)
+  surv0 <- exp(-M)
+  NPR <- c(1, cumprod(surv0[1:maxage-1]))
+  NPR[maxage] <- NPR[maxage]/(1 - surv0[maxage])
+
+  SBPR <- sum(NPR * weight * mat)
+  CR <- ifelse(SR_type == "BH", 4*h/(1-h), (5*h)^1.25)
+  R_per_S <- CR/SBPR
+
+  EL <- R_per_S * sum(NPR * weight * mat * exp(-exp(log_r) * c(1:maxage)))
+  return(EL - 1)
+}
