@@ -108,7 +108,7 @@ Assuming either a Beverton-Holt or Ricker stock-recruit relationship, steepness 
 For each pair of sampled M and h values, the corresponding value of $r$ is obtained by solving a modified Euler-Lotka equation:
 $$\alpha \Sigma_{a=1}^A l_a m_a w_a \exp(-ra) = 1.$$
 
-Equation 12 is modified to include the $\alpha$ term from the stock-recruit relationship (Stanley et al. 2009).
+Equation 12 is modified to include the $\alpha$ term from the stock-recruit relationship (Stanley et al. 2009). In this way, the recruits-per-spawner at low stock sizes, i.e., as spawning biomass approaches zero, is considered for calculating r.
 
 The numbers-per-recruit at age $a$ is
 $$

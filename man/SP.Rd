@@ -7,7 +7,7 @@
 \title{Surplus production model with FMSY and MSY as leading parameters}
 \usage{
 SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, n_seas = 4L, n_itF = 3L, r_prior = FALSE,
+  fix_n = TRUE, n_seas = 4L, n_itF = 3L, use_r_prior = FALSE,
   r_reps = 100, SR_type = c("BH", "Ricker"), silent = TRUE,
   opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 5000, eval.max = 10000), ...)
@@ -15,7 +15,7 @@ SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
 SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
   fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE,
   early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
-  r_prior = FALSE, r_reps = 100, SR_type = c("BH", "Ricker"),
+  use_r_prior = FALSE, r_reps = 100, SR_type = c("BH", "Ricker"),
   integrate = FALSE, silent = TRUE, opt_hess = FALSE,
   n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
   eval.max = 10000), inner.control = list(), ...)
@@ -47,13 +47,13 @@ is half of carrying capacity.}
 \item{n_itF}{Integer, the number of iterations to solve F conditional on the observed catch given multiple seasons within an annual time step.
 Ignored if \code{n_seas} = 1.}
 
-\item{r_prior}{Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.}
+\item{use_r_prior}{Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.}
 
-\item{r_reps}{If \code{r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
+\item{r_reps}{If \code{use_r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
 mean and standard deviation of the r prior.}
 
-\item{SR_type}{If \code{r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner.
-to calculate the r prior.}
+\item{SR_type}{If \code{use_r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner at the origin
+of spwaning biomass approaches zero. Used for the r prior.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}
@@ -106,7 +106,11 @@ For \code{SP_SS}, a start value can also be provided for \code{sigma} and \code{
 of the index and log-biomass deviates, respectively. Default for tau is 0.1. Deviations are estimated beginning in the year when index
 data are available.
 
-If \code{r_prior = TRUE}, a prior is created using the Euler-Lotka method (Equation 15a of McAllister et al. 2001).
+If \code{use_r_prior = TRUE}, \code{SP} and \code{SP_SS} will use a prior for the intrinsic rate of increase in the objective function.
+A vector of length two can be passed in the \code{start} list for the mean and standard deviation of the prior (see example). The normal
+distribution is used.
+
+If no values are provided, a prior is created using the Euler-Lotka method (Equation 15a of McAllister et al. 2001).
 The Euler-Lotka method is modified to multiply the left-hand side of equation 15a by the alpha parameter of the
 stock-recruit relationship (Stanley et al. 2009). Natural mortality and steepness are sampled in order to generate
 a prior distribution for r. See \code{vignette("Surplus_production")} for more details.
@@ -149,15 +153,21 @@ retrospective(res)
 }
 
 #### State-space version
-res <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1))
+res_SS <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1))
 
 \donttest{
-plot(res)
+plot(res_SS)
 }
 
 #### Fox model
 res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
 res_Fox2 <- SP_Fox(Data = swordfish)
+
+#### SP with r_prior
+res_prior <- SP(Data = SimulatedData, r_prior = TRUE)
+
+#### Pass an r_prior to the model with mean = 0.35, sd = 0.10
+res_prior2 <- SP(Data = SimulatedData, r_prior = TRUE, start = list(r_prior = c(0.35, 0.10)))
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.

@@ -33,11 +33,11 @@
 #' Ignored if \code{n_seas} = 1.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the biomass deviations (thus, treating it as a state-space variable).
-#' @param r_prior Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.
-#' @param r_reps If \code{r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
+#' @param use_r_prior Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.
+#' @param r_reps If \code{use_r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
 #' mean and standard deviation of the r prior.
-#' @param SR_type If \code{r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner.
-#' to calculate the r prior.
+#' @param SR_type If \code{use_r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner at the origin
+#' of spwaning biomass approaches zero. Used for the r prior.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param opt_hess Logical, whether the hessian function will be passed to \code{\link[stats]{nlminb}} during optimization
@@ -58,7 +58,11 @@
 #' of the index and log-biomass deviates, respectively. Default for tau is 0.1. Deviations are estimated beginning in the year when index
 #' data are available.
 #'
-#' If \code{r_prior = TRUE}, a prior is created using the Euler-Lotka method (Equation 15a of McAllister et al. 2001).
+#' If \code{use_r_prior = TRUE}, \code{SP} and \code{SP_SS} will use a prior for the intrinsic rate of increase in the objective function.
+#' A vector of length two can be passed in the \code{start} list for the mean and standard deviation of the prior (see example). The normal
+#' distribution is used.
+#'
+#' If no values are provided, a prior is created using the Euler-Lotka method (Equation 15a of McAllister et al. 2001).
 #' The Euler-Lotka method is modified to multiply the left-hand side of equation 15a by the alpha parameter of the
 #' stock-recruit relationship (Stanley et al. 2009). Natural mortality and steepness are sampled in order to generate
 #' a prior distribution for r. See \code{vignette("Surplus_production")} for more details.
@@ -111,22 +115,28 @@
 #' }
 #'
 #' #### State-space version
-#' res <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1))
+#' res_SS <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1))
 #'
 #' \donttest{
-#' plot(res)
+#' plot(res_SS)
 #' }
 #'
 #' #### Fox model
 #' res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
 #' res_Fox2 <- SP_Fox(Data = swordfish)
+#'
+#' #### SP with r_prior
+#' res_prior <- SP(Data = SimulatedData, use_r_prior = TRUE)
+#'
+#' #### Pass an r_prior to the model with mean = 0.35, sd = 0.10
+#' res_prior2 <- SP(Data = SimulatedData, use_r_prior = TRUE, start = list(r_prior = c(0.35, 0.10)))
 #' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @import TMB
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
 #' @export
 SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
-               n_seas = 4L, n_itF = 3L, r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"),
+               n_seas = 4L, n_itF = 3L, use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"),
                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   dependencies = "Data@Cat, Data@Ind"
@@ -146,13 +156,20 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
   I_hist[I_hist < 0] <- NA
   ny <- length(C_hist)
 
-  if(r_prior) {
-    rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
-  } else rp <- 0
-
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SP", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
-               nstep = n_seas, dt = 1/n_seas, nitF = n_itF, r_prior = c(mean(rp), max(0.1 * mean(rp), sd(rp))))
+               nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
+
+  if(use_r_prior) {
+    if(!is.null(start$r_prior) && length(start$r_prior) == 2) {
+      rp <- data$r_prior <- start$r_prior
+    } else {
+      rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
+      data$r_prior <- c(mean(rp), sd(rp))
+    }
+  } else {
+    rp <- data$r_prior <- c(0, 0)
+  }
 
   params <- list()
   if(!is.null(start)) {
@@ -241,7 +258,7 @@ class(SP) <- "Assess"
 #' @useDynLib MSEtool
 SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                   fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
-                  r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
+                  use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
                   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies = "Data@Cat, Data@Ind"
@@ -268,13 +285,19 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], 0, 1)
   }
 
-  if(r_prior) {
-    rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
-  } else rp <- 0
+  data <- list(model = "SP_SS", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny, est_B_dev = est_B_dev,
+               nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
 
-  data <- list(model = "SP_SS", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
-               est_B_dev = est_B_dev, nstep = n_seas, dt = 1/n_seas, nitF = n_itF,
-               r_prior = c(mean(rp), max(0.1 * mean(rp), sd(rp))))
+  if(use_r_prior) {
+    if(!is.null(start$r_prior) && length(start$r_prior) == 2) {
+      rp <- data$r_prior <- start$r_prior
+    } else {
+      rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
+      data$r_prior <- c(mean(rp), sd(rp))
+    }
+  } else {
+    rp <- data$r_prior <- c(0, 0)
+  }
 
   params <- list()
   if(!is.null(start)) {
