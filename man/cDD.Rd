@@ -100,7 +100,6 @@ deviation of the index and recruitment variability, respectively.
 }
 
 \examples{
-\donttest{
 #### Observation-error delay difference model
 res <- cDD(Data = DLMtool::Red_snapper)
 
@@ -111,9 +110,9 @@ res <- cDD(Data = DLMtool::Red_snapper, start = start)
 summary(res@SD) # Parameter estimates
 
 ### State-space version
-### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
+### Set recruitment variability SD = 0.6 (since fix_tau = TRUE)
 res <- cDD_SS(Data = Red_snapper, start = list(tau = 0.6))
-}
+
 }
 \references{
 Hilborn, R., and Walters, C., 1992. Quantitative Fisheries Stock Assessment: Choice,

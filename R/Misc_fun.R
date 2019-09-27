@@ -11,13 +11,11 @@
 #' If FALSE, returns only those objects included in MSEtool.
 #' @author Q. Huynh
 #' @examples
-#' \donttest{
 #' avail("Assess")
 #' avail("HCR")
 #' avail("Stock")
 #' avail("MP")
 #' avail("MP", all_avail = FALSE)
-#' }
 #' @export
 avail <- function(classy, all_avail = TRUE) {
   temp <- try(class(classy), silent = TRUE)

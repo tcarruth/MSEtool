@@ -61,7 +61,6 @@
 #' @import TMB
 #' @importFrom stats nlminb
 #' @examples
-#' \donttest{
 #' #### Observation-error delay difference model
 #' res <- cDD(Data = DLMtool::Red_snapper)
 #'
@@ -72,9 +71,9 @@
 #' summary(res@@SD) # Parameter estimates
 #'
 #' ### State-space version
-#' ### Set recruitment variability SD = 0.3 (since fix_tau = TRUE)
+#' ### Set recruitment variability SD = 0.6 (since fix_tau = TRUE)
 #' res <- cDD_SS(Data = Red_snapper, start = list(tau = 0.6))
-#' }
+#'
 #' @seealso \link{DD_TMB} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export

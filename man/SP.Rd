@@ -132,7 +132,6 @@ Tip: to create the Fox model (Fox 1970), just fix n = 1. See example.
 }
 
 \examples{
-\donttest{
 data(swordfish)
 
 #### Observation-error surplus production model
@@ -142,19 +141,23 @@ res <- SP(Data = swordfish)
 # and symmetrical production curve (n = 2)
 start <- list(dep = 0.875, n = 2)
 res <- SP(Data = swordfish, start = start)
+
+\donttest{
 plot(res)
 profile(res, FMSY = seq(0.1, 0.4, 0.01))
 retrospective(res)
+}
 
 #### State-space version
-res <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1),
-             fix_tau = TRUE, fix_sigma = TRUE)
+res <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1))
+
+\donttest{
 plot(res)
+}
 
 #### Fox model
 res_Fox <- SP(Data = swordfish, start = list(n = 1), fix_n = TRUE)
 res_Fox2 <- SP_Fox(Data = swordfish)
-}
 }
 \references{
 Fletcher, R. I. 1978. On the restructuring of the Pella-Tomlinson system. Fishery Bulletin 76:515:521.

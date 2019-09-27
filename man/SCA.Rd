@@ -205,10 +205,17 @@ for example, when vulnerability >> 0.5 for the youngest age class.
 }
 
 \examples{
-\donttest{
 res <- SCA(Data = DLMtool::SimulatedData)
-res2 <- SCA2(Data = DLMtool::Simulation_1)
+res2 <- SCA2(Data = DLMtool::SimulatedData)
+
+compare_models(res, res2)
+
+SCA_assess <- SCA2(Data = DLMtool::Simulation_1)
+
+\donttest{
+plot(res)
 }
+
 }
 \references{
 Cadigan, N.G. 2016. A state-space stock assessment model for northern cod, including under-reported catches and

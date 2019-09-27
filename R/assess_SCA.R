@@ -130,10 +130,17 @@
 #' Research 48:967-980.
 #'
 #' @examples
-#' \donttest{
 #' res <- SCA(Data = DLMtool::SimulatedData)
-#' res2 <- SCA2(Data = DLMtool::Simulation_1)
+#' res2 <- SCA2(Data = DLMtool::SimulatedData)
+#'
+#' compare_models(res, res2)
+#'
+#' SCA_assess <- SCA2(Data = DLMtool::Simulation_1)
+#'
+#' \donttest{
+#' plot(res)
 #' }
+#'
 #' @section Required Data:
 #' \itemize{
 #' \item \code{SCA}, \code{SCA_Pope}, and \code{SCA_Pope}: Cat, Ind, Mort, L50, L95, CAA, vbK, vbLinf, vbt0, wla, wlb, MaxAge

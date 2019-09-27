@@ -91,7 +91,7 @@ prelim_AM <- function(x, Assess, ncpus = NULL, ...) {
 #' DD_MSY <- make_MP(DD_TMB, HCR_MSY, diagnostic = "min")
 #' show(DD_MSY)
 #'
-#' # Set PPD = TRUE in runMSE function
+#' ##### Ensure that PPD = TRUE in runMSE function
 #' myMSE <- runMSE(DLMtool::testOM, MPs = "DD_MSY", PPD = TRUE)
 #' diagnostic_AM(myMSE)
 #' }

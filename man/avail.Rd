@@ -21,13 +21,11 @@ MSEtool and DLMtool packages. This function is an addendum to the \code{\link[DL
 function in DLMtool.
 }
 \examples{
-\donttest{
 avail("Assess")
 avail("HCR")
 avail("Stock")
 avail("MP")
 avail("MP", all_avail = FALSE)
-}
 }
 \author{
 Q. Huynh
