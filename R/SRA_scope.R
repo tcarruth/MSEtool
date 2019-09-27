@@ -356,7 +356,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
   }
 
-  ### Fit to means if report = TRUE
+  ### Fit to life history means if mean_fit = TRUE
   if(mean_fit) {
     message("Generating additional model fit from mean values of parameters in the operating model...\n")
     mean_fit_output <- SRA_scope_est(Catch = Chist, Effort = Ehist, condition = condition,
@@ -404,7 +404,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
       OM@isRel <- FALSE
 
       vul_par <- do.call(cbind, lapply(res, getElement, "vul_par"))
-      LFS <- ilogit(vul_par[1, ]) * 0.75 * max(length_bin) # Actually L95 for logistics
+      LFS <- ilogit(vul_par[1, ]) * 0.95 * max(length_bin) # Actually L95 for logistics
       L50 <- LFS - exp(vul_par[2, ])
 
       if(selectivity == "logistic") {
@@ -511,16 +511,16 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   ### Output list
   E <- do.call(rbind, lapply(res, getElement, "E"))
-  N <- array(lapply(res, getElement, "N"), c(nyears+1, maxage, nsim))
-  CAA_pred <- array(lapply(res, getElement, "CAApred"), c(nyears, maxage, nfleet, nsim))
-  CAL_pred <- array(lapply(res, getElement, "CALpred"), c(nyears, length(length_bin), nfleet, nsim))
+  N <- array(sapply(res, getElement, "N"), c(nyears+1, maxage, nsim))
+  CAA_pred <- array(sapply(res, getElement, "CAApred"), c(nyears, maxage, nfleet, nsim))
+  CAL_pred <- array(sapply(res, getElement, "CALpred"), c(nyears, length(length_bin), nfleet, nsim))
 
-  dat <- list(C_hist = res[[1]]$report$C_hist, E_hist = res[[1]]$report$E_hist, Index = res[[1]]$obj$env$data$I_hist,
-              CAA = res[[1]]$obj$env$data$CAA_hist, CAL = res[[1]]$obj$env$data$CAL_hist, ML = res[[1]]$obj$env$data$mlen,
+  dat <- list(C_hist = res[[1]]$C_hist, E_hist = res[[1]]$E_hist, Index = mod[[1]]$obj$env$data$I_hist,
+              CAA = mod[[1]]$obj$env$data$CAA_hist, CAL = mod[[1]]$obj$env$data$CAL_hist, ML = mod[[1]]$obj$env$data$mlen,
               nfleet = nfleet, nsurvey = nsurvey, length_bin = length_bin)
 
   output <- new("SRA", OM = OM, SSB = E, NAA = aperm(N, c(3, 1, 2)), CAA = aperm(CAA_pred, c(4, 1:3)),
-                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv, data = dat, Misc = lapply(res, function(x) return(x[-1])))
+                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv, data = dat, Misc = res)
   if(mean_fit) output@mean_fit <- mean_fit_output
 
   message("Complete.")
@@ -679,10 +679,10 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
 
   for(ff in 1:nfleet) {
     if(selectivity[ff]) { #logistic
-      vul_par[1:2, ff] <- c(logit(L95/max(length_bin)/0.75), log(L95 - L50))
+      vul_par[1:2, ff] <- c(logit(min(L95/max(length_bin)/0.95, 0.95)), log(L95 - L50))
       map_vul_par[3:4, ff] <- NA
     } else {
-      vul_par[, ff] <- c(logit(L95/max(length_bin)/0.75), log(L95 - L50), -20, logit(FleetPars$Vmaxlen[nyears, x]))
+      vul_par[, ff] <- c(logit(min(L95/max(length_bin)/0.95, 0.95)), log(L95 - L50), -20, logit(FleetPars$Vmaxlen[nyears, x]))
       map_vul_par[3, ff] <- NA
       if(fix_dome) map_ful_par[4, ff] <- NA
     }

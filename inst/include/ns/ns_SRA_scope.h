@@ -117,7 +117,7 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int nlbin, vector<Type> length_
 
   Type max_lenbin = length_bin(length_bin.size()-1);
 
-  Type len_full = invlogit(vul_par(0)) * 0.75 * max_lenbin;
+  Type len_full = invlogit(vul_par(0)) * 0.95 * max_lenbin;
   Type len_50 = len_full - exp(vul_par(1));
   Type len_full2 = invlogit(vul_par(2));
   len_full2 *= max_lenbin - len_full;
@@ -154,7 +154,7 @@ template<class Type>
 vector<Type> calc_logistic_vul(vector<Type> vul_par, int nlbin, vector<Type> length_bin, Type &prior) {
   vector<Type> vul(nlbin);
   Type max_lenbin = length_bin(length_bin.size()-1);
-  Type len_95 = invlogit(vul_par(0)) * 0.75 * max_lenbin;
+  Type len_95 = invlogit(vul_par(0)) * 0.95 * max_lenbin;
   Type len_50 = len_95 - exp(vul_par(1));
 
   prior -= dnorm(vul_par(1), Type(0), Type(3), true);

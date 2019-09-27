@@ -1,7 +1,7 @@
 
 
 rmd_persp_plot <- function(x, y, z, xlab, ylab, zlab, phi, theta, expand, fig.cap, header = NULL) {
-  ans <- c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  ans <- c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
            paste0("persp(x = ", x, ", y = ", y, ", z = ", z, ", theta = ", theta, ", phi = ", phi, ", expand = ", expand, ", xlab = \"", xlab, "\",
                    ylab = \"", ylab, "\", zlab = \"", zlab, "\", ticktype = \"detailed\")"),
            " ```\n")
@@ -10,7 +10,7 @@ rmd_persp_plot <- function(x, y, z, xlab, ylab, zlab, phi, theta, expand, fig.ca
 }
 
 rmd_matplot <- function(x, y, col, xlab, ylab, legend.lab = "Fleet", type = "l", lty = 1, fig.cap, header = NULL) {
-  ans <- c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  ans <- c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
            paste0("x <- ", x, "; y <- ", y),
            paste0("matplot(x, y, type = \"", type, "\", lty = ", lty, ", col = ", col,
                   ", ylim = c(0, 1.1 * max(y, na.rm = TRUE)), xlab = \"", xlab, "\", ylab = \"", ylab, "\")"),
@@ -26,7 +26,7 @@ rmd_assess_fit2 <- function(year, obs, fit, fig.cap, label = fig.cap, match = FA
   fig.cap2 <- paste0("Observed (black) and predicted (red) ", fig.cap, ".")
   if(match) fig.cap2 <- paste(fig.cap2, "Predicted", fig.cap, "should match observed in this model.")
 
-  c(paste0("```{r, fig.cap=\"", fig.cap2, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap2, "\"}"),
     paste0("plot_timeseries(", year, ", ", obs, ", ", fit, ", label = \"", label, "\")"),
     "```\n")
 }
@@ -38,33 +38,33 @@ rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual"), ages = "
   } else {
     arg <- paste0("\"annual\", CAL_bins = ", CAL_bins, ", ages = ", ages)
   }
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     paste0("ind_valid <- rowSums(", obs, ", na.rm = TRUE) > 0"),
     paste0("if(any(ind_valid)) plot_composition(", year, "[ind_valid], ", obs, "[ind_valid, ], ", fit, "[ind_valid, ], plot_type = ", arg, ")"),
     "```\n")
 }
 
 rmd_SRA_R0 <- function(fig.cap = "Histogram of R0 (unfished recruitment).") {
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "if(!is.null(OM@cpars$R0)) hist(OM@cpars$R0, main = \"\", xlab = expression(R[0]))",
     "```\n")
 }
 
 
 rmd_SRA_initD <- function(fig.cap = "Histogram of initial depletion.") {
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "if(!is.null(OM@cpars$initD)) hist(OM@cpars$initD, main = \"\", xlab = \"Initial depletion\")",
     "```\n")
 }
 
 rmd_SRA_D <- function(fig.cap = "Histogram of historical depletion.") {
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "if(!is.null(OM@cpars$D)) hist(OM@cpars$D, main = \"\", xlab = \"Depletion\")",
     "```\n")
 }
 
 rmd_SRA_Perr <- function(fig.cap = "Recruitment deviations among simulations.") {
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "Perr <- OM@cpars$Perr_y[, max_age:(max_age+nyears-1), drop = FALSE]",
     "matplot(Year_matrix, t(Perr), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment deviations\",",
     "        ylim = c(0, 1.1 * max(Perr)))",
@@ -72,15 +72,15 @@ rmd_SRA_Perr <- function(fig.cap = "Recruitment deviations among simulations.") 
     "```\n")
 }
 
-rmd_SRA_Find <- function(fig.cap = "Apical F from model used as effort among simulations.") {
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+rmd_SRA_Find <- function(fig.cap = "Apical F from SRA model. These values may be subsequently re-scaled in the operating model in order to match the specified depletion") {
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "matplot(Year_matrix, t(OM@cpars$Find), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Apical F\")",
     "abline(h = 0, col = \"grey\")",
     "```\n")
 }
 
 rmd_SRA_sel <- function(fig.cap = "Operating model selectivity among simulations.") {
-  c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "if(nfleet == 1) {",
     "  vul <- do.call(cbind, lapply(report_list, getElement, \"vul\"))",
     "  matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = \"l\", col = \"black\",",
@@ -120,19 +120,21 @@ rmd_SRA_fleet_output <- function(ff) {
            "}",
            "abline(h = 0, col = \"grey\")",
            "```\n",
+           "",
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean ages of fleet ", ff, ".\"}"),
            paste0("MApred <- do.call(cbind, lapply(report_list, function(x) x$CAApred[, , ", ff, "] %*% age/x$CN[, ", ff, "]))"),
            "matplot(Year_matrix, MApred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean age\")",
-           paste0("if(any(data$CAA_hist[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("  lines(Year, (data$CAA_hist[, , ", ff, "] %*% age)/rowSums(data$CAA_hist[, , ", ff, "], na.rm = TRUE),",
+           paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
+           paste0("  lines(Year, (data$CAA[, , ", ff, "] %*% age)/rowSums(data$CAA[, , ", ff, "], na.rm = TRUE),",
            "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "}",
            "```\n",
+           "",
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean lengths of fleet ", ff, ".\"}"),
            paste0("MLpred <- do.call(cbind, lapply(report_list, function(x) x$mlen_pred[, ", ff, "]))"),
            "matplot(Year_matrix, MLpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean length\")",
-           paste0("if(any(data$CAL_hist[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("  lines(Year, (data$CAL_hist[, , ", ff, "] %*% length_bin)/rowSums(data$CAL_hist[, , ", ff, "], na.rm = TRUE),",
+           paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
+           paste0("  lines(Year, (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE),",
                   "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            paste0("} else if(any(data$mlen[, ", ff, "] > 0, na.rm = TRUE)) lines(Year, data$mlen[, ", ff, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "```\n")
@@ -144,7 +146,7 @@ rmd_SRA_survey_output <- function(sur) {
   ans <- c(paste0("```{r, fig.cap = \"Observed (red) and predicted (black) index values in survey ", sur, ".\"}"),
            paste0("Ipred <- do.call(cbind, lapply(report_list, function(x) x$Ipred[, ", sur, "]))"),
            paste0("matplot(Year_matrix, Ipred, type = \"l\", col = \"black\", ylim = c(0, 1.1 * max(c(Ipred, data$I_hist[, ", sur, "]), na.rm = TRUE)), xlab = \"Year\", ylab = \"Survey ", sur, "\")"),
-           paste0("lines(Year, data$I_hist[, ", sur, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
+           paste0("lines(Year, data$Index[, ", sur, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "abline(h = 0, col = \"grey\")",
            "```\n")
   c(header, ans)

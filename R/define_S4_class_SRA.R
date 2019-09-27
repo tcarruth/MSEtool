@@ -75,7 +75,21 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             length_bin <- x@data$length_bin
 
             ####### Document header
-            header <- rmd_head(paste("Operating model conditioning for", ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))), FALSE)
+            header <- c("---",
+                        "title: \"Operating model conditioning for `r ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))`\"",
+                        "subtitle: Output from Stock Reduction Analysis scoping function (SRA_scope)",
+                        "date: \"`r Sys.Date()`\"",
+                        "---",
+                        "<style type=\"text/css\">",
+                        "h1 { /* Header 1 */",
+                        "  font-size: 24px;",
+                        "}",
+                        "</style>",
+                        "",
+                        "```{r setup, include = FALSE, echo = FALSE}",
+                        "  knitr::opts_chunk$set(collapse = TRUE, echo = FALSE, message = FALSE,",
+                        "  fig.width = 6, fig.height = 4.5, out.width = \"650px\", comment = \"#>\")",
+                        "```\n")
 
             ####### Updated historical OM parameters
             Year_matrix <- matrix(Year, ncol = nsim, nrow = nyears)
@@ -88,7 +102,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             ####### Output from all simulations {.tabset}
             fleet_output <- lapply(1:nfleet, rmd_SRA_fleet_output)
 
-            if(any(data$I_hist > 0, na.rm = TRUE)) {
+            if(any(data$Index > 0, na.rm = TRUE)) {
               survey_output <- lapply(1:nsurvey, rmd_SRA_survey_output)
             } else survey_output <- NULL
 
