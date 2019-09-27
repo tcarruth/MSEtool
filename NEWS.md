@@ -1,21 +1,23 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
-## MSEtool 1.2.4
-- `SRA_scope` returns an S4 object of class `SRA` with a `plot()` method.
+## MSEtool 1.3.0
+
+### Updates to SRA_scope
+- Defaults for `SRA_scope` are now more robust (set maximum F in model, higher std. dev. for likelihood of mean lengths).
+- Users can choose to use `SRA_scope` conditioned on either observed catch or observed effort. 
+- `SRA_scope` returns an S4 object of class `SRA` with a `plot()` method that generates a markdown report of model fits.
+
+### Assessment models
+- A prior for r is now possible with `SP` and `SP_SS` using life history information (priors in natural mortality and steepness, as well as maturity/weight at age). To use this feature, set argument `use_r_prior = TRUE`.
 - Default process error standard deviation for `SP_SS` is reduced to 0.1.
-- A prior for r is now possible with `SP` and `SP_SS`.
-
-## MSEtool 1.2.3
-- Users can choose to use `SRA_scope` while conditioning on either catch or effort. Function will also return a markdown report of model fits.
-- Update defaults to `SRA_scope` so that it is more robust (set maximum F in model, higher std. dev. for mean lengths).
-- Vignette links are now available through the `?MSEtool` help page.
-- Minor fixes to `multiMSE`.
+- `cDD` and `cDD_SS` are more robust when catch is very, very small (F is set to 0). This is important for management procedures that shut down fishing.
 - Minor updates to simplify TMB code.
-- Update `make_MP` to pass CRAN check.
+- Minor revision to `make_MP`.
 
-## MSEtool 1.2.2
+### Other edits
+- Vignette links are now available through the MSEtool help page. Type `?MSEtool` into the console.
+- Minor fixes to `multiMSE`.
 - `SS2OM` now has an option for selecting male or female life history parameters.
-- Set F = 0 when Catch is very small in `cDD` and `cDD_SS`. This is especially important for management procedures that shut down fishing.
 
 ## MSEtool 1.2.1
 - Fixed error in Solaris build.
@@ -27,6 +29,7 @@ For the new features described below, DLMtool version 5.3.1 is recommended.
 - The initial release for multi-fleet and multi-stock operating models and MSEs are released in this version, with `multiMSE` being the core function. The multiMSE vignette will be quite useful and can be accessed at `browseVignettes("MSEtool")`.
 
 ### Assessment models
+
 Quite a few additions and changes have been made to the Assessment models. See the help manual and vignettes for descriptions of these new Assessment functions.
 
 - The continuous delay-differential model with deterministic and stochastic recruitment (`cDD` and `cDD_SS`, respectively) have been added as new Assessment models to the package. The continuous formulation should be more stable in high F situations.
