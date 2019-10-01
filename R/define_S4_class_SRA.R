@@ -240,7 +240,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                      "No model found. Re-run `SRA_scope()` with `mean_fit = TRUE`.\n\n")
 
             if(compare) {
-              Hist <- runMSE(x@OM, Hist = TRUE, parallel = snowfall::sfIsRunning())
+              Hist <- runMSE(OM, Hist = TRUE, parallel = OM@nsim >= 48 & snowfall::sfIsRunning())
 
               compare_rmd <- c("## Updated OM {.tabset}\n",
                                "### OM historical period\n\n",
@@ -254,7 +254,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                "```\n",
                                "",
                                "```{r, fig.cap = \"Recruitment from the operating model.\"}",
-                               "matplot(Year, t(Hist@TSdata$Rec), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"OM Recruitment\", ylim = c(0, 1.1 * max(Hist@TSdata$SSB)))",
+                               "matplot(Year, t(Hist@TSdata$Rec), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"OM Recruitment\", ylim = c(0, 1.1 * max(Hist@TSdata$Rec)))",
                                "```\n",
                                "",
                                "```{r, fig.cap = \"Catch from the operating model.\"}",

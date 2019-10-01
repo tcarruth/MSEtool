@@ -6,9 +6,9 @@
 \alias{plot,SRA,missing-method}
 \title{Plot SRA scope output}
 \usage{
-\S4method{plot}{SRA,missing}(x, compare = FALSE,
-  filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim,
-  Year = NULL, open_file = TRUE, quiet = TRUE, ...)
+\S4method{plot}{SRA,missing}(x, compare = TRUE, filename = "SRA_scope",
+  dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL,
+  open_file = TRUE, quiet = TRUE, ...)
 }
 \arguments{
 \item{x}{An object of class \linkS4class{SRA} (output from \link{SRA_scope}).}
@@ -20,7 +20,7 @@ and the SRA model output.}
 
 \item{dir}{The directory in which the markdown and HTML files will be saved.}
 
-\item{sims}{A logical vector of length \code{OM@nsim} or a numeric vector indicating which simulations to keep.}
+\item{sims}{A logical vector of length \code{x@OM@nsim} or a numeric vector indicating which simulations to keep.}
 
 \item{Year}{Optional, a vector of years for the historical period for plotting.}
 

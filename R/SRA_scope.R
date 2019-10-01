@@ -131,11 +131,15 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   maxage <- OM@maxage
   message(nfleet, " fleet(s) detected.")
 
+  OM@maxF <- max_F
+  message("OM@maxF updated to ", max_F, ".")
+
   # Match number of historical years of catch to OM
   if(OM@nyears != nyears) {
     message("OM@nyears will be updated to length(Chist): ", nyears)
     OM@nyears <- nyears
   }
+  if(length(OM@CurrentYr) == 0) OM@CurrentYr <- nyears
 
   # Indices
   if(!is.null(Index)) {
@@ -494,6 +498,8 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   OM@cpars$M_ageArray <- StockPars$M_ageArray
 
   OM@cpars$h <- StockPars$hs
+
+  OM@cpars$plusgroup <- 1L
 
   if(fix_sel) {
     OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ] else FleetPars$L5
