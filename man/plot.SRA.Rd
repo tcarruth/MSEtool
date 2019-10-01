@@ -6,12 +6,15 @@
 \alias{plot,SRA,missing-method}
 \title{Plot SRA scope output}
 \usage{
-\S4method{plot}{SRA,missing}(x, filename = "SRA_scope",
-  dir = tempdir(), sims = 1:OM@nsim, Year = NULL, open_file = TRUE,
-  quiet = TRUE, ...)
+\S4method{plot}{SRA,missing}(x, compare = FALSE,
+  filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim,
+  Year = NULL, open_file = TRUE, quiet = TRUE, ...)
 }
 \arguments{
 \item{x}{An object of class \linkS4class{SRA} (output from \link{SRA_scope}).}
+
+\item{compare}{Logical, if TRUE, the function will run \code{runMSE} to compare the historical period of the operating model
+and the SRA model output.}
 
 \item{filename}{Character string for the name of the markdown and HTML files.}
 

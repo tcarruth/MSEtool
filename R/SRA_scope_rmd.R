@@ -94,7 +94,7 @@ rmd_SRA_sel <- function(fig.cap = "Operating model selectivity among simulations
 }
 
 rmd_SRA_fleet_output <- function(ff) {
-  if(ff == 1) header <- "## Output from all simulations {.tabset}\n" else header <- NULL
+  if(ff == 1) header <- "## SRA output {.tabset}\n" else header <- NULL
   ans <- c(paste("### Fleet", ff, "\n"),
            paste0("```{r, fig.cap = \"Selectivity of fleet ", ff, ".\"}"),
            paste0("vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul[, ", ff, "]))"),
@@ -109,7 +109,7 @@ rmd_SRA_fleet_output <- function(ff) {
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) catch of fleet ", ff, ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) catch from fleet ", ff, ".\"}"),
            paste0("if(any(data$C_hist[, ", ff, "] > 0)) {"),
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]))"),
            paste0("  matplot(Year_matrix, Cpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Catch of Fleet ", ff, "\")"),
@@ -121,7 +121,7 @@ rmd_SRA_fleet_output <- function(ff) {
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean ages of fleet ", ff, ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean ages from fleet ", ff, ".\"}"),
            paste0("MApred <- do.call(cbind, lapply(report_list, function(x) x$CAApred[, , ", ff, "] %*% age/x$CN[, ", ff, "]))"),
            "matplot(Year_matrix, MApred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean age\")",
            paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
@@ -130,14 +130,38 @@ rmd_SRA_fleet_output <- function(ff) {
            "}",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean lengths of fleet ", ff, ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean lengths from fleet ", ff, ".\"}"),
            paste0("MLpred <- do.call(cbind, lapply(report_list, function(x) x$mlen_pred[, ", ff, "]))"),
            "matplot(Year_matrix, MLpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean length\")",
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  lines(Year, (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE),",
                   "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            paste0("} else if(any(data$mlen[, ", ff, "] > 0, na.rm = TRUE)) lines(Year, data$mlen[, ", ff, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) age composition from fleet ", ff, ".\"}"),
+           paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
+           paste0("plot_composition_SRA(Year, x@CAA[, , , ", ff, "], data$CAA[, , ", ff, "])"),
+           "}",
+           "```\n",
+           paste0("```{r, fig.cap = \"Predicted age composition from fleet ", ff, ".\"}"),
+           paste0("if(all(is.na(data$CAA[, , ", ff, "]))) {"),
+           paste0("plot_composition_SRA(Year, x@CAA[, , , ", ff, "])"),
+           "}",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) length composition from fleet ", ff, ".\"}"),
+           paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
+           paste0("plot_composition_SRA(Year, x@CAL[, , , ", ff, "], data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
+           "}",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Predicted length composition from fleet ", ff, ".\"}"),
+           paste0("if(all(is.na(data$CAL[, , ", ff, "]))) {"),
+           paste0("plot_composition_SRA(Year, x@CAL[, , , ", ff, "], data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
+           "}",
            "```\n")
+
   c(header, ans)
 }
 
@@ -167,6 +191,86 @@ rmd_SRA_SSB_output <- function() {
     "abline(h = 0, col = \"grey\")",
     "```\n")
 }
+
+
+plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
+                                 annual_yscale = c("proportions", "raw"), dat_linewidth = 3, dat_color = "red") {
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
+
+  annual_yscale <- match.arg(annual_yscale)
+  if(is.null(CAL_bins)) data_type <- "age" else data_type <- "length"
+
+  #if(!is.null(dat) && !all(dim(dat) == dim(SRA))) stop("Dimensions of 'SRA' and 'dat' do not match.")
+
+  if(data_type == 'length') {
+    data_val <- CAL_bins
+    data_lab <- "Length"
+  }
+  if(data_type == 'age') {
+    data_val <- if(is.null(ages)) 1:dim(SRA)[3] else ages
+    data_lab <- "Age"
+  }
+
+  # Annual comps (SRA vs. dat if available)
+  # Dim of
+  SRA_plot <- SRA
+  dat_plot <- dat
+  if(annual_yscale == "proportions") {
+    for(i in 1:length(Year)) {
+      SRA_plot[, i, ] <- SRA[, i, ]/max(SRA[, i, ])
+      if(!is.null(dat)) dat_plot[i, ] <- dat[i, ]/max(dat[i, ])
+    }
+  }
+  ylim <- c(0, 1.1 * max(SRA_plot, dat_plot, na.rm = TRUE))
+  yaxp <- c(0, max(pretty(ylim, n = 4)), 4)
+  if(max(SRA_plot, dat_plot, na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
+
+  las <- 1
+
+  for(i in 1:length(Year)) {
+
+    if(i < length(Year)) {
+      if(i %% 16 %in% c(1:4)) { # First column
+        yaxt <- 's'
+
+        # First three rows
+        if(i %% 4 %in% c(1:3)) {
+          xaxt <- 'n'
+        } else {
+          xaxt <- 's'
+        }
+      } else { # All other columns
+        if(i %% 4 %in% c(1:3)) { # First three rows
+          xaxt <- yaxt <- 'n'
+        } else {
+          xaxt <- 's'
+        }
+      }
+      matplot(data_val, t(SRA_plot[, i, ]), typ = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      abline(h = 0, col = 'grey')
+      if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
+      legend("topright", legend = Year[i], bty = "n", xjust = 1)
+    }
+
+    if(i == length(Year)) {
+      xaxt <- 's'
+      if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
+      matplot(data_val, t(SRA_plot[, i, ]), typ = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      abline(h = 0, col = 'grey')
+      if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
+      legend("topright", legend = Year[i], bty = "n", xjust = 1)
+    }
+    if(i %% 16 == 0 || i == length(Year)) {
+      mtext(data_lab, side = 1, line = 3, outer = TRUE)
+      mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)
+    }
+  }
+
+  invisible()
+}
+
 
 
 

@@ -33,9 +33,11 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' for the fits to the SRA for each simulation.
 #'
 #' @param x An object of class \linkS4class{SRA} (output from \link{SRA_scope}).
+#' @param compare Logical, if TRUE, the function will run \code{runMSE} to compare the historical period of the operating model
+#' and the SRA model output.
 #' @param filename Character string for the name of the markdown and HTML files.
 #' @param dir The directory in which the markdown and HTML files will be saved.
-#' @param sims A logical vector of length \code{OM@@nsim} or a numeric vector indicating which simulations to keep.
+#' @param sims A logical vector of length \code{x@@OM@@nsim} or a numeric vector indicating which simulations to keep.
 #' @param Year Optional, a vector of years for the historical period for plotting.
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
@@ -45,20 +47,10 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @seealso \linkS4class{SRA} \link{SRA_scope}
 #' @exportMethod plot
 setMethod("plot", signature(x = "SRA", y = "missing"),
-          function(x, filename = "SRA_scope", dir = tempdir(), sims = 1:OM@nsim, Year = NULL, open_file = TRUE, quiet = TRUE, ...) {
+          function(x, compare = TRUE, filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL, open_file = TRUE, quiet = TRUE, ...) {
             OM <- Sub_cpars(x@OM, sims)
             mean_fit <- x@mean_fit
             report_list <- x@Misc[sims]
-
-            # Generate markdown report
-            filename_html <- paste0(filename, ".html")
-            filename_rmd <- paste0(filename, ".Rmd")
-            if(!dir.exists(dir)) {
-              message("Creating directory: \n", dir)
-              dir.create(dir)
-            }
-
-            message("Writing markdown file: ", file.path(dir, filename_rmd))
 
             ####### Assign variables
             nsim <- OM@nsim
@@ -68,7 +60,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             max_age <- OM@maxage
             age <- 1:max_age
             nyears <- OM@nyears
-            if(is.null(Year)) Year <- 1:nyears
+            if(is.null(Year)) Year <- (OM@CurrentYr - nyears + 1):OM@CurrentYr
 
             nfleet <- x@data$nfleet
             nsurvey <- x@data$nsurvey
@@ -76,7 +68,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
             ####### Document header
             header <- c("---",
-                        "title: \"Operating model conditioning for `r ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))`\"",
+                        "title: \"Operating model (OM) conditioning for `r ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))`\"",
                         "subtitle: Output from Stock Reduction Analysis scoping function (SRA_scope)",
                         "date: \"`r Sys.Date()`\"",
                         "---",
@@ -96,7 +88,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             Yearplusone_matrix <- matrix(c(Year, max(Year) + 1), ncol = nsim, nrow = nyears+1)
 
             OM_update <- c("# Summary {.tabset}\n",
-                           "## Updated historical operating model parameters\n", rmd_SRA_R0(),
+                           "## Updated historical OM parameters\n", rmd_SRA_R0(),
                            rmd_SRA_initD(), rmd_SRA_D(), rmd_SRA_Perr(), rmd_SRA_Find(), rmd_SRA_sel())
 
             ####### Output from all simulations {.tabset}
@@ -106,7 +98,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               survey_output <- lapply(1:nsurvey, rmd_SRA_survey_output)
             } else survey_output <- NULL
 
-            all_sims_output <- c(fleet_output, survey_output, "### Model output\n",
+            all_sims_output <- c(fleet_output, survey_output, "### Model predictions\n",
                                  rmd_SRA_R_output(), rmd_SRA_SSB_output())
 
             ####### Fit to mean inputs from operating model
@@ -120,8 +112,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
               conv <- report$conv
 
-              sumry <- c("## Fit to mean inputs from operating model {.tabset}\n",
-                         "### Model Estimates\n",
+              sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
+                         "### SRA Model Estimates\n",
                          "`r as.data.frame(summary(SD))`\n\n")
 
               # Life History section
@@ -244,11 +236,69 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                              rmd_N(), N_bubble, CAA_bubble, CAL_bubble)
 
               mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output)
-            } else mean_fit_rmd <- c("## Fit to mean inputs from operating model {.tabset}\n",
+            } else mean_fit_rmd <- c("## Fit to mean parameters of OM {.tabset}\n",
                                      "No model found. Re-run `SRA_scope()` with `mean_fit = TRUE`.\n\n")
 
-            rmd <- c(header, OM_update, all_sims_output, mean_fit_rmd, rmd_footer())
+            if(compare) {
+              Hist <- runMSE(x@OM, Hist = TRUE, parallel = snowfall::sfIsRunning())
+
+              compare_rmd <- c("## Updated OM {.tabset}\n",
+                               "### OM historical period\n\n",
+                               "```{r, fig.cap = \"Apical F from the operating model.\"}",
+                               "Hist_F <- apply(Hist@AtAge$FM, c(1, 3), max)",
+                               "matplot(Year, t(Hist_F), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"OM Apical F\", ylim = c(0, 1.1 * max(Hist_F)))",
+                               "```\n",
+                               "",
+                               "```{r, fig.cap = \"Spawning biomass (SSB) from the operating model.\"}",
+                               "matplot(Year, t(Hist@TSdata$SSB), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"OM SSB\", ylim = c(0, 1.1 * max(Hist@TSdata$SSB)))",
+                               "```\n",
+                               "",
+                               "```{r, fig.cap = \"Recruitment from the operating model.\"}",
+                               "matplot(Year, t(Hist@TSdata$Rec), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"OM Recruitment\", ylim = c(0, 1.1 * max(Hist@TSdata$SSB)))",
+                               "```\n",
+                               "",
+                               "```{r, fig.cap = \"Catch from the operating model.\"}",
+                               "matplot(Year, t(Hist@TSdata$Catch), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"OM Catch\", ylim = c(0, 1.1 * max(Hist@TSdata$Catch)))",
+                               "```\n",
+                               "",
+                               "### OM/SRA Comparison\n\n",
+                               "```{r, fig.cap = \"Difference in apical F between the OM and SRA. Positive values indicate higher F in the OM.\"}",
+                               "matplot(Year, t(Hist_F - OM@cpars$Find), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Difference in apical F\")",
+                               "abline(h = 0, lwd = 3, lty = 2)",
+                               "```\n",
+                               "",
+                               "```{r, fig.cap = \"Difference in spawning biomass (SSB) between the OM and SRA. Positive values indicate higher SSB in the OM.\"}",
+                               "matplot(Year, t(Hist@TSdata$SSB - x@SSB[, 1:OM@nyears]), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Difference in SSB\")",
+                               "abline(h = 0, lwd = 3, lty = 2)",
+                               "```\n",
+                               "",
+                               "```{r, fig.cap = \"Difference in recruitment between the OM and SRA. Positive values indicate higher recruitment in the OM.\"}",
+                               "matplot(Year, t(Hist@TSdata$Rec - x@NAA[, 1:OM@nyears, 1]), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Difference in recruitment\")",
+                               "abline(h = 0, lwd = 3, lty = 2)",
+                               "```\n",
+                               "",
+                               "```{r, fig.cap = \"Difference in catch between the OM and SRA. Positive values indicate higher catch in the OM.\"}",
+                               "if(any(data$C_hist > 0, na.rm = TRUE)) {",
+                               "matplot(Year, t(Hist@TSdata$Catch) - rowSums(data$C_hist), typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Difference in catch\")",
+                               "abline(h = 0, lwd = 3, lty = 2)",
+                               "}",
+                               "```\n")
+
+            } else compare_rmd <- c("## Updated OM\n",
+                                    "Re-run `plot()` function with argument `compare = TRUE`.\n\n")
+
+            rmd <- c(header, OM_update, all_sims_output, mean_fit_rmd, compare_rmd, rmd_footer())
             if(is.list(rmd)) rmd <- do.call(c, rmd)
+
+            # Generate markdown report
+            filename_html <- paste0(filename, ".html")
+            filename_rmd <- paste0(filename, ".Rmd")
+            if(!dir.exists(dir)) {
+              message("Creating directory: \n", dir)
+              dir.create(dir)
+            }
+
+            message("Writing markdown file: ", file.path(dir, filename_rmd))
 
             write(rmd, file = file.path(dir, filename_rmd))
 
