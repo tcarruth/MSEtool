@@ -112,7 +112,7 @@ rmd_SRA_fleet_output <- function(ff) {
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) catch from fleet ", ff, ".\"}"),
            paste0("if(any(data$C_hist[, ", ff, "] > 0)) {"),
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]))"),
-           paste0("  matplot(Year_matrix, Cpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Catch of Fleet ", ff, "\")"),
+           paste0("  matplot(Year_matrix, Cpred, type = \"o\", pch = 1, col = \"black\", xlab = \"Year\", ylab = \"Catch of Fleet ", ff, "\")"),
            paste0("  lines(Year, data$C_hist[, ", ff, "], col = \"red\", lwd = 3)"),
            "} else {",
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]/mean(x$Cpred[, ", ff, "])))"),
