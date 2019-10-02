@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.3.1 (ongoing)
+- New plots for `SRA_scope` markdown report, and draft vignette is now available.
+
 ## MSEtool 1.3.0
 
 ### Updates to SRA_scope
