@@ -137,7 +137,7 @@ cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = 
     if(!is.null(start$F_equilibrium) && is.numeric(start$F_equilibrium)) params$F_equilibrium <- start$F_equililbrium
   }
   if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
+    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
@@ -280,7 +280,7 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
   if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$N0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
+    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
