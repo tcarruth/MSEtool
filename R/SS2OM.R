@@ -343,9 +343,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     M_at_age <- M_at_age[as.numeric(M_at_age$Age)-1 >= age_rec * ifelse(season_as_years, nseas, 1), ]  # Subset by age >= age_rec
 
     M_at_age <- summarise(group_by(M_at_age, Yr, Age), M = mean(M))
-
     M_ageArray <- reshape2::acast(M_at_age, list("Age", "Yr"), value.var = "M")
-
   }
 
   if(ncol(M_ageArray) < nyears) M_ageArray <- cbind(M_ageArray, M_ageArray[, ncol(M_ageArray)])
@@ -443,7 +441,6 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # Fleet parameters ===========================================================
   # ---- Vulnerability ----
   if(all(match(c("Gender", "Year"), names(replist$Z_at_age), nomatch = 0))) { # SS 3.24
-
 
     Z_at_age <- reshape2::melt(replist$Z_at_age, id.vars = c("Bio_Pattern", "Gender", "Year"), variable.name = "Age", value.name = "Z")
     Z_at_age <- Z_at_age[as.numeric(Z_at_age$Age)-1 >= age_rec * ifelse(season_as_years, nseas, 1), ]  # Subset by age >= age_rec
