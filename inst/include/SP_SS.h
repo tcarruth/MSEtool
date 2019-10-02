@@ -35,7 +35,7 @@
 
   Type BMSY = MSY/FMSY;
   Type K = BMSY / n_term2;
-  Type r = MSY * n_term / K;
+  Type r = MSY * n_term / K; // r = FMSY * pow(n, 1/(1-n))
 
   vector<Type> B(ny+1);
   vector<Type> SP(ny);
@@ -46,7 +46,7 @@
   Type penalty = 0;
   Type prior = 0;
 
-  if(r_prior(0) > 0) prior -= dnorm(r, r_prior(0), r_prior(1), true);
+  if(r_prior(0) > 0) prior -= dnorm(r, r_prior(0), r_prior(1), true) + log_FMSY; // r prior with log-Jacobian transformation, exact with fixed n
 
   B(0) = dep * K;
   for(int y=0;y<ny;y++) {

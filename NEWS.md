@@ -2,6 +2,7 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 
 ## MSEtool 1.3.1 (ongoing)
 - New plots for `SRA_scope` markdown report, and draft vignette is now available.
+- Since FMSY is the estimated rate parameter in `SP` (surplus production model), a log-Jacobian transform is needed for the r prior and has been added. It is assumed n is fixed in the model.
 
 ## MSEtool 1.3.0
 
