@@ -11,11 +11,11 @@ rmd_persp_plot <- function(x, y, z, xlab, ylab, zlab, phi, theta, expand, fig.ca
 
 rmd_matplot <- function(x, y, col, xlab, ylab, legend.lab = "Fleet", type = "l", lty = 1, fig.cap, header = NULL) {
   ans <- c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
-           paste0("x <- ", x, "; y <- ", y),
-           paste0("matplot(x, y, type = \"", type, "\", lty = ", lty, ", col = ", col,
-                  ", ylim = c(0, 1.1 * max(y, na.rm = TRUE)), xlab = \"", xlab, "\", ylab = \"", ylab, "\")"),
+           paste0("xx <- ", x, "; yy <- ", y),
+           paste0("matplot(xx, yy, type = \"", type, "\", lty = ", lty, ", col = ", col,
+                  ", ylim = c(0, 1.1 * max(yy, na.rm = TRUE)), xlab = \"", xlab, "\", ylab = \"", ylab, "\")"),
            "abline(h = 0, col = \"grey\")",
-           paste0("if(ncol(x) > 1) legend(\"topleft\", paste(\"", legend.lab, "\", 1:ncol(x)), text.col = ", col, ")"),
+           paste0("if(ncol(xx) > 1) legend(\"topleft\", paste(\"", legend.lab, "\", 1:ncol(x)), text.col = ", col, ")"),
            " ```\n")
   if(!is.null(header)) ans <- c(header, ans)
   return(ans)
@@ -82,7 +82,7 @@ rmd_SRA_Find <- function(fig.cap = "Apical F from SRA model. These values may be
 rmd_SRA_sel <- function(fig.cap = "Operating model selectivity among simulations.") {
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "if(nfleet == 1) {",
-    "  vul <- do.call(cbind, lapply(report_list, getElement, \"vul\"))",
+    "  vul <- do.call(cbind, lapply(report_list, getElement, \"vul_len\"))",
     "  matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = \"l\", col = \"black\",",
     "          xlab = \"Length\", ylab = \"Selectivity\", ylim = c(0, 1.1))",
     "} else {",
@@ -97,8 +97,8 @@ rmd_SRA_fleet_output <- function(ff) {
   if(ff == 1) header <- "## SRA output {.tabset}\n" else header <- NULL
   ans <- c(paste("### Fleet", ff, "\n"),
            paste0("```{r, fig.cap = \"Selectivity of fleet ", ff, ".\"}"),
-           paste0("vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul[, ", ff, "]))"),
-           "matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul_ff, type = \"l\", col = \"black\",",
+           paste0("vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul_len[, ", ff, "]))"),
+           "matplot(length_bin, vul_ff, type = \"l\", col = \"black\",",
            paste0("        xlab = \"Length\", ylab = \"Selectivity of Fleet ", ff, "\")"),
            "abline(h = 0, col = \"grey\")",
            "```\n",
@@ -110,10 +110,10 @@ rmd_SRA_fleet_output <- function(ff) {
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) catch from fleet ", ff, ".\"}"),
-           paste0("if(any(data$C_hist[, ", ff, "] > 0)) {"),
+           paste0("if(any(data$Chist[, ", ff, "] > 0)) {"),
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]))"),
            paste0("  matplot(Year_matrix, Cpred, type = \"o\", pch = 1, col = \"black\", xlab = \"Year\", ylab = \"Catch of Fleet ", ff, "\")"),
-           paste0("  lines(Year, data$C_hist[, ", ff, "], col = \"red\", lwd = 3)"),
+           paste0("  lines(Year, data$Chist[, ", ff, "], col = \"red\", lwd = 3)"),
            "} else {",
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]/mean(x$Cpred[, ", ff, "])))"),
            paste0("  matplot(Year_matrix, Cpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Relative catch of Fleet ", ff, "\")"),
@@ -136,7 +136,7 @@ rmd_SRA_fleet_output <- function(ff) {
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  lines(Year, (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE),",
                   "  col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
-           paste0("} else if(any(data$mlen[, ", ff, "] > 0, na.rm = TRUE)) lines(Year, data$mlen[, ", ff, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
+           paste0("} else if(any(data$ML[, ", ff, "] > 0, na.rm = TRUE)) lines(Year, data$ML[, ", ff, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) age composition from fleet ", ff, ".\"}"),

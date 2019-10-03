@@ -32,8 +32,9 @@
 
   DATA_MATRIX(M);         // Natural mortality at age
   DATA_MATRIX(len_age);   // Length-at-age
+  DATA_SCALAR(Linf);      // Linf
   DATA_SCALAR(CV_LAA);    // CV of length-at-age
-  DATA_VECTOR(wt_at_len); // Weight-at-length
+  DATA_MATRIX(wt);        // Weight-at-age
   DATA_MATRIX(mat);       // Maturity-at-age at the beginning of the year
 
   DATA_IVECTOR(vul_type); // Integer vector indicating whether logistic (0) or dome vul (1) is used
@@ -52,7 +53,6 @@
   PARAMETER(transformed_h);
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
   PARAMETER_VECTOR(log_q_effort);
-  //PARAMETER_VECTOR(log_mean_F);
   PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
 
@@ -78,8 +78,10 @@
   // Vulnerability (length-based) and F parameters
   Type penalty = 0;
   Type prior = 0.;
-
-  matrix<Type> vul = calc_vul(vul_par, vul_type, nlbin, length_bin, prior);
+  vector<Type> LFS(nfleet);
+  vector<Type> L5(nfleet);
+  vector<Type> Vmaxlen(nfleet);
+  array<Type> vul = calc_vul(vul_par, vul_type, len_age, LFS, L5, Vmaxlen, Linf);
 
   vector<Type> q_effort(nfleet);
   vector<Type> sigma_mlen(nfleet);
@@ -87,7 +89,7 @@
   F_equilibrium.setZero();
 
   matrix<Type> F(n_y,nfleet);
-  array<Type> Z_total(n_y, max_age, nlbin);
+  matrix<Type> Z = M;
 
   for(int ff=0;ff<nfleet;ff++) {
     sigma_mlen(ff) = exp(log_sigma_mlen(ff));
@@ -117,34 +119,32 @@
   vector<Type> Brec(n_y);
 
   for(int y=0;y<n_y;y++) {
-    matrix<Type> ALK_unfished = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
-    matrix<Type> NPR_unfished = calc_NPR0(nlbin, M, max_age, ALK_unfished, y);
+    vector<Type> NPR_unfished = calc_NPR0(M, max_age, y);
 
-    EPR0(y) = sum_EPR(NPR_unfished, wt_at_len, mat, max_age, nlbin, y);
+    EPR0(y) = sum_EPR(NPR_unfished, wt, mat, max_age, y);
     E0(y) = R0 * EPR0(y);
-    B0(y) = R0 * sum_BPR(NPR_unfished, wt_at_len);
+    B0(y) = R0 * sum_BPR(NPR_unfished, wt, max_age, y);
     N0(y) = R0 * NPR_unfished.sum();
 
     if(SR_type == "BH") {
       Arec(y) = 4 *h;
       Arec(y) /= 1-h;
       Brec(y) = 5*h - 1;
-      Brec(y) /= (1-h) * E0(y);
+      Brec(y) /= (1-h);
     } else {
       Arec(y) = pow(5*h, 1.25);
       Brec(y) = 1.25;
       Brec(y) *= log(5*h);
-      Brec(y) /= E0(y);
     }
     Arec(y) /= EPR0(y);
+    Brec(y) /= E0(y);
   }
 
   ////// During time series year = 1, 2, ..., n_y
-  vector<matrix<Type> > ALK(n_y+1);
-  array<Type> N_full(n_y+1, max_age, nlbin);   // Numbers at year, age, and length
+  vector<matrix<Type> > ALK(n_y);
   matrix<Type> N(n_y+1, max_age);
 
-  array<Type> Cat(n_y, max_age, nlbin);
+  vector<Type> C_eq_pred(nfleet);
   array<Type> CAApred(n_y, max_age, nfleet);   // Catch (in numbers) at year and age at the mid-point of the season
   array<Type> CALpred(n_y, nlbin, nfleet);
   matrix<Type> mlen_pred(n_y, nfleet);
@@ -159,9 +159,7 @@
   vector<Type> B(n_y+1);            // Total biomass at year
   vector<Type> E(n_y+1);            // Spawning biomass at year
 
-  N.setZero();
-
-  Cat.setZero();
+  C_eq_pred.setZero();
   CAApred.setZero();
   CALpred.setZero();
   mlen_pred.setZero();
@@ -175,10 +173,8 @@
   E.setZero();
 
   // Equilibrium quantities (leading into first year of model)
-  matrix<Type> ALK_equilibrium = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
-  matrix<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, nfleet, nlbin, M, max_age, ALK_equilibrium, 0);
-
-  Type EPR_eq = sum_EPR(NPR_equilibrium, wt_at_len, mat, max_age, nlbin, 0);
+  vector<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, nfleet, M, max_age, 0);
+  Type EPR_eq = sum_EPR(NPR_equilibrium, wt, mat, max_age, 0);
   Type R_eq;
 
   if(SR_type == "BH") {
@@ -193,24 +189,22 @@
     R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
   }
 
-  ALK(0) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, 0);
   for(int a=0;a<max_age;a++) {
     if(a == 0) {
-      N(0,a) = R(0) * NPR_equilibrium.row(a).sum();
+      N(0,a) = R(0) * NPR_equilibrium(a);
     } else {
       R_early(a-1) = R_eq;
       if(est_early_rec_dev(a-1)) R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
-      N(0,a) = R_early(a-1) * NPR_equilibrium.row(a).sum();
+      N(0,a) = R_early(a-1) * NPR_equilibrium(a);
     }
-    for(int len=0;len<nlbin;len++) {
-      N_full(0,a,len) = N(0,a) * ALK(0)(a,len);
-      for(int ff=0;ff<nfleet;ff++) VB(0,ff) += N_full(0,a,len) * wt_at_len(len) * vul(len,ff);
-      B(0) += N_full(0,a,len) * wt_at_len(len);
-      E(0) += N_full(0,a,len) * wt_at_len(len) * mat(0,a);
+
+    B(0) += N(0,a) * wt(0,a);
+    E(0) += N(0,a) * wt(0,a) * mat(0,a);
+    for(int ff=0;ff<nfleet;ff++) {
+      C_eq_pred(ff) += Baranov(vul(0,a,ff), F_equilibrium(ff), M(0,a), N(0,a)) * wt(0,a);
+      VB(0,ff) += N(0,a) * wt(0,a) * vul(0,a,ff);
     }
   }
-
-  vector<Type> C_eq_pred = calc_C_eq(F_equilibrium, N_full, vul, M, wt_at_len, nlbin, nfleet, max_age, 0);
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
@@ -224,37 +218,31 @@
       if(est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
     }
     N(y+1,0) = R(y+1);
-
-    int x = y+1;
-    if(y==n_y-1) x = y;
-    ALK(y+1) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, x);
+    ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
 
     for(int a=0;a<max_age;a++) {
-      for(int len=0;len<nlbin;len++) {
-        Z_total(y,a,len) = M(y,a) + (vul.row(len) * F.row(y)).sum();
-        Type mean_N = N_full(y,a,len) * (1 - exp(-Z_total(y,a,len)));
-        mean_N /= Z_total(y,a,len);
+      for(int ff=0;ff<nfleet;ff++) Z(y,a) += vul(y,a,ff) * F(y,ff);
+      Type mean_N = N(y,a) * (1 - exp(-Z(y,a)));
+      mean_N /= Z(y,a);
 
-        for(int ff=0;ff<nfleet;ff++) {
-          Type Cat_yalf = vul(len,ff) * F(y,ff) * mean_N;
-          CAApred(y,a,ff) += Cat_yalf;
-          CALpred(y,len,ff) += Cat_yalf;
-          Cat(y,a,len) += Cat_yalf;
-          CN(y,ff) += Cat_yalf;
-          mlen_pred(y,ff) += Cat_yalf * length_bin(len);
-          Cpred(y,ff) += Cat_yalf * wt_at_len(len);
+      for(int ff=0;ff<nfleet;ff++) {
+        CAApred(y,a,ff) = vul(y,a,ff) * F(y,ff) * mean_N;
+        CN(y,ff) += CAApred(y,a,ff);
+        Cpred(y,ff) += CAApred(y,a,ff) * wt(y,a);
+
+        for(int len=0;len<nlbin;len++) {
+          CALpred(y,len,ff) += CAApred(y,a,ff) * ALK(y)(a,len);
+          mlen_pred(y,ff) += CAApred(y,a,ff) * ALK(y)(a,len) * length_bin(len);
         }
 
-        if(a<max_age-1) N(y+1,a+1) += N_full(y,a,len) * exp(-Z_total(y,a,len));
-        if(a==max_age-1) N(y+1,a) += N_full(y,a,len) * exp(-Z_total(y,a,len));
+        VB(y+1,ff) += vul(y+1,a,ff) * N(y+1,a) * wt(y+1,a);
       }
 
-      for(int len=0;len<nlbin;len++) {
-        N_full(y+1,a,len) = N(y+1,a) * ALK(y+1)(a,len);
-        for(int ff=0;ff<nfleet;ff++) VB(y+1,ff) += vul(len,ff) * N_full(y+1,a,len) * wt_at_len(len);
-        B(y+1) += N_full(y+1,a,len) * wt_at_len(len);
-        E(y+1) += N_full(y+1,a,len) * wt_at_len(len) * mat(x,a);
-      }
+      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-Z(y,a));
+      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-Z(y,a));
+
+      B(y+1) += N(y+1,a) * wt(y+1,a);
+      E(y+1) += N(y+1,a) * wt(y+1,a) * mat(y+1,a);
     }
     for(int ff=0;ff<nfleet;ff++) mlen_pred(y,ff) /= CN(y,ff);
   }
@@ -356,12 +344,15 @@
 
   REPORT(M);
   REPORT(length_bin);
+  REPORT(Linf);
 
   REPORT(log_R0);
   REPORT(transformed_h);
   REPORT(vul_par);
+  REPORT(LFS);
+  REPORT(L5);
+  REPORT(Vmaxlen);
   REPORT(log_q_effort);
-  //REPORT(log_mean_F);
   REPORT(log_F);
   REPORT(log_F_equilibrium);
 
@@ -377,7 +368,7 @@
   REPORT(F_equilibrium);
   REPORT(vul);
   REPORT(F);
-  REPORT(Z_total);
+  REPORT(Z);
 
   REPORT(EPR0);
   REPORT(B0);
@@ -387,9 +378,7 @@
   REPORT(Arec);
   REPORT(Brec);
 
-  REPORT(N_full);
   REPORT(ALK);
-  REPORT(Cat);
   REPORT(N);
   REPORT(CAApred);
   REPORT(CALpred);
@@ -404,7 +393,6 @@
   REPORT(E);
 
   REPORT(NPR_equilibrium);
-  REPORT(ALK_equilibrium);
   REPORT(EPR_eq);
   REPORT(R_eq);
 

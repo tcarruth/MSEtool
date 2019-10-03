@@ -124,21 +124,21 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               LAA <- rmd_at_age(age, data_mean_fit$len_age[nyears, ], header = "### Life History\n", fig.cap = "Length-at-age in last historical year.",
                                 label = "Mean Length-at-age")
               if(LH_varies_fn(data_mean_fit$len_age)) {
-                LAA_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$len_age", xlab = "Year", ylab = "Age",
+                LAA_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$len_age[1:nyears, ]", xlab = "Year", ylab = "Age",
                                             zlab = "Length-at-age", phi = 35, theta = 45, expand = 0.55, fig.cap = "Annual length-at-age.")
               } else LAA_persp <- NULL
 
-              LW <- rmd_LW(data_mean_fit$length_bin, data_mean_fit$wt_at_len)
+              #LW <- rmd_LW(data_mean_fit$length_bin, data_mean_fit$wt_at_len)
 
               mat <- rmd_mat(age, data_mean_fit$mat[nyears, ], fig.cap = "Maturity-at-age in last historical year.")
               if(LH_varies_fn(data_mean_fit$mat)) {
-                mat_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$mat", xlab = "Year", ylab = "Age",
+                mat_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$mat[1:nyears, ]", xlab = "Year", ylab = "Age",
                                             zlab = "Maturity-at-age", phi = 35, theta = 45, expand = 0.55, fig.cap = "Annual maturity-at-age.")
               } else mat_persp <- NULL
 
               NatM <- rmd_at_age(age, data_mean_fit$M[nyears, ], fig.cap = "Natural mortality in last historical year.", label = "Natural mortality")
               if(LH_varies_fn(data_mean_fit$M)) {
-                NatM_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$M", xlab = "Year", ylab = "Age",
+                NatM_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$M[1:nyears, ]", xlab = "Year", ylab = "Age",
                                              zlab = "Natural mortality", phi = 35, theta = 45, expand = 0.55, fig.cap = "Annual M-at-age.")
               } else NatM_persp <- NULL
 
@@ -195,7 +195,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, ML_plots)
 
               # Model output
-              sel_matplot <- rmd_matplot(x = "matrix(data_mean_fit$length_bin, nrow(report$vul), nfleet)", y = "report$vul", col = "rich.colors(nfleet)",
+              sel_matplot <- rmd_matplot(x = "matrix(data_mean_fit$length_bin, nrow(report$vul_len), nfleet)", y = "report$vul_len", col = "rich.colors(nfleet)",
                                          xlab = "Length", ylab = "Selectivity",
                                          fig.cap = "Selectivity by fleet.", header = "### Output \n")
 
@@ -278,8 +278,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                "```\n",
                                "",
                                "```{r, fig.cap = \"Difference in catch (relative to time series mean) between the OM and SRA. Positive values indicate higher catch in the OM.\"}",
-                               "if(any(data$C_hist > 0, na.rm = TRUE)) {",
-                               "Catch_difference <- (t(Hist@TSdata$Catch) - rowSums(data$C_hist, na.rm = TRUE))/mean(rowSums(data$C_hist), na.rm = TRUE)",
+                               "if(any(data$Chist > 0, na.rm = TRUE)) {",
+                               "Catch_difference <- (t(Hist@TSdata$Catch) - rowSums(data$Chist, na.rm = TRUE))/mean(rowSums(data$Chist), na.rm = TRUE)",
                                "matplot(Year, Catch_difference, typ = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Difference in relative catch\")",
                                "abline(h = 0, lwd = 3, lty = 2)",
                                "}",

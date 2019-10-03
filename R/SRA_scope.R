@@ -286,6 +286,10 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     if(length(E_eq) < nfleet) stop("E_eq needs to be of length nfleet (", nfleet, ").", call. = FALSE)
   }
 
+  #### Data summary
+  SRA_data <- list(Chist = Chist, Ehist = Ehist, Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML, length_bin = length_bin,
+                   C_eq = C_eq, E_eq = E_eq, nfleet = nfleet, nsurvey = nsurvey)
+
   # Likelihood weights
   if(is.null(LWT$Chist)) {
     LWT$Chist <- rep(1, nfleet)
@@ -352,7 +356,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                   fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
                   max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
-  #assign('mod', mod, envir = globalenv())
+  assign('mod', mod, envir = globalenv())
   res <- lapply(mod, getElement, "report")
   conv <- vapply(res, getElement, logical(1), name = "conv")
   message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
@@ -385,63 +389,57 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   ### Selectivity and F
   ### Find
-  F_matrix <- lapply(res, getElement, "F_at_age")
-  apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
-  Find <- do.call(rbind, apical_F)
-
-  V <- Map("/", e1 = F_matrix, e2 = apical_F)
-  expand_V_matrix <- function(x) {
-    y <- matrix(x[nyears, ], proyears, maxage, byrow = TRUE)
-    rbind(x, y)
-  }
-  V <- lapply(V, expand_V_matrix)
-  V2 <- array(unlist(V), c(nyears+proyears, maxage, nsim))
-  V2 <- aperm(V2, c(3, 2, 1))
-
   if(nfleet > 1) {
-    OM@cpars$V <- V2
+    F_matrix <- lapply(res, getElement, "F_at_age")
+    apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
+    Find <- do.call(rbind, apical_F)
+
+    V <- Map("/", e1 = F_matrix, e2 = apical_F)
+    expand_V_matrix <- function(x) {
+      y <- matrix(x[nyears, ], proyears, maxage, byrow = TRUE)
+      rbind(x, y)
+    }
+    V <- lapply(V, expand_V_matrix)
+    V2 <- array(unlist(V), c(nyears+proyears, maxage, nsim))
+
+    OM@cpars$V <- aperm(V2, c(3, 2, 1))
     OM@cpars$Find <- Find
     message("Historical F and selectivity trends set in OM@cpars$Find and OM@cpars$V, respectively.")
     message("Selectivity during projection period is equal to that in most recent historical year.")
-  } else {
+
+  } else { # nfleet = 1
+
     if(!fix_sel) {
       OM@isRel <- FALSE
 
-      vul_par <- do.call(cbind, lapply(res, getElement, "vul_par"))
-      LFS <- ilogit(vul_par[1, ]) * 0.95 * max(length_bin) # Actually L95 for logistics
-      L50 <- LFS - exp(vul_par[2, ])
+      OM@cpars$L5 <- vapply(res, getElement, numeric(1), "L5")
+      message("Range of OM@cpars$L5: ", paste(round(range(OM@cpars$L5), 2), collapse = " - "))
+
+      OM@cpars$LFS <- vapply(res, getElement, numeric(1), "LFS")
+      message("Range of OM@cpars$LFS: ", paste(round(range(OM@cpars$LFS), 2), collapse = " - "))
 
       if(selectivity == "logistic") {
-        L5 <- 2 * L50 - LFS
-
-        OM@cpars$L5 <- L5
-        message("Range of OM@cpars$L5: ", paste(round(range(OM@cpars$L5), 2), collapse = " - "))
-
-        OM@cpars$LFS <- LFS
-        message("Range of OM@cpars$LFS: ", paste(round(range(OM@cpars$LFS), 2), collapse = " - "))
-
         OM@cpars$Vmaxlen <- rep(1, nsim)
         message("With logistic selectivity, setting OM@cpars$Vmaxlen = 1")
 
       } else {
-        sd_asc <- sqrt((L50 - LFS)^2/log(4))
-        L5 <- LFS - sd_asc * sqrt(-log(0.05)/0.5)
-
-        OM@cpars$L5 <- L5
-        message("Range of OM@cpars$L5: ", paste(round(range(OM@cpars$L5), 2), collapse = " - "))
-
-        OM@cpars$LFS <- LFS
-        message("Range of OM@cpars$LFS: ", paste(round(range(OM@cpars$LFS), 2), collapse = " - "))
-
-        OM@cpars$Vmaxlen <- ilogit(vul_par[4, ])
+        OM@cpars$Vmaxlen <- vapply(res, getElement, numeric(1), "Vmaxlen")
         message("Range of OM@cpars$Vmaxlen: ", paste(round(range(OM@cpars$Vmaxlen), 2), collapse = " - "))
       }
     }
 
-    F_vector <- do.call(cbind, lapply(res, getElement, "F"))
-    OM@cpars$Find <- t(F_vector)
-
+    OM@cpars$Find <- t(do.call(cbind, lapply(res, getElement, "F")))
     message("Historical F set in OM@cpars$Find.")
+  }
+
+  if(fix_sel) {
+    OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ] else FleetPars$L5
+    OM@cpars$LFS <- if(is.matrix(FleetPars$LFS)) FleetPars$LFS[nyears, ] else FleetPars$LFS
+    OM@cpars$Vmaxlen <- if(is.matrix(FleetPars$Vmaxlen)) FleetPars$Vmaxlen[nyears, ] else FleetPars$Vmaxlen
+    V <- FleetPars$V
+    maxV <- apply(FleetPars$V, c(1, 3), max)
+    for(i in 1:maxage) V[,i,] <- V[,i,]/maxV
+    OM@cpars$V <- V
   }
 
   Eff <- apply(OM@cpars$Find, 2, range)
@@ -486,31 +484,15 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   ### Assign OM variables that were used in the SRA to the output
   OM@cpars$Len_age <- StockPars$Len_age
-  OM@cpars$Linf <- StockPars$Linf
-  OM@cpars$K <- StockPars$K
-  OM@cpars$t0 <- StockPars$t0
   OM@cpars$LenCV <- StockPars$LenCV
+  OM@cpars$Wt_age <- StockPars$Wt_age
 
   OM@cpars$Mat_age <- StockPars$Mat_age
-  OM@cpars$L50 <- StockPars$L50
-  OM@cpars$L95 <- StockPars$L95
-
   OM@cpars$M_ageArray <- StockPars$M_ageArray
 
   OM@cpars$h <- StockPars$hs
 
   OM@cpars$plusgroup <- 1L
-
-  if(fix_sel) {
-    OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ] else FleetPars$L5
-    OM@cpars$LFS <- if(is.matrix(FleetPars$LFS)) FleetPars$LFS[nyears, ] else FleetPars$LFS
-    OM@cpars$Vmaxlen <- if(is.matrix(FleetPars$Vmaxlen)) FleetPars$Vmaxlen[nyears, ] else FleetPars$Vmaxlen
-    V <- FleetPars$V
-    maxV <- apply(FleetPars$V, c(1, 3), max)
-    for(i in 1:maxage) V[,i,] <- V[,i,]/maxV
-    OM@cpars$V <- V
-  }
-
   OM@cpars$Iobs <- ObsPars$Iobs
 
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")
@@ -521,12 +503,8 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   CAA_pred <- array(sapply(res, getElement, "CAApred"), c(nyears, maxage, nfleet, nsim))
   CAL_pred <- array(sapply(res, getElement, "CALpred"), c(nyears, length(length_bin), nfleet, nsim))
 
-  dat <- list(C_hist = res[[1]]$C_hist, E_hist = res[[1]]$E_hist, Index = mod[[1]]$obj$env$data$I_hist,
-              CAA = mod[[1]]$obj$env$data$CAA_hist, CAL = mod[[1]]$obj$env$data$CAL_hist, ML = mod[[1]]$obj$env$data$mlen,
-              nfleet = nfleet, nsurvey = nsurvey, length_bin = length_bin)
-
   output <- new("SRA", OM = OM, SSB = E, NAA = aperm(N, c(3, 1, 2)), CAA = aperm(CAA_pred, c(4, 1:3)),
-                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv, data = dat, Misc = res)
+                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv, data = SRA_data, Misc = res)
   if(mean_fit) output@mean_fit <- mean_fit_output
 
   message("Complete.")
@@ -560,26 +538,36 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 # selectivity type
 # maxage integer
 
-get_F_at_age <- function(report) {
-  N <- report$N
-  max_age <- ncol(N)
-  nyears <- nrow(N) - 1
+#get_F_at_age <- function(report) {
+#  N <- report$N
+#  max_age <- ncol(N)
+#  nyears <- nrow(N) - 1
+#
+#  surv_matrix <- N[2:(nyears+1), 2:max_age]/N[1:nyears, 1:(max_age-1)]
+#  surv_plusgroup <- N[2:(nyears+1), max_age]/(N[1:nyears, max_age-1] + N[1:nyears, max_age])
+#
+#  Z_matrix <- -log(surv_matrix)
+#  Z_matrix[, max_age-1] <- -log(surv_plusgroup)
+#
+#  Z_matrix <- cbind(Z_matrix, -log(surv_plusgroup))
+#
+#  F_matrix <- Z_matrix - report$M
+#  F_matrix[F_matrix < 0] <- 0
+#
+#  report$Z_at_age <- Z_matrix
+#  report$F_at_age <- F_matrix
+#
+#  return(report)
+#}
+get_vul_len <- function(report) {
+  sls <- (report$LFS - report$L5)/sqrt(-log(0.05, 2))
+  srs <- (report$Linf - report$LFS)/sqrt(-log(report$Vmaxlen, 2))
 
-  surv_matrix <- N[2:(nyears+1), 2:max_age]/N[1:nyears, 1:(max_age-1)]
-  surv_plusgroup <- N[2:(nyears+1), max_age]/(N[1:nyears, max_age-1] + N[1:nyears, max_age])
-
-  Z_matrix <- -log(surv_matrix)
-  Z_matrix[, max_age-1] <- -log(surv_plusgroup)
-
-  Z_matrix <- cbind(Z_matrix, -log(surv_plusgroup))
-
-  F_matrix <- Z_matrix - report$M
-  F_matrix[F_matrix < 0] <- 0
-
-  report$Z_at_age <- Z_matrix
-  report$F_at_age <- F_matrix
-
-  return(report)
+  asc <- Map(function(x, y) 2^-((report$length_bin - y)/x * (report$length_bin - y)/x), x = sls, y = report$LFS)
+  dsc <- Map(function(x, y, z) ifelse(z > rep(0.99, length(report$length_bin)), 1, 2^-((report$length_bin - y)/x * (report$length_bin - y)/x)),
+             x = srs, y = report$LFS, z = report$Vmaxlen)
+  vul <- Map(function(x, y, z) ifelse(report$length_bin > x, y, z), x = report$LFS, y = dsc, z = asc)
+  do.call(cbind, vul)
 }
 
 SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, condition = c("catch", "effort"),
@@ -641,9 +629,9 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                        I_hist = Index, sigma_I = I_sd, CAA_hist = CAA, CAA_n = pmin(CAA_n, ESS[1]),
                        CAL_hist = CAL, CAL_n = pmin(CAL_n, ESS[2]), length_bin = length_bin, mlen = ML,
                        n_y = nyears, max_age = ncol(CAA), nfleet = nfleet, nsurvey = nsurvey,
-                       M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:nyears]),
-                       CV_LAA = StockPars$LenCV[x], wt_at_len = wt_at_len, mat = t(StockPars$Mat_age[x, , 1:nyears]),
-                       vul_type = selectivity, I_type = I_type, SR_type = SR_type,
+                       M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
+                       Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
+                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, I_type = I_type, SR_type = SR_type,
                        LWT_C = LWT_C, LWT_Index = LWT$Index, max_F = max_F,
                        est_early_rec_dev = rep(0, max_age-1), est_rec_dev = c(rep(1, nyears-1), 0))
   TMB_data_all$CAA_hist[TMB_data_all$CAA_hist < 1e-8] <- 1e-8
@@ -677,18 +665,19 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     transformed_h <- logit((StockPars$hs[x] - 0.2)/0.8)
   } else transformed_h <- log(StockPars$hs[x] - 0.2)
 
-  L95 <- FleetPars$LFS[nyears, x]
-  L50 <- mean(c(FleetPars$LFS[nyears, x], FleetPars$L5[nyears, x]))
+  LFS <- FleetPars$LFS[nyears, x]
+  L5 <- FleetPars$L5[nyears, x]
 
   vul_par <- matrix(0, 4, nfleet)
   map_vul_par <- matrix(ifelse(fix_selectivity, NA, 0), 4, nfleet)
 
   for(ff in 1:nfleet) {
+    vul_par[1:2, ff] <- c(logit(min(LFS/StockPars$Linf[x]/0.95, 0.95)), log(LFS - L5))
+
     if(selectivity[ff]) { #logistic
-      vul_par[1:2, ff] <- c(logit(min(L95/max(length_bin)/0.95, 0.95)), log(L95 - L50))
       map_vul_par[3:4, ff] <- NA
     } else {
-      vul_par[, ff] <- c(logit(min(L95/max(length_bin)/0.95, 0.95)), log(L95 - L50), -20, logit(FleetPars$Vmaxlen[nyears, x]))
+      vul_par[3:4, ff] <- c(-20, logit(FleetPars$Vmaxlen[nyears, x]))
       map_vul_par[3, ff] <- NA
       if(fix_dome) map_ful_par[4, ff] <- NA
     }
@@ -749,7 +738,8 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     fun_fixed <- c(NA, NA)
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
-  report <- get_F_at_age(report)
+  report$F_at_age <- report$Z - report$M[1:nyears, ]
+  report$vul_len <- get_vul_len(report)
   report$rescale <- rescale
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
