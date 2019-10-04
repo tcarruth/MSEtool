@@ -255,7 +255,6 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     CAL <- array(0, c(nyears, length(StockPars$CAL_binsmid), nfleet))
     length_bin <- StockPars$CAL_binsmid
   }
-  weight_at_length <- StockPars$a * length_bin ^ StockPars$b
 
   # Process mean lengths
   if(!is.null(ML)) {
@@ -344,7 +343,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     mod <- snowfall::sfClusterApplyLB(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
                               Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
                               ML_sd = ML_sd, length_bin = length_bin,
-                              wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
+                              I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
                               fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
                               max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
 
@@ -352,7 +351,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     mod <- lapply(1:nsim, SRA_scope_est, Catch = Chist, Effort = Ehist, condition = condition,
                   Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
                   ML_sd = ML_sd, length_bin = length_bin,
-                  wt_at_len = weight_at_length, I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
+                  I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
                   fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
                   max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
@@ -369,7 +368,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     message("Generating additional model fit from mean values of parameters in the operating model...\n")
     mean_fit_output <- SRA_scope_est(Catch = Chist, Effort = Ehist, condition = condition,
                                      Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL, ML = ML,
-                                     ML_sd = ML_sd, length_bin = length_bin, wt_at_len = weight_at_length,
+                                     ML_sd = ML_sd, length_bin = length_bin,
                                      I_type = I_type2, C_eq = C_eq, E_eq = E_eq, selectivity = sel,
                                      fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"),
                                      LWT = LWT, ESS = ESS, max_F = max_F, mean_fit = TRUE,
@@ -557,7 +556,7 @@ get_vul_len <- function(report) {
 SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, condition = c("catch", "effort"),
                           I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, ML_sd = NULL, length_bin,
                           I_type, C_eq = 0, E_eq = 0, SR_type = c("BH", "Ricker"), LWT = list(), ESS = c(30, 30),
-                          StockPars, ObsPars, FleetPars, wt_at_len, integrate = FALSE, selectivity, fix_selectivity = TRUE,
+                          StockPars, ObsPars, FleetPars, integrate = FALSE, selectivity, fix_selectivity = TRUE,
                           fix_dome = FALSE, mean_fit = FALSE, max_F = 3,
                           control = list(iter.max = 2e+05, eval.max = 4e+05), inner.control = list(maxit = 1e3)) {
   condition <- match.arg(condition)
