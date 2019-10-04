@@ -487,7 +487,12 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   OM@cpars$LenCV <- StockPars$LenCV
   OM@cpars$Wt_age <- StockPars$Wt_age
 
-  OM@cpars$Mat_age <- StockPars$Mat_age
+  if(any(apply(StockPars$Mat_age, 1, function(x) all(x >= 0.5)))) { # Any simulations where all mat_age > 0.5?
+    OM@cpars$L50 <- StockPars$L50
+    OM@cpars$L95 <- StockPars$L95
+  } else {
+    OM@cpars$Mat_age <- StockPars$Mat_age
+  }
   OM@cpars$M_ageArray <- StockPars$M_ageArray
 
   OM@cpars$h <- StockPars$hs
