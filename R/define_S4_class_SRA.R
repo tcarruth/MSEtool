@@ -142,7 +142,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                              zlab = "Natural mortality", phi = 35, theta = 45, expand = 0.55, fig.cap = "Annual M-at-age.")
               } else NatM_persp <- NULL
 
-              LH_section <- c(LAA, LAA_persp, LW, mat, mat_persp, NatM, NatM_persp)
+              LH_section <- c(LAA, LAA_persp, mat, mat_persp, NatM, NatM_persp)
 
               # Data and fit section
               individual_matrix_fn <- function(i, obs, pred, fig.cap, label) {
