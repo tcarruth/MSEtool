@@ -538,27 +538,6 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 # selectivity type
 # maxage integer
 
-#get_F_at_age <- function(report) {
-#  N <- report$N
-#  max_age <- ncol(N)
-#  nyears <- nrow(N) - 1
-#
-#  surv_matrix <- N[2:(nyears+1), 2:max_age]/N[1:nyears, 1:(max_age-1)]
-#  surv_plusgroup <- N[2:(nyears+1), max_age]/(N[1:nyears, max_age-1] + N[1:nyears, max_age])
-#
-#  Z_matrix <- -log(surv_matrix)
-#  Z_matrix[, max_age-1] <- -log(surv_plusgroup)
-#
-#  Z_matrix <- cbind(Z_matrix, -log(surv_plusgroup))
-#
-#  F_matrix <- Z_matrix - report$M
-#  F_matrix[F_matrix < 0] <- 0
-#
-#  report$Z_at_age <- Z_matrix
-#  report$F_at_age <- F_matrix
-#
-#  return(report)
-#}
 get_vul_len <- function(report) {
   sls <- (report$LFS - report$L5)/sqrt(-log(0.05, 2))
   srs <- (report$Linf - report$LFS)/sqrt(-log(report$Vmaxlen, 2))
