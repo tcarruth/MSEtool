@@ -188,8 +188,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               } else CAL_plots <- NULL
 
               if(any(data_mean_fit$mlen > 0, na.rm = TRUE)) {
-                ML_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data_mean_fit$mlen", pred = "report$Ipred",
-                                   fig.cap = "Mean Length from Fleet", label = "mean lengths from fleet")
+                ML_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data_mean_fit$mlen", pred = "report$mlen_pred",
+                                   fig.cap = "mean lengths from fleet", label = "Mean Length from Fleet")
               } else ML_plots <- NULL
 
               data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, ML_plots)
