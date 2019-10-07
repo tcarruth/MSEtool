@@ -71,7 +71,7 @@ The stock reduction paradigm can be quite useful for informing the historical sc
 
 In MSEtool, `SRA_scope()` will be the main function for scoping historical scenarios for an operating model `OM`. `SRA_scope` takes an operating model, data, in order to run the SRA and then returns a list with an updated OM and predicted outputs from the SRA. All model configurations for the SRA will also be specified through arguments passed through `SRA_scope`.
 
-The approach can be stochastic (with Monte Carlo sampling) if the operating model is specified as such. For example, steepness is highly uncertain, then one could specify a range of values, for example, between 0.6 and 0.9 with a uniform distribution, in an operating model. If one wishes to run 250 simulations in the closed-loop simulation, then `SRA_scope` will sample 250 steepness values from this distribution and then fit the SRA model 250 times. The SRA model output from `i-th` fit will be conditioned on the `i-th` sampled value of steepness. The samples values of steepness (as well as all input parameters to the SRA) are saved in the OM object returned by `SRA_scope` to ensure consistency.
+The approach can be stochastic (with Monte Carlo sampling) if the operating model is specified as such. For example, steepness is highly uncertain, then one could specify a range of values, for example, between 0.6 and 0.9 with a uniform distribution, in an operating model. If one wishes to run 250 simulations in the closed-loop simulation, then `SRA_scope` will sample 250 steepness values from this distribution and then fit the SRA model 250 times. The SRA model output from `i-th` fit will be conditioned on the `i-th` sampled value of steepness. The sampled values of steepness (as well as all input parameters to the SRA) are saved in the OM object returned by `SRA_scope` to ensure consistency.
 
 
 ## Model configuration of the SRA
@@ -83,12 +83,13 @@ Ideally, the time series begins at unfished conditions. One could pass the asssu
 If catch or effort data are unavailable going back to unfished conditions, then the data could be extrapolated back in time using reconstruction. Examples of catch reconstruction methods for the purposes of a stock asesssment can be found in Porch et al. (2004) and Appendix A of Starr and Haigh (2017).
 
 In addition to the conditioning variable, additional data types can be used:
+
 - Indices of abundance (either as surveyed biomass or fishery-dependent catch-per-unit time series)
 - Age compositions
 - Length compositions
 - Mean lengths (this option is generally for very sparse data scenarios when mean length data are available but not the composition data)
 
-Multiple surveys and fleets can be accommodated with `SRA_scope`. One of these several data types in addition to catch or effort is generally needed to obtain depletion estimates. Availability of these data can be quite sparse over time, yet still informative. For example, a recent age composition sample from a single year that shows a very truncated age structure can sufficient to imply a heavily depleted stock.
+Multiple surveys and fleets can be accommodated with `SRA_scope`. One of these several data types in addition to catch or effort is generally needed to obtain depletion estimates. Availability of these data can be quite sparse over time, yet still informative. For example, a recent age composition sample from a single year that shows a very truncated age structure can be sufficient to imply a heavily depleted stock.
 
 Here are the required pre-specified OM parameters needed for SRA scoping:
 
@@ -98,9 +99,9 @@ Here are the required pre-specified OM parameters needed for SRA scoping:
 - Maturity using slots `OM@L50, OM@L50_95` or `OM@cpars$Mat_age`
 - Standard deviation of recruitment deviations using slot `OM@Perr` or `OM@cpars$Perr`
 - Stock-recruit relationship with `OM@SRrel`
-- If no age or length compositions, selectivity is needed with `OM@L5, OM@LFS, and OM@Vmaxlen`
+- If no age or length compositions, selectivity is needed with `OM@L5`, `OM@LFS`, and `OM@Vmaxlen`
 
-If growth, natural mortality, or maturity are time-varying in the historical period, then the SRA will implement time-varying life history in the estimation model as well. For example, we're setting up an operating model where the length of the historical period is 50 years, and we believe that natural mortality has doubled from 0.2 to 0.4 since Year 30 and will remain so into the future. This code can be used to setup this scenario:
+If growth, natural mortality, or maturity are time-varying in the historical period, then the SRA will implement time-varying life history in the estimation model as well. For example, if we're setting up an operating model where the length of the historical period is 50 years, and we believe that natural mortality has doubled from 0.2 to 0.4 since Year 30 and will remain so into the future, this code can be used to set up this scenario:
 
 ```{r, eval = FALSE}
 OM@nyears <- 50
@@ -113,7 +114,7 @@ OM@cpars$M_ageArray <- M_ageArray
 
 The SRA will pick up this change in the model as well.
 
-Note that time-varying life history affects calculation of reference points, in particular unfished depletion. The `SRA_scope` function will annually calculate the unfished depletion associated with that year's life history values. The easiest way to turn off time-varying growth and M is to set:
+Note that time-varying life history affects calculation of reference points---in particular unfished depletion. The `SRA_scope` function will annually calculate the unfished depletion associated with that year's life history values. The easiest way to turn off time-varying growth and M is to set:
 
 ```{r, eval = FALSE}
 OM@Linfsd <- OM@Ksd <- OM@Msd <- c(0, 0)
@@ -130,15 +131,15 @@ Historical OM parameters that are updated by the SRA scoping function include:
 - Unfished recruitment `OM@R0`, only if catch is provided
 - Initial depletion `OM@cpars$initD`
 - Depletion `OM@D`
-- Relative effort `OM@cpars$Find`. 
-- Annual recruitment deviations `OM@cpars$Perr_y`.
-- If age or length compositions were used, selectivity parameters `OM@L5, OM@LFS, and OM@Vmaxlen`.
+- Relative effort `OM@cpars$Find`
+- Annual recruitment deviations `OM@cpars$Perr_y`
+- If age or length compositions were used, selectivity parameters `OM@L5, OM@LFS, and OM@Vmaxlen`
 
-The SRA model will estimate and return `R0` when conditioned on catch. When conditioning on effort, the model is generally scale-independent; there can be information to inform depletion but not the stock size. 
+The SRA model will estimate and return R0 when conditioned on catch. When conditioning on effort, the model is generally scale-independent; there can be information to inform depletion but not the stock size. 
 
-The exception occurs when the SRA is conditioned on effort from multiple-fleets, in which case, catch data from all fleets are needed in inform the relative F's among fleets. In this scenario, R0 is estimated.
+The exception occurs when the SRA is conditioned on effort from multiple-fleets, in which case, catch data from all fleets are needed to inform the relative F's among fleets. In this scenario, R0 is estimated.
 
-Additionally, if multiple fleets are used for conditioning, then the annual selectivity can change basd on the relative F among fleets. In this case, the annual selectivity is passed the OM output in the `OM@cpars$V` slot. The default assumption in the projection period of the closed-loop simulation is that the selectivity and relative F among fleets are identical to those in the last historical year. Fleet allocation in management procedures can be exploration in `multiMSE`, see `vignette("multiMSE")`.
+Additionally, if multiple fleets are used for conditioning, then the annual selectivity can change basd on the relative F among fleets. In this case, the annual selectivity is passed from the OM output in the `OM@cpars$V` slot. The default assumption in the projection period of the closed-loop simulation is that the selectivity and relative F among fleets are identical to those in the last historical year. Fleet allocation in management procedures can be explored in `multiMSE`, see `vignette("multiMSE")`.
 
 The relative effort provided in the output is the apical F from the SRA. When running the management strategy evaluation with `DLMtool::runMSE()`, the apical F may be re-scaled to ensure that specified depletion has been reached at the beginning and end of the historical period. For simple operating models, i.e. those with conditions identical to the SRA, the apical F's in the MSE should be nearly identical to those from the SRA. To confirm that this is the case, one can run the `plot` function on output returned by `SRA_scope`:
 
@@ -155,7 +156,7 @@ This function returns a markdown report with:
 - Fits to an additional run of the SRA model to mean life history values among simulations (only when `SRA_scope(..., mean_fit = TRUE)` is run)
 - Comparisons of the historical period of the updated OM to the SRA output
 
-Currently, it is possible to create a more complex operating model than the SRA model itself. For example, discard mortality, movement, and spatial targetting are currently not modeled in the SRA. If these processes are specified in the operating model, then it is possible that the operating model may not necessarily match all output from the SRA. 
+Currently, it is possible to create a more complex operating model than the SRA model itself. For example, discard mortality, movement, and spatial targetting are currently not modeled in the SRA. If these processes are specified in the operating model, then the operating model will not necessarily match all output from the SRA. 
 
 
 # Case study
@@ -167,7 +168,7 @@ To be added later.
 ## Dynamics equations 
 Selectivity $v$ for length bin $\ell$ and fleet $f$ is length-based, where
 $$ v_{\ell,f} = \left[1 + \exp\left(-\log(19) \left(\dfrac{L^{50}_f - L_{\ell}}{L^{95}_f - L^{50}_f}\right)\right)\right]^{-1} $$
-if logistic shaped, with $L$ is the midpoint of length bin $\ell$ and $L^{95}_f$ and $L^{50}_f$ are the lengths at 95 and 50% selectivity, respectively.
+if logistic shaped, $L$ is the midpoint of length bin $\ell$ and $L^{95}_f$ and $L^{50}_f$ are the lengths at 95 and 50% selectivity, respectively.
 
 If dome shaped, selectivity is
 $$ v_{\ell,f} = 
