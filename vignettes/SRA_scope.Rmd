@@ -7,7 +7,7 @@ output:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{Description of the SRA model for conditioning DLMtool operating models}
+  %\VignetteIndexEntry{SRA model for conditioning operating models}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -161,36 +161,56 @@ Currently, it is possible to create a more complex operating model than the SRA 
 
 # Case study
 
-To be added later.
+To be added.
 
 # Mathematical description of the SRA model
 
 ## Dynamics equations 
-Selectivity $v$ for length bin $\ell$ and fleet $f$ is length-based, where
-$$ v_{\ell,f} = \left[1 + \exp\left(-\log(19) \left(\dfrac{L^{50}_f - L_{\ell}}{L^{95}_f - L^{50}_f}\right)\right)\right]^{-1} $$
-if logistic shaped, $L$ is the midpoint of length bin $\ell$ and $L^{95}_f$ and $L^{50}_f$ are the lengths at 95 and 50% selectivity, respectively.
+Selectivity $v$ is length-based as double-exponential function (using base 2). For fleet $f$ with flat-topped selectivity, two parameters are used, the length of 5% selectivity ($L^5_f$) and the length of full selectivity $L^{\textrm{FS}}$. For dome selectivity, a third parameter, the selectivity at $L_{\infty}$, $V^{L_{\infty}}$ is also used. Length-based selectivity is converted to age selectivity in the age-structured model as:
 
-If dome shaped, selectivity is
-$$ v_{\ell,f} = 
+$$ v_{y,a,f} = 
 \begin{cases}
-\exp\left(-\dfrac{(L_{\ell} - \mu_f)^2}{2(\sigma^L_f)^2}\right) & L_{\ell} < \mu_f\\
-\exp\left(-\dfrac{(L_{\ell} - \mu_f)^2}{2(\sigma^R_f)^2}\right) & L_{\ell} \ge \mu_f
-\end{cases},
+2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{asc}}_f)]^2} & \textrm{if } L_{y,a} < L^{\textrm{FS}}_f\\ 
+1 & \textrm{if logistic and } L_{y,a} \ge L^{\textrm{FS}}_f,\\
+2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{des}}_f)]^2} & \textrm{if flat-topped and } L_{y,a} \ge L^{\textrm{FS}}_f
+\end{cases}
 $$
-where $\mu_f$ is the length of full selectivity and $\sigma^L_f$ and $\sigma^R_f$ control the shape of the ascending and descending limbs, respectively, of the selectivity function.
 
-Total mortality $Z$ in year $y$ and for age $a$ and length bin is the sum of fishing mortality $F$ from all fleets for that length bin and natural mortality $M$ for that age,
 
-$$ Z_{y,a,\ell} = M_{y,a} + \Sigma_f v_{\ell,f} F_{y,f}.$$
-The catch (in numbers) $C^N$ at age and length for fleet $f$ is
-$$ C^N_{y,a,\ell,f} = \dfrac{v_{\ell,f} F_{y,f}}{Z_{y,a,\ell}} N_{y,a,\ell} (1 - \exp[-Z_{y,a,\ell}]).$$
+where $L_{y,a}$ is the mean length-at-age in year $y$, $\sigma^{\textrm{asc}}_f = (L^5_f - L^{\textrm{FS}}_f)/\sqrt{-\log_2(0.05)}$ and $\sigma^{\textrm{des}}_f = (L_{\infty} - L^{\textrm{FS}}_f)/\sqrt{-\log_2(V^{L_{\infty}})}$ control the shape of the ascending and descending limbs, respectively, of the selectivity function. In this parameterization, length-based selectivity is constant over time. The corresponding age-based selectivity is constant over time if growth is not time-varying.
+
+Total mortality $Z$ in year $y$ and for age $a$ is the sum of fishing mortality $F$ from all fleets and natural mortality $M$,
+
+$$ Z_{y,a} = M_{y,a} + \Sigma_f v_{y,a,f} F_{y,f}.$$
+
+The population age distribution in the first year of the model $y=1$ is in equilibrium where
+$$ N_{1,a} = 
+\begin{cases}
+      R^{\textrm{eq}} \exp(-\Sigma_{i=1}^{a-1}Z^{\textrm{eq}}_i) & a = 1, \ldots, A-1\\
+      \dfrac{R^{\textrm{eq}} \exp(-\Sigma_{i=1}^{a-1}Z^{\textrm{eq}}_i)}{1 - \exp(-Z^{\textrm{eq}}_A)} & a = A,
+\end{cases}
+$$
+where the $R_{\textrm{eq}}$ is the equilibrium recruitment and $Z^{\textrm{eq}}_a = M_{1,a} + \Sigma_f v_{1,a,f} F^{\textrm{eq}}_f$ is the equilibrium survival. Unfished conditions are modeled by setting $F^{\textrm{eq}}_f = 0$.
+
+After setting the equilibrium population age distribution in the first year of the model, the population abundance $N_{y,a}$ in subsequent years is
+$$ N_{y,a} =
+\begin{cases}
+      R_y & a = 1\\
+      N_{y-1,a-1} \exp(-Z_{y-1,a-1}) & a = 2, \ldots, A - 1,\\
+      N_{y-1,a-1} \exp(-Z_{y-1,a-1}) + N_{y-1,a} \exp(-Z_{y-1,a}) & a = A
+\end{cases}
+$$
+where $R_y$ is the recruitment predicted in year $y$ and $A$ is the maximum-age as the plus-group.
+
+The catch (in numbers) $C^N$ at age for fleet $f$ is
+$$ C^N_{y,a,f} = \dfrac{v_{y,a,f} F_{y,f}}{Z_{y,a}} N_{y,a} (1 - \exp[-Z_{y,a}]).$$
 
 If the model is conditioned on catch, then $F_{y,f}$ are estimated. If the model is conditioned on effort, then
 $$ F_{y,f} = q_f E_{y,f},$$
 where $E_{y,f}$ is the observed effort and $q^f$ is a scaling coefficient.
 
-The population abundance $N$ at age and length is calculated assuming a normally distributed length-at-age $P(\ell,a)$, where
-$$ N_{y,a,\ell} = N_{y,a} P(\ell|a) $$
+The catch at length is calculated assuming a normally distributed length-at-age $P(\ell,a)$, where
+$$ C^N_{y,\ell,f} = C^N_{y,a,f} P(\ell|a) $$
 and
 
 $$ P(\ell|a) = 
@@ -202,31 +222,22 @@ $$ P(\ell|a) =
 $$
 with $L'_{\ell}$ as the length at the lower boundary of length bin $\ell$ and $\phi(L'_{\ell})$ as the cumulative distribution function of a normal variable with mean $\tilde{L}_{y,a}$ (the expected mean length at age $a$) and standard deviation $\tilde{L}_{y,a} \times CV^L$ ($CV^L$ is the coefficient of variation in mean length at age). 
 
-After setting the equilibrium population age distribution in the first year of the model, the population abundance (after summing across all length bins) in subsequent years is
-$$ N_{y,a} =
-\begin{cases}
-      R_y & a = 1\\
-      \Sigma_{\ell} N_{y-1,a-1,\ell} \exp(-Z_{y-1,a-1,\ell}) & a = 2, \ldots, A - 1,\\
-      \Sigma_{\ell} N_{y-1,a-1,\ell} \exp(-Z_{y-1,a-1,\ell}) + \Sigma_{\ell} N_{y-1,a,\ell} \exp(-Z_{y-1,a,\ell}) & a = A
-\end{cases}
-$$
-where $R_y$ is the recruitment predicted in year $y$.
-
 The catch in weight $\tilde{C}$ is
-$$ \tilde{C}_{y,f} = \Sigma_{\ell}\Sigma_a C^N_{y,a,\ell,f} w_{\ell},$$
-where $w$ is the weight at length bin $\ell$.
+$$ \tilde{C}_{y,f} = \Sigma_a C^N_{y,a,f} w_a,$$
+where $w_a$ is the mean weight at age.
 
 The mean length of the catch $\bar{L}_{y,f}$ is
-$$ \bar{L}_{y,f} = \dfrac{\Sigma_{\ell} L_{\ell}\Sigma_a C^N_{y,a,\ell,f}}{\Sigma_a\Sigma_{\ell} C^N_{y,a,\ell,f}}. $$
+$$ \bar{L}_{y,f} = \dfrac{\Sigma_{\ell} L_{\ell} C^N_{y,\ell,f}}{\Sigma_{\ell} C^N_{y,\ell,f}},$$
+where $L_\ell$ is the midpoint of the length bin $\ell$.
 
 The proportion of the catch-at-age is
-$$ p_{y,a,f} = \dfrac{\Sigma_{\ell}C^N_{y,a,\ell,f}}{\Sigma_a \Sigma_{\ell}C^N_{y,a,\ell,f}}.$$
+$$ p_{y,a,f} = \dfrac{C^N_{y,a,f}}{\Sigma_a C^N_{y,a,f}}.$$
 
 The proportion of the catch-at-length is
-$$ p_{y,\ell,f} = \dfrac{\Sigma_a C^N_{y,a,\ell,f}}{\Sigma_a \Sigma_{\ell}C^N_{y,a,\ell,f}}.$$
+$$ p_{y,\ell,f} = \dfrac{C^N_{y,\ell,f}}{\Sigma_{\ell}C^N_{y,\ell,f}}.$$
 
 The spawning biomass is $B^S_y$ is
-$$B^S_y = \Sigma_{\ell} w_{\ell} \Sigma_a m_a N_{y,a,\ell},$$
+$$B^S_y = \Sigma_a w_a m_a N_{y,a},$$
 
 where $m_a$ is the maturity at age.
 
@@ -250,7 +261,7 @@ $$\Lambda_4 = \Sigma_y \Sigma_f O^L_{y,f} \log(p_{y,\ell,f})$$
 where $O^L$ is the annual sample sizes for the length compositions.
 
 The log-likelihood component $\Lambda_5$ of observed mean lengths in the catch is
-$$\Lambda_5 = \Sigma_y \Sigma_f \left(-\log(\omega_f) - \dfrac{[\tilde{L}^{\textrm{obs}}_{y,f} - \tilde{L}^{\textrm{pred}}_{y,f}]^2}{2 \omega^2_f}\right),$$
+$$\Lambda_5 = \Sigma_y \Sigma_f \left(-\log(\omega_f) - \dfrac{[\bar{L}^{\textrm{obs}}_{y,f} - \bar{L}^{\textrm{pred}}_{y,f}]^2}{2 \omega^2_f}\right),$$
 where $\omega_f$ is the standard deviation of mean lengths.
 
 The log-likelihood component $\Lambda_6$ of annual estimated recruitment deviates $\delta_y$ in log space is
