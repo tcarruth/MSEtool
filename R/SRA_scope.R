@@ -496,7 +496,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   OM@cpars$h <- StockPars$hs
 
-  OM@cpars$plusgroup <- 1L
+  OM@cpars$plusgroup <- rep(1L, nsim)
   OM@cpars$Iobs <- ObsPars$Iobs
 
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")

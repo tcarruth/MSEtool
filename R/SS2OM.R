@@ -214,7 +214,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   seas1_aind <- which(seas1_aind_full$nseas == 1 & seas1_aind_full$true_age >= age_rec) # Age indices that correspond to season 1
 
   OM@maxage <- maxage
-  OM@cpars$plusgroup <- 1L
+  OM@cpars$plusgroup <- rep(1L, OM@nsim)
   if(!silent) message("Max age is ", maxage, ".")
 
   # ---- Growth ----
