@@ -200,8 +200,12 @@
 
     B(0) += N(0,a) * wt(0,a);
     E(0) += N(0,a) * wt(0,a) * mat(0,a);
+
+    Type Z_eq = M(0,a);
+    for(int ff=0;ff<nfleet;ff++) Z_eq += vul(0,a,ff) * F_equilibrium(ff);
+    Type mean_N = N(0,a) * (1 - exp(-Z_eq)) / Z_eq;
     for(int ff=0;ff<nfleet;ff++) {
-      C_eq_pred(ff) += Baranov(vul(0,a,ff), F_equilibrium(ff), M(0,a), N(0,a)) * wt(0,a);
+      C_eq_pred(ff) += vul(0,a,ff) * F_equilibrium(ff) * mean_N * wt(0,a);
       VB(0,ff) += N(0,a) * wt(0,a) * vul(0,a,ff);
     }
   }
@@ -222,8 +226,7 @@
 
     for(int a=0;a<max_age;a++) {
       for(int ff=0;ff<nfleet;ff++) Z(y,a) += vul(y,a,ff) * F(y,ff);
-      Type mean_N = N(y,a) * (1 - exp(-Z(y,a)));
-      mean_N /= Z(y,a);
+      Type mean_N = N(y,a) * (1 - exp(-Z(y,a))) / Z(y,a);
 
       for(int ff=0;ff<nfleet;ff++) {
         CAApred(y,a,ff) = vul(y,a,ff) * F(y,ff) * mean_N;

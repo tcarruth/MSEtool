@@ -355,7 +355,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                   fix_selectivity = fix_sel, fix_dome = fix_dome, SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
                   max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars)
   }
-  assign('mod', mod, envir = globalenv())
+  #assign('mod', mod, envir = globalenv())
   res <- lapply(mod, getElement, "report")
   conv <- vapply(res, getElement, logical(1), name = "conv")
   message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
