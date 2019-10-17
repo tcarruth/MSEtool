@@ -70,29 +70,6 @@ Type sum_VBPR(matrix<Type> NPR, vector<Type> wt_at_len, vector<Type> vul, int ma
   return VBPR;
 }
 
-template<class Type>
-Type Baranov(Type vul, Type F, Type M, Type N) {
-  Type Z = vul * F + M;
-  Type mean_N = N * (1 - exp(-Z)) / Z;
-  return vul * F * mean_N;
-}
-
-template<class Type>
-vector<Type> calc_C_eq(vector<Type> F, array<Type> N, matrix<Type> vul, matrix<Type> M, vector<Type> wt_at_len, int nlbin,
-                       int nfleet, int max_age, int y) {
-  vector<Type> C_eq(nfleet);
-  C_eq.setZero();
-  for(int a=0;a<max_age;a++) {
-    for(int len=0;len<nlbin;len++) {
-      Type Z_total = M(y,a);
-      for(int ff=0;ff<nfleet;ff++) Z_total += vul(len,ff) * F(ff);
-      for(int ff=0;ff<nfleet;ff++) C_eq(ff) += vul(len,ff) * F(ff) * N(y,a,len) * (1 - exp(-Z_total))/Z_total * wt_at_len(len);
-    }
-  }
-  return C_eq;
-}
-
-
 
 
 template<class Type>
