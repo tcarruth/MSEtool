@@ -51,11 +51,7 @@ rmd_SRA_R0 <- function(fig.cap = "Histogram of R0 (unfished recruitment).") {
 }
 
 
-rmd_SRA_initD <- function(fig.cap = "Histogram of initial depletion.") {
-  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
-    "if(!is.null(OM@cpars$initD)) hist(OM@cpars$initD, main = \"\", xlab = \"Initial depletion\")",
-    "```\n")
-}
+
 
 rmd_SRA_D <- function(fig.cap = "Histogram of historical depletion.") {
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
@@ -174,6 +170,13 @@ rmd_SRA_survey_output <- function(sur) {
            "abline(h = 0, col = \"grey\")",
            "```\n")
   c(header, ans)
+}
+
+rmd_SRA_initD <- function(fig.cap = "Histogram of initial depletion among all simulations.") {
+  c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
+    "initD <- vapply(report_list, function(x) x$E[1]/x$E0[1], numeric(1))",
+    "hist(initD, main = \"\", xlab = \"Initial depletion\")",
+    "```\n")
 }
 
 rmd_SRA_R_output <- function() {

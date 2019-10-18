@@ -381,8 +381,8 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   ### Depletion and init D
   if(any(C_eq > 0) || any(E_eq) > 0) {
-    OM@cpars$initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))
-    message("Range of initial spawning depletion (OM@cpars$initD): ", paste(round(range(OM@cpars$initD), 2), collapse = " - "))
+    initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))
+    message("Estimated range in initial spawning depletion: ", paste(round(range(initD), 2), collapse = " - "))
   }
 
   OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0[length(x$E0)], numeric(1))
@@ -453,13 +453,15 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   OM@cpars$Perr <- StockPars$procsd
   make_Perr <- function(x) {
     bias_corr <- ifelse(x$obj$env$data$est_rec_dev, exp(-0.5 * x$report$tau^2), 1)
-    exp(x$report$log_rec_dev) * bias_corr
+    res <- exp(x$report$log_rec_dev) * bias_corr
+    res[1] <- res[1] * x$report$R_eq/x$report$R0
+    return(res)
   }
   Perr <- do.call(rbind, lapply(mod, make_Perr))
 
   make_early_Perr <- function(x) {
-    bias_corr <- ifelse(x$obj$env$data$est_early_rec_dev, exp(-0.5 * x$report$tau^2), 1)
-    exp(x$report$log_early_rec_dev) * bias_corr
+    res <- x$report$R_eq * x$report$NPR_equilibrium / (x$report$R0 * x$report$NPR_unfished[[1]])
+    return(rev(res[-1]))
   }
   early_Perr <- do.call(rbind, lapply(mod, make_early_Perr))
 

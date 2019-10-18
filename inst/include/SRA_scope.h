@@ -110,6 +110,7 @@
 
 
   ////// Equilibrium reference points and per-recruit quantities - calculate annually
+  vector<vector<Type> > NPR_unfished(n_y);
   vector<Type> EPR0(n_y);
   vector<Type> E0(n_y);
   vector<Type> B0(n_y);
@@ -119,12 +120,12 @@
   vector<Type> Brec(n_y);
 
   for(int y=0;y<n_y;y++) {
-    vector<Type> NPR_unfished = calc_NPR0(M, max_age, y);
+    NPR_unfished(y) = calc_NPR0(M, max_age, y);
 
-    EPR0(y) = sum_EPR(NPR_unfished, wt, mat, max_age, y);
+    EPR0(y) = sum_EPR(NPR_unfished(y), wt, mat, max_age, y);
     E0(y) = R0 * EPR0(y);
-    B0(y) = R0 * sum_BPR(NPR_unfished, wt, max_age, y);
-    N0(y) = R0 * NPR_unfished.sum();
+    B0(y) = R0 * sum_BPR(NPR_unfished(y), wt, max_age, y);
+    N0(y) = R0 * NPR_unfished(y).sum();
 
     if(SR_type == "BH") {
       Arec(y) = 4 *h;
@@ -373,6 +374,7 @@
   REPORT(F);
   REPORT(Z);
 
+  REPORT(NPR_unfished);
   REPORT(EPR0);
   REPORT(B0);
   REPORT(E0);

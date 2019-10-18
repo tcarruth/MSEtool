@@ -89,7 +89,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
             OM_update <- c("# Summary {.tabset}\n",
                            "## Updated historical OM parameters\n", rmd_SRA_R0(),
-                           rmd_SRA_initD(), rmd_SRA_D(), rmd_SRA_Perr(), rmd_SRA_Find(), rmd_SRA_sel())
+                           rmd_SRA_D(), rmd_SRA_Perr(), rmd_SRA_Find(), rmd_SRA_sel())
 
             ####### Output from all simulations {.tabset}
             fleet_output <- lapply(1:nfleet, rmd_SRA_fleet_output)
@@ -99,7 +99,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             } else survey_output <- NULL
 
             all_sims_output <- c(fleet_output, survey_output, "### Model predictions\n",
-                                 rmd_SRA_R_output(), rmd_SRA_SSB_output())
+                                 rmd_SRA_initD(), rmd_SRA_R_output(), rmd_SRA_SSB_output())
 
             ####### Fit to mean inputs from operating model
             # Generate summary table (parameter estimates)
