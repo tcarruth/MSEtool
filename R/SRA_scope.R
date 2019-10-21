@@ -44,6 +44,7 @@
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).
 #' @param mean_fit Logical, whether to run an additional with mean values of life history parameters from the OM.
 #' @param sims A logical vector of length \code{OM@@nsim} or a numberic vector indicating which simulations to keep.
+#' @param drop_nonconv Logical, whether to drop non-converged fits of the SRA model.
 #' @param ... Other arguments to add in the future.
 #' @return An object of class \linkS4class{SRA} (see link for output dimensions).
 #'
@@ -79,7 +80,7 @@
 #' @export
 SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "effort"), Index = NULL, I_sd = NULL, CAA = NULL, CAL = NULL, ML = NULL, length_bin = NULL,
                       C_eq = 0, E_eq = 0, ML_sd = NULL, selectivity = "logistic", I_type = NULL, LWT = list(), ESS = c(30, 30),
-                      fix_dome = FALSE, max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, ...) {
+                      fix_dome = FALSE, max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
   condition <- match.arg(condition)
   if(is.null(Chist) && !is.null(Ehist)) condition <- "effort"
@@ -336,7 +337,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   message(ifelse(OM@SRrel == 1, "Beverton-Holt", "Ricker"), " stock-recruitment relationship used.")
 
   # Fit model
-  message("Fitting model (", nsim, " simulations) ...")
+  message("\nFitting model (", nsim, " simulations) ...")
 
   if(cores > 1 && !snowfall::sfIsRunning()) DLMtool::setup(as.integer(cores))
   if(snowfall::sfIsRunning()) {
@@ -359,8 +360,13 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   res <- lapply(mod, getElement, "report")
   conv <- vapply(res, getElement, logical(1), name = "conv")
   message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
-  if(sum(conv) < nsim) {
-    message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
+  if(sum(conv) < nsim) message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
+  if(sum(conv) < nsim && drop_nonconv) {
+    message("Non-converged iterations will be removed. Setting OM@nsim = ", sum(conv), "\n")
+    OM@nsim <- sum(conv)
+    keep <- conv
+  } else {
+    keep <- !logical(OM@nsim)
   }
 
   ### Fit to life history means if mean_fit = TRUE
@@ -376,16 +382,16 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   }
 
   ### R0
-  OM@cpars$R0 <- vapply(1:nsim, function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
+  OM@cpars$R0 <- vapply(1:length(mod), function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))[keep]
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
   if(any(C_eq > 0) || any(E_eq) > 0) {
-    initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))
+    initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))[keep]
     message("Estimated range in initial spawning depletion: ", paste(round(range(initD), 2), collapse = " - "))
   }
 
-  OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0[length(x$E0)], numeric(1))
+  OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0[length(x$E0)], numeric(1))[keep]
   message("Range of spawning depletion (OM@cpars$D): ", paste(round(range(OM@cpars$D), 2), collapse = " - "), "\n")
 
   ### Selectivity and F
@@ -403,8 +409,8 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     V <- lapply(V, expand_V_matrix)
     V2 <- array(unlist(V), c(nyears+proyears, maxage, nsim))
 
-    OM@cpars$V <- aperm(V2, c(3, 2, 1))
-    OM@cpars$Find <- Find
+    OM@cpars$V <- aperm(V2, c(3, 2, 1))[keep, , , drop = FALSE]
+    OM@cpars$Find <- Find[keep, , drop = FALSE]
     message("Historical F and selectivity trends set in OM@cpars$Find and OM@cpars$V, respectively.")
     message("Selectivity during projection period is equal to that in most recent historical year.")
 
@@ -413,10 +419,10 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     if(!fix_sel) {
       OM@isRel <- FALSE
 
-      OM@cpars$L5 <- vapply(res, getElement, numeric(1), "L5")
+      OM@cpars$L5 <- vapply(res, getElement, numeric(1), "L5")[keep]
       message("Range of OM@cpars$L5: ", paste(round(range(OM@cpars$L5), 2), collapse = " - "))
 
-      OM@cpars$LFS <- vapply(res, getElement, numeric(1), "LFS")
+      OM@cpars$LFS <- vapply(res, getElement, numeric(1), "LFS")[keep]
       message("Range of OM@cpars$LFS: ", paste(round(range(OM@cpars$LFS), 2), collapse = " - "))
 
       if(selectivity == "logistic") {
@@ -424,23 +430,23 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
         message("With logistic selectivity, setting OM@cpars$Vmaxlen = 1")
 
       } else {
-        OM@cpars$Vmaxlen <- vapply(res, getElement, numeric(1), "Vmaxlen")
+        OM@cpars$Vmaxlen <- vapply(res, getElement, numeric(1), "Vmaxlen")[keep]
         message("Range of OM@cpars$Vmaxlen: ", paste(round(range(OM@cpars$Vmaxlen), 2), collapse = " - "))
       }
     }
 
-    OM@cpars$Find <- t(do.call(cbind, lapply(res, getElement, "F")))
+    OM@cpars$Find <- t(do.call(cbind, lapply(res, getElement, "F")))[keep, , drop = FALSE]
     message("Historical F set in OM@cpars$Find.")
   }
 
   if(fix_sel) {
-    OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ] else FleetPars$L5
-    OM@cpars$LFS <- if(is.matrix(FleetPars$LFS)) FleetPars$LFS[nyears, ] else FleetPars$LFS
-    OM@cpars$Vmaxlen <- if(is.matrix(FleetPars$Vmaxlen)) FleetPars$Vmaxlen[nyears, ] else FleetPars$Vmaxlen
+    OM@cpars$L5 <- if(is.matrix(FleetPars$L5)) FleetPars$L5[nyears, ][keep] else FleetPars$L5[keep]
+    OM@cpars$LFS <- if(is.matrix(FleetPars$LFS)) FleetPars$LFS[nyears, ][keep] else FleetPars$LFS[keep]
+    OM@cpars$Vmaxlen <- if(is.matrix(FleetPars$Vmaxlen)) FleetPars$Vmaxlen[nyears, ][keep] else FleetPars$Vmaxlen[keep]
     V <- FleetPars$V
     maxV <- apply(FleetPars$V, c(1, 3), max)
     for(i in 1:maxage) V[,i,] <- V[,i,]/maxV
-    OM@cpars$V <- V
+    OM@cpars$V <- V[keep, , , drop = FALSE]
   }
 
   Eff <- apply(OM@cpars$Find, 2, range)
@@ -450,33 +456,32 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   message("Historical effort trends set in OM@EffLower and OM@EffUpper.\n")
 
   ### Rec devs
-  OM@cpars$Perr <- StockPars$procsd
+  OM@cpars$Perr <- StockPars$procsd[keep]
   make_Perr <- function(x) {
     bias_corr <- ifelse(x$obj$env$data$est_rec_dev, exp(-0.5 * x$report$tau^2), 1)
     res <- exp(x$report$log_rec_dev) * bias_corr
     res[1] <- res[1] * x$report$R_eq/x$report$R0
     return(res)
   }
-  Perr <- do.call(rbind, lapply(mod, make_Perr))
+  Perr <- do.call(rbind, lapply(mod[keep], make_Perr))
 
   make_early_Perr <- function(x) {
     res <- x$report$R_eq * x$report$NPR_equilibrium / (x$report$R0 * x$report$NPR_unfished[[1]])
     return(rev(res[-1]))
   }
-  early_Perr <- do.call(rbind, lapply(mod, make_early_Perr))
+  early_Perr <- do.call(rbind, lapply(mod[keep], make_early_Perr))
 
-  OM@cpars$Perr_y <- StockPars$Perr_y
+  OM@cpars$Perr_y <- StockPars$Perr_y[keep, , drop = FALSE]
   OM@cpars$Perr_y[, 1:(OM@maxage - 1)] <- early_Perr
   OM@cpars$Perr_y[, OM@maxage:(OM@maxage + nyears - 1)] <- Perr
 
-  log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
-  log_early_rec_dev <- do.call(rbind, lapply(res, getElement, "log_early_rec_dev"))
+  log_rec_dev <- do.call(rbind, lapply(res[keep], getElement, "log_rec_dev"))
 
   OM@cpars$AC <- apply(log_rec_dev, 1, function(x) acf(x, lag.max = 1, plot = FALSE)$acf[2])
   OM@AC <- range(OM@cpars$AC)
 
-  pro_Perr_y <- matrix(rnorm(proyears * nsim, rep(StockPars$procmu, proyears), rep(StockPars$procsd, proyears)),
-                       c(nsim, proyears))
+  pro_Perr_y <- matrix(rnorm(proyears * OM@nsim, rep(StockPars$procmu[keep], proyears), rep(StockPars$procsd[keep], proyears)),
+                       OM@nsim, proyears)
   for(y in 2:proyears) pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y - 1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
   OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- exp(pro_Perr_y)
 
@@ -486,33 +491,32 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   message("Future recruitment deviations sampled with autocorrelation (in OM@cpars$Perr_y).\n")
 
   ### Assign OM variables that were used in the SRA to the output
-  OM@cpars$Len_age <- StockPars$Len_age
-  OM@cpars$LenCV <- StockPars$LenCV
-  OM@cpars$Wt_age <- StockPars$Wt_age
+  OM@cpars$Len_age <- StockPars$Len_age[keep, , , drop = FALSE]
+  OM@cpars$LenCV <- StockPars$LenCV[keep]
+  OM@cpars$Wt_age <- StockPars$Wt_age[keep, , , drop = FALSE]
 
-  if(any(apply(StockPars$Mat_age, 1, function(x) all(x >= 0.5)))) { # Any simulations where all mat_age > 0.5?
-    OM@cpars$L50 <- StockPars$L50
-    OM@cpars$L95 <- StockPars$L95
+  if(any(apply(StockPars$Mat_age[keep, , , drop = FALSE], 1, function(x) all(x >= 0.5)))) { # Any simulations where all mat_age > 0.5?
+    OM@cpars$L50 <- StockPars$L50[keep]
+    OM@cpars$L95 <- StockPars$L95[keep]
   } else {
-    OM@cpars$Mat_age <- StockPars$Mat_age
+    OM@cpars$Mat_age <- StockPars$Mat_age[keep, , , drop = FALSE]
   }
-  OM@cpars$M_ageArray <- StockPars$M_ageArray
+  OM@cpars$M_ageArray <- StockPars$M_ageArray[keep, , , drop = FALSE]
 
-  OM@cpars$h <- StockPars$hs
+  OM@cpars$h <- StockPars$hs[keep]
 
   OM@cpars$plusgroup <- rep(1L, nsim)
-  OM@cpars$Iobs <- ObsPars$Iobs
-
+  OM@cpars$Iobs <- ObsPars$Iobs[keep]
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")
 
   ### Output list
-  E <- do.call(rbind, lapply(res, getElement, "E"))
-  N <- array(sapply(res, getElement, "N"), c(nyears+1, maxage, nsim))
-  CAA_pred <- array(sapply(res, getElement, "CAApred"), c(nyears, maxage, nfleet, nsim))
-  CAL_pred <- array(sapply(res, getElement, "CALpred"), c(nyears, length(length_bin), nfleet, nsim))
+  E <- do.call(rbind, lapply(res[keep], getElement, "E"))
+  N <- array(sapply(res[keep], getElement, "N"), c(nyears+1, maxage, sum(keep)))
+  CAA_pred <- array(sapply(res[keep], getElement, "CAApred"), c(nyears, maxage, nfleet, sum(keep)))
+  CAL_pred <- array(sapply(res[keep], getElement, "CALpred"), c(nyears, length(length_bin), nfleet, sum(keep)))
 
   output <- new("SRA", OM = OM, SSB = E, NAA = aperm(N, c(3, 1, 2)), CAA = aperm(CAA_pred, c(4, 1:3)),
-                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv, data = SRA_data, Misc = res)
+                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv[keep], data = SRA_data, Misc = res[keep])
   if(mean_fit) output@mean_fit <- mean_fit_output
 
   message("Complete.")
