@@ -11,7 +11,7 @@ SRA_scope(OM, Chist = NULL, Ehist = NULL, condition = c("catch",
   ML = NULL, length_bin = NULL, C_eq = 0, E_eq = 0, ML_sd = NULL,
   selectivity = "logistic", I_type = NULL, LWT = list(),
   ESS = c(30, 30), fix_dome = FALSE, max_F = 3, cores = 1L,
-  integrate = FALSE, mean_fit = FALSE, ...)
+  integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...)
 
 plot_SRA_scope(...)
 
@@ -72,6 +72,8 @@ multinomial likelihood function. The annual sample size of an age or length comp
 \item{integrate}{Logical, whether to treat recruitment deviations as penalized parameters (FALSE) or random effects (TRUE).}
 
 \item{mean_fit}{Logical, whether to run an additional with mean values of life history parameters from the OM.}
+
+\item{drop_nonconv}{Logical, whether to drop non-converged fits of the SRA model.}
 
 \item{...}{Other arguments to add in the future.}
 
