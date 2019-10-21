@@ -1,7 +1,14 @@
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
-  using namespace SCA;
+
+#ifndef SCA_hpp
+#define SCA_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type SCA(objective_function<Type> *obj) {
+
+  using namespace ns_SCA;
 
   DATA_VECTOR(C_hist);    // Total catch
   DATA_VECTOR(I_hist);    // Index
@@ -14,26 +21,35 @@
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
   DATA_STRING(I_type);    // String whether index surveys B, VB, or SSB
+  DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_STRING(CAA_dist);  // String indicating whether CAA is multinomial or lognormal
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
-  PARAMETER(log_meanR);
+  PARAMETER(log_R0);
+  PARAMETER(transformed_h);
   PARAMETER(F_equilibrium);
   PARAMETER_VECTOR(vul_par);
 
   PARAMETER_VECTOR(logF);
 
-  PARAMETER(log_omega);
   PARAMETER(log_sigma);
+  PARAMETER(log_omega);
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
 
-  Type meanR = exp(log_meanR);
+  Type R0 = exp(log_R0);
+  Type h;
+  if(SR_type == "BH") {
+    h = 0.8 * invlogit(transformed_h);
+  } else {
+    h = exp(transformed_h);
+  }
+  h += 0.2;
 
-  Type omega = exp(log_omega);
   Type sigma = exp(log_sigma);
+  Type omega = exp(log_omega);
   Type tau = exp(log_tau);
 
   Type penalty = 0;
@@ -47,15 +63,41 @@
     vul = calc_dome_vul(vul_par, max_age, prior);
   }
 
+  ////// Equilibrium reference points and per-recruit quantities
+  vector<Type> NPR_virgin = calc_NPR(Type(0), vul, M, max_age);
+
+  Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
+
+  Type B0 = R0 * sum_BPR(NPR_virgin, weight);
+  Type N0 = R0 * NPR_virgin.sum();
+  Type E0 = R0 * EPR0;
+  Type VB0 = R0 * sum_VBPR(NPR_virgin, weight, vul);
+
+  Type Arec, Brec;
+
+  if(SR_type == "BH") {
+    Arec = 4 * h;
+    Arec /= 1-h;
+    Brec = 5*h - 1;
+    Brec /= (1-h);
+  } else {
+    Arec = pow(5*h, 1.25);
+    Brec = 1.25;
+    Brec *= log(5*h);
+  }
+  Type CR = Arec;
+  Arec /= EPR0;
+  Brec /= E0;
+
   ////// During time series year = 1, 2, ..., n_y
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
   matrix<Type> CAApred(n_y, max_age);   // Catch (in numbers) at year and age at the mid-point of the season
   vector<Type> CN(n_y);             // Catch in numbers
   vector<Type> Cpred(n_y);
-  vector<Type> F(n_y);              // Harvest rate at year
+  vector<Type> F(n_y);
   vector<Type> Ipred(n_y);          // Predicted index at year
   vector<Type> R(n_y+1);            // Recruitment at year
-  vector<Type> R_early(max_age-1);  // Early recruitment (boundary conditions)
+  vector<Type> R_early(max_age-1);
   vector<Type> VB(n_y+1);           // Vulnerable biomass at year
   vector<Type> B(n_y+1);            // Total biomass at year
   vector<Type> E(n_y+1);            // Spawning biomass at year
@@ -68,14 +110,23 @@
 
   // Equilibrium quantities (leading into first year of model)
   vector<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, M, max_age);
+  Type EPR_eq = sum_EPR(NPR_equilibrium, weight, mat);
+  Type R_eq;
 
-  R(0) = meanR;
+  if(SR_type == "BH") {
+    R_eq = Arec * EPR_eq - 1;
+  } else {
+    R_eq = log(Arec * EPR_eq);
+  }
+  R_eq /= Brec * EPR_eq;
+
+  R(0) = R_eq;
   if(est_rec_dev(0)) R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
   for(int a=0;a<max_age;a++) {
-    if(a==0) {
+    if(a == 0) {
       N(0,a) = R(0) * NPR_equilibrium(a);
     } else {
-      R_early(a-1) = meanR;
+      R_early(a-1) = R_eq;
       if(est_early_rec_dev(a-1)) R_early(a-1) *= exp(log_early_rec_dev(a-1) - 0.5 * tau * tau);
       N(0,a) = R_early(a-1) * NPR_equilibrium(a);
     }
@@ -86,11 +137,14 @@
 
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
-    if(y<n_y-1) {
-      R(y+1) = meanR;
-      if(est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
+    if(SR_type == "BH") {
+      R(y+1) = BH_SR(E(y), h, R0, E0);
     } else {
-      R(y+1) = R(y);
+      R(y+1) = Ricker_SR(E(y), h, R0, E0);
+    }
+
+    if(y<n_y-1) {
+      if(est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
     }
     N(y+1,0) = R(y+1);
 
@@ -149,7 +203,8 @@
 
   Type nll = nll_comp.sum() + penalty + prior;
 
-  ADREPORT(meanR);
+  ADREPORT(R0);
+  ADREPORT(h);
   ADREPORT(omega);
   ADREPORT(sigma);
   ADREPORT(tau);
@@ -159,7 +214,17 @@
   REPORT(sigma);
   REPORT(tau);
 
-  REPORT(meanR);
+  REPORT(NPR_virgin);
+  REPORT(Arec);
+  REPORT(Brec);
+  REPORT(EPR0);
+  REPORT(CR);
+  REPORT(h);
+  REPORT(R0);
+  REPORT(B0);
+  REPORT(N0);
+  REPORT(E0);
+  REPORT(VB0);
 
   REPORT(vul_par);
   REPORT(vul);
@@ -185,6 +250,9 @@
   REPORT(prior);
 
   return nll;
-//}
+}
 
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
 
+#endif

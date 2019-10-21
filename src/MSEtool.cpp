@@ -1,6 +1,6 @@
 #define TMB_LIB_INIT R_init_MSEtool
 #include <TMB.hpp>
-#include "../inst/include/functions.h"
+#include "../inst/include/functions.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() ()
@@ -8,31 +8,31 @@ Type objective_function<Type>::operator() ()
   DATA_STRING(model);
 
   if(model == "DD") {
-    #include "../inst/include/DD.h"
+    return DD(this);
   } else if(model == "DD_SS") {
-	  #include "../inst/include/DD_SS.h"
+	return DD_SS(this);
   } else if(model =="SP") {
-    #include "../inst/include/SP.h"
+    return SP(this);
   } else if(model == "SP_SS") {
-    #include "../inst/include/SP_SS.h"
+    return SP_SS(this);
   } else if(model == "grav") {
-    #include "../inst/include/grav.h"
+    return grav(this);
   } else if(model == "grav_Pbyarea") {
-    #include "../inst/include/grav_Pbyarea.h"
+	return grav_Pbyarea(this);
   } else if(model == "SCA") {
-    #include "../inst/include/SCA.h"
+    return SCA(this);
   } else if(model == "SCA2") {
-    #include "../inst/include/SCA2.h"
+    return SCA2(this);
   } else if(model == "SCA_Pope") {
-    #include "../inst/include/SCA_Pope.h"
+    return SCA_Pope(this);
   } else if(model == "VPA") {
-    #include "../inst/include/VPA.h"
+    return VPA(this);
   } else if(model == "cDD") {
-    #include "../inst/include/cDD.h"
+    return cDD(this);
   } else if(model == "cDD_SS") {
-	  #include "../inst/include/cDD_SS.h"
+	return cDD_SS(this);
   } else if(model == "SRA_scope") {
-	  #include "../inst/include/SRA_scope.h"
+	return SRA_scope(this);
   } else {
     error("No model found.");
   }

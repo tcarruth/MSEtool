@@ -1,7 +1,12 @@
 
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
+#ifndef grav_Pbyarea_hpp
+#define grav_Pbyarea_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type grav_Pbyarea(objective_function<Type> *obj) {
   using namespace density;
 
   DATA_VECTOR( fracs );
@@ -105,4 +110,9 @@
 
   return nll;
 
-//}
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif

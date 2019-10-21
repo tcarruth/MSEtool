@@ -1,7 +1,14 @@
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
-  using namespace SCA;
+
+#ifndef SCA_Pope_hpp
+#define SCA_Pope_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type SCA_Pope(objective_function<Type> *obj) {
+
+  using namespace ns_SCA;
 
   DATA_VECTOR(C_hist);    // Total catch
   DATA_VECTOR(I_hist);    // Index
@@ -21,13 +28,10 @@
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
-  PARAMETER(F_equilibrium);
+  PARAMETER(U_equilibrium);
   PARAMETER_VECTOR(vul_par);
 
-  PARAMETER_VECTOR(logF);
-
   PARAMETER(log_sigma);
-  PARAMETER(log_omega);
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
@@ -40,9 +44,7 @@
     h = exp(transformed_h);
   }
   h += 0.2;
-
   Type sigma = exp(log_sigma);
-  Type omega = exp(log_omega);
   Type tau = exp(log_tau);
 
   Type penalty = 0;
@@ -57,7 +59,7 @@
   }
 
   ////// Equilibrium reference points and per-recruit quantities
-  vector<Type> NPR_virgin = calc_NPR(Type(0), vul, M, max_age);
+  vector<Type> NPR_virgin = calc_NPR_U(Type(0), vul, M, max_age);                     // Numbers-per-recruit (NPR) at U = 0
 
   Type EPR0 = sum_EPR(NPR_virgin, weight, mat);
 
@@ -70,11 +72,11 @@
 
   if(SR_type == "BH") {
     Arec = 4 * h;
-    Arec /= 1-h;	
+    Arec /= 1-h;
     Brec = 5*h - 1;
-    Brec /= (1-h);	
+    Brec /= (1-h);
   } else {
-    Arec = pow(5*h, 1.25);	
+    Arec = pow(5*h, 1.25);
     Brec = 1.25;
     Brec *= log(5*h);
   }
@@ -86,23 +88,21 @@
   matrix<Type> N(n_y+1, max_age);   // Numbers at year and age
   matrix<Type> CAApred(n_y, max_age);   // Catch (in numbers) at year and age at the mid-point of the season
   vector<Type> CN(n_y);             // Catch in numbers
-  vector<Type> Cpred(n_y);
-  vector<Type> F(n_y);
+  vector<Type> U(n_y);              // Harvest rate at year
   vector<Type> Ipred(n_y);          // Predicted index at year
   vector<Type> R(n_y+1);            // Recruitment at year
   vector<Type> R_early(max_age-1);
-  vector<Type> VB(n_y+1);           // Vulnerable biomass at year
+  vector<Type> VB(n_y+1);           // Vulnerable biomass at the midpoint of the year
   vector<Type> B(n_y+1);            // Total biomass at year
   vector<Type> E(n_y+1);            // Spawning biomass at year
 
   CN.setZero();
-  Cpred.setZero();
   VB.setZero();
   B.setZero();
   E.setZero();
 
   // Equilibrium quantities (leading into first year of model)
-  vector<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, M, max_age);
+  vector<Type> NPR_equilibrium = calc_NPR_U(U_equilibrium, vul, M, max_age);
   Type EPR_eq = sum_EPR(NPR_equilibrium, weight, mat);
   Type R_eq;
 
@@ -114,7 +114,9 @@
   R_eq /= Brec * EPR_eq;
 
   R(0) = R_eq;
-  if(est_rec_dev(0)) R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
+  if(est_rec_dev(0)) {
+    R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
+  }
   for(int a=0;a<max_age;a++) {
     if(a == 0) {
       N(0,a) = R(0) * NPR_equilibrium(a);
@@ -124,7 +126,7 @@
       N(0,a) = R_early(a-1) * NPR_equilibrium(a);
     }
     B(0) += N(0,a) * weight(a);
-    VB(0) += N(0,a) * weight(a) * vul(a);
+    VB(0) += N(0,a) * weight(a) * vul(a) * exp(-0.5 * M(a));
     E(0) += N(0,a) * weight(a) * mat(a);
   }
 
@@ -141,17 +143,16 @@
     }
     N(y+1,0) = R(y+1);
 
-    F(y) = CppAD::CondExpLt(3 - exp(logF(y)), Type(0), 3 - posfun(3 - exp(logF(y)), Type(0), penalty), exp(logF(y)));
+    U(y) = CppAD::CondExpLt(1 - C_hist(y)/VB(y), Type(0.025),
+                            1 - posfun(1 - C_hist(y)/VB(y), Type(0.025), penalty), C_hist(y)/VB(y));
 
     for(int a=0;a<max_age;a++) {
-      Type meanN = N(y,a) * (1 - exp(-vul(a) * F(y) - M(a))) / (vul(a) * F(y) + M(a));
-      CAApred(y,a) = vul(a) * F(y) * meanN;
-      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-vul(a) * F(y) - M(a));
-      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-vul(a) * F(y) - M(a));
+      CAApred(y,a) = vul(a) * U(y) * N(y,a) * exp(-0.5 * M(a));
       CN(y) += CAApred(y,a);
-      Cpred(y) += CAApred(y,a) * weight(a);
+      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
+      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-M(a)) * (1 - vul(a) * U(y));
       B(y+1) += N(y+1,a) * weight(a);
-      VB(y+1) += N(y+1,a) * weight(a) * vul(a);
+      VB(y+1) += N(y+1,a) * weight(a) * vul(a) * exp(-0.5 * M(a));
       E(y+1) += N(y+1,a) * weight(a) * mat(a);
     }
   }
@@ -169,7 +170,7 @@
     for(int y=0;y<n_y;y++) Ipred(y) = q * E(y);
   }
 
-  vector<Type> nll_comp(4);
+  vector<Type> nll_comp(3);
   nll_comp.setZero();
   for(int y=0;y<n_y;y++) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
@@ -186,24 +187,21 @@
           nll_comp(1) -= dlnorm_comp(loglike_CAAobs, loglike_CAApred);
         }
       }
-      nll_comp(2) -= dnorm(log(C_hist(y)), log(Cpred(y)), omega, true);
     }
-    if(est_rec_dev(y)) nll_comp(3) -= dnorm(log_rec_dev(y), Type(0), tau, true);
+    if(est_rec_dev(y)) nll_comp(2) -= dnorm(log_rec_dev(y), Type(0), tau, true);
   }
   for(int a=0;a<max_age-1;a++) {
-    if(est_early_rec_dev(a)) nll_comp(3) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
+    if(est_early_rec_dev(a)) nll_comp(2) -= dnorm(log_early_rec_dev(a), Type(0), tau, true);
   }
 
   Type nll = nll_comp.sum() + penalty + prior;
 
   ADREPORT(R0);
   ADREPORT(h);
-  ADREPORT(omega);
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(q);
 
-  REPORT(omega);
   REPORT(sigma);
   REPORT(tau);
 
@@ -222,12 +220,10 @@
   REPORT(vul_par);
   REPORT(vul);
 
-  REPORT(F);
-
   REPORT(N);
   REPORT(CN);
-  REPORT(Cpred);
   REPORT(CAApred);
+  REPORT(U);
   REPORT(Ipred);
   REPORT(R);
   REPORT(R_early);
@@ -242,7 +238,13 @@
   REPORT(penalty);
   REPORT(prior);
 
-  return nll;
-  //}
 
+  return nll;
+
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif
 

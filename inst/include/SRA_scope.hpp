@@ -1,8 +1,14 @@
 
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
-  using namespace SRA_scope;
+#ifndef SRA_scope_hpp
+#define SRA_scope_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type SRA_scope(objective_function<Type> *obj) {
+
+  using namespace ns_SRA_scope;
 
   DATA_MATRIX(C_hist);    // Total catch by year and fleet
   DATA_VECTOR(C_eq);      // Equilibrium catch by fleet
@@ -424,6 +430,12 @@
 
   return nll;
 
-//}
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif
+
 
 

@@ -1,7 +1,7 @@
 
-namespace VPA {
+namespace ns_VPA {
 
-using namespace SCA;
+using namespace ns_SCA;
 
 // Iterative solver for F in VPA model -
 // if F_ya = Z_ya C_ya / (exp(Z_ya) - 1) N_y+1,a+1, then:

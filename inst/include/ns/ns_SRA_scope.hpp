@@ -1,7 +1,7 @@
 
-namespace SRA_scope {
+namespace ns_SRA_scope {
 
-using namespace SCA;
+using namespace ns_SCA;
 
 template <class Type>
 Type log2(Type x) {

@@ -1,7 +1,7 @@
-#include "ns/ns_cDD.h"
-#include "ns/ns_SCA.h"
-#include "ns/ns_VPA.h"
-#include "ns/ns_SRA_scope.h"
+#include "ns/ns_cDD.hpp"
+#include "ns/ns_SCA.hpp"
+#include "ns/ns_VPA.hpp"
+#include "ns/ns_SRA_scope.hpp"
 
 //posfun from ADMB
 template<class Type>
@@ -122,4 +122,19 @@ Type SP_F(Type U_start, Type C_hist, Type MSY, Type K, Type n, Type nterm, Type 
 
   return F;
 }
+
+
+#include "cDD.hpp"
+#include "cDD_SS.hpp"
+#include "DD.hpp"
+#include "DD_SS.hpp"
+#include "grav.hpp"
+#include "grav_Pbyarea.hpp"
+#include "SCA.hpp"
+#include "SCA_Pope.hpp"
+#include "SCA2.hpp"
+#include "SP.hpp"
+#include "SP_SS.hpp"
+#include "SRA_scope.hpp"
+#include "VPA.hpp"
 

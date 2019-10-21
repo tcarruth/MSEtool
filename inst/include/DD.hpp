@@ -1,7 +1,12 @@
 
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
+#ifndef DD_hpp
+#define DD_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type DD(objective_function<Type> *obj) {
 
   DATA_SCALAR(S0);
   DATA_SCALAR(Alpha);
@@ -12,15 +17,11 @@
   DATA_VECTOR(E_hist);
   DATA_VECTOR(C_hist);
   DATA_STRING(SR_type);
-  DATA_VECTOR_INDICATOR(keep, C_hist);
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
   PARAMETER(log_q);
   PARAMETER(U_equilibrium);
-  PARAMETER(log_sigma);
-  PARAMETER(log_tau);
-  PARAMETER_VECTOR(log_rec_dev);
 
   Type h;
   if(SR_type == "BH") {
@@ -29,8 +30,6 @@
   h += 0.2;
   Type R0 = exp(log_R0);
   Type q = exp(log_q);
-  Type sigma = exp(log_sigma);
-  Type tau = exp(log_tau);
 
   //--DECLARING DERIVED VALUES
   Type Spr0 = (S0 * Alpha/(1 - S0) + wk)/(1 - Rho * S0);
@@ -60,7 +59,6 @@
   vector<Type> B(ny_p);
   vector<Type> N(ny_p);
   vector<Type> R(ny_k);
-  vector<Type> Rec_dev(ny - k);
 
   vector<Type> Surv(ny);
   vector<Type> Cpred(ny);
@@ -96,38 +94,29 @@
     } else {
       R(tt+k) = Ricker_SR(B(tt), h, R0, B0);
     }
-    if(tt + k < ny) {
-      Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * pow(tau, 2));
-      R(tt + k) *= Rec_dev(tt);
-    }
-
-    B(tt+1) = Surv(tt) * (Alpha * N(tt) + Rho * B(tt)) + wk * R(tt+1);
-    N(tt+1) = Surv(tt) * N(tt) + R(tt+1);
+    B(tt + 1) = Surv(tt) * (Alpha * N(tt) + Rho * B(tt)) + wk * R(tt + 1);
+    N(tt + 1) = Surv(tt) * N(tt) + R(tt + 1);
   }
 
   //--ARGUMENTS FOR NLL
-  // Objective function
-  //creates storage for nll and sets value to 0
-  vector<Type> nll_comp(2);
-  nll_comp.setZero();
+  Type sigma = calc_sigma(C_hist, Cpred);
 
-  for(int tt=0; tt<ny; tt++){
-    if(C_hist(tt) > 0) nll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
-    if(tt + k < ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
+  // Objective function
+  //creates storage for jnll and sets value to 0
+  Type nll = 0.;
+  for(int tt=0; tt<ny; tt++) {
+    if(C_hist(tt) > 0) nll -= dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
   }
 
-  //Summing individual nll and penalties
-  Type nll = nll_comp.sum() + penalty;
+  //Summing individual jnll and penalties
+  nll += penalty;
 
   //-------REPORTING-------//
   ADREPORT(R0);
   ADREPORT(h);
   ADREPORT(q);
   ADREPORT(sigma);
-  ADREPORT(tau);
   REPORT(sigma);
-  REPORT(tau);
-  REPORT(nll_comp);
   REPORT(nll);
   REPORT(Arec);
   REPORT(Brec);
@@ -136,8 +125,6 @@
   REPORT(B);
   REPORT(N);
   REPORT(R);
-  REPORT(log_rec_dev);
-  REPORT(Rec_dev);
   REPORT(U);
   REPORT(h);
   REPORT(R0);
@@ -146,4 +133,10 @@
   REPORT(penalty);
 
   return nll;
-//}
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif
+

@@ -1,7 +1,12 @@
 
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
+#ifndef SP_SS_hpp
+#define SP_SS_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type SP_SS(objective_function<Type> *obj) {
 
   DATA_VECTOR(C_hist);
   DATA_VECTOR(I_hist);
@@ -107,4 +112,9 @@
 
   return nll;
 
-//}
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif

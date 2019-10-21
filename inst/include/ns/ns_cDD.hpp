@@ -1,5 +1,5 @@
 
-namespace cDD {
+namespace ns_cDD {
 
 template<class Type>
 Type cDD_BPR(Type F, Type M, Type wk, Type Kappa, Type Winf) {

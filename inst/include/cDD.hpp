@@ -1,8 +1,13 @@
 
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
-  using namespace cDD;
+#ifndef cDD_hpp
+#define cDD_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type cDD(objective_function<Type> *obj) {
+  using namespace ns_cDD;
 
   DATA_SCALAR(M);
   DATA_SCALAR(Winf);
@@ -18,9 +23,6 @@
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
   PARAMETER(F_equilibrium);
-  PARAMETER(log_sigma);
-  PARAMETER(log_tau);
-  PARAMETER_VECTOR(log_rec_dev);
 
   Type h;
   if(SR_type == "BH") {
@@ -28,10 +30,7 @@
   } else h = exp(transformed_h);
   h += 0.2;
   Type R0 = exp(log_R0);
-  Type sigma = exp(log_sigma);
-  Type tau = exp(log_tau);
   int SR_type2 = SR_type == "BH";
-
 
   //--DECLARING DERIVED VALUES
   Type BPR0 = cDD_BPR(Type(0), M, wk, Kappa, Winf);
@@ -66,7 +65,6 @@
   vector<Type> Ipred(ny);
 
   vector<Type> BPRinf(ny);
-  vector<Type> Rec_dev(ny-k);
   vector<Type> Binf(ny);
   vector<Type> Ninf(ny);
 
@@ -96,33 +94,28 @@
     } else {
       R(tt+k) = Ricker_SR(B(tt), h, R0, B0);
     }
-    if(tt+k<ny) {
-      Rec_dev(tt) = exp(log_rec_dev(tt) - 0.5 * tau * tau);
-      R(tt+k) *= Rec_dev(tt);
-    }
   }
 
   //--ARGUMENTS FOR NLL
   Type q = calc_q(I_hist, B);
-  for(int tt=0;tt<ny;tt++) Ipred(tt) = q * B(tt);
+  for(int y=0;y<ny;y++) Ipred(y) = q * B(y);
+  Type sigma = calc_sigma(I_hist, Ipred);
 
   // Objective function
   //creates storage for jnll and sets value to 0
-  vector<Type> nll_comp(2);
-  nll_comp.setZero();
-
-  for(int tt=0;tt<ny;tt++) if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
-  for(int tt=0;tt<log_rec_dev.size();tt++) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
+  Type nll = 0.;
+  for(int y=0;y<ny;y++) {
+    if(!R_IsNA(asDouble(I_hist(y)))) nll -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
+  }
 
   //Summing individual jnll and penalties
-  Type nll = nll_comp.sum() + penalty;
+  nll += penalty;
 
   //-------REPORTING-------//
   ADREPORT(R0);
   ADREPORT(h);
   ADREPORT(q);
   ADREPORT(sigma);
-  ADREPORT(tau);
   REPORT(sigma);
   REPORT(nll);
   REPORT(Arec);
@@ -142,10 +135,12 @@
   REPORT(R0);
   REPORT(N0);
   REPORT(B0);
-  REPORT(log_rec_dev);
-  REPORT(Rec_dev);
-  REPORT(nll_comp);
   REPORT(penalty);
 
   return nll;
-//}
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif

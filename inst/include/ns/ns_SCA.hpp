@@ -1,5 +1,5 @@
 
-namespace SCA {
+namespace ns_SCA {
 
 template<class Type>
 vector<Type> calc_NPR(Type F, vector<Type> vul, vector<Type> M, int max_age) {

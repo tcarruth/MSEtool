@@ -1,8 +1,14 @@
 
-//template<class Type>
-//Type objective_function<Type>::operator() ()
-//{
-  using namespace VPA;
+#ifndef VPA_hpp
+#define VPA_hpp
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
+template<class Type>
+Type VPA(objective_function<Type> *obj) {
+
+  using namespace ns_VPA;
 
   DATA_VECTOR(I_hist);         // Index
   DATA_MATRIX(CAA_hist);       // Catch-at-age proportions
@@ -154,4 +160,10 @@
   REPORT(fn);
 
   return fn;
-//}
+}
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif
+
