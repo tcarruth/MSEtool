@@ -386,7 +386,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
-  if(any(C_eq > 0) || any(E_eq) > 0) {
+  if(any(C_eq > 0) || any(E_eq > 0)) {
     initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))[keep]
     message("Estimated range in initial spawning depletion: ", paste(round(range(initD), 2), collapse = " - "))
   }
@@ -670,7 +670,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     } else {
       vul_par[3:4, ff] <- c(-20, logit(FleetPars$Vmaxlen[nyears, x]))
       map_vul_par[3, ff] <- NA
-      if(fix_dome) map_ful_par[4, ff] <- NA
+      if(fix_dome) map_vul_par[4, ff] <- NA
     }
   }
 
