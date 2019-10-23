@@ -137,7 +137,9 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
 
   # Match number of historical years of catch to OM
   if(OM@nyears != nyears) {
-    message("OM@nyears will be updated to length(Chist): ", nyears)
+    cpars_cond <- length(OM@cpars) > 0 && any(vapply(OM@cpars, function(x) class(x) == "matrix" || class(x) == "array", logical(1)))
+    stmt <- ifelse(cpars_cond, ". This could create indexing errors in your custom parameters (OM@cpars).", "")
+    warning("OM@nyears will be updated to length(Chist): ", nyears, stmt)
     OM@nyears <- nyears
   }
   if(length(OM@CurrentYr) == 0) OM@CurrentYr <- nyears
@@ -391,7 +393,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
     message("Estimated range in initial spawning depletion: ", paste(round(range(initD), 2), collapse = " - "))
   }
 
-  OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0[length(x$E0)], numeric(1))[keep]
+  OM@cpars$D <- vapply(res, function(x) x$E[length(x$E)-1]/x$E0_SR, numeric(1))[keep]
   message("Range of spawning depletion (OM@cpars$D): ", paste(round(range(OM@cpars$D), 2), collapse = " - "), "\n")
 
   ### Selectivity and F
@@ -602,7 +604,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     StockPars_ind <- match(c("M_ageArray", "Len_age", "Mat_age"), names(StockPars))
     StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_array)
 
-    StockPars_ind <- match(c("hs", "LenCV", "procsd"), names(StockPars))
+    StockPars_ind <- match(c("hs", "LenCV", "procsd", "ageM"), names(StockPars))
     StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_vector)
 
     if(condition == "effort") StockPars$R0 <- mean_vector(StockPars$R0)
@@ -623,7 +625,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
                        Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
                        mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, I_type = I_type, SR_type = SR_type,
-                       LWT_C = LWT_C, LWT_Index = LWT$Index, max_F = max_F,
+                       LWT_C = LWT_C, LWT_Index = LWT$Index, max_F = max_F, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
                        est_early_rec_dev = rep(0, max_age-1), est_rec_dev = c(rep(1, nyears-1), 0))
   TMB_data_all$CAA_hist[TMB_data_all$CAA_hist < 1e-8] <- 1e-8
   TMB_data_all$CAL_hist[TMB_data_all$CAL_hist < 1e-8] <- 1e-8
@@ -715,7 +717,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   report$E_hist <- TMB_data$E_hist/rescale_effort
 
   vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "CN", "Cpred", "N", "N_full", "VB",
-                "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0")
+                "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_SR")
   vars_mult <- c("Brec", "q")
   var_trans <- c("R0", "q")
   fun_trans <- c("/", "*")

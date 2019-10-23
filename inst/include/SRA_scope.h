@@ -44,7 +44,8 @@
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
   DATA_VECTOR(LWT_Index); // LIkelihood weights for the index
 
-  DATA_SCALAR(max_F);
+  DATA_SCALAR(max_F);     // Maximum F in the model
+  DATA_INTEGER(ageM);     // Age of maturity used for averaging E0 and EPR0
 
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
@@ -116,9 +117,7 @@
   vector<Type> B0(n_y);
   vector<Type> N0(n_y);
 
-  vector<Type> Arec(n_y);
-  vector<Type> Brec(n_y);
-
+  Type E0_SR = 0;
   for(int y=0;y<n_y;y++) {
     NPR_unfished(y) = calc_NPR0(M, max_age, y);
 
@@ -127,19 +126,24 @@
     B0(y) = R0 * sum_BPR(NPR_unfished(y), wt, max_age, y);
     N0(y) = R0 * NPR_unfished(y).sum();
 
-    if(SR_type == "BH") {
-      Arec(y) = 4 *h;
-      Arec(y) /= 1-h;
-      Brec(y) = 5*h - 1;
-      Brec(y) /= (1-h);
-    } else {
-      Arec(y) = pow(5*h, 1.25);
-      Brec(y) = 1.25;
-      Brec(y) *= log(5*h);
-    }
-    Arec(y) /= EPR0(y);
-    Brec(y) /= E0(y);
+    if(y < ageM) E0_SR += E0(y);
   }
+  E0_SR /= Type(ageM);
+  Type EPR0_SR = E0_SR/R0;
+
+  Type Arec, Brec;
+  if(SR_type == "BH") {
+    Arec = 4 *h;
+    Arec /= 1-h;
+    Brec = 5*h - 1;
+    Brec /= (1-h);
+  } else {
+    Arec = pow(5*h, 1.25);
+    Brec = 1.25;
+    Brec *= log(5*h);
+  }
+  Arec /= EPR0_SR;
+  Brec /= E0_SR;
 
   ////// During time series year = 1, 2, ..., n_y
   vector<matrix<Type> > ALK(n_y);
@@ -179,11 +183,11 @@
   Type R_eq;
 
   if(SR_type == "BH") {
-    R_eq = Arec(0) * EPR_eq - 1;
+    R_eq = Arec * EPR_eq - 1;
   } else {
-    R_eq = log(Arec(0) * EPR_eq);
+    R_eq = log(Arec * EPR_eq);
   }
-  R_eq /= Brec(0) * EPR_eq;
+  R_eq /= Brec * EPR_eq;
 
   R(0) = R_eq;
   if(est_rec_dev(0)) {
@@ -214,9 +218,9 @@
   // Loop over all other years
   for(int y=0;y<n_y;y++) {
     if(SR_type == "BH") {
-      R(y+1) = BH_SR(E(y), h, R0, E0(y));
+      R(y+1) = BH_SR(E(y), h, R0, E0_SR);
     } else {
-      R(y+1) = Ricker_SR(E(y), h, R0, E0(y));
+      R(y+1) = Ricker_SR(E(y), h, R0, E0_SR);
     }
 
     if(y<n_y-1) {
@@ -382,6 +386,8 @@
 
   REPORT(Arec);
   REPORT(Brec);
+  REPORT(E0_SR);
+  REPORT(EPR0_SR);
 
   REPORT(ALK);
   REPORT(N);

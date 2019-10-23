@@ -191,6 +191,12 @@ rmd_SRA_SSB_output <- function() {
     "E <- do.call(cbind, lapply(report_list, getElement, \"E\"))",
     "matplot(Yearplusone_matrix, E, ylim = c(0, 1.1 * max(E)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Spawning biomass\")",
     "abline(h = 0, col = \"grey\")",
+    "```\n",
+    "",
+    "```{r, fig.cap = \"Estimated spawning depletion among all simulations. Unfished spawning biomass is the value calculated from first year life history parameters.\"}",
+    "E_E0 <- do.call(cbind, lapply(report_list, function(x) x$E/x$E0_SR))",
+    "matplot(Yearplusone_matrix, E_E0, ylim = c(0, 1.1 * max(E_E0)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Spawning depletion\")",
+    "abline(h = 0, col = \"grey\")",
     "```\n")
 }
 
