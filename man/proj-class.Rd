@@ -19,7 +19,9 @@ An S4 class for the output from \link{projection}.
 
 \item{\code{B}}{An matrix of biomass with \code{p_sim} rows and \code{p_years} columns.}
 
-\item{\code{SSB}}{An matrix of spawning biomass with \code{p_sim} rows and \code{p_years} columns.}
+\item{\code{SSB}}{A matrix of spawning biomass with \code{p_sim} rows and \code{p_years} columns.}
+
+\item{\code{VB}}{A matrix of vulnerable biomass with \code{p_sim} rows and \code{p_years} columns.}
 
 \item{\code{R}}{A matrix of recruitment over \code{p_sim} rows and \code{p_years} columns.}
 

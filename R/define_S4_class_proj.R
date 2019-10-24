@@ -10,7 +10,8 @@
 #' @slot Name Name of Data object.
 #' @slot FMort A matrix of fishing mortality over \code{p_sim} rows and \code{p_years} columns.
 #' @slot B An matrix of biomass with \code{p_sim} rows and \code{p_years} columns.
-#' @slot SSB An matrix of spawning biomass with \code{p_sim} rows and \code{p_years} columns.
+#' @slot SSB A matrix of spawning biomass with \code{p_sim} rows and \code{p_years} columns.
+#' @slot VB A matrix of vulnerable biomass with \code{p_sim} rows and \code{p_years} columns.
 #' @slot R A matrix of recruitment over \code{p_sim} rows and \code{p_years} columns.
 #' @slot N A matrix of abundance over \code{p_sim} rows and \code{p_years} columns.
 #' @slot Catch A matrix of observed catch over \code{p_sim} rows and \code{p_years} columns.
@@ -21,7 +22,7 @@
 #' @export proj
 #' @exportClass proj
 proj <- setClass("proj", slots = c(Model = "character", Name = "character", FMort = "matrix",
-                                   B = "matrix", SSB = "matrix", R = "matrix", N = "matrix",
+                                   B = "matrix", SSB = "matrix", VB = "matrix", R = "matrix", N = "matrix",
                                    Catch = "matrix", Index = "matrix", C_at_age = "array"))
 
 
@@ -118,7 +119,7 @@ projection_SP <- function(Assessment, constrain = c("F", "Catch"), FMort = NULL,
   }
   Ipred <- TMB_report$q * B * Iobs_err
 
-  return(new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, FMort = Fout))
+  return(new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, FMort = Fout))
 }
 
 SP_catch_solver <- function(FM, B, dt, MSY, K, n, n_term, TAC = NULL) {
@@ -172,7 +173,7 @@ projection_SCA <- projection_SCA_Pope <- function(Assessment, constrain = c("F",
                 C_at_age = aperm(CAApred, c(3, 1, 2)),
                 Index = do.call(rbind, lapply(p_output, getElement, "Ipred")),
                 SSB = do.call(rbind, lapply(p_output, getElement, "E")),
-                N = do.call(rbind, lapply(p_output, function(x) rowSums(x$N))),
+                N = do.call(rbind, lapply(p_output, function(x) rowSums(x$N))), VB = do.call(rbind, lapply(p_output, getElement, "VB")),
                 B = do.call(rbind, lapply(p_output, getElement, "B")), FMort = do.call(rbind, lapply(p_output, getElement, "Fout")))
   return(output)
 }
@@ -339,7 +340,7 @@ projection_cDD <- projection_cDD_SS <- function(Assessment, constrain = c("F", "
   Ipred <- TMB_report$q * B * Iobs_err
   #return(list(Cpred = Cpred * Cobs_err, Ipred = Ipred, B = B, R = R, N = N, F = Fout))
 
-  new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, R = R, N = N, FMort = Fout)
+  new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, R = R, N = N, FMort = Fout)
 }
 
 cDD_catch_solver <- function(FM, B, N, R, M, Kappa, Winf, wk, TAC = NULL) {
@@ -417,7 +418,7 @@ projection_DD_TMB <- projection_DD_SS <- function(Assessment, constrain = c("F",
   Eff <- -log(1 - U)/TMB_report$q/Assessment@info$E_rescale
   Ipred <- Cpred/Eff * Iobs_err
   #return(list(Cpred = Cpred * Cobs_err, Ipred = Ipred, B = B, R = R, N = N, F = Fout))
-  new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, R = R, N = N, FMort = Fout)
+  new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, R = R, N = N, FMort = Fout)
 }
 
 projection_VPA <- function(...) stop("Projection function for VPA is not yet available.", call. = FALSE)
