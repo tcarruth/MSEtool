@@ -171,7 +171,9 @@ if(getRversion() >= "2.15.1") {
   utils::globalVariables(c("Bmcmc", "currentMCMC", "currentRes"))
 
   # For dplyr functions in SS2OM
-  utils::globalVariables(c("Year", "Age", "M"))
+  utils::globalVariables(c("Year", "Age", "M", "steep", "int_Age", "Len_Beg", "Wt_Beg", "Len_Mat", "Age_Mat", "Yr",
+                           "LAA", "Gender", "true_Age", "true_Year", "true_Yr", "bias_adjusted", "pred_recr", "Z"))
+
 }
 
 
