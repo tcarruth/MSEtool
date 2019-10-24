@@ -135,12 +135,17 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   OM@maxF <- max_F
   message("OM@maxF updated to ", max_F, ".")
 
-  # Match number of historical years of catch to OM
+  # Match number of historical years of catch/effort to OM
   if(OM@nyears != nyears) {
     cpars_cond <- length(OM@cpars) > 0 && any(vapply(OM@cpars, function(x) class(x) == "matrix" || class(x) == "array", logical(1)))
-    stmt <- ifelse(cpars_cond, ". This could create indexing errors in your custom parameters (OM@cpars).", "")
-    warning("OM@nyears will be updated to length(Chist): ", nyears, stmt)
-    OM@nyears <- nyears
+    if(cpars_cond) {
+      stmt <- paste0("OM@nyears != length(", ifelse(condition == "catch", "Chist", "Ehist"), "). ",
+                     "There will be indexing errors in your custom parameters (OM@cpars).")
+      stop(stmt, call. = FALSE)
+    } else {
+      warning("OM@nyears was updated to length(", ifelse(condition == "catch", "Chist", "Ehist"), "): ", nyears)
+      OM@nyears <- nyears
+    }
   }
   if(length(OM@CurrentYr) == 0) OM@CurrentYr <- nyears
 
@@ -364,8 +369,7 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
   if(sum(conv) < nsim) message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
   if(sum(conv) < nsim && drop_nonconv) {
-    message("Non-converged iterations will be removed. Setting OM@nsim = ", sum(conv), "\n")
-    OM@nsim <- sum(conv)
+    message("Non-converged iterations will be removed.\n")
     keep <- conv
   } else {
     keep <- !logical(OM@nsim)
@@ -478,12 +482,11 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
   OM@cpars$Perr_y[, OM@maxage:(OM@maxage + nyears - 1)] <- Perr
 
   log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
-
   OM@cpars$AC <- apply(log_rec_dev, 1, function(x) acf(x, lag.max = 1, plot = FALSE)$acf[2])
   OM@AC <- range(OM@cpars$AC)
 
   pro_Perr_y <- matrix(rnorm(proyears * nsim, rep(StockPars$procmu, proyears), rep(StockPars$procsd, proyears)),
-                       OM@nsim, proyears)
+                       nsim, proyears)
   for(y in 2:proyears) pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y - 1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
   OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- exp(pro_Perr_y)
 
