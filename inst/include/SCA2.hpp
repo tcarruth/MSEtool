@@ -172,6 +172,7 @@ Type SCA2(objective_function<Type> *obj) {
   REPORT(vul);
 
   REPORT(F);
+  REPORT(q);
 
   REPORT(N);
   REPORT(CN);

@@ -165,9 +165,9 @@ cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = 
 
   if(rescale != 1) {
     vars_div <- c("B0", "B", "Cpred", "N0", "N", "R0", "R", "Binf", "Rinf", "Ninf")
-    vars_mult <- c("Brec")
-    var_trans <- c("R0")
-    fun_trans <- c("/")
+    vars_mult <- c("Brec", "q")
+    var_trans <- c("R0", "q")
+    fun_trans <- c("/", "*")
     fun_fixed <- c("log")
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
@@ -323,9 +323,9 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
 
   if(rescale != 1) {
     vars_div <- c("B0", "B", "Cpred", "N0", "N", "R0", "R", "Binf", "Rinf", "Ninf")
-    vars_mult <- c("Brec")
-    var_trans <- c("R0")
-    fun_trans <- c("/")
+    vars_mult <- c("Brec", "q")
+    var_trans <- c("R0", "q")
+    fun_trans <- c("/", "*")
     fun_fixed <- c("log")
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }

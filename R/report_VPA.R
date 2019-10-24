@@ -35,6 +35,7 @@ summary_VPA <- function(Assessment) {
                  derived_quantities = derived, model_estimates = model_estimates)
   return(output)
 }
+class(VPA) <- "Assessment"
 
 rmd_VPA <- function(Assessment) {
   ss <- rmd_summary("Virtual Population Analysis (VPA)")

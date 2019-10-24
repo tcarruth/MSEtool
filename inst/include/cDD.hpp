@@ -123,6 +123,7 @@ Type cDD(objective_function<Type> *obj) {
   REPORT(BPR0);
   REPORT(Cpred);
   REPORT(Ipred);
+  REPORT(q);
   REPORT(B);
   REPORT(N);
   REPORT(R);

@@ -13,7 +13,7 @@ An S4 class for the output from \link{SRA_scope}.
 \describe{
 \item{\code{OM}}{An updated operating model, class \linkS4class{OM}.}
 
-\item{\code{SSB}}{An matrix of estimated spawning biomass with \code{OM@nsim} rows and \code{OM@nyears+1} columns.}
+\item{\code{SSB}}{A matrix of estimated spawning biomass with \code{OM@nsim} rows and \code{OM@nyears+1} columns.}
 
 \item{\code{NAA}}{An array for the predicted numbers at age with dimension \code{OM@nsim}, \code{OM@nyears+1}, and \code{OM@maxage}.}
 

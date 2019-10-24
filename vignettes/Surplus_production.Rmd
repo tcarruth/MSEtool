@@ -69,7 +69,7 @@ browseVignettes("MSEtool")
 The surplus production model uses the Fletcher (1978) formulation. The biomass $B_t$ in year $t$ is
 $$B_t = B_{t-1} + P_{t-1} - C_{t-1},$$
 where $C_t$ is the observed catch and $P_t$ is the surplus production given by:
-$$P_t = \gamma MSY \left(\dfrac{B_t}{K}-\left[\dfrac{B_t}{K}\right]^n\right), $$
+$$P_t = \gamma \times MSY \times \left(\dfrac{B_t}{K}-\left[\dfrac{B_t}{K}\right]^n\right), $$
 where $K$ is the carrying capacity, $MSY$ is the estimated maximum sustainable yield, and $n$ is the parameter that controls shape of the production curve, and
 $\gamma$ is
 $$\gamma = \dfrac{1}{n-1}n^{n/(n-1)}.$$
@@ -88,9 +88,9 @@ $$\log(I_t) \sim N(\log[\hat{I}_t], \sigma^2).$$
 From estimates of leading parameters $F_{MSY}$ and $MSY$, the biomass $B_{MSY}$ at $MSY$ is
 $$B_{MSY} = \dfrac{MSY}{F_{MSY}},$$
 the carrying capacity $K$ is
-$$K = n^{1/(n-1)} B_{MSY} ,$$
+$$K = n^{1/(n-1)} \times B_{MSY} ,$$
 and the intrinsic rate of population increase $r$ is
-$$ r = n F_{MSY}.$$
+$$ r = n \times F_{MSY}.$$
 The production parameter $n$ is typically fixed and the model has a symmetric productive curve ($B_{MSY}/K = 0.5$) when $n = 2$.
 
 ## State-space version (SP_SS)
@@ -106,7 +106,7 @@ To generate the prior for the intrinsic rate of increase, natural mortality $M_a
 Assuming either a Beverton-Holt or Ricker stock-recruit relationship, steepness is sampled from a transformed beta or transformed lognormal distribution, respectively.
 
 For each pair of sampled M and h values, the corresponding value of $r$ is obtained by solving a modified Euler-Lotka equation:
-$$\alpha \Sigma_{a=1}^A l_a m_a w_a \exp(-r \times a) = 1.$$
+$$\Sigma_{a=1}^A l_a m_a \exp(-r \times a) = 1.$$
 
 Equation 12 is modified to include the $\alpha$ term from the stock-recruit relationship (Stanley et al. 2009). In this way, the recruits-per-spawner at low stock sizes, i.e., as spawning biomass approaches zero, is considered for calculating $r$.
 
@@ -120,8 +120,8 @@ l_a =
 \end{cases}.
 $$
 
-Maturity at age $m_a$ is
-$$m_a = \left[1 + \exp\left(-\log(19) \dfrac{a - \tilde{a}_{50}}{\tilde{a}_{95} - \tilde{a}_{50}}\right)\right]^{-1}, $$
+Fecundity at age $m_a$ is
+$$m_a = \dfrac{\alpha w_a}{\left[1 + \exp\left(-\log(19) \dfrac{a - \tilde{a}_{50}}{\tilde{a}_{95} - \tilde{a}_{50}}\right)\right]}, $$
 where $\tilde{a}_{50}$ and $\tilde{a}_{95}$ are the ages of 50% and 95% maturity, respectively.
 
 Weight-at-age $w_a$ is

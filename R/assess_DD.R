@@ -17,8 +17,8 @@
 #' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model is
 #' estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
 #' (assumes virgin conditions).
-#' @param fix_sigma Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
-#' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Cat}.
+#' @param fix_omega Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+#' omega is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Cat}.
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
@@ -42,7 +42,7 @@
 #' To provide starting values for \code{DD_TMB}, a named list can be provided for \code{R0} (virgin recruitment),
 #' \code{h} (steepness), and \code{q} (catchability coefficient) via the \code{start} argument (see example).
 #'
-#' For \code{DD_SS}, additional start values can be provided for and \code{sigma} and \code{tau}, the standard
+#' For \code{DD_SS}, additional start values can be provided for and \code{omega} and \code{tau}, the standard
 #' deviation of the catch and recruitment variability, respectively.
 #' @note Similar to many other assessment
 #' models, the model depends on assumptions such as stationary productivity and
@@ -112,7 +112,8 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   I_hist <- Data@Ind[x, yind]
   E_hist <- C_hist/I_hist
   if(any(is.na(E_hist))) stop("Missing values in catch and index in Data object.")
-  E_hist <- E_hist/mean(E_hist)
+  E_rescale <- 1/mean(E_hist)
+  E_hist <- E_hist * E_rescale
   ny <- length(C_hist)
   k <- ceiling(a50V)  # get age nearest to 50% vulnerability (ascending limb)
   k[k > Data@MaxAge/2] <- ceiling(Data@MaxAge/2)  # to stop stupidly high estimates of age at 50% vulnerability
@@ -155,14 +156,14 @@ DD_TMB <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   if(is.null(params$log_q)) params$log_q <- log(1)
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
 
-  info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH, rescale = rescale, control = control)
+  info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH, rescale = rescale,
+               E_rescale = E_rescale, control = control)
 
   map <- list()
   if(fix_h) map$transformed_h <- factor(NA)
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
 
-  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
-                   map = map, DLL = "MSEtool", silent = silent)
+  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE, map = map, DLL = "MSEtool", silent = silent)
 
   mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
   opt <- mod[[1]]
@@ -222,12 +223,13 @@ class(DD_TMB) <- "Assess"
 #' @useDynLib MSEtool
 #' @export
 DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE,
+                  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_omega = FALSE, fix_tau = TRUE,
                   integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   start <- lapply(start, eval, envir = environment())
+  if("fix_sigma" %in% names(dots)) fix_omega <- fix_sigma # For backwards compatibility
 
   SR <- match.arg(SR)
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
@@ -247,7 +249,8 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   I_hist <- Data@Ind[x, yind]
   E_hist <- C_hist/I_hist
   if(any(is.na(E_hist))) stop("Missing values in catch and index in Data object.")
-  E_hist <- E_hist/mean(E_hist)
+  E_rescale <- 1/mean(E_hist)
+  E_hist <- E_hist * E_rescale
   ny <- length(C_hist)
   k <- ceiling(a50V)  # get age nearest to 50% vulnerability (ascending limb)
   k[k > Data@MaxAge/2] <- ceiling(Data@MaxAge/2)  # to stop stupidly high estimates of age at 50% vulnerability
@@ -274,7 +277,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
     }
     if(!is.null(start$q) && is.numeric(start$q)) params$log_q <- log(start$q[1])
     if(!is.null(start$U_equilibrium) && is.numeric(start$U_equilibrium)) params$U_equilibrium <- start$U_equililbrium
-    if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma[1])
+    if(!is.null(start$omega) && is.numeric(start$omega)) params$log_omega <- log(start$omega[1])
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
   if(is.null(params$log_R0)) {
@@ -291,9 +294,9 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   }
   if(is.null(params$log_q)) params$log_q <- log(1)
   if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
-  if(is.null(params$log_sigma)) {
+  if(is.null(params$log_omega)) {
     sigmaC <- max(0.05, sdconv(1, Data@CV_Cat[x]))
-    params$log_sigma <- log(sigmaC)
+    params$log_omega <- log(sigmaC)
   }
   if(is.null(params$log_tau)) {
     tau_start <- ifelse(is.na(Data@sigmaR[x]), 0.6, Data@sigmaR[x])
@@ -302,12 +305,12 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   params$log_rec_dev = rep(0, ny - k)
 
   info <- list(Year = Year, data = data, params = params, I_hist = I_hist, LH = LH,
-               rescale = rescale, control = control, inner.control = inner.control)
+               rescale = rescale, E_rescale = E_rescale, control = control, inner.control = inner.control)
 
   map <- list()
   if(fix_h) map$transformed_h <- factor(NA)
   if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
-  if(fix_sigma) map$log_sigma <- factor(NA)
+  if(fix_omega) map$log_omega <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
 
   random <- NULL
@@ -392,8 +395,6 @@ get_MSY_DD <- function(TMB_data, Arec, Brec) {
     U <- ilogit(x)
     SS <- S0 * (1 - U)
     Spr <- (SS * Alpha/(1 - SS) + wk)/(1 - Rho * SS)
-    #if(SR == "BH") Req <- (Arec * Spr * (1 - U) - 1)/(Brec * Spr * (1 - U))
-    #if(SR == "Ricker") Req <- log(Arec * Spr * (1 - U))/(Brec * Spr * (1 - U))
     if(SR == "BH") Req <- (Arec * Spr - 1)/(Brec * Spr)
     if(SR == "Ricker") Req <- log(Arec * Spr)/(Brec * Spr)
     Beq <- Spr * Req

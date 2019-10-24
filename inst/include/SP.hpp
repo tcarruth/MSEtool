@@ -85,6 +85,8 @@ Type SP(objective_function<Type> *obj) {
   REPORT(MSY);
   REPORT(dep);
   REPORT(n);
+  REPORT(n_term);
+  REPORT(q);
   REPORT(sigma);
   REPORT(r);
   REPORT(K);

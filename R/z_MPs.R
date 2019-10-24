@@ -140,7 +140,7 @@ get_dependencies <- function(Assess, arg = list()) {
   more_deps <- dep_args[do.call(c, formals2[dep_match])]
 
   if(length(more_deps) > 0) {
-    if(Assess == "DD_SS" && any(names(more_deps) == "fix_sigma")) more_deps$fix_sigma <- "Data@CV_Cat"
+    #if(Assess == "DD_SS" && any(names(more_deps) == "fix_sigma")) more_deps$fix_sigma <- "Data@CV_Cat"
     more_deps <- paste(do.call(c, more_deps), collapse = ", ")
     dep <- paste(c(dep, more_deps), collapse = ", ")
   }

@@ -99,13 +99,13 @@ Type DD(objective_function<Type> *obj) {
   }
 
   //--ARGUMENTS FOR NLL
-  Type sigma = calc_sigma(C_hist, Cpred);
+  Type omega = calc_sigma(C_hist, Cpred);
 
   // Objective function
   //creates storage for jnll and sets value to 0
   Type nll = 0.;
   for(int tt=0; tt<ny; tt++) {
-    if(C_hist(tt) > 0) nll -= dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+    if(C_hist(tt) > 0) nll -= dnorm(log(C_hist(tt)), log(Cpred(tt)), omega, true);
   }
 
   //Summing individual jnll and penalties
@@ -115,13 +115,14 @@ Type DD(objective_function<Type> *obj) {
   ADREPORT(R0);
   ADREPORT(h);
   ADREPORT(q);
-  ADREPORT(sigma);
-  REPORT(sigma);
+  ADREPORT(omega);
+  REPORT(omega);
   REPORT(nll);
   REPORT(Arec);
   REPORT(Brec);
   REPORT(Spr0);
   REPORT(Cpred);
+  REPORT(q);
   REPORT(B);
   REPORT(N);
   REPORT(R);

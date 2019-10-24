@@ -129,12 +129,14 @@ Type cDD_SS(objective_function<Type> *obj) {
   ADREPORT(sigma);
   ADREPORT(tau);
   REPORT(sigma);
+  REPORT(tau);
   REPORT(nll);
   REPORT(Arec);
   REPORT(Brec);
   REPORT(BPR0);
   REPORT(Cpred);
   REPORT(Ipred);
+  REPORT(q);
   REPORT(B);
   REPORT(N);
   REPORT(R);

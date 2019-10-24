@@ -12,7 +12,7 @@ DD_TMB(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
 
 DD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
   start = NULL, fix_h = TRUE, fix_U_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, integrate = FALSE,
+  fix_omega = FALSE, fix_tau = TRUE, integrate = FALSE,
   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
   1), control = list(iter.max = 5000, eval.max = 10000),
   inner.control = list(), ...)
@@ -52,8 +52,8 @@ hasn't converged. The optimization continues from the parameters from the previo
 
 \item{...}{Additional arguments (not currently used).}
 
-\item{fix_sigma}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
-sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Cat}.}
+\item{fix_omega}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
+omega is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Cat}.}
 
 \item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
@@ -79,7 +79,7 @@ recruitment deviations from the stock-recruit relationship are estimated.
 To provide starting values for \code{DD_TMB}, a named list can be provided for \code{R0} (virgin recruitment),
 \code{h} (steepness), and \code{q} (catchability coefficient) via the \code{start} argument (see example).
 
-For \code{DD_SS}, additional start values can be provided for and \code{sigma} and \code{tau}, the standard
+For \code{DD_SS}, additional start values can be provided for and \code{omega} and \code{tau}, the standard
 deviation of the catch and recruitment variability, respectively.
 }
 \section{Functions}{

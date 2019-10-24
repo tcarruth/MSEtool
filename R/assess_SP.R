@@ -205,7 +205,7 @@ SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix
 
   if(rescale != 1) {
     vars_div <- c("B", "BMSY", "K", "MSY", "Cpred", "SP")
-    vars_mult <- NULL
+    vars_mult <- "q"
     var_trans <- c("MSY", "K", "q")
     fun_trans <- c("/", "/", "*")
     fun_fixed <- c("log", NA, NA)
@@ -347,7 +347,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
 
   if(rescale != 1) {
     vars_div <- c("B", "BMSY", "K", "MSY", "Cpred", "SP")
-    vars_mult <- NULL
+    vars_mult <- "q"
     var_trans <- c("MSY", "K", "q")
     fun_trans <- c("/", "/", "*")
     fun_fixed <- c("log", NA, NA)

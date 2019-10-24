@@ -68,20 +68,17 @@ Type SCA_Pope(objective_function<Type> *obj) {
   Type E0 = R0 * EPR0;
   Type VB0 = R0 * sum_VBPR(NPR_virgin, weight, vul);
 
-  Type Arec, Brec;
-
+  Type CR, Brec;
   if(SR_type == "BH") {
-    Arec = 4 * h;
-    Arec /= 1-h;
+    CR = 4 * h;
+    CR /= 1-h;
     Brec = 5*h - 1;
     Brec /= (1-h);
   } else {
-    Arec = pow(5*h, 1.25);
-    Brec = 1.25;
-    Brec *= log(5*h);
+    CR = pow(5*h, 1.25);
+    Brec = 1.25 * log(5*h);
   }
-  Type CR = Arec;
-  Arec /= EPR0;
+  Type Arec = CR/EPR0;
   Brec /= E0;
 
   ////// During time series year = 1, 2, ..., n_y
@@ -219,6 +216,7 @@ Type SCA_Pope(objective_function<Type> *obj) {
 
   REPORT(vul_par);
   REPORT(vul);
+  REPORT(q);
 
   REPORT(N);
   REPORT(CN);

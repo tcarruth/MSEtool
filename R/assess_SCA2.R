@@ -174,7 +174,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
 
   if(rescale != 1) {
     vars_div <- c("meanR", "B", "E", "CAApred", "Cpred", "CN", "N", "VB", "R", "R_early")
-    vars_mult <- NULL
+    vars_mult <- "q"
     var_trans <- c("meanR", "q")
     fun_trans <- c("/", "*")
     fun_fixed <- c("log", NA)

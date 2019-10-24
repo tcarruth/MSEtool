@@ -382,7 +382,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
 
   if(rescale != 1) {
     vars_div <- c("B", "E", "CAApred", "CN", "Cpred", "N", "VB", "R", "R_early", "VB0", "R0", "B0", "E0", "N0")
-    vars_mult <- "Brec"
+    vars_mult <- c("Brec", "q")
     var_trans <- c("R0", "q")
     fun_trans <- c("/", "*")
     fun_fixed <- c("log", NA)

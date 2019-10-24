@@ -23,7 +23,7 @@ Type DD_SS(objective_function<Type> *obj) {
   PARAMETER(transformed_h);
   PARAMETER(log_q);
   PARAMETER(U_equilibrium);
-  PARAMETER(log_sigma);
+  PARAMETER(log_omega);
   PARAMETER(log_tau);
   PARAMETER_VECTOR(log_rec_dev);
 
@@ -34,7 +34,7 @@ Type DD_SS(objective_function<Type> *obj) {
   h += 0.2;
   Type R0 = exp(log_R0);
   Type q = exp(log_q);
-  Type sigma = exp(log_sigma);
+  Type omega = exp(log_omega);
   Type tau = exp(log_tau);
 
   //--DECLARING DERIVED VALUES
@@ -117,7 +117,7 @@ Type DD_SS(objective_function<Type> *obj) {
   nll_comp.setZero();
 
   for(int tt=0; tt<ny; tt++){
-    if(C_hist(tt) > 0) nll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), sigma, true);
+    if(C_hist(tt) > 0) nll_comp(0) -= keep(tt) * dnorm(log(C_hist(tt)), log(Cpred(tt)), omega, true);
     if(tt + k < ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
   }
 
@@ -128,9 +128,9 @@ Type DD_SS(objective_function<Type> *obj) {
   ADREPORT(R0);
   ADREPORT(h);
   ADREPORT(q);
-  ADREPORT(sigma);
+  ADREPORT(omega);
   ADREPORT(tau);
-  REPORT(sigma);
+  REPORT(omega);
   REPORT(tau);
   REPORT(nll_comp);
   REPORT(nll);
@@ -138,6 +138,7 @@ Type DD_SS(objective_function<Type> *obj) {
   REPORT(Brec);
   REPORT(Spr0);
   REPORT(Cpred);
+  REPORT(q);
   REPORT(B);
   REPORT(N);
   REPORT(R);

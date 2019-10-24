@@ -13,10 +13,10 @@ summary_DD_TMB <- function(Assessment, state_space = FALSE) {
                   "Age of knife-edge selectivity",
                   "Weight at age k")
   rownam <- c("S0", "alpha", "rho", "k", "w_k")
-  if("log_sigma" %in% names(obj$env$map)) {
-    Value <- c(Value, TMB_report$sigma)
+  if("log_omega" %in% names(obj$env$map)) {
+    Value <- c(Value, TMB_report$omega)
     Description <- c(Description, "Catch SD (log-space)")
-    rownam <- c(rownam, "sigma")
+    rownam <- c(rownam, "omega")
   }
   if("log_tau" %in% names(obj$env$map)) {
     Value <- c(Value, TMB_report$tau)
