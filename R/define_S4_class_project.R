@@ -1,9 +1,9 @@
 
-#' Class-\code{proj}
+#' Class-\code{project}
 #'
 #' An S4 class for the output from \link{projection}.
 #'
-#' @name proj-class
+#' @name project-class
 #' @docType class
 #'
 #' @slot Model Name of the assessment model.
@@ -19,11 +19,11 @@
 #' @slot C_at_age An array for catch-at-age with dimension \code{c(p_sim, p_years, maxage)}.
 #' @seealso \link{projection}
 #' @author Q. Huynh
-#' @export proj
-#' @exportClass proj
-proj <- setClass("proj", slots = c(Model = "character", Name = "character", FMort = "matrix",
-                                   B = "matrix", SSB = "matrix", VB = "matrix", R = "matrix", N = "matrix",
-                                   Catch = "matrix", Index = "matrix", C_at_age = "array"))
+#' @export project
+#' @exportClass project
+project <- setClass("project", slots = c(Model = "character", Name = "character", FMort = "matrix",
+                                         B = "matrix", SSB = "matrix", VB = "matrix", R = "matrix", N = "matrix",
+                                         Catch = "matrix", Index = "matrix", C_at_age = "array"))
 
 
 #' Projections for assessment models
@@ -45,7 +45,7 @@ proj <- setClass("proj", slots = c(Model = "character", Name = "character", FMor
 #' @examples
 #' \donttest{
 #' myAssess <- SCA(Data = SimulatedData)
-#' proj <- projection(myAssess, FMort = myAssess@@FMSY)
+#' do_projection <- projection(myAssess, FMort = myAssess@@FMSY)
 #' }
 #' @export
 projection <- function(Assessment, constrain = c("F", "Catch"), FMort = NULL, Catch = NULL, p_years = 50, p_sim = 200,
@@ -119,7 +119,7 @@ projection_SP <- function(Assessment, constrain = c("F", "Catch"), FMort = NULL,
   }
   Ipred <- TMB_report$q * B * Iobs_err
 
-  return(new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, FMort = Fout))
+  return(new("project", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, FMort = Fout))
 }
 
 SP_catch_solver <- function(FM, B, dt, MSY, K, n, n_term, TAC = NULL) {
@@ -169,7 +169,7 @@ projection_SCA <- projection_SCA_Pope <- function(Assessment, constrain = c("F",
 
   CAApred <- array(unlist(lapply(p_output, getElement, "CAApred")), dim = c(50, 15, p_sim))
 
-  output <- new("proj", Catch = do.call(rbind, lapply(p_output, getElement, "Cpred")),
+  output <- new("project", Catch = do.call(rbind, lapply(p_output, getElement, "Cpred")),
                 C_at_age = aperm(CAApred, c(3, 1, 2)),
                 Index = do.call(rbind, lapply(p_output, getElement, "Ipred")),
                 SSB = do.call(rbind, lapply(p_output, getElement, "E")),
@@ -338,9 +338,8 @@ projection_cDD <- projection_cDD_SS <- function(Assessment, constrain = c("F", "
     }
   }
   Ipred <- TMB_report$q * B * Iobs_err
-  #return(list(Cpred = Cpred * Cobs_err, Ipred = Ipred, B = B, R = R, N = N, F = Fout))
 
-  new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, R = R, N = N, FMort = Fout)
+  new("project", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, R = R, N = N, FMort = Fout)
 }
 
 cDD_catch_solver <- function(FM, B, N, R, M, Kappa, Winf, wk, TAC = NULL) {
@@ -417,8 +416,8 @@ projection_DD_TMB <- projection_DD_SS <- function(Assessment, constrain = c("F",
   }
   Eff <- -log(1 - U)/TMB_report$q/Assessment@info$E_rescale
   Ipred <- Cpred/Eff * Iobs_err
-  #return(list(Cpred = Cpred * Cobs_err, Ipred = Ipred, B = B, R = R, N = N, F = Fout))
-  new("proj", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, R = R, N = N, FMort = Fout)
+
+  new("project", Catch = Cpred * Cobs_err, Index = Ipred, B = B, VB = B, SSB = B, R = R, N = N, FMort = Fout)
 }
 
 projection_VPA <- function(...) stop("Projection function for VPA is not yet available.", call. = FALSE)
