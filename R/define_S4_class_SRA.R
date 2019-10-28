@@ -466,7 +466,7 @@ rmd_SRA_fleet_output <- function(ff) {
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  MLobs <- (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE)"),
            paste0("} else if(any(data$ML[, ", ff, "] > 0, na.rm = TRUE)) MLobs <- data$ML[, ", ff, "] else MLobs <- NA"),
-           "ylim <- c(0.9, 1.1) * range(MLobs, na.rm = TRUE)",
+           "ylim <- c(0.9, 1.1) * range(c(MLpred, MLobs), na.rm = TRUE)",
            "matplot(Year_matrix, MLpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean length\", ylim = ylim)",
            "if(!all(is.na(MLobs))) lines(Year, MLobs, col = \"red\", lwd = 3, typ = \"o\", pch = 16)",
            "```\n",

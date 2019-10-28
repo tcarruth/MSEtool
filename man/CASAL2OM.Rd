@@ -12,7 +12,7 @@ CASAL2OM(CASALdir, Obs = DLMtool::Precise_Unbiased,
   Author = NA)
 }
 \arguments{
-\item{CASALdir}{A folder with Stock Synthesis input and output files in it}
+\item{CASALdir}{A folder with CASAL input and output files in it}
 
 \item{Obs}{The observation model (class Obs).}
 
@@ -51,8 +51,6 @@ CASAL2OM(CASALdir, Obs = DLMtool::Precise_Unbiased,
 \item{Source}{Reference to assessment documentation e.g. a url}
 
 \item{Author}{Who did the assessment}
-
-\item{...}{Arguments to pass to \link[r4ss]{SS_output}.}
 }
 \value{
 An object of class OM.

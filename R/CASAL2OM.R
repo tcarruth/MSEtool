@@ -11,7 +11,7 @@
 #' @description A (prototype) function that uses the file location of a fitted CASAL assessment model including input files to population the
 #' various slots of an operating model with MLE parameter estimates. The function mainly populates the Stock and Fleet portions
 #' of the operating model; the user still needs to parameterize most of the observation and implementation portions of the operating model.
-#' @param CASALdir A folder with Stock Synthesis input and output files in it
+#' @param CASALdir A folder with CASAL input and output files in it
 #' @param Obs The observation model (class Obs).
 #' @param Imp The implementation model (class Imp).
 #' @param Name The common name of the operating model
@@ -31,7 +31,6 @@
 #' @param Species The species latin name
 #' @param Source Reference to assessment documentation e.g. a url
 #' @param Author Who did the assessment
-#' @param ... Arguments to pass to \link[r4ss]{SS_output}.
 #' @return An object of class OM.
 #' @author T. Carruthers
 #' @export
