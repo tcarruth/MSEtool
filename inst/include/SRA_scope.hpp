@@ -239,6 +239,9 @@ Type SRA_scope(objective_function<Type> *obj) {
       for(int ff=0;ff<nfleet;ff++) Z(y,a) += vul(y,a,ff) * F(y,ff);
       Type mean_N = N(y,a) * (1 - exp(-Z(y,a))) / Z(y,a);
 
+      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-Z(y,a));
+      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-Z(y,a));
+
       for(int ff=0;ff<nfleet;ff++) {
         CAApred(y,a,ff) = vul(y,a,ff) * F(y,ff) * mean_N;
         CN(y,ff) += CAApred(y,a,ff);
@@ -251,9 +254,6 @@ Type SRA_scope(objective_function<Type> *obj) {
 
         VB(y+1,ff) += vul(y+1,a,ff) * N(y+1,a) * wt(y+1,a);
       }
-
-      if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-Z(y,a));
-      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-Z(y,a));
 
       B(y+1) += N(y+1,a) * wt(y+1,a);
       E(y+1) += N(y+1,a) * wt(y+1,a) * mat(y+1,a);
