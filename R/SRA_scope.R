@@ -524,6 +524,38 @@ SRA_scope <- function(OM, Chist = NULL, Ehist = NULL, condition = c("catch", "ef
                 CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv[keep], data = SRA_data, Misc = res[keep])
   if(mean_fit) output@mean_fit <- mean_fit_output
 
+  # Data in cpars
+  if(condition == "catch" || nsurvey > 0) {
+
+    real_Data <- new("Data")
+    if(condition == "catch") {
+      real_Data@Cat <- matrix(rowSums(output@data$Chist, na.rm = TRUE), 1, nyears)
+      real_Data@CV_Cat <- matrix(sqrt(exp(0.01^1 - 1)), 1, nyears)
+      message("Historical catch data added to OM@cpars$Data@Cat.")
+    }
+    if(nsurvey > 0) {
+      real_Data@AddInd <- array(output@data$Index, c(nyears, nsurvey, output@OM@nsim)) %>%
+        aperm(perm = c(3, 2, 1))
+      real_Data@CV_AddInd <- array(sqrt(exp(output@data$I_sd^2) - 1), c(nyears, nsurvey, output@OM@nsim)) %>%
+        aperm(perm = c(3, 2, 1))
+
+      AddIndV <- array(NA, c(OM@nsim, maxage, nsurvey))
+      for(sur in 1:nsurvey) {
+        if(I_type[sur] == "B") {
+          AddIndV[, , sur] <- 1
+        } else if(I_type[sur] == "SSB") {
+          AddIndV[, , sur] <- OM@cpars$Mat_age[, , nyears]
+        } else {
+          ff <- as.numeric(I_type[sur])
+          AddIndV[, , sur] <- do.call(cbind, lapply(output@Misc, function(x) x$vul[nyears, , ff]))
+        }
+      }
+      real_Data@AddIndV <- aperm(AddIndV, c(1, 3, 2))
+      message("Historical indices added to OM@cpars$Data@Ind.")
+    }
+    output@OM@cpars$Data <- real_Data
+  }
+
   message("Complete.")
 
   return(output)
