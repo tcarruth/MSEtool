@@ -794,6 +794,11 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
   if(any(!sims2)) {
     message("Removing simulations: ", paste0(which(!sims2), collapse = " "))
     cpars <- OM@cpars
+
+    subset_Data <- function(xx, Data, sims) {
+      z <- slot(Data, xx)
+      return(z[sims, , , drop = FALSE])
+    }
     subset_function <- function(x, sims) {
       if(is.matrix(x)) {
         return(x[sims, , drop = FALSE])
@@ -801,6 +806,11 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
         if(length(dim(x)) == 3) return(x[sims, , , drop = FALSE])
         if(length(dim(x)) == 4) return(x[sims, , , , drop = FALSE])
         if(length(dim(x)) == 5) return(x[sims, , , , , drop = FALSE])
+      } else if(class(x)[[1]] == "Data") {
+        s_names <- c("AddIndV", "AddInd", "CV_AddInd")
+        update_slots <- lapply(s_names, subset_Data, Data = x, sims = sims)
+        for(i in 1:length(s_names)) slot(x, s_names[i]) <- update_slots[[i]]
+        return(x)
       } else return(x[sims])
     }
 
