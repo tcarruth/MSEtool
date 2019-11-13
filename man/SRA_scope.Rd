@@ -56,7 +56,8 @@ If \code{NULL}, default value is \code{0.1 * mean(ML)}.}
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
 
 \item{I_type}{A character vector (length nsurvey) to indicate the type of biomass for which each index follows. Either \code{"B"} for
-total biomass, or \code{"SSB"} for spawning biomass. If \code{NULL}, "B" is used. Use numbers if the index corresponds to a fleet in \code{Chist}.}
+total biomass, or \code{"SSB"} for spawning biomass. If \code{NULL}, "B" is used. Use numbers if the index corresponds to a fleet in \code{Chist}.
+Use \code{"est"} to estimate survey selectivity, but this requires age or length compositions (see details pertaining to \code{...}).}
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See details.}
 
@@ -75,12 +76,12 @@ multinomial likelihood function. The annual sample size of an age or length comp
 
 \item{drop_nonconv}{Logical, whether to drop non-converged fits of the SRA model.}
 
-\item{...}{Other arguments to add in the future.}
+\item{...}{Other arguments to pass in. See details.}
 
 \item{sims}{A logical vector of length \code{OM@nsim} or a numberic vector indicating which simulations to keep.}
 }
 \value{
-An object of class \linkS4class{SRA} (see link for output dimensions).
+An object of class \linkS4class{SRA}, including the updated operating model object.
 }
 \description{
 Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch or effort, and potentially
@@ -94,27 +95,41 @@ Either a full catch (conditioned on catch) or effort (conditioned on effort) tim
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 
-\code{LWT} is a named list containing the likelihood weights (values > 0) with the possible options:
+For \code{SRA_scope}, additional arguments can be passed to the model via \code{...}:
+
+\itemize{
+\item s_CAA: Survey age composition data, an array of dimension nyears, maxage, nsurvey.
+\item s_CAL: Survey length composition data, an array of dimension nyears, length(length_bin), nsurvey.
+\item s_selectivity: Character vector of length nsurvey indicating "logistic" (default) or "dome" selectivity of the surveys.
+\item vul_par: A matrix of 3 rows and nfleet columns for starting values for fleet selectivity. The three rows correspond
+to L5 (length of 5% selectivity), LFS (length of full selectivity) and Vmaxlen (selectivity at length Linf).
+\item s_vul_par: A matrix of 3 rows and nsurvey columns for starting values for fleet selectivity. Same setup as vul_par.
+}
+
+Survey selectivity is estimated only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should
+be mirrored to a fleet (vulnerable biomass selectivity) or indexed to total or spawning biomass (see \code{I_type}).
+
+\code{LWT} is an optional named list containing the likelihood weights (values > 0) with the possible options:
 \itemize{
 \item Chist: A vector of length nfleet.
 \item Index: A vector of length nsurvey.
 \item CAA, CAL, ML, C_eq: A vector of length nfleet for each.
+\item s_CAA, s_CAL: A vector of length nsurvey for each.
 }
 By default, all likelihood weights are equal to one if not specified by the user. Likelihoods for CAA and CAL can also be adjusted by changing the
 multinomial sample size. See argument \code{ESS}.
 
 \code{plot_SRA_scope} is now deprecated in favor of \link{plot.SRA}
 
-Output from \code{SRA_scope} is placed in objects in \code{OM@cpars}. \code{Sub_cpars} is a convenient function to subset simulations
+Output from \code{SRA_scope} is placed in objects in \code{OM@cpars}.
+
+\code{Sub_cpars} is a convenient function to subset simulations
 for the operating model, for example, to remove simulations from unconverged model fits or outlier simulations.
 }
 \note{
 If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
 Time-varying life history parameters create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
 See section D.5 of \code{DLMtool::userguide()}.
-
-Here, the initial depletion (OM@cpars$initD) is calculated based on unfished spawning biomass using growth and M in the first year. If growth/M varies,
-then this reference point may no longer be relevant at the end of the historical period and in the projection period.
 
 The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <- OM@Linfsd <- OM@Ksd <- c(0, 0)}.
 }

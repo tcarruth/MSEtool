@@ -128,8 +128,6 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                             zlab = "Length-at-age", phi = 35, theta = 45, expand = 0.55, fig.cap = "Annual length-at-age.")
               } else LAA_persp <- NULL
 
-              #LW <- rmd_LW(data_mean_fit$length_bin, data_mean_fit$wt_at_len)
-
               mat <- rmd_mat(age, data_mean_fit$mat[nyears, ], fig.cap = "Maturity-at-age in last historical year.")
               if(LH_varies_fn(data_mean_fit$mat)) {
                 mat_persp <- rmd_persp_plot(x = "Year", y = "age", z = "data_mean_fit$mat[1:nyears, ]", xlab = "Year", ylab = "Age",
@@ -427,7 +425,13 @@ rmd_SRA_fleet_output <- function(ff) {
   ans <- c(paste("### Fleet", ff, "\n"),
            paste0("```{r, fig.cap = \"Selectivity of fleet ", ff, ".\"}"),
            paste0("vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul_len[, ", ff, "]))"),
-           "matplot(length_bin, vul_ff, type = \"l\", col = \"black\", xlab = \"Length\", ylab = \"Selectivity of Fleet ", ff, "\")",
+           paste0("matplot(length_bin, vul_ff, type = \"l\", col = \"black\", xlab = \"Length\", ylim = c(0, 1), ylab = \"Selectivity of Fleet ", ff, "\")"),
+           "abline(h = 0, col = \"grey\")",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Corresponding age-based selectivity of fleet ", ff, " in last historical year.\"}"),
+           paste0("vul_ff_age <- do.call(cbind, lapply(report_list, function(x) x$vul[nyears, , ", ff, "]))"),
+           paste0("matplot(age, vul_ff_age, type = \"l\", col = \"black\", xlab = \"Age\", ylim = c(0, 1), ylab = \"Selectivity of Fleet ", ff, "\")"),
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
@@ -498,14 +502,35 @@ rmd_SRA_fleet_output <- function(ff) {
 }
 
 rmd_SRA_survey_output <- function(sur) {
-  if(sur == 1) header <- "### Surveys\n" else header <- NULL
-  ans <- c(paste0("```{r, fig.cap = \"Observed (red) and predicted (black) index values in survey ", sur, ".\"}"),
+  ans <- c(paste0("### Survey ", sur, " \n"),
+           "",
+           paste0("```{r, fig.cap = \"Selectivity of survey ", sur, " in last historical year.\"}"),
+           paste0("s_vul_ff_age <- do.call(cbind, lapply(report_list, function(x) x$s_vul[nyears, , ", sur, "]))"),
+           paste0("matplot(age, s_vul_ff_age, type = \"l\", col = \"black\", xlab = \"Age\", ylim = c(0, 1), ylab = \"Selectivity of Survey ", sur, "\")"),
+           "abline(h = 0, col = \"grey\")",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) index values in survey ", sur, ".\"}"),
            paste0("Ipred <- do.call(cbind, lapply(report_list, function(x) x$Ipred[, ", sur, "]))"),
            paste0("matplot(Year_matrix, Ipred, type = \"l\", col = \"black\", ylim = c(0, 1.1 * max(c(Ipred, data$Index[, ", sur, "]), na.rm = TRUE)), xlab = \"Year\", ylab = \"Survey ", sur, "\")"),
            paste0("lines(Year, data$Index[, ", sur, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
            "abline(h = 0, col = \"grey\")",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) age composition from survey ", sur, ".\"}"),
+           paste0("if(!is.null(data$s_CAA) && any(!is.na(data$s_CAA[, , ", sur, "]))) {"),
+           paste0("pred_sCAA <- lapply(report_list, function(x) x$s_CAA[,, ", sur, "]) %>% unlist() %>% array(dim = c(nyears, max_age, nsim)) %>% aperm(perm = c(3, 1, 2))"),
+           paste0("plot_composition_SRA(Year, pred_sCAA, data$s_CAA[, , ", sur, "])"),
+           "}",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) length composition from survey ", sur, ".\"}"),
+           paste0("if(!is.null(data$s_CAL) && any(!is.na(data$s_CAL[, , ", sur, "]))) {"),
+           paste0("pred_sCAL <- lapply(report_list, function(x) x$s_CAL[,, ", sur, "]) %>% unlist() %>% array(dim = c(nyears, length(data$length_bin), nsim)) %>% aperm(perm = c(3, 1, 2))"),
+           paste0("plot_composition_SRA(Year, pred_sCAL, data$s_CAL[, , ", sur, "], CAL_bins = data$length_bin)"),
+           "}",
            "```\n")
-  c(header, ans)
+  ans
 }
 
 rmd_SRA_initD <- function(fig.cap = "Histogram of initial depletion among all simulations.") {

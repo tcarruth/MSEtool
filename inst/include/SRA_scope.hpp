@@ -28,6 +28,12 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_ARRAY(CAL_hist);   // Catch-at-length re-weighted by year, length_bin, fleet
   DATA_MATRIX(CAL_n);     // Annual samples in CAL by year and fleet
 
+  DATA_ARRAY(s_CAA_hist);   // Catch-at-age re-weighted by year, age, survey
+  DATA_MATRIX(s_CAA_n);     // Annual samples in CAA by year and survey
+
+  DATA_ARRAY(s_CAL_hist);   // Catch-at-length re-weighted by year, length_bin, survey
+  DATA_MATRIX(s_CAL_n);     // Annual samples in CAL by year and survey
+
   DATA_VECTOR(length_bin);// Vector of length bins
   DATA_MATRIX(mlen);      // Vector of annual mean lengths by year and fleet
 
@@ -44,7 +50,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_MATRIX(mat);       // Maturity-at-age at the beginning of the year
 
   DATA_IVECTOR(vul_type); // Integer vector indicating whether logistic (0) or dome vul (1) is used
-  DATA_IVECTOR(I_type);   // Integer vector indicating the basis of the indices for fleet (1-nfleet) or surveys B (-1) or SSB (-2)
+  DATA_IVECTOR(s_vul_type); // Same but for surveys
+  DATA_IVECTOR(I_type);   // Integer vector indicating the basis of the indices for fleet (1-nfleet) or surveys B (-1) or SSB (-2) or estimated (0)
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
@@ -59,6 +66,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
+  PARAMETER_MATRIX(s_vul_par);
   PARAMETER_VECTOR(log_q_effort);
   PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
@@ -214,9 +222,9 @@ Type SRA_scope(objective_function<Type> *obj) {
 
     Type Z_eq = M(0,a);
     for(int ff=0;ff<nfleet;ff++) Z_eq += vul(0,a,ff) * F_equilibrium(ff);
-    Type mean_N = N(0,a) * (1 - exp(-Z_eq)) / Z_eq;
+    Type mean_N_eq = N(0,a) * (1 - exp(-Z_eq)) / Z_eq;
     for(int ff=0;ff<nfleet;ff++) {
-      C_eq_pred(ff) += vul(0,a,ff) * F_equilibrium(ff) * mean_N * wt(0,a);
+      C_eq_pred(ff) += vul(0,a,ff) * F_equilibrium(ff) * mean_N_eq * wt(0,a);
       VB(0,ff) += N(0,a) * wt(0,a) * vul(0,a,ff);
     }
   }
@@ -261,22 +269,52 @@ Type SRA_scope(objective_function<Type> *obj) {
     for(int ff=0;ff<nfleet;ff++) mlen_pred(y,ff) /= CN(y,ff);
   }
 
-
   // Calculate nuisance parameters and likelihood
+  // Survey selectivity
+  vector<Type> s_LFS(nsurvey);
+  vector<Type> s_L5(nsurvey);
+  vector<Type> s_Vmaxlen(nsurvey);
+
+  array<Type> s_CAApred(n_y, max_age, nsurvey);
+  array<Type> s_CALpred(n_y, nlbin, nsurvey);
+  vector<Type> s_CN(n_y, nsurvey);
+  matrix<Type> B_sur(n_y, nsurvey); // Biomass vulnerable to the survey
+
+  s_CAApred.setZero();
+  s_CALpred.setZero();
+  s_CN.setZero();
+  B_sur.setZero();
+
+  array<Type> s_vul = calc_vul(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf);
   vector<Type> q(nsurvey);
   for(int sur=0;sur<nsurvey;sur++) {
     if(I_type(sur) > 0) { // VB.col(sur);
       q(sur) = calc_q(I_hist, VB, sur, I_type(sur) - 1, Ipred);
     } else if(I_type(sur) == -1) { // "B"
       q(sur) = calc_q(I_hist, B, sur, Ipred);
-    } else {
+    } else if(I_type(sur) == -2) {
       q(sur) = calc_q(I_hist, E, sur, Ipred);
+    } else {
+      // Estimate survey selectivity
+      for(int y=0;y<n_y;y++) {
+        for(int a=0;a<max_age;a++) {
+          s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
+          s_CN(y,sur) += s_CAApred(y,a,sur);
+          B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
+
+          if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+            for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
+          }
+        }
+      }
+      q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred);
     }
   }
 
-  // 0 = index, 1 = CAA, 2 = CAL, 3 = mean length, 4 = rec_dev, 5 = eq. catch
   vector<Type> nll_Catch(nfleet);
   vector<Type> nll_Index(nsurvey);
+  vector<Type> nll_s_CAA(nsurvey);
+  vector<Type> nll_s_CAL(nsurvey);
   vector<Type> nll_CAA(nfleet);
   vector<Type> nll_CAL(nfleet);
   vector<Type> nll_ML(nfleet);
@@ -287,14 +325,38 @@ Type SRA_scope(objective_function<Type> *obj) {
   nll_Index.setZero();
   nll_CAA.setZero();
   nll_CAL.setZero();
+  nll_s_CAA.setZero();
+  nll_s_CAL.setZero();
   nll_ML.setZero();
   nll_Ceq.setZero();
 
   for(int sur=0;sur<nsurvey;sur++) {
     for(int y=0;y<n_y;y++) {
       if(!R_IsNA(asDouble(I_hist(y,sur)))) nll_Index(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), sigma_I(y,sur), true);
+
+      if(!R_IsNA(asDouble(s_CAA_n(y,sur))) && s_CAA_n(y,sur) > 0) {
+        vector<Type> loglike_CAAobs(max_age);
+        vector<Type> loglike_CAApred(max_age);
+        for(int a=0;a<max_age;a++) {
+          loglike_CAApred(a) = s_CAApred(y,a,sur)/s_CN(y,sur);
+          loglike_CAAobs(a) = s_CAA_hist(y,a,sur);
+        }
+        nll_s_CAA(sur) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
+      }
+
+      if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+        vector<Type> loglike_CALobs(nlbin);
+        vector<Type> loglike_CALpred(nlbin);
+        for(int len=0;len<nlbin;len++) {
+          loglike_CALpred(len) = s_CALpred(y,len,sur)/s_CN(y,sur);
+          loglike_CALobs(len) = s_CAL_hist(y,len,sur);
+        }
+        nll_s_CAL(sur) -= dmultinom(loglike_CALobs, loglike_CALpred, true);
+      }
     }
-    nll_Index(sur) *= LWT_Index(sur);
+    nll_Index(sur) *= LWT_Index(sur,0);
+    nll_s_CAA(sur) *= LWT_Index(sur,1);
+    nll_s_CAL(sur) *= LWT_Index(sur,2);
   }
 
   for(int ff=0;ff<nfleet;ff++) {
@@ -346,6 +408,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   }
 
   Type nll = nll_Catch.sum() + nll_Index.sum();
+  nll += nll_s_CAA.sum() + nll_s_CAL.sum();
   nll += nll_CAA.sum() + nll_CAL.sum() + nll_ML.sum();
   nll += nll_log_rec_dev + nll_Ceq.sum();
   nll += penalty + prior;
@@ -418,6 +481,8 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   REPORT(nll_Catch);
   REPORT(nll_Index);
+  REPORT(nll_s_CAA);
+  REPORT(nll_s_CAL);
   REPORT(nll_CAA);
   REPORT(nll_CAL);
   REPORT(nll_ML);
@@ -427,6 +492,13 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(nll);
   REPORT(penalty);
   REPORT(prior);
+
+  REPORT(s_CAApred);
+  REPORT(s_CALpred);
+  REPORT(s_vul);
+  REPORT(s_L5);
+  REPORT(s_LFS);
+  REPORT(s_Vmaxlen);
 
   return nll;
 

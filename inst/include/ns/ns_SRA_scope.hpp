@@ -92,7 +92,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
         }
       }
     } else { // Dome
-      Vmaxlen(ff) = invlogit(vul_par(3,ff));
+      Vmaxlen(ff) = invlogit(vul_par(2,ff));
       Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
 
       for(int y=0;y<Len_age.rows();y++) {
