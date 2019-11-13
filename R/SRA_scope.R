@@ -801,6 +801,8 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
         if(length(dim(x)) == 3) return(x[sims, , , drop = FALSE])
         if(length(dim(x)) == 4) return(x[sims, , , , drop = FALSE])
         if(length(dim(x)) == 5) return(x[sims, , , , , drop = FALSE])
+      } else if(class(x)[[1]] == "Data") {
+        x
       } else return(x[sims])
     }
 
