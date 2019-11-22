@@ -731,13 +731,13 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   vul_par[3, ] <- logit(vul_par[3, ])
 
   map_vul_par <- matrix(ifelse(fix_selectivity, NA, 0), 3, nfleet)
-  map_vul_par[3, selectivity] <- NA
+  map_vul_par[3, as.logical(selectivity)] <- NA
   if(fix_dome) map_vul_par[3, ] <- NA
   if(!fix_selectivity) map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
 
   # s_vul_par, and map
   if(is.null(dots$s_vul_par)) {
-    s_vul_par <- matrix(c(LFS, L5, Vmaxlen), 3, nfleet)
+    s_vul_par <- matrix(c(LFS, L5, Vmaxlen), 3, nsurvey)
   } else {
     s_vul_par <- dots$s_vul_par
   }
@@ -746,6 +746,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   s_vul_par[3, ] <- logit(s_vul_par[3, ])
 
   map_s_vul_par <- matrix(0, 3, nsurvey)
+  map_s_vul_par[3, as.logical(s_vul_type)] <- NA
   for(sur in 1:nsurvey) {
     if(I_type[sur] != 0) map_s_vul_par[, sur] <- NA
   }
@@ -883,9 +884,9 @@ get_s_vul_len <- function(report, TMB_data) {
   s_vul_len <- matrix(NA, length(TMB_data$length_bin), TMB_data$nsurvey) # length-based: matrix of dimension nlbin, nsurvey
 
   for(i in 1:TMB_data$nsurvey) {
-    if(TMB_data$I_type == -2) s_vul[, , i] <- TMB_data$mat
-    if(TMB_data$I_type == -1) s_vul[, , i] <- s_vul_len[, i] <- 1
-    if(TMB_data$I_type == 0) {
+    if(TMB_data$I_type[i] == -2) s_vul[, , i] <- TMB_data$mat
+    if(TMB_data$I_type[i] == -1) s_vul[, , i] <- s_vul_len[, i] <- 1
+    if(TMB_data$I_type[i] == 0) {
       s_vul[,,i] <- report$s_vul[,,i]
 
       sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
@@ -896,9 +897,9 @@ get_s_vul_len <- function(report, TMB_data) {
                     2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
       s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
     }
-    if(TMB_data$I_type > 0) {
-      s_vul[,,i] <- report$vul[, , TMB_data$I_type]
-      s_vul_len[, i] <- report$vul_len[, TMB_data$I_type]
+    if(TMB_data$I_type[i] > 0) {
+      s_vul[,,i] <- report$vul[, , TMB_data$I_type[i]]
+      s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
     }
   }
   report$s_vul <- s_vul
