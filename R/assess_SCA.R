@@ -331,6 +331,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
       }
     }
   }
+  if(is.na(params$vul_par[1])) params$vul_par[1] <- 1
   if(is.null(params$logF)) params$logF <- rep(log(0.1), n_y)
 
   if(is.null(params$log_omega)) {
