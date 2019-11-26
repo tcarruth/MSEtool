@@ -651,8 +651,11 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     StockPars_ind <- match(c("M_ageArray", "Len_age", "Mat_age"), names(StockPars))
     StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_array)
 
-    StockPars_ind <- match(c("hs", "LenCV", "procsd", "ageM"), names(StockPars))
+    StockPars_ind <- match(c("hs", "LenCV", "procsd"), names(StockPars))
     StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_vector)
+
+    StockPars_ind <- match("ageM", names(StockPars))
+    StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_matrix)
 
     if(condition == "effort") StockPars$R0 <- mean_vector(StockPars$R0)
 
@@ -727,7 +730,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
     vul_par <- dots$vul_par
   }
   vul_par[2, ] <- log(vul_par[1, ] - vul_par[2, ])
-  vul_par[1, ] <- logit(min(vul_par[1, ]/StockPars$Linf[x]/0.95, 0.95))
+  vul_par[1, ] <- logit(pmin(vul_par[1, ]/StockPars$Linf[x]/0.95, 0.95))
   vul_par[3, ] <- logit(vul_par[3, ])
 
   map_vul_par <- matrix(ifelse(fix_selectivity, NA, 0), 3, nfleet)

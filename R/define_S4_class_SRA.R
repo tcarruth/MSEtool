@@ -152,45 +152,70 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                 obs2 <- paste(obs, "[, , ", i, "]")
                 pred2 <- paste(pred, "[, , ", i, "]")
                 fig.cap2 <- paste0("Observed (black) and predicted (red) ", comps, " composition from fleet ", i, ".")
+                fig.cap3 <- paste0(comps, " composition residuals from fleet ", i, ".")
                 if(comps == "age") {
-                  rmd_fit_comps("Year", obs2, pred2, type = "annual", fig.cap = fig.cap2)
-                } else rmd_fit_comps("Year", obs2, pred2, type = "annual", CAL_bins = "data_mean_fit$length_bin", fig.cap = fig.cap2)
+                  rr <- rmd_fit_comps("Year", obs2, pred2, type = "annual", fig.cap = fig.cap2)
+                  rr2 <- rmd_fit_comps("Year", obs2, pred2, type = "bubble_residuals", fig.cap = fig.cap3)
+                } else {
+                  rr <- rmd_fit_comps("Year", obs2, pred2, type = "annual", CAL_bins = "data$length_bin", fig.cap = fig.cap2)
+                  rr2 <- rmd_fit_comps("Year", obs2, pred2, type = "bubble_residuals", CAL_bins = "data$length_bin", fig.cap = fig.cap3)
+                }
+                c(rr, rr2)
               }
 
-              if(any(data_mean_fit$C_hist > 0, na.rm = TRUE)) {
-                C_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data_mean_fit$C_hist", col = "rich.colors(nfleet)",
-                                         xlab = "Year", ylab = "Catch", fig.cap = "Catch time series.", header = "### Data and Fit\n")
+              if(any(data$Chist > 0, na.rm = TRUE)) {
+                C_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$Chist", col = "rich.colors(nfleet)",
+                                         xlab = "Year", ylab = "Catch", fig.cap = "Catch time series.", header = "### Data and Fit {.tabset}\n#### Catch \n")
 
-                if(data_mean_fit$condition == "effort" || ncol(data_mean_fit$C_hist) > 1) {
-                  C_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data_mean_fit$C_hist", pred = "report$Cpred",
+                if(data_mean_fit$condition == "effort" || ncol(data$Chist) > 1) {
+                  C_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data$Chist", pred = "report$Cpred",
                                     fig.cap = "catch from fleet", label = "Fleet")
                 } else C_plots <- NULL
               } else C_matplot <- C_plots <- NULL
 
-              if(any(data_mean_fit$E_hist > 0, na.rm = TRUE)) {
-                E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data_mean_fit$E_hist", col = "rich.colors(nfleet)",
-                                         xlab = "Year", ylab = "Effort", fig.cap = "Effort time series.")
+              if(any(data$Ehist > 0, na.rm = TRUE)) {
+                if(is.null(C_matplot)) {
+                  E_header <- "### Data and Fit {.tabset}\n#### Effort \n"
+                } else {
+                  E_header <- "#### Effort \n"
+                }
+                E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$Ehist", col = "rich.colors(nfleet)",
+                                         xlab = "Year", ylab = "Effort", fig.cap = "Effort time series.", E_header)
               } else E_matplot <- NULL
 
-              if(any(report$Ipred > 0, na.rm = TRUE)) {
-                I_plots <- lapply(1:nsurvey, individual_matrix_fn, obs = "data_mean_fit$I_hist", pred = "report$Ipred",
-                                  fig.cap = "index from survey", label = "Survey")
+              if(any(data$Index > 0, na.rm = TRUE)) {
+                I_plots <- c("#### Surveys \n",
+                             lapply(1:nsurvey, individual_matrix_fn, obs = "data$Index", pred = "report$Ipred",
+                                    fig.cap = "index from survey", label = "Survey"))
               } else I_plots <- NULL
 
-              if(any(data_mean_fit$CAA_hist > 0, na.rm = TRUE)) {
-                CAA_plots <- lapply(1:nfleet, individual_array_fn, obs = "data_mean_fit$CAA_hist", pred = "report$CAApred", comps = "age")
+              if(any(data$CAA > 0, na.rm = TRUE)) {
+                CAA_plots <- c("#### Age comps \n",
+                               lapply(1:nfleet, individual_array_fn, obs = "data$CAA", pred = "report$CAApred", comps = "age"))
               } else CAA_plots <- NULL
 
-              if(any(data_mean_fit$CAL_hist > 0, na.rm = TRUE)) {
-                CAL_plots <- lapply(1:nfleet, individual_array_fn, obs = "data_mean_fit$CAL_hist", pred = "report$CALpred", comps = "length")
+              if(any(data$CAL > 0, na.rm = TRUE)) {
+                CAL_plots <- c("#### Length comps \n",
+                               lapply(1:nfleet, individual_array_fn, obs = "data$CAL", pred = "report$CALpred", comps = "length"))
               } else CAL_plots <- NULL
 
-              if(any(data_mean_fit$mlen > 0, na.rm = TRUE)) {
-                ML_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data_mean_fit$mlen", pred = "report$mlen_pred",
-                                   fig.cap = "mean lengths from fleet", label = "Mean Length from Fleet")
+              if(any(data$ML > 0, na.rm = TRUE)) {
+                ML_plots <- c("#### Mean lengths \n",
+                              lapply(1:nfleet, individual_matrix_fn, obs = "data$ML", pred = "report$mlen_pred",
+                                     fig.cap = "mean lengths from fleet", label = "Mean Length from Fleet"))
               } else ML_plots <- NULL
 
-              data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, ML_plots)
+              if(any(data$s_CAA > 0, na.rm = TRUE)) {
+                s_CAA_plots <- c("#### Survey age comps \n",
+                                 lapply(1:nsurvey, individual_array_fn, obs = "data$s_CAA", pred = "report$s_CAApred", comps = "age"))
+              } else s_CAA_plots <- NULL
+
+              if(any(data$s_CAL > 0, na.rm = TRUE)) {
+                s_CAL_plots <- c("#### Survey length comps \n",
+                                 lapply(1:nsurvey, individual_array_fn, obs = "data$s_CAL", pred = "report$s_CALpred", comps = "length"))
+              } else s_CAL_plots <- NULL
+
+              data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, ML_plots, s_CAA_plots, s_CAL_plots)
 
               # Model output
               sel_matplot <- rmd_matplot(x = "matrix(data_mean_fit$length_bin, nrow(report$vul_len), nfleet)", y = "report$vul_len", col = "rich.colors(nfleet)",
@@ -349,7 +374,7 @@ rmd_matplot <- function(x, y, col, xlab, ylab, legend.lab = "Fleet", type = "l",
            paste0("matplot(xx, yy, type = \"", type, "\", lty = ", lty, ", col = ", col,
                   ", ylim = c(0, 1.1 * max(yy, na.rm = TRUE)), xlab = \"", xlab, "\", ylab = \"", ylab, "\")"),
            "abline(h = 0, col = \"grey\")",
-           paste0("if(ncol(xx) > 1) legend(\"topleft\", paste(\"", legend.lab, "\", 1:ncol(x)), text.col = ", col, ")"),
+           paste0("if(ncol(xx) > 1) legend(\"topleft\", paste(\"", legend.lab, "\", 1:ncol(xx)), text.col = ", col, ")"),
            " ```\n")
   if(!is.null(header)) ans <- c(header, ans)
   return(ans)
@@ -365,10 +390,12 @@ rmd_assess_fit2 <- function(year, obs, fit, fig.cap, label = fig.cap, match = FA
     "```\n")
 }
 
-rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual"), ages = "NULL", CAL_bins = "NULL", fig.cap) {
+rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual", "bubble_residuals"), ages = "NULL", CAL_bins = "NULL", fig.cap) {
   type <- match.arg(type)
   if(type == "bubble") {
     arg <- paste0("\"bubble_data\", CAL_bins = ", CAL_bins, ", ages = ", ages)
+  } else if(type == "bubble_residuals") {
+    arg <- paste0("\"bubble_residuals\", CAL_bins = ", CAL_bins, ", ages = ", ages)
   } else {
     arg <- paste0("\"annual\", CAL_bins = ", CAL_bins, ", ages = ", ages)
   }
@@ -564,10 +591,10 @@ rmd_SRA_SSB_output <- function() {
 
 rmd_log_rec_dev <- function() {
   c("```{r, fig.cap = \"Estimated recruitment deviations among all simulations.\"}",
-    "log_rec_dev <- do.call(cbind, lapply(report_list, getElement, \"log_rec_dev\"))",
-    "matplot(Year, log_rec_dev, type = \"n\", xlab = \"Year\", ylab = \"log-recruitment deviations\")",
+    "log_rec_dev2 <- do.call(cbind, lapply(report_list, getElement, \"log_rec_dev\"))",
+    "matplot(Year, log_rec_dev2, type = \"n\", xlab = \"Year\", ylab = \"log-recruitment deviations\")",
     "abline(h = 0, col = \"grey\")",
-    "matlines(Year, log_rec_dev, col = \"black\")",
+    "matlines(Year, log_rec_dev2, col = \"black\")",
     "```\n")
 }
 
