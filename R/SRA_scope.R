@@ -689,7 +689,7 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
                        mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_vul_type,
                        I_type = I_type, SR_type = SR_type,
                        LWT_C = LWT_C, LWT_Index = rbind(LWT$Index, LWT$s_CAA, LWT$s_CAL), max_F = max_F, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       est_early_rec_dev = rep(0, max_age-1), est_rec_dev = c(rep(1, nyears-1), 0))
+                       est_early_rec_dev = rep(0, max_age-1))
   TMB_data_all$CAA_hist[TMB_data_all$CAA_hist < 1e-8] <- 1e-8
   TMB_data_all$CAL_hist[TMB_data_all$CAL_hist < 1e-8] <- 1e-8
 
@@ -748,12 +748,17 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
   s_vul_par[1, ] <- logit(min(s_vul_par[1, ]/StockPars$Linf[x]/0.95, 0.95))
   s_vul_par[3, ] <- logit(s_vul_par[3, ])
 
-  map_s_vul_par <- matrix(0, 3, nsurvey)
-  map_s_vul_par[3, as.logical(s_vul_type)] <- NA
-  for(sur in 1:nsurvey) {
-    if(I_type[sur] != 0) map_s_vul_par[, sur] <- NA
+  if(is.null(dots$map_s_vul_par)) {
+    map_s_vul_par <- matrix(0, 3, nsurvey)
+    map_s_vul_par[3, as.logical(s_vul_type)] <- NA
+    for(sur in 1:nsurvey) {
+      if(I_type[sur] != 0) map_s_vul_par[, sur] <- NA
+    }
+    if(any(!is.na(map_s_vul_par))) map_s_vul_par[!is.na(map_s_vul_par)] <- 1:sum(!is.na(map_s_vul_par))
+
+  } else {
+    map_s_vul_par <- dots$map_s_vul_par
   }
-  if(any(!is.na(map_s_vul_par))) map_s_vul_par[!is.na(map_s_vul_par)] <- 1:sum(!is.na(map_s_vul_par))
 
   TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 3, log(StockPars$R0[x])),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
@@ -781,7 +786,12 @@ SRA_scope_est <- function(x = 1, Catch = NULL, Effort = NULL, Index = NULL, cond
 
   map$log_sigma_mlen <- factor(rep(NA, nfleet))
   map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
-  map$log_rec_dev <- factor(c(1:(nyears-1), NA))
+  if(is.null(dots$map_log_rec_dev)) {
+    map$log_rec_dev <- factor(c(1:(nyears-1), NA))
+  } else {
+    map$log_rec_dev <- dots$map_log_rec_dev
+  }
+  TMB_data$est_rec_dev <- ifelse(is.na(map$log_rec_dev), 0, 1)
 
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
 
