@@ -91,6 +91,20 @@ update_SRA_data <- function(data, OM, condition, dots) {
   message(data$nfleet, " fleet(s) detected.")
   message(data$nyears, " years of data detected.")
 
+  # Match number of historical years of catch/effort to OM
+  if(OM@nyears != data$nyears) {
+    cpars_cond <- length(OM@cpars) > 0 && any(vapply(OM@cpars, function(x) class(x) == "matrix" || class(x) == "array", logical(1)))
+    if(cpars_cond) {
+      stmt <- paste0("OM@nyears != length(", ifelse(data$condition == "catch", "Chist", "Ehist"), "). ",
+                     "There will be indexing errors in your custom parameters (OM@cpars).")
+      stop(stmt, call. = FALSE)
+    } else {
+      message("OM@nyears was updated to length(", ifelse(data$condition == "catch", "Chist", "Ehist"), "): ", data$nyears)
+      OM@nyears <- data$nyears
+    }
+  }
+  if(length(OM@CurrentYr) == 0) OM@CurrentYr <- data$nyears
+
   # Indices
   if(!is.null(data$Index)) {
     if(is.vector(data$Index)) {

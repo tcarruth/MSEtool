@@ -115,7 +115,7 @@
 SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selectivity = "logistic", s_selectivity = NULL, LWT = list(), ESS = c(30, 30),
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
-  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, s_selectivity,
+  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev
 
   condition <- match.arg(condition)
   dat_update <- update_SRA_data(data, OM, condition, dots)
@@ -134,20 +134,6 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
 
   OM@maxF <- max_F
   message("OM@maxF updated to ", max_F, ".")
-
-  # Match number of historical years of catch/effort to OM
-  if(OM@nyears != nyears) {
-    cpars_cond <- length(OM@cpars) > 0 && any(vapply(OM@cpars, function(x) class(x) == "matrix" || class(x) == "array", logical(1)))
-    if(cpars_cond) {
-      stmt <- paste0("OM@nyears != length(", ifelse(data$condition == "catch", "data$Chist", "data$Ehist"), "). ",
-                     "There will be indexing errors in your custom parameters (OM@cpars).")
-      stop(stmt, call. = FALSE)
-    } else {
-      warning("OM@nyears was updated to length(", ifelse(data$condition == "data$catch", "data$Chist", "data$Ehist"), "): ", nyears)
-      OM@nyears <- nyears
-    }
-  }
-  if(length(OM@CurrentYr) == 0) OM@CurrentYr <- nyears
 
   # Indices (by default selectivity of index is for total biomass)
   I_type2 <- suppressWarnings(as.numeric(data$I_type))
@@ -170,13 +156,18 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   sel <- ifelse(selectivity == "logistic", 1L, 0L)
 
   if(nsurvey > 0) {
-    if(length(s_selectivity) < nsurvey) stop("selectivity vector should be of length nsurvey (", nsurvey, ").", call. = FALSE)
-    s_sel_test <- match(s_selectivity, c("logistic", "dome"))
-    if(any(is.na(s_sel_test) && I_type2 == 0)) {
-      ind <- which(any(is.na(s_sel_test) && I_type2 == 0))
-      stop("Selectivity for survey ", paste0(ind, collapse = " "), " is estimated but s_selectivity should be either \"logistic\" or \"dome\".", call. = FALSE)
+    if(!any(I_type2 == 0)) {
+      s_sel <- rep(1L, nsurvey)
+    } else {
+      if(length(s_selectivity) < nsurvey) stop("s_selectivity vector should be of length nsurvey (", nsurvey, ").", call. = FALSE)
+      s_sel_test <- match(s_selectivity, c("logistic", "dome"))
+      if(any(is.na(s_sel_test) && I_type2 == 0)) {
+        ind <- which(any(is.na(s_sel_test) && I_type2 == 0))
+        stop("Selectivity for survey ", paste0(ind, collapse = " "), " is estimated but s_selectivity should be either \"logistic\" or \"dome\".", call. = FALSE)
+      }
+      s_sel <- ifelse(s_selectivity == "logistic", 1L, 0L)
     }
-    s_sel <- ifelse(s_selectivity == "logistic", 1L, 0L)
+
   } else {
     s_sel <- 1L
   }
