@@ -229,7 +229,7 @@ DD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start 
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   start <- lapply(start, eval, envir = environment())
-  if("fix_sigma" %in% names(dots)) fix_omega <- fix_sigma # For backwards compatibility
+  if("fix_sigma" %in% names(dots)) fix_omega <- dots$fix_sigma # For backwards compatibility
 
   SR <- match.arg(SR)
   Winf = Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
