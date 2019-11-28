@@ -268,7 +268,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   }
 
   # Terminal-year + 1 abundance
-  report <- projection_VPA(report, info, R_pen[1])
+  report <- projection_VPA_internal(report, info, R_pen[1])
   Yearplusone <- c(Year, max(Year) + 1)
 
   Assessment <- new("Assessment", Model = "VPA",
@@ -332,7 +332,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
 
 
 
-projection_VPA <- function(report, info, nR) {
+projection_VPA_internal <- function(report, info, nR) {
   max_age <- info$data$max_age
   termY <- nrow(report$N)
   N <- numeric(max_age)
