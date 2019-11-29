@@ -398,12 +398,12 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   if(sum(output@data$Chist > 0, na.rm = TRUE) || nsurvey > 0) {
 
     real_Data <- new("Data")
-    if(sum(output@data$Chist > 0, na.rm = TRUE)) {
+    if(sum(output@data$Chist > 0, na.rm = TRUE) && all(!is.na(output@data$Chist))) {
       real_Data@Cat <- matrix(rowSums(output@data$Chist, na.rm = TRUE), 1, nyears)
       real_Data@CV_Cat <- matrix(sqrt(exp(0.01^1 - 1)), 1, nyears)
-      message("Historical catch data added to OM@cpars$Data@Cat.")
+      message("Historical catch data added to OM@cpars$Data@Cat with default catch CV = 0.01.")
     }
-    if(nsurvey > 0) {
+    if(.hasSlot(real_Data, "AddInd") && nsurvey > 0) {
       real_Data@AddInd <- array(output@data$Index, c(nyears, nsurvey, output@OM@nsim)) %>%
         aperm(perm = c(3, 2, 1))
       real_Data@CV_AddInd <- array(sqrt(exp(output@data$I_sd^2) - 1), c(nyears, nsurvey, output@OM@nsim)) %>%
@@ -411,7 +411,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
 
       AddIndV <- lapply(output@Misc, function(x) x$s_vul[nyears, , , drop = FALSE]) %>% unlist() %>% array(dim = c(maxage, nsurvey, OM@nsim))
       real_Data@AddIndV <- aperm(AddIndV, c(3, 2, 1))
-      message("Historical indices added to OM@cpars$Data@Ind.")
+      message("Historical indices added to OM@cpars$Data@AddInd.")
     }
     output@OM@cpars$Data <- real_Data
   }
@@ -630,8 +630,6 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
-  #report$C_hist <- TMB_data$C_hist/rescale
-  #report$E_hist <- TMB_data$E_hist/rescale_effort
 
   vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "N_full", "VB",
                 "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_SR")

@@ -225,9 +225,9 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     } else growdat <- growdat[growdat$int_Age >= age_rec, ]
     growdat <- growdat[vapply(growdat$Sex, "%in%", logical(1), gender), ]
 
-    Len_age_terminal <- summarise(group_by(growdat, int_Age), LAA = mean(Len_Beg))[, 2]
-    Wt_age_terminal <- summarise(group_by(growdat, int_Age), WAA = mean(Wt_Beg))[, 2]
-    Mat_age_terminal <- summarise(group_by(growdat, int_Age), MAA = mean(Len_Mat[Len_Mat >= 0] * Age_Mat[Age_Mat >= 0]))[, 2]
+    Len_age_terminal <- summarise(group_by(growdat, int_Age), LAA = mean(Len_Beg)) %>% pull(2)
+    Wt_age_terminal <- summarise(group_by(growdat, int_Age), WAA = mean(Wt_Beg)) %>% pull(2)
+    Mat_age_terminal <- summarise(group_by(growdat, int_Age), MAA = mean(Len_Mat[Len_Mat >= 0] * Age_Mat[Age_Mat >= 0])) %>% pull(2)
 
   } else {
 
@@ -307,7 +307,6 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
     OM@cpars$Wt_age <- aperm(Wt_age2, c(2, 1, 3)) # dims = nsim, max_age, nyears+proyears
   }
   if(!silent) message("Weight-at-age found.")
-
 
   # ---- Maturity ----
   Mat_age <- array(NA, dim = c(maxage, nsim, nyears+proyears))
