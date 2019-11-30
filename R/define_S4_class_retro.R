@@ -90,8 +90,10 @@ setMethod("plot", signature(x = "Assessment", y = "retro"),
 #' res <- SCA(Data = DLMtool::Red_snapper)
 #' ret <- retrospective(res)
 #'
-#' plot(ret)
 #' summary(ret)
+#' }
+#' \dontrun{
+#' plot(ret)
 #' }
 #' @exportMethod plot
 setMethod("plot", signature(x = "retro", y = "missing"),

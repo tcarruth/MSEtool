@@ -42,6 +42,8 @@ Produces HTML file (via markdown) figures of parameter estimates and output from
 \examples{
 \donttest{
 output <- DD_TMB(Data = Simulation_1)
+}
+\dontrun{
 plot(output)
 }
 }

@@ -146,8 +146,10 @@ res <- SP(Data = swordfish)
 start <- list(dep = 0.875, n = 2)
 res <- SP(Data = swordfish, start = start)
 
-\donttest{
+\dontrun{
 plot(res)
+}
+\donttest{
 profile(res, FMSY = seq(0.1, 0.4, 0.01))
 retrospective(res)
 }
@@ -155,7 +157,7 @@ retrospective(res)
 #### State-space version
 res_SS <- SP_SS(Data = swordfish, start = list(dep = 0.875, sigma = 0.1, tau = 0.1))
 
-\donttest{
+\dontrun{
 plot(res_SS)
 }
 

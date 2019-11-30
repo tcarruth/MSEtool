@@ -137,7 +137,7 @@
 #'
 #' SCA_assess <- SCA2(Data = DLMtool::Simulation_1)
 #'
-#' \donttest{
+#' \dontrun{
 #' plot(res)
 #' }
 #'

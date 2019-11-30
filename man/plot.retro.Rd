@@ -27,8 +27,10 @@ plot and summary functions for retro object.
 res <- SCA(Data = DLMtool::Red_snapper)
 ret <- retrospective(res)
 
-plot(ret)
 summary(ret)
+}
+\dontrun{
+plot(ret)
 }
 }
 \author{

@@ -212,7 +212,7 @@ compare_models(res, res2)
 
 SCA_assess <- SCA2(Data = DLMtool::Simulation_1)
 
-\donttest{
+\dontrun{
 plot(res)
 }
 

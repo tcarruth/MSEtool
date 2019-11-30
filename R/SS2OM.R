@@ -38,7 +38,7 @@
 #' @seealso \link{SS2Data}
 #' @importFrom stats acf
 #' @importFrom reshape2 melt
-#' @importFrom dplyr summarise group_by
+#' @importFrom dplyr summarise group_by pull
 SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1, interval = 1,
                   Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp,
                   import_mov = TRUE, gender = 1:2, age_rec = 1, silent = FALSE,
