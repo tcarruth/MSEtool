@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.4.1
+- Fixed error in Solaris build.
+
 ## MSEtool 1.4.0
 
 ### Updates to SRA_scope 

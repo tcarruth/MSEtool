@@ -150,12 +150,15 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   }
 
   # Selectivity
+  if(length(selectivity) == 1) selectivity <- rep(selectivity, nfleet)
   if(length(selectivity) < nfleet) stop("selectivity vector should be of length nfleet (", nfleet, ").", call. = FALSE)
   sel_test <- match(selectivity, c("logistic", "dome"))
   if(any(is.na(sel_test))) stop("selectivity vector should be either \"logistic\" or \"dome\".", call. = FALSE)
   sel <- ifelse(selectivity == "logistic", 1L, 0L)
 
   if(nsurvey > 0) {
+    if(is.null(s_selectivity)) s_selectivity <- rep("logistic", nsurvey)
+    if(length(s_selectivity) == 1) s_selectivity <- rep(s_selectivity, nsurvey)
     if(!any(I_type2 == 0)) {
       s_sel <- rep(1L, nsurvey)
     } else {

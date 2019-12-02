@@ -5,7 +5,7 @@ using namespace ns_SCA;
 
 template <class Type>
 Type log2(Type x) {
-  return log(x)/log(2);
+  return log(x)/log(Type(2));
 }
 
 template<class Type>
