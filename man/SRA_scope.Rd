@@ -25,8 +25,9 @@ steepness, maturity parameters (L50 and L50_95), standard deviation of recruitme
 
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
 
-\item{s_selectivity}{A character vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
-Only used if any of \code{data$I_type = "est"}.}
+\item{s_selectivity}{A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
+for an age-specific index.
+Only used if any of \code{data$I_type = "est"} or if a number is specified.}
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See details.}
 
@@ -107,6 +108,9 @@ The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <-
 }
 \section{Data}{
 
+One of indices, age compositions, or length compositions should be provided in addition to the historical catch or effort. Not all arguments
+are needed to run the model (some have defaults, while others are ignored if not applicable depending on the data provided).
+
 The \code{data} list can include:
 
 \itemize{
@@ -134,9 +138,9 @@ If not provided, default value is \code{0.1 * mean(ML)}.
 Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
 \item E_eq - The equilibrium effort for each fleet in \code{Ehist} prior to the first year of the operating model.
 Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
+\item abs_I - Optional, an integer vector to indicate which indices are in absolute magnitude. Use 1 to set q = 1, otherwise use 0 to estimate q.
 }
 
-One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 }
 

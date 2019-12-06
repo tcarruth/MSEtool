@@ -82,7 +82,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
     L5(ff) = LFS(ff) - exp(vul_par(1,ff));
     Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
 
-    if(vul_type(ff)) { // Logistic
+    if(vul_type(ff) < 0) { // Logistic
       Vmaxlen(ff) = 1;
 
       for(int y=0;y<Len_age.rows();y++) {
@@ -91,7 +91,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
           vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, Type(1));
         }
       }
-    } else { // Dome
+    } else if(vul_type(ff) == 0) { // Dome
       Vmaxlen(ff) = invlogit(vul_par(2,ff));
       Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
 
@@ -100,6 +100,16 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
           Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
           Type hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
           vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
+        }
+      }
+    } else { // Age-specific index
+      for(int y=0;y<Len_age.rows();y++) {
+        for(int a=0;a<Len_age.cols();a++) {
+          if(a == vul_type(ff) - 1) {
+            vul(y,a,ff) = 1;
+          } else {
+            vul(y,a,ff) = 0;
+          }
         }
       }
     }
@@ -112,17 +122,23 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 // Calculates analytical solution of catchability when conditioned on catch and
 // index is lognormally distributed.
 template<class Type>
-Type calc_q(matrix<Type> I_y, vector<Type> B_y, int sur, matrix<Type> &Ipred) {
-  Type num = 0.;
-  Type n_y = 0.;
+Type calc_q(matrix<Type> I_y, vector<Type> B_y, int sur, matrix<Type> &Ipred, vector<int> abs_I) {
 
-  for(int y=0;y<I_y.rows();y++) {
-    if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
-      num += log(I_y(y,sur)/B_y(y));
-      n_y += 1.;
+  Type q;
+  if(abs_I(sur)) {
+    q = 1;
+  } else {
+    Type num = 0.;
+    Type n_y = 0.;
+
+    for(int y=0;y<I_y.rows();y++) {
+      if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
+        num += log(I_y(y,sur)/B_y(y));
+        n_y += 1.;
+      }
     }
+    q = exp(num/n_y);
   }
-  Type q = exp(num/n_y);
   for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q * B_y(y);
   return q;
 }
@@ -131,17 +147,22 @@ Type calc_q(matrix<Type> I_y, vector<Type> B_y, int sur, matrix<Type> &Ipred) {
 // Calculates analytical solution of catchability when conditioned on catch and
 // index is lognormally distributed.
 template<class Type>
-Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &Ipred) {
-  Type num = 0.;
-  Type n_y = 0.;
+Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &Ipred, vector<int> abs_I) {
+  Type q;
+  if(abs_I(sur)) {
+    q = 1;
+  } else {
+    Type num = 0.;
+    Type n_y = 0.;
 
-  for(int y=0;y<I_y.rows();y++) {
-    if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
-      num += log(I_y(y,sur)/B_y(y,ff));
-      n_y += 1.;
+    for(int y=0;y<I_y.rows();y++) {
+      if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
+        num += log(I_y(y,sur)/B_y(y,ff));
+        n_y += 1.;
+      }
     }
+    q = exp(num/n_y);
   }
-  Type q = exp(num/n_y);
   for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q * B_y(y,ff);
   return q;
 }

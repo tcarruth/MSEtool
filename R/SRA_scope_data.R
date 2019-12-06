@@ -274,6 +274,14 @@ update_SRA_data <- function(data, OM, condition, dots) {
     data$s_CAL <- array(0, c(data$nyears, length(data$length_bin), ncol(data$Index)))
   }
 
+  # Absolute survey
+  if(data$nsurvey > 0) {
+    if(is.null(data$abs_I)) data$abs_I <- 0L
+    if(length(data$abs_I) < data$nsurvey) stop("abs_I should be of length", data$nsurvey, call. = FALSE)
+  } else {
+    data$abs_I <- 0L
+  }
+
   return(list(data = data, OM = OM, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars))
 
 }

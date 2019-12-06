@@ -49,9 +49,10 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_MATRIX(wt);        // Weight-at-age
   DATA_MATRIX(mat);       // Maturity-at-age at the beginning of the year
 
-  DATA_IVECTOR(vul_type); // Integer vector indicating whether logistic (0) or dome vul (1) is used
+  DATA_IVECTOR(vul_type); // Integer vector indicating whether logistic (-1) or dome vul (0), or age-specific (1 - maxage) is used
   DATA_IVECTOR(s_vul_type); // Same but for surveys
   DATA_IVECTOR(I_type);   // Integer vector indicating the basis of the indices for fleet (1-nfleet) or surveys B (-1) or SSB (-2) or estimated (0)
+  DATA_IVECTOR(abs_I);    // Boolean, whether index is an absolute (fix q = 1) or relative terms (estimate q)
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
@@ -68,6 +69,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
   PARAMETER_MATRIX(s_vul_par);
   PARAMETER_VECTOR(log_q_effort);
+  PARAMETER_VECTOR(log_q_B);
   PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
 
@@ -288,14 +290,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   array<Type> s_vul = calc_vul(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf);
   vector<Type> q(nsurvey);
   for(int sur=0;sur<nsurvey;sur++) {
-    if(I_type(sur) > 0) { // VB.col(sur);
-      q(sur) = calc_q(I_hist, VB, sur, I_type(sur) - 1, Ipred);
-    } else if(I_type(sur) == -1) { // "B"
-      q(sur) = calc_q(I_hist, B, sur, Ipred);
-    } else if(I_type(sur) == -2) {
-      q(sur) = calc_q(I_hist, E, sur, Ipred);
-    } else {
-      // Estimate survey selectivity
+    if(s_vul_type(sur) > 0) {
       for(int y=0;y<n_y;y++) {
         for(int a=0;a<max_age;a++) {
           s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
@@ -307,8 +302,32 @@ Type SRA_scope(objective_function<Type> *obj) {
           }
         }
       }
-      q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred);
+      q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
+
+    } else {
+      if(I_type(sur) > 0) { // VB.col(sur);
+        q(sur) = calc_q(I_hist, VB, sur, I_type(sur) - 1, Ipred, abs_I);
+      } else if(I_type(sur) == -1) { // "B"
+        q(sur) = calc_q(I_hist, B, sur, Ipred, abs_I);
+      } else if(I_type(sur) == -2) {
+        q(sur) = calc_q(I_hist, E, sur, Ipred, abs_I);
+      } else {
+        // Use survey selectivity in s_vul
+        for(int y=0;y<n_y;y++) {
+          for(int a=0;a<max_age;a++) {
+            s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
+            s_CN(y,sur) += s_CAApred(y,a,sur);
+            B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
+
+            if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+              for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
+            }
+          }
+        }
+        q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
+      }
     }
+
   }
 
   vector<Type> nll_Catch(nfleet);

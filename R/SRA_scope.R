@@ -15,8 +15,9 @@
 #' @param data A list of data inputs. See Data section below.
 #' @param condition String to indicate whether the SRA model is conditioned on catch or effort.
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
-#' @param s_selectivity A character vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
-#' Only used if any of \code{data$I_type = "est"}.
+#' @param s_selectivity A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
+#' for an age-specific index.
+#' Only used if any of \code{data$I_type = "est"} or if a number is specified.
 #' @param LWT A named list of likelihood weights for the SRA model. See details.
 #' @param ESS A numeric vector of length two to cap the maximum effective samples size of the age and length compositions, respectively, for the
 #' multinomial likelihood function. The effective sample size of an age or length composition sample is the minimum of ESS or the number of observations
@@ -31,6 +32,9 @@
 #' @return An object of class \linkS4class{SRA}, including the updated operating model object.
 #'
 #' @section Data:
+#' One of indices, age compositions, or length compositions should be provided in addition to the historical catch or effort. Not all arguments
+#' are needed to run the model (some have defaults, while others are ignored if not applicable depending on the data provided).
+#'
 #' The \code{data} list can include:
 #'
 #' \itemize{
@@ -58,9 +62,9 @@
 #' Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
 #' \item E_eq - The equilibrium effort for each fleet in \code{Ehist} prior to the first year of the operating model.
 #' Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
+#' \item abs_I - Optional, an integer vector to indicate which indices are in absolute magnitude. Use 1 to set q = 1, otherwise use 0 to estimate q.
 #' }
 #'
-#' One of indices, age compositions, or length compositions should be provided in addition to the historical catch.
 #' Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 #'
 #' @details
@@ -154,7 +158,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   if(length(selectivity) < nfleet) stop("selectivity vector should be of length nfleet (", nfleet, ").", call. = FALSE)
   sel_test <- match(selectivity, c("logistic", "dome"))
   if(any(is.na(sel_test))) stop("selectivity vector should be either \"logistic\" or \"dome\".", call. = FALSE)
-  sel <- ifelse(selectivity == "logistic", 1L, 0L)
+  sel <- ifelse(selectivity == "logistic", -1, 0)
 
   if(nsurvey > 0) {
     if(is.null(s_selectivity)) s_selectivity <- rep("logistic", nsurvey)
@@ -163,12 +167,13 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
       s_sel <- rep(1L, nsurvey)
     } else {
       if(length(s_selectivity) < nsurvey) stop("s_selectivity vector should be of length nsurvey (", nsurvey, ").", call. = FALSE)
-      s_sel_test <- match(s_selectivity, c("logistic", "dome"))
-      if(any(is.na(s_sel_test) && I_type2 == 0)) {
-        ind <- which(any(is.na(s_sel_test) && I_type2 == 0))
+      s_sel <- suppressWarnings(as.numeric(s_selectivity))
+      s_sel[s_selectivity == "logistic"] <- -1
+      s_sel[s_selectivity == "dome"] <- 0
+      if(any(s_sel > 0 && I_type2 == 0)) {
+        ind <- which(s_sel > 0 && I_type2 == 0)
         stop("Selectivity for survey ", paste0(ind, collapse = " "), " is estimated but s_selectivity should be either \"logistic\" or \"dome\".", call. = FALSE)
       }
-      s_sel <- ifelse(s_selectivity == "logistic", 1L, 0L)
     }
 
   } else {
@@ -510,7 +515,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        n_y = nyears, max_age = max_age, nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
                        Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
-                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity,
+                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, abs_I = data$abs_I,
                        I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index,
                        max_F = max_F, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
                        est_early_rec_dev = rep(0, max_age-1))
@@ -580,7 +585,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(is.null(dots$map_s_vul_par)) {
     map_s_vul_par <- matrix(0, 3, nsurvey)
-    map_s_vul_par[3, as.logical(s_selectivity)] <- NA
+    map_s_vul_par[3, s_selectivity < 0] <- NA # if logistic
     for(sur in 1:nsurvey) {
       if(I_type[sur] != 0 || (all(data$s_CAA[,,sur] <= 0, na.rm = TRUE) & all(data$s_CAL[,,sur] <= 0, na.rm = TRUE))) {
         map_s_vul_par[, sur] <- NA
@@ -726,22 +731,27 @@ get_s_vul_len <- function(report, TMB_data) {
   s_vul_len <- matrix(NA, length(TMB_data$length_bin), TMB_data$nsurvey) # length-based: matrix of dimension nlbin, nsurvey
 
   for(i in 1:TMB_data$nsurvey) {
-    if(TMB_data$I_type[i] == -2) s_vul[, , i] <- TMB_data$mat
-    if(TMB_data$I_type[i] == -1) s_vul[, , i] <- s_vul_len[, i] <- 1
-    if(TMB_data$I_type[i] == 0) {
+    if(TMB_data$s_vul_type[i] > 0) {
       s_vul[,,i] <- report$s_vul[,,i]
+    } else {
+      if(TMB_data$I_type[i] == -2) s_vul[, , i] <- TMB_data$mat
+      if(TMB_data$I_type[i] == -1) s_vul[, , i] <- s_vul_len[, i] <- 1
+      if(TMB_data$I_type[i] == 0) {
+        s_vul[,,i] <- report$s_vul[,,i]
 
-      sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
-      srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
+        sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
+        srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
 
-      asc <- 2^-((report$length_bin - report$s_LFS[i])/sls * (report$length_bin - report$s_LFS[i])/sls)
-      dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
-                    2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
-      s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
-    }
-    if(TMB_data$I_type[i] > 0) {
-      s_vul[,,i] <- report$vul[, , TMB_data$I_type[i]]
-      s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
+        asc <- 2^-((report$length_bin - report$s_LFS[i])/sls * (report$length_bin - report$s_LFS[i])/sls)
+        dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
+                      2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
+        s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
+      }
+      if(TMB_data$I_type[i] > 0) {
+        s_vul[,,i] <- report$vul[, , TMB_data$I_type[i]]
+        s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
+      }
+
     }
   }
   report$s_vul <- s_vul
