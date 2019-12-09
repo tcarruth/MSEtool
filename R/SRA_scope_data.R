@@ -276,7 +276,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
 
   # Absolute survey
   if(data$nsurvey > 0) {
-    if(is.null(data$abs_I)) data$abs_I <- 0L
+    if(is.null(data$abs_I)) data$abs_I <- rep(0L, data$nsurvey)
     if(length(data$abs_I) < data$nsurvey) stop("abs_I should be of length", data$nsurvey, call. = FALSE)
   } else {
     data$abs_I <- 0L

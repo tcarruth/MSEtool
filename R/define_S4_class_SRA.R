@@ -620,15 +620,13 @@ rmd_log_rec_dev <- function() {
 
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
-                                 annual_yscale = c("proportions", "raw"), dat_linewidth = 3, dat_color = "red") {
+                                 annual_yscale = c("proportions", "raw"), N = rowSums(dat), dat_linewidth = 3, dat_color = "red") {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
   par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
 
   annual_yscale <- match.arg(annual_yscale)
   if(is.null(CAL_bins)) data_type <- "age" else data_type <- "length"
-
-  #if(!is.null(dat) && !all(dim(dat) == dim(SRA))) stop("Dimensions of 'SRA' and 'dat' do not match.")
 
   if(data_type == 'length') {
     data_val <- CAL_bins
@@ -674,20 +672,16 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
           xaxt <- 's'
         }
       }
-      matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
-      abline(h = 0, col = 'grey')
-      if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
-      legend("topright", legend = Year[i], bty = "n", xjust = 1)
-    }
-
-    if(i == length(Year)) {
+    } else {
       xaxt <- 's'
       if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
-      matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
-      abline(h = 0, col = 'grey')
-      if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
-      legend("topright", legend = Year[i], bty = "n", xjust = 1)
     }
+
+    matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+    abline(h = 0, col = 'grey')
+    if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
+    legend("topright", legend = c(Year[i], ifelse(is.null(N) | is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
+
     if(i %% 16 == 0 || i == length(Year)) {
       mtext(data_lab, side = 1, line = 3, outer = TRUE)
       mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)

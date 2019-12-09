@@ -725,14 +725,14 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
       if(!is.null(fit)) mupred[i] <- weighted.mean(data_val, fit[i, ], na.rm = TRUE)
     }
     ind2 <- (which(!is.na(mu) & mu > 0)[1]):length(mu)
-    plot(Year[ind2], mu[ind2], xlab = 'Year', ylab = paste0('Mean ', data_type), typ = 'o')
+    plot(Year[ind2], mu[ind2], xlab = "Year", ylab = paste0("Mean ", data_type), typ = "o")
     if(!is.null(fit)) lines(Year[ind2], mupred[ind2], lwd = fit_linewidth, col = fit_color)
 
     return(invisible())
   }
 
   # Annual comps (obs vs. fitted if available)
-  if('annual' %in% plot_type) {
+  if("annual" %in% plot_type) {
     old_par <- par(no.readonly = TRUE)
     on.exit(par(old_par))
     par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
@@ -752,49 +752,36 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     if(max(obs_prob_all, fit_prob_all, na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
 
     las <- 1
-    type <- 'o'
+    type <- "o"
     for(i in 1:length(Year)) {
-      obs.vec <- obs_prob[i, ]
-
       if(i < length(Year)) {
         if(i %% 16 %in% c(1:4)) { # First column
-          yaxt <- 's'
+          yaxt <- "s"
 
           # First three rows
           if(i %% 4 %in% c(1:3)) {
-            xaxt <- 'n'
+            xaxt <- "n"
           } else {
-            xaxt <- 's'
+            xaxt <- "s"
           }
         } else { # All other columns
           if(i %% 4 %in% c(1:3)) { # First three rows
-            xaxt <- yaxt <- 'n'
+            xaxt <- yaxt <- "n"
           } else {
-            xaxt <- 's'
+            xaxt <- "s"
           }
         }
-        plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
-             xaxt = xaxt, yaxt = yaxt, las = las)
-        abline(h = 0, col = 'grey')
-        if(!is.null(fit)) {
-          fit.vec <- fit_prob[i, ]
-          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
-        }
-        legend('topright', legend = c(Year[i], ifelse(is.null(N), "", paste0("N = ", N[i]))), bty = 'n', xjust = 1)
+      } else {
+        xaxt <- "s"
+        if(i %% 16 %in% c(1:4)) yaxt <- "s" else yaxt <- "n"
       }
 
-      if(i == length(Year)) {
-        xaxt <- 's'
-        if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
-        plot(data_val, obs.vec, typ = 'o', ylim = ylim, yaxp = yaxp,
-             xaxt = xaxt, yaxt = yaxt, las = las)
-        abline(h = 0, col = 'grey')
-        if(!is.null(fit)) {
-          fit.vec <- fit_prob[i, ]
-          lines(data_val, fit.vec, lwd = fit_linewidth, col = fit_color)
-        }
-        legend('topright', legend = c(Year[i], ifelse(is.null(N), "", paste0("N = ", N[i]))), bty = 'n', xjust = 1)
-      }
+      plot(data_val, obs_prob[i, ], typ = "n", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      abline(h = 0, col = "grey")
+      lines(data_val, obs_prob[i, ], typ = "o")
+      if(!is.null(fit)) lines(data_val, fit_prob[i, ], lwd = fit_linewidth, col = fit_color)
+      legend("topright", legend = c(Year[i], ifelse(is.null(N), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
+
       if(i %% 16 == 0 || i == length(Year)) {
         mtext(data_lab, side = 1, line = 3, outer = TRUE)
         mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)
@@ -831,7 +818,7 @@ plot_surplus_production <- function(B, B0 = NULL, C, yield_fn = NULL, arrow_size
 
   xlim <- c(0, max(B))
   ylim <- c(min(0, min(SP_now)), max(SP_now))
-  plot(B_now, SP_now, typ = 'n', xlab = xlab, xlim = xlim, ylim = ylim,
+  plot(B_now, SP_now, typ = "n", xlab = xlab, xlim = xlim, ylim = ylim,
        ylab = "Surplus production")
   if(!is.null(yield_fn)) {
     if(!is.null(B0)) lines(yield_fn$B_B0, yield_fn$Yield) else {
@@ -840,7 +827,7 @@ plot_surplus_production <- function(B, B0 = NULL, C, yield_fn = NULL, arrow_size
   }
   arrows(x0 = B_now, y0 = SP_now[1:(length(B)-1)], x1 = B_next, y1 = SP_now[2:length(B)],
          length = arrow_size)
-  abline(h = 0, col = 'grey')
+  abline(h = 0, col = "grey")
 
   invisible()
 }
@@ -856,7 +843,7 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, xlab = 
 
   x.max <- max(biomass, 1)
   y.max <- max(exploit, 1)
-  plot(NULL, NULL, typ = 'n', xlab = xlab, ylab = ylab, xlim = c(0, max(1.1, 1.1 * x.max)), ylim = c(0, max(1.1, 1.1 * y.max)))
+  plot(NULL, NULL, typ = "n", xlab = xlab, ylab = ylab, xlim = c(0, max(1.1, 1.1 * x.max)), ylim = c(0, max(1.1, 1.1 * y.max)))
   if(color) {
     # Colors from https://www.rapidtables.com/web/color/html-color-codes.html
     green <- "#228B22"    #forestgreen
@@ -872,8 +859,8 @@ plot_Kobe <- function(biomass, exploit, arrow_size = 0.07, color = TRUE, xlab = 
   }
   arrows(x0 = biomass[1:(n.arrows-1)], y0 = exploit[1:(n.arrows-1)],
          x1 = biomass[2:n.arrows], y1 = exploit[2:n.arrows], length = arrow_size)
-  abline(h = 0, col = 'grey')
-  abline(v = 0, col = 'grey')
+  abline(h = 0, col = "grey")
+  abline(v = 0, col = "grey")
   if(!color) {
     abline(h = 1, lty = 2)
     abline(v = 1, lty = 2)
@@ -910,8 +897,8 @@ plot_SR <- function(Spawners, expectedR, R0 = NULL, S0 = NULL, rec_dev = NULL, t
     else R.max <- y_zoom * max(expectedR)
   }
   S.max <- 1.1 * max(c(Spawners, S0))
-  plot(Spawners[order(Spawners)], expectedR[order(Spawners)], typ = 'l', xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
-       xlab = 'Spawning Stock Biomass (SSB)', ylab = ylab)
+  plot(Spawners[order(Spawners)], expectedR[order(Spawners)], typ = "l", xlim = c(0, 1.05 * S.max), ylim = c(0, 1.1 * R.max),
+       xlab = "Spawning Stock Biomass (SSB)", ylab = ylab)
   if(!trajectory) {
     if(is.null(rec_dev)) points(Spawners, expectedR)
     if(!is.null(rec_dev)) points(Spawners, rec_dev)
@@ -925,16 +912,16 @@ plot_SR <- function(Spawners, expectedR, R0 = NULL, S0 = NULL, rec_dev = NULL, t
     arrows(x0 = Spawners[1:(n.arrows-1)], y0 = rec_dev[1:(n.arrows-1)],
            x1 = Spawners[2:n.arrows], y1 = rec_dev[2:n.arrows], length = 0.07)
   }
-  if(!is.null(R0) && !is.null(S0)) points(S0, R0, col = 'red', pch = 16)
-  abline(h = 0, col = 'grey')
-  abline(v = 0, col = 'grey')
+  if(!is.null(R0) && !is.null(S0)) points(S0, R0, col = "red", pch = 16)
+  abline(h = 0, col = "grey")
+  abline(v = 0, col = "grey")
 }
 
 
 plot_generic_at_age <- function(Age, quantity, label, ymax = 1.1 * max(quantity)) {
-  plot(Age, quantity, ylab = label, typ = 'n', ylim = c(0, ymax))
-  abline(h = 0, col = 'grey')
-  lines(Age, quantity, typ = 'o')
+  plot(Age, quantity, ylab = label, typ = "n", ylim = c(0, ymax))
+  abline(h = 0, col = "grey")
+  lines(Age, quantity, typ = "o")
 
   invisible()
 
