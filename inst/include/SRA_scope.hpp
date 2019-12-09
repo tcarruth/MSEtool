@@ -69,7 +69,6 @@ Type SRA_scope(objective_function<Type> *obj) {
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
   PARAMETER_MATRIX(s_vul_par);
   PARAMETER_VECTOR(log_q_effort);
-  PARAMETER_VECTOR(log_q_B);
   PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
 
