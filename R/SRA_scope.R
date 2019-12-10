@@ -406,6 +406,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   if(sum(output@data$Chist > 0, na.rm = TRUE) || nsurvey > 0) {
 
     real_Data <- new("Data")
+    real_Data@Year <- (output@OM@CurrentYr - output@OM@nyears + 1):output@OM@CurrentYr
     if(sum(output@data$Chist > 0, na.rm = TRUE) && all(!is.na(output@data$Chist))) {
       real_Data@Cat <- matrix(rowSums(output@data$Chist, na.rm = TRUE), 1, nyears)
       real_Data@CV_Cat <- matrix(sqrt(exp(0.01^1 - 1)), 1, nyears)
@@ -596,7 +597,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     map_s_vul_par <- dots$map_s_vul_par
   }
 
-  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 3, log(StockPars$R0[x])),
+  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 0, log(StockPars$R0[x])),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
                      log_F = matrix(log(0.05), nyears, nfleet), log_F_equilibrium = rep(log(0.05), nfleet),

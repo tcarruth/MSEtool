@@ -155,8 +155,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               }
               individual_array_fn <- function(i, obs, pred, comps = c("age", "length"), label) {
                 comps <- match.arg(comps)
-                obs2 <- paste(obs, "[, , ", i, "]")
-                pred2 <- paste(pred, "[, , ", i, "]")
+                obs2 <- paste0(obs, "[, , ", i, "]")
+                pred2 <- paste0(pred, "[, , ", i, "]")
                 fig.cap2 <- paste0("Observed (black) and predicted (red) ", comps, " composition from ", label[i], ".")
                 fig.cap3 <- paste0("Residuals for ", comps, " composition from ", label[i], ".")
                 if(comps == "age") {
@@ -408,7 +408,7 @@ rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual", "bubble_r
   }
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     paste0("ind_valid <- rowSums(", obs, ", na.rm = TRUE) > 0"),
-    paste0("if(any(ind_valid)) plot_composition(", year, "[ind_valid], ", obs, "[ind_valid, ], ", fit, "[ind_valid, ], plot_type = ", arg, ")"),
+    paste0("if(any(ind_valid)) plot_composition(", year, "[ind_valid], ", obs, "[ind_valid, , drop = FALSE], ", fit, "[ind_valid, , drop = FALSE], plot_type = ", arg, ")"),
     "```\n")
 }
 
@@ -515,7 +515,7 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "}",
            "```\n",
            paste0("```{r, fig.cap = \"Predicted age composition from fleet ", ff, ".\"}"),
-           paste0("if(all(is.na(data$CAA[, , ", ff, "]))) {"),
+           paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("plot_composition_SRA(Year, x@CAA[, , , ", ff, "])"),
            "}",
            "```\n",
@@ -527,7 +527,7 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Predicted length composition from ", f_name[ff], ".\"}"),
-           paste0("if(all(is.na(data$CAL[, , ", ff, "]))) {"),
+           paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("plot_composition_SRA(Year, x@CAL[, , , ", ff, "], data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
            "}",
            "```\n")
@@ -620,7 +620,7 @@ rmd_log_rec_dev <- function() {
 
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
-                                 annual_yscale = c("proportions", "raw"), N = rowSums(dat), dat_linewidth = 3, dat_color = "red") {
+                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else rowSums(dat), dat_linewidth = 3, dat_color = "red") {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
   par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
@@ -679,8 +679,10 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
 
     matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
     abline(h = 0, col = 'grey')
-    if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
-    legend("topright", legend = c(Year[i], ifelse(is.null(N) | is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
+    if(!is.null(dat)) {
+      lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
+      legend("topright", legend = c(Year[i], ifelse(is.null(N) || is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
+    }
 
     if(i %% 16 == 0 || i == length(Year)) {
       mtext(data_lab, side = 1, line = 3, outer = TRUE)
