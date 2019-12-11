@@ -284,9 +284,14 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   #  Wt_age_emp$Yr <- abs(Wt_age_emp$Yr)
   #}
   GP <- replist$Growth_Parameters   # Some growth parameters (presumably in endyr)
-  GP <- GP[GP$Platoon == 1, ]
+  if (!is.null(GP$Platoon)) {
+    GP <- GP[GP$Platoon == 1, ]
+  }
   muLinf <- mean(GP$Linf[gender], na.rm = TRUE)
   cvLinf <- mean(GP$CVmax[gender], na.rm = TRUE)
+
+
+
   if(cvLinf > 1) cvLinf <- cvLinf/muLinf
   OM@LenCV <- rep(cvLinf, 2)
 
