@@ -447,7 +447,8 @@ rmd_SRA_sel <- function(fig.cap = "Operating model selectivity among simulations
     "  matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = \"l\", col = \"black\",",
     "          xlab = \"Length\", ylab = \"Selectivity\", ylim = c(0, 1.1))",
     "} else {",
-    "  matplot(matrix(age, ncol = nsim, nrow = max_age), t(OM@cpars$V[, , nyears]), type = \"l\", col = \"black\",",
+    "  if(nsim == 1) V_plot <- matrix(OM@cpars$V[, , nyears], 1, byrow = TRUE) else V_plot <- OM@cpars$V[, , nyears]",
+    "  matplot(matrix(age, ncol = nsim, nrow = max_age), t(V_plot), type = \"l\", col = \"black\",",
     "          xlab = \"Age\", ylab = \"Selectivity (last historical year)\", ylim = c(0, 1.1))",
     "}",
     "abline(h = 0, col = \"grey\")",
@@ -511,24 +512,26 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "",
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) age composition from ", f_name[ff], ".\"}"),
            paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("plot_composition_SRA(Year, x@CAA[, , , ", ff, "], data$CAA[, , ", ff, "])"),
+           paste0("if(nsim == 1) CAA_plot <- array(x@CAA[, , , ", ff, "], c(1, nyears, max_age)) else CAA_plot <- x@CAA[, , , ", ff, "]"),
+           paste0("plot_composition_SRA(Year, CAA_plot, data$CAA[, , ", ff, "])"),
            "}",
            "```\n",
            paste0("```{r, fig.cap = \"Predicted age composition from fleet ", ff, ".\"}"),
            paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("plot_composition_SRA(Year, x@CAA[, , , ", ff, "])"),
+           paste0("plot_composition_SRA(Year, CAA_plot)"),
            "}",
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Observed (red) and predicted (black) length composition from ", f_name[ff], ".\"}"),
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("plot_composition_SRA(Year, x@CAL[, , , ", ff, "], data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
+           paste0("if(nsim == 1) CAL_plot <- array(x@CAL[, , , ", ff, "], c(1, nyears, length(data$length_bin))) else CAL_plot <- x@CAL[, , , ", ff, "]"),
+           paste0("plot_composition_SRA(Year, CAL_plot, data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
            "}",
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Predicted length composition from ", f_name[ff], ".\"}"),
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("plot_composition_SRA(Year, x@CAL[, , , ", ff, "], data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
+           paste0("plot_composition_SRA(Year, CAL_plot, CAL_bins = data$length_bin)"),
            "}",
            "```\n")
 
@@ -620,7 +623,7 @@ rmd_log_rec_dev <- function() {
 
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
-                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else rowSums(dat), dat_linewidth = 3, dat_color = "red") {
+                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 3, dat_color = "red") {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
   par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
@@ -677,12 +680,14 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
       if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
     }
 
-    matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
-    abline(h = 0, col = 'grey')
-    if(!is.null(dat)) {
-      lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
-      legend("topright", legend = c(Year[i], ifelse(is.null(N) || is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
+    if(dim(SRA_plot)[1] == 1) {
+      plot(data_val, SRA_plot[, i, ], type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+    } else {
+      matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
     }
+    abline(h = 0, col = 'grey')
+    if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
+    legend("topright", legend = c(Year[i], ifelse(is.null(N) || is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
 
     if(i %% 16 == 0 || i == length(Year)) {
       mtext(data_lab, side = 1, line = 3, outer = TRUE)

@@ -286,47 +286,21 @@ Type SRA_scope(objective_function<Type> *obj) {
   s_CN.setZero();
   B_sur.setZero();
 
-  array<Type> s_vul = calc_vul(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf);
+  array<Type> s_vul = calc_vul_sur(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf, mat, I_type, vul);
   vector<Type> q(nsurvey);
   for(int sur=0;sur<nsurvey;sur++) {
-    if(s_vul_type(sur) > 0) {
-      for(int y=0;y<n_y;y++) {
-        for(int a=0;a<max_age;a++) {
-          s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
-          s_CN(y,sur) += s_CAApred(y,a,sur);
-          B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
+    for(int y=0;y<n_y;y++) {
+      for(int a=0;a<max_age;a++) {
+        s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
+        s_CN(y,sur) += s_CAApred(y,a,sur);
+        B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
 
-          if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
-            for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
-          }
+        if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+          for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
         }
-      }
-      q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
-
-    } else {
-      if(I_type(sur) > 0) { // VB.col(sur);
-        q(sur) = calc_q(I_hist, VB, sur, I_type(sur) - 1, Ipred, abs_I);
-      } else if(I_type(sur) == -1) { // "B"
-        q(sur) = calc_q(I_hist, B, sur, Ipred, abs_I);
-      } else if(I_type(sur) == -2) {
-        q(sur) = calc_q(I_hist, E, sur, Ipred, abs_I);
-      } else {
-        // Use survey selectivity in s_vul
-        for(int y=0;y<n_y;y++) {
-          for(int a=0;a<max_age;a++) {
-            s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
-            s_CN(y,sur) += s_CAApred(y,a,sur);
-            B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
-
-            if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
-              for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
-            }
-          }
-        }
-        q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
       }
     }
-
+    q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
   }
 
   vector<Type> nll_Catch(nfleet);

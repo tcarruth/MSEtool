@@ -728,34 +728,21 @@ get_vul_len <- function(report) {
 }
 
 get_s_vul_len <- function(report, TMB_data) {
-  s_vul <- array(NA, dim(report$s_vul)) # age-based array of dimension nyears, maxage, nsurvey
   s_vul_len <- matrix(NA, length(TMB_data$length_bin), TMB_data$nsurvey) # length-based: matrix of dimension nlbin, nsurvey
 
   for(i in 1:TMB_data$nsurvey) {
-    if(TMB_data$s_vul_type[i] > 0) {
-      s_vul[,,i] <- report$s_vul[,,i]
-    } else {
-      if(TMB_data$I_type[i] == -2) s_vul[, , i] <- TMB_data$mat
-      if(TMB_data$I_type[i] == -1) s_vul[, , i] <- s_vul_len[, i] <- 1
-      if(TMB_data$I_type[i] == 0) {
-        s_vul[,,i] <- report$s_vul[,,i]
+    if(TMB_data$I_type[i] == 0) {
+      sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
+      srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
 
-        sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
-        srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
-
-        asc <- 2^-((report$length_bin - report$s_LFS[i])/sls * (report$length_bin - report$s_LFS[i])/sls)
-        dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
-                      2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
-        s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
-      }
-      if(TMB_data$I_type[i] > 0) {
-        s_vul[,,i] <- report$vul[, , TMB_data$I_type[i]]
-        s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
-      }
-
+      asc <- 2^-((report$length_bin - report$s_LFS[i])/sls * (report$length_bin - report$s_LFS[i])/sls)
+      dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
+                    2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
+      s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
     }
+    if(TMB_data$I_type[i] > 0) s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
   }
-  report$s_vul <- s_vul
+
   report$s_vul_len <- s_vul_len
   return(report)
 }

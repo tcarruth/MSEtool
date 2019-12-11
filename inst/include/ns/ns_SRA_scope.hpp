@@ -119,6 +119,78 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 }
 
 
+
+template<class Type>
+array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Len_age, vector<Type> &LFS, vector<Type> &L5,
+                         vector<Type> &Vmaxlen, Type Linf, matrix<Type> mat, vector<int> I_type, array<Type> fleet_var) {
+  array<Type> vul(Len_age.rows(), Len_age.cols(), vul_type.size());
+
+  for(int ff=0;ff<vul_type.size();ff++) {
+
+    if(I_type(ff) == -2) { // SSB
+
+      for(int y=0;y<Len_age.rows();y++) {
+        for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = mat(y,a);
+      }
+
+    } else if(I_type(ff) == -1) { // B
+
+      for(int y=0;y<Len_age.rows();y++) {
+        for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = Type(1);
+      }
+
+    } else if(I_type(ff) == 0) { // est
+
+      LFS(ff) = invlogit(vul_par(0,ff)) * 0.95 * Linf;
+      L5(ff) = LFS(ff) - exp(vul_par(1,ff));
+      Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
+
+      if(vul_type(ff) < 0) { // Logistic
+        Vmaxlen(ff) = 1;
+
+        for(int y=0;y<Len_age.rows();y++) {
+          for(int a=0;a<Len_age.cols();a++) {
+            Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
+            vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, Type(1));
+          }
+        }
+      } else if(vul_type(ff) == 0) { // Dome
+        Vmaxlen(ff) = invlogit(vul_par(2,ff));
+        Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
+
+        for(int y=0;y<Len_age.rows();y++) {
+          for(int a=0;a<Len_age.cols();a++) {
+            Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
+            Type hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
+            vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
+          }
+        }
+      } else { // Age-specific index
+        for(int y=0;y<Len_age.rows();y++) {
+          for(int a=0;a<Len_age.cols();a++) {
+            if(a == vul_type(ff) - 1) {
+              vul(y,a,ff) = 1;
+            } else {
+              vul(y,a,ff) = 0;
+            }
+          }
+        }
+      }
+    } else {
+
+      for(int y=0;y<Len_age.rows();y++) {
+        for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = fleet_var(y,a,I_type(ff)-1);
+      }
+
+    }
+  }
+
+  return vul;
+}
+
+
+
+
 // Calculates analytical solution of catchability when conditioned on catch and
 // index is lognormally distributed.
 template<class Type>
