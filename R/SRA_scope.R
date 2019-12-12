@@ -120,6 +120,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
   dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev
+  if(!is.null(dots$maxF)) max_F <- dots$maxF
 
   condition <- match.arg(condition)
   dat_update <- update_SRA_data(data, OM, condition, dots)
@@ -137,7 +138,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   nsurvey <- data$nsurvey
 
   OM@maxF <- max_F
-  message("OM@maxF updated to ", max_F, ".")
+  message("OM@maxF updated to ", maxF, ".")
 
   # Indices (by default selectivity of index is for total biomass)
   I_type2 <- suppressWarnings(as.numeric(data$I_type))
@@ -267,16 +268,43 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
     keep <- !logical(OM@nsim)
   }
 
-  ### Fit to life history means if mean_fit = TRUE
-  if(mean_fit) {
+  # Test for identical sims
+  all_identical_sims_fn <- function() {
+    vector_fn <- function(x) sum(mean(x) - x) == 0
+    array_fn <- function(x) {
+      x_mean <- apply(x, 2:length(dim(x)), mean)
+      all(apply(x, 1, identical, x_mean))
+    }
+    run_test <- function(x) if(is.null(dim(x))) vector_fn(x) else array_fn(x)
+    StockPars_subset <- StockPars[c("hs", "procsd", "ageM", "M_ageArray", "Linf", "Len_age", "Wt_age", "Mat_age")]
+    if(!any(data$CAL > 0, na.rm = TRUE) || !any(data$s_CAL > 0, na.rm = TRUE) || !any(data$ML > 0, na.rm = TRUE)) {
+      StockPars_subset <- c(StockPars_subset, StockPars["LenCV"])
+    }
+    S_test <- vapply(StockPars_subset, run_test, logical(1))
+    if(data$nfleet == 1 && !any(data$CAL > 0, na.rm = TRUE) && !any(data$CAA > 0, na.rm = TRUE)) {
+      FleetPars_subset <- StockPars[c("L5", "LFS", "Vmaxlen")]
+      FleetPars_subset <- lapply(FleetPars_subset, function(x) x[nyears, ])
+      F_test <- vapply(FleetPars_subset, run_test, logical(1))
+    } else {
+      F_test <- TRUE
+    }
+    if(data$nsurvey > 0 && !any(data$I_sd > 0, na.rm = TRUE)) {
+      O_test <- run_test(ObsPars$Isd)
+    } else {
+      O_test <- TRUE
+    }
+    return(all(c(S_test, F_test, O_test)))
+  }
+  if(all_identical_sims_fn()) { # All identical sims detected
+    mean_fit_output <- mod[[1]]
+  } else if(mean_fit) { ### Fit to life history means if mean_fit = TRUE
     message("Generating additional model fit from mean values of parameters in the operating model...\n")
     mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                                      SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, ESS = ESS,
                                      max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
                                      FleetPars = FleetPars, mean_fit = TRUE, dots = dots)
-
-    if(!mean_fit_output$report$conv) warning("Mean fit model did not appear to converge.")
-  }
+  } else mean_fit_output <- list()
+  if(length(mean_fit_output) > 0 && !mean_fit_output$report$conv) warning("Mean fit model did not appear to converge.")
 
   ### R0
   OM@cpars$R0 <- vapply(1:length(mod), function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
@@ -399,8 +427,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   CAL_pred <- array(sapply(res[keep], getElement, "CALpred"), c(nyears, length(data$length_bin), nfleet, sum(keep)))
 
   output <- new("SRA", OM = Sub_cpars(OM, keep), SSB = E, NAA = aperm(N, c(3, 1, 2)), CAA = aperm(CAA_pred, c(4, 1:3)),
-                CAL = aperm(CAL_pred, c(4, 1:3)), conv = conv[keep], data = data, Misc = res[keep])
-  if(mean_fit) output@mean_fit <- mean_fit_output
+                CAL = aperm(CAL_pred, c(4, 1:3)), mean_fit = mean_fit_output, conv = conv[keep], data = data, Misc = res[keep])
 
   # Data in cpars
   if(sum(output@data$Chist > 0, na.rm = TRUE) || nsurvey > 0) {
