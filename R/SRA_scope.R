@@ -138,7 +138,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   nsurvey <- data$nsurvey
 
   OM@maxF <- max_F
-  message("OM@maxF updated to ", maxF, ".")
+  message("OM@maxF updated to ", max_F, ".")
 
   # Indices (by default selectivity of index is for total biomass)
   I_type2 <- suppressWarnings(as.numeric(data$I_type))

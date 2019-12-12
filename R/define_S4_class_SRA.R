@@ -151,7 +151,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               # Data and fit section
               individual_matrix_fn <- function(i, obs, pred, fig.cap, label) {
                 rmd_assess_fit2("Year", paste0(obs, "[, ", i, "]"), paste0(pred, "[, ", i, "]"),
-                                fig.cap = paste(fig.cap, i), label = paste0(label, "[", i, "]"))
+                                fig.cap = paste(fig.cap, i), label = eval(parse(text = paste0(label, "[", i, "]"))))
               }
               individual_array_fn <- function(i, obs, pred, comps = c("age", "length"), label) {
                 comps <- match.arg(comps)
@@ -253,11 +253,11 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               N_bubble <- rmd_bubble("c(Year, max(Year)+1)", "N_at_age", fig.cap = "Predicted abundance-at-age.")
 
               CAA_all <- apply(report$CAApred, c(1, 2), sum)
-              CAA_bubble <- rmd_bubble("Year", "CAA_all", fig.cap = "Predicted catch-at-age (summed over all fleets).")
+              CAA_bubble <- rmd_bubble("Year", "CAA_all", fig.cap = "Predicted catch-at-age (summed over all fleets).", bubble_adj = "10")
 
               CAL_all <- apply(report$CALpred, c(1, 2), sum)
               CAL_bubble <- rmd_bubble("Year", "CAL_all", CAL_bins = "data_mean_fit$length_bin",
-                                       fig.cap = "Predicted catch-at-length (summed over all fleets).")
+                                       fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = "10")
 
               ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_R(),
                              rmd_residual("log_rec_dev", fig.cap = "Time series of recruitment deviations.", label = "log-Recruitment deviations"),
@@ -397,7 +397,8 @@ rmd_assess_fit2 <- function(year, obs, fit, fig.cap, label = fig.cap, match = FA
     "```\n")
 }
 
-rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual", "bubble_residuals"), ages = "NULL", CAL_bins = "NULL", fig.cap) {
+rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual", "bubble_residuals"), ages = "NULL", CAL_bins = "NULL", fig.cap,
+                          bubble_adj = "10") {
   type <- match.arg(type)
   if(type == "bubble") {
     arg <- paste0("\"bubble_data\", CAL_bins = ", CAL_bins, ", ages = ", ages)
@@ -408,7 +409,7 @@ rmd_fit_comps <- function(year, obs, fit, type = c("bubble", "annual", "bubble_r
   }
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     paste0("ind_valid <- rowSums(", obs, ", na.rm = TRUE) > 0"),
-    paste0("if(any(ind_valid)) plot_composition(", year, "[ind_valid], ", obs, "[ind_valid, , drop = FALSE], ", fit, "[ind_valid, , drop = FALSE], plot_type = ", arg, ")"),
+    paste0("if(any(ind_valid)) plot_composition(", year, "[ind_valid], ", obs, "[ind_valid, , drop = FALSE], ", fit, "[ind_valid, , drop = FALSE], plot_type = ", arg, ", bubble_adj = ", bubble_adj, ")"),
     "```\n")
 }
 
@@ -646,8 +647,8 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
   dat_plot <- dat
   if(annual_yscale == "proportions") {
     for(i in 1:length(Year)) {
-      SRA_plot[, i, ] <- SRA[, i, ]/max(SRA[, i, ])
-      if(!is.null(dat)) dat_plot[i, ] <- dat[i, ]/max(dat[i, ])
+      SRA_plot[, i, ] <- SRA[, i, ]/rowSums(SRA[, i, ])
+      if(!is.null(dat)) dat_plot[i, ] <- dat[i, ]/sum(dat[i, ])
     }
   }
   ylim <- c(0, 1.1 * max(SRA_plot, dat_plot, na.rm = TRUE))

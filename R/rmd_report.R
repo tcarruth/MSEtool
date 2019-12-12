@@ -286,9 +286,9 @@ rmd_fit_age_comps <- function(type = c("bubble", "annual"), ages = "NULL", match
     "```\n")
 }
 
-rmd_bubble <- function(year, par, CAL_bins = "NULL", ages = "NULL", fig.cap) {
+rmd_bubble <- function(year, par, CAL_bins = "NULL", ages = "NULL", fig.cap, bubble_adj = "5") {
   c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
-    paste0("plot_composition(", year, ", ", par, ", CAL_bins = ", CAL_bins, ", ages = ", ages, ", plot_type = \"bubble_data\")"),
+    paste0("plot_composition(", year, ", ", par, ", CAL_bins = ", CAL_bins, ", ages = ", ages, ", plot_type = \"bubble_data\", bubble_adj = ", bubble_adj, ")"),
     "```\n")
 }
 
