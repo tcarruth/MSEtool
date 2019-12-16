@@ -116,7 +116,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               length_bin <- x@mean_fit$report$length_bin
               data_mean_fit <- x@mean_fit$obj$env$data
 
-              #conv <- report$conv
+              conv <- report$conv
 
               SD2 <- rbind(summary(SD, "report"), summary(SD, "fixed"))
               SD2 <- SD2[SD2[, 2] > 0, ] %>% round(2) %>% as.data.frame()
