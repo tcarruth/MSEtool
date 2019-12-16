@@ -59,6 +59,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_VECTOR(LWT_Index); // LIkelihood weights for the index
 
   DATA_SCALAR(max_F);     // Maximum F in the model
+  DATA_SCALAR(rescale);   // Catch rescaler, needed in case q = 1
   DATA_INTEGER(ageM);     // Age of maturity used for averaging E0 and EPR0
 
   DATA_IVECTOR(est_early_rec_dev);
@@ -205,9 +206,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   R_eq /= Brec * EPR_eq;
 
   R(0) = R_eq;
-  if(est_rec_dev(0)) {
-    R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
-  }
+  if(est_rec_dev(0)) R(0) *= exp(log_rec_dev(0) - 0.5 * tau * tau);
 
   for(int a=0;a<max_age;a++) {
     if(a == 0) {
@@ -302,7 +301,7 @@ Type SRA_scope(objective_function<Type> *obj) {
       }
     }
     if(s_vul_type(sur) > 0) B_sur.col(sur) = s_CN.col(sur);
-    q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
+    q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I, rescale);
   }
 
   vector<Type> nll_Catch(nfleet);

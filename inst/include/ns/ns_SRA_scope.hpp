@@ -175,40 +175,13 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
 }
 
 
-
-
 // Calculates analytical solution of catchability when conditioned on catch and
 // index is lognormally distributed.
 template<class Type>
-Type calc_q(matrix<Type> I_y, vector<Type> B_y, int sur, matrix<Type> &Ipred, vector<int> abs_I) {
-
+Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &Ipred, vector<int> abs_I, Type rescale) {
   Type q;
-  if(abs_I(sur)) {
-    q = 1;
-  } else {
-    Type num = 0.;
-    Type n_y = 0.;
-
-    for(int y=0;y<I_y.rows();y++) {
-      if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
-        num += log(I_y(y,sur)/B_y(y));
-        n_y += 1.;
-      }
-    }
-    q = exp(num/n_y);
-  }
-  for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q * B_y(y);
-  return q;
-}
-
-
-// Calculates analytical solution of catchability when conditioned on catch and
-// index is lognormally distributed.
-template<class Type>
-Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &Ipred, vector<int> abs_I) {
-  Type q;
-  if(abs_I(sur)) {
-    q = 1;
+  if(abs_I(sur)) { // q = 1 after rescaling
+    q = 1/rescale;
   } else {
     Type num = 0.;
     Type n_y = 0.;

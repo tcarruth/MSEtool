@@ -536,21 +536,6 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(is.null(data$I_sd)) data$I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
 
-  TMB_data_all <- list(condition = data$condition,
-                       nll_C = as.integer((all(CAA_n <= 0) & all(CAL_n <= 0) & all(is.na(data$ML)) & all(is.na(data$Index))) || nfleet > 1), # if condition = "effort"
-                       I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
-                       CAL_hist = data$CAL, CAL_n = pmin(CAL_n, ESS[2]), s_CAA_hist = data$s_CAA, s_CAA_n = apply(data$s_CAA, c(1, 3), sum),
-                       s_CAL_hist = data$s_CAL, s_CAL_n = apply(data$s_CAL, c(1, 3), sum), length_bin = data$length_bin, mlen = data$ML,
-                       n_y = nyears, max_age = max_age, nfleet = nfleet, nsurvey = nsurvey,
-                       M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
-                       Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
-                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, abs_I = data$abs_I,
-                       I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index,
-                       max_F = max_F, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       est_early_rec_dev = rep(0, max_age-1))
-  TMB_data_all$CAA_hist[TMB_data_all$CAA_hist < 1e-8] <- 1e-8
-  TMB_data_all$CAL_hist[TMB_data_all$CAL_hist < 1e-8] <- 1e-8
-
   if(!is.null(data$Chist) && any(data$Chist > 0, na.rm = TRUE)) {
     rescale <- 1/mean(data$Chist, na.rm = TRUE)
     C_hist <- data$Chist * rescale
@@ -566,6 +551,21 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     rescale_effort <- 1
     E_hist <- matrix(0, nyears, nfleet)
   }
+
+  TMB_data_all <- list(condition = data$condition,
+                       nll_C = as.integer((all(CAA_n <= 0) & all(CAL_n <= 0) & all(is.na(data$ML)) & all(is.na(data$Index))) || nfleet > 1), # if condition = "effort"
+                       I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
+                       CAL_hist = data$CAL, CAL_n = pmin(CAL_n, ESS[2]), s_CAA_hist = data$s_CAA, s_CAA_n = apply(data$s_CAA, c(1, 3), sum),
+                       s_CAL_hist = data$s_CAL, s_CAL_n = apply(data$s_CAL, c(1, 3), sum), length_bin = data$length_bin, mlen = data$ML,
+                       n_y = nyears, max_age = max_age, nfleet = nfleet, nsurvey = nsurvey,
+                       M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
+                       Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
+                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, abs_I = data$abs_I,
+                       I_type = I_type, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index,
+                       max_F = max_F, rescale = rescale, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
+                       est_early_rec_dev = rep(0, max_age-1))
+  TMB_data_all$CAA_hist[TMB_data_all$CAA_hist < 1e-8] <- 1e-8
+  TMB_data_all$CAL_hist[TMB_data_all$CAL_hist < 1e-8] <- 1e-8
 
   if(data$condition == "catch") {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
