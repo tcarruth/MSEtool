@@ -116,11 +116,13 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               length_bin <- x@mean_fit$report$length_bin
               data_mean_fit <- x@mean_fit$obj$env$data
 
-              conv <- report$conv
+              #conv <- report$conv
 
+              SD2 <- rbind(summary(SD, "report"), summary(SD, "fixed"))
+              SD2 <- SD2[SD2[, 2] > 0, ] %>% round(2) %>% as.data.frame()
               sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
                          "### SRA Model Estimates\n",
-                         "`r as.data.frame(summary(SD))`\n\n")
+                         "`r SD2`\n\n")
 
               # Life History section
               LH_varies_fn <- function(x) {
@@ -265,7 +267,14 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                           label = "log-Recruitment deviations", conv_check = TRUE),
                              rmd_N(), N_bubble, CAA_bubble, CAL_bubble)
 
-              mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output)
+              nll <- SRA_get_likelihoods(report, f_name, s_name)
+
+              nll_table <- c("### Likelihood components\n",
+                             "`r nll[[1]]`\n\n",
+                             "`r nll[[2]]`\n\n",
+                             "`r nll[[3]]`\n\n")
+
+              mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output, nll_table)
             } else mean_fit_rmd <- c("## Fit to mean parameters of OM {.tabset}\n",
                                      "No model found. Re-run `SRA_scope()` with `mean_fit = TRUE`.\n\n")
 
@@ -699,6 +708,26 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
   invisible()
 }
 
+SRA_get_likelihoods <- function(x, f_name, s_name) {
+  f_nll <- rbind(x$nll_Catch + x$nll_Ceq, x$nll_CAA, x$nll_CAL, x$nll_ML)
+  f_nll <- cbind(f_nll, rowSums(f_nll))
+  f_nll <- rbind(f_nll, colSums(f_nll))
+  colnames(f_nll) <- c(f_name, "Sum")
+  rownames(f_nll) <- c("Catch", "CAA", "CAL", "ML", "Sum")
+
+  s_nll <- rbind(x$nll_Index, x$nll_s_CAA, x$nll_s_CAL)
+  s_nll <- cbind(s_nll, rowSums(s_nll))
+  s_nll <- rbind(s_nll, colSums(s_nll))
+  colnames(s_nll) <- c(s_name, "Sum")
+  rownames(s_nll) <- c("Index", "CAA", "CAL", "Sum")
+
+  tot <- matrix(c(x$nll, x$nll_log_rec_dev, f_nll[5, length(f_name) + 1], s_nll[4, length(s_name) + 1]), ncol = 1,
+                dimnames = list(c("Total", "Recruitment Deviations", "Fleets", "Surveys"), "Negative log-likelihood"))
+
+  res <- list(tot, f_nll, s_nll)
+  res <- lapply(res, function(x) x %>% round(2) %>% as.data.frame())
+  return(res)
+}
 
 
 
