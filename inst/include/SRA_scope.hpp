@@ -293,13 +293,15 @@ Type SRA_scope(objective_function<Type> *obj) {
       for(int a=0;a<max_age;a++) {
         s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
         s_CN(y,sur) += s_CAApred(y,a,sur);
-        B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
-
+        if(s_vul_type(sur) <= 0) {
+          B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
+        }
         if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
           for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
         }
       }
     }
+    if(s_vul_type(sur) > 0) B_sur.col(sur) = s_CN.col(sur);
     q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
   }
 

@@ -27,7 +27,7 @@ steepness, maturity parameters (L50 and L50_95), standard deviation of recruitme
 
 \item{s_selectivity}{A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
 for an age-specific index.
-Only used if any of \code{data$I_type = "est"} or if a number is specified.}
+Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.}
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See details.}
 
@@ -118,12 +118,13 @@ The \code{data} list can include:
 Ideally, the first year of the catch series represents unfished conditions (see also \code{C_eq}).
 \item Ehist - A vector of historical effort, should be of length OM@nyears (see also \code{E_eq}).
 \item Index - A vector of values of an index (of length OM@nyears). If there are multiple surveys: a matrix of historical indices of abundances, with rows
-indexing years and columns indexing surveys.
+indexing years and columns indexing surveys. Age-specific indices should be numbers-specific while all others are weight-based.
 \item I_sd - A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
 If not provided, this function will use values from \code{OM@Iobs}.
 \item I_type - A character vector of length nsurvey to indicate the type of biomass for which each index follows. Either \code{"B"} for
 total biomass, or \code{"SSB"} for spawning biomass. If not provided, "B" is used. Use numbers if the index corresponds to a fleet in \code{Chist}.
-Use \code{"est"} to estimate survey selectivity, but this generally requires age \code{s_CAA} or length \code{s_CAL}compositions.
+Use \code{"est"} to set survey selectivity to be an independent component of the model, i.e., as an age-specific index or estimated separatel.
+Note, this generally requires age \code{s_CAA} or length \code{s_CAL}compositions.
 \item CAA - Fishery age composition matrix with nyears rows and OM@maxage columns. If multiple fleets: an array with dimension: nyears, OM@maxage, and nfleets.
 \item CAL - Fishery Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 length bins, and nfleets.
