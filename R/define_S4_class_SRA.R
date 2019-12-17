@@ -724,8 +724,7 @@ SRA_get_likelihoods <- function(x, f_name, s_name) {
   tot <- matrix(c(x$nll, x$nll_log_rec_dev, f_nll[5, length(f_name) + 1], s_nll[4, length(s_name) + 1]), ncol = 1,
                 dimnames = list(c("Total", "Recruitment Deviations", "Fleets", "Surveys"), "Negative log-likelihood"))
 
-  res <- list(tot, f_nll, s_nll)
-  res <- lapply(res, function(x) x %>% round(2) %>% as.data.frame())
+  res <- list(tot, f_nll, s_nll) %>% lapply(FUN = function(xx) xx %>% round(2) %>% as.data.frame())
   return(res)
 }
 

@@ -61,60 +61,44 @@ Type sum_BPR(vector<Type> NPR, matrix<Type> wt, int max_age, int y) {
   return BPR;
 }
 
-template<class Type>
-Type sum_VBPR(matrix<Type> NPR, vector<Type> wt_at_len, vector<Type> vul, int max_age, int nlbin) {
-  Type VBPR = 0;
-  for(int a=0;a<max_age;a++) {
-    for(int len=0;len<nlbin;len++) VBPR += NPR(a,len) * wt_at_len(len) * vul(len);
-  }
-  return VBPR;
-}
-
-
 
 template<class Type>
 array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Len_age, vector<Type> &LFS, vector<Type> &L5,
                      vector<Type> &Vmaxlen, Type Linf) {
   array<Type> vul(Len_age.rows(), Len_age.cols(), vul_type.size());
+  vul.setZero();
 
   for(int ff=0;ff<vul_type.size();ff++) {
-    LFS(ff) = invlogit(vul_par(0,ff)) * 0.95 * Linf;
-    L5(ff) = LFS(ff) - exp(vul_par(1,ff));
-    Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
 
-    if(vul_type(ff) < 0) { // Logistic
-      Vmaxlen(ff) = 1;
-
-      for(int y=0;y<Len_age.rows();y++) {
-        for(int a=0;a<Len_age.cols();a++) {
-          Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
-          vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, Type(1));
-        }
+    if(vul_type(ff) <= 0) { // Logistic or dome
+      LFS(ff) = invlogit(vul_par(0,ff)) * 0.95 * Linf;
+      L5(ff) = LFS(ff) - exp(vul_par(1,ff));
+      Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
+      if(vul_type(ff) < 0) { // Logistic
+        Vmaxlen(ff) = 1;
+      } else { // Dome
+        Vmaxlen(ff) = invlogit(vul_par(2,ff));
       }
-    } else if(vul_type(ff) == 0) { // Dome
-      Vmaxlen(ff) = invlogit(vul_par(2,ff));
-      Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
 
       for(int y=0;y<Len_age.rows();y++) {
         for(int a=0;a<Len_age.cols();a++) {
           Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
-          Type hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
+          Type hi;
+
+          if(vul_type(ff) < 0) { // Logistic
+            hi = 1;
+          } else { // Dome
+            Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
+            hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
+          }
           vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
         }
       }
+
     } else { // Age-specific index
-      for(int y=0;y<Len_age.rows();y++) {
-        for(int a=0;a<Len_age.cols();a++) {
-          if(a == vul_type(ff) - 1) {
-            vul(y,a,ff) = 1;
-          } else {
-            vul(y,a,ff) = 0;
-          }
-        }
-      }
+      for(int y=0;y<Len_age.rows();y++) vul(y,vul_type(ff)-1,ff) = 1;
     }
   }
-
   return vul;
 }
 
@@ -146,6 +130,11 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
         LFS(ff) = invlogit(vul_par(0,ff)) * 0.95 * Linf;
         L5(ff) = LFS(ff) - exp(vul_par(1,ff));
         Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
+        if(vul_type(ff) < 0) { // Logistic
+          Vmaxlen(ff) = 1;
+        } else { // Dome
+          Vmaxlen(ff) = invlogit(vul_par(2,ff));
+        }
 
         for(int y=0;y<Len_age.rows();y++) {
           for(int a=0;a<Len_age.cols();a++) {
@@ -153,10 +142,8 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
             Type hi;
 
             if(vul_type(ff) < 0) { // Logistic
-              Vmaxlen(ff) = 1;
               hi = 1;
             } else { // Dome
-              Vmaxlen(ff) = invlogit(vul_par(2,ff));
               Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
               hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
             }
