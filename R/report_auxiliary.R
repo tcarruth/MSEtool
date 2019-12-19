@@ -102,7 +102,8 @@ match_R_years <- function(RR) {
 
 
 #' @importFrom rmarkdown render
-report <- function(Assessment, retro = NULL, filename = paste0("report_", Assessment@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
+report <- function(Assessment, retro = NULL, filename = paste0("report_", Assessment@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE,
+                   render_args = list(), ...) {
   name <- ifelse(nchar(Assessment@Name) > 0, Assessment@Name, substitute(Assessment))
 
   # Generate markdown report
@@ -117,7 +118,7 @@ report <- function(Assessment, retro = NULL, filename = paste0("report_", Assess
 
   if(Assessment@Model == "SCA2") Assessment@info$data$SR_type <- Assessment@info$SR
   f <- get(paste0("rmd_", Assessment@Model))
-  rmd_model <- f(Assessment)
+  rmd_model <- f(Assessment, ...)
 
   if(!is.null(retro)) {
     rmd_ret <- c("## Retrospective\n",
@@ -130,15 +131,21 @@ report <- function(Assessment, retro = NULL, filename = paste0("report_", Assess
   rmd <- c(rmd_head(name), rmd_model, rmd_ret, rmd_footer())
   write(rmd, file = file.path(dir, filename_rmd))
 
-  # Rendering markdown file
-  message("Rendering markdown file to HTML: ", file.path(dir, filename_html))
+  # Render markdown file
   assign_Assessment_slots(Assessment)
 
-  output <- rmarkdown::render(file.path(dir, filename_rmd), "html_document", filename_html, dir,
-                              output_options = list(df_print = "paged"), quiet = quiet, ...)
+  if(is.null(render_args$input)) render_args$input <- file.path(dir, filename_rmd)
+  if(is.null(render_args$output_format)) render_args$output_format <- "html_document"
+  if(is.null(render_args$output_options) && render_args$output_format == "html_document") {
+    render_args$output_options <- list(df_print = "paged")
+  }
+  render_args$quiet <- quiet
+
+  message("Rendering markdown file...")
+  output <- do.call(rmarkdown::render, render_args)
   message("Rendering complete.")
 
-  if(open_file) browseURL(file.path(dir, filename_html))
+  if(open_file) browseURL(output)
   invisible(output)
 }
 

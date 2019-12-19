@@ -13,8 +13,6 @@ Type objective_function<Type>::operator() ()
 	return DD_SS(this);
   } else if(model =="SP") {
     return SP(this);
-  } else if(model == "SP_SS") {
-    return SP_SS(this);
   } else if(model == "grav") {
     return grav(this);
   } else if(model == "grav_Pbyarea") {

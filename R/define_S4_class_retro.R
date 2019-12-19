@@ -73,8 +73,9 @@ retro <- setClass("retro", slots = c(Model = "character", Name = "character", TS
 #' @aliases plot,Assessment,retro-method
 #' @exportMethod plot
 setMethod("plot", signature(x = "Assessment", y = "retro"),
-          function(x, y, filename = paste0("report_", x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE, ...) {
-            report(x, y, filename = filename, dir = dir, open_file = open_file, quiet = quiet, ...)
+          function(x, y, filename = paste0("report_", x@Model), dir = tempdir(), open_file = TRUE, quiet = TRUE,
+                   render_args = list(), ...) {
+            report(x, y, filename = filename, dir = dir, open_file = open_file, quiet = quiet, render_args = render_args, ...)
           })
 
 #' @name plot.retro

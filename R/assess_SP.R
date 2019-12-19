@@ -11,6 +11,7 @@
 #' @param x An index for the objects in \code{Data} when running in \link[DLMtool]{runMSE}.
 #' Otherwise, equals to 1 When running an assessment interactively.
 #' @param Data An object of class Data.
+#' @param AddInd A vector of integers indicating the indices to be used in the model. Integers assign the index to
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 #' Output is re-converted back to original units.
@@ -28,6 +29,7 @@
 #' @param early_dev Character string describing the years for which biomass deviations are estimated in \code{SP_SS}.
 #' By default, deviations are estimated in each year of the model (\code{"all"}), while deviations could also be estimated
 #' once index data are available (\code{"index"}).
+#' @param LWT A vector of likelihood weights for each survey.
 #' @param n_seas Integer, the number of seasons in the model for calculating continuous surplus production.
 #' @param n_itF Integer, the number of iterations to solve F conditional on the observed catch given multiple seasons within an annual time step.
 #' Ignored if \code{n_seas} = 1.
@@ -35,7 +37,8 @@
 #' of the biomass deviations (thus, treating it as a state-space variable).
 #' @param use_r_prior Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.
 #' @param r_reps If \code{use_r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
-#' mean and standard deviation of the r prior.
+#' mean and standard deviation of the r prior. To override and directly provide the r-prior mean and standard deviation, use the start list, e.g.
+#' \code{start = list(r_prior = c(0.1, 0.05))} (mean of 0.1 and s.d. of 0.05).
 #' @param SR_type If \code{use_r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner at the origin
 #' of spwaning biomass approaches zero. Used for the r prior.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
@@ -133,136 +136,53 @@
 #' #### Pass an r_prior to the model with mean = 0.35, sd = 0.10
 #' res_prior2 <- SP(Data = SimulatedData, use_r_prior = TRUE, start = list(r_prior = c(0.35, 0.10)))
 #' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
-#' @import TMB
-#' @importFrom stats nlminb
-#' @useDynLib MSEtool
 #' @export
-SP <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE,
+SP <- function(x = 1, Data, rescale = "mean1", AddInd = 0L, start = NULL, fix_dep = TRUE, fix_n = TRUE, LWT = NULL,
                n_seas = 4L, n_itF = 3L, use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"),
                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
-  dependencies = "Data@Cat, Data@Ind"
-  dots <- list(...)
-  start <- lapply(start, eval, envir = environment())
-
-  if(any(names(dots) == "yind")) {
-    yind <- eval(dots$yind)
-  } else {
-    ystart <- which(!is.na(Data@Cat[x, ]))[1]
-    yind <- ystart:length(Data@Cat[x, ])
-  }
-  Year <- Data@Year[yind]
-  C_hist <- Data@Cat[x, yind]
-  if(any(is.na(C_hist))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
-  I_hist <- Data@Ind[x, yind]
-  I_hist[I_hist < 0] <- NA
-  ny <- length(C_hist)
-
-  if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "SP", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny,
-               nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
-
-  if(use_r_prior) {
-    if(!is.null(start$r_prior) && length(start$r_prior) == 2) {
-      rp <- data$r_prior <- start$r_prior
-    } else {
-      rp <- r_prior_fn(x, Data, r_reps = r_reps, SR_type = SR_type)
-      data$r_prior <- c(mean(rp), max(sd(rp), 0.1 * mean(rp)))
-    }
-  } else {
-    rp <- data$r_prior <- c(0, 0)
-  }
-
-  params <- list()
-  if(!is.null(start)) {
-    if(!is.null(start$FMSY) && is.numeric(start$FMSY)) params$log_FMSY <- logit(start$FMSY[1])
-    if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
-    if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
-    if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
-  }
-  if(is.null(params$log_FMSY)) {
-    FMSY_start <- ifelse(is.na(Data@Mort[x]), 0.2, 0.5 * Data@Mort[x])
-    params$log_FMSY <- log(FMSY_start)
-  }
-  if(is.null(params$log_MSY)) {
-    AvC <- mean(C_hist * rescale)
-    params$log_MSY <- log(3 * AvC)
-  }
-  if(is.null(params$log_dep)) params$log_dep <- log(1)
-  if(is.null(params$log_n)) params$log_n <- log(2)
-
-  info <- list(Year = Year, data = data, params = params, rp = rp, rescale = rescale, control = control)
-
-  map <- list()
-  if(fix_dep) map$log_dep <- factor(NA)
-  if(fix_n) map$log_n = factor(NA)
-
-
-  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
-                   map = map, DLL = "MSEtool", silent = silent)
-  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
-  opt <- mod[[1]]
-  SD <- mod[[2]]
-  report <- obj$report(obj$env$last.par.best)
-
-  if(rescale != 1) {
-    vars_div <- c("B", "BMSY", "K", "MSY", "Cpred", "SP")
-    vars_mult <- "q"
-    var_trans <- c("MSY", "K", "q")
-    fun_trans <- c("/", "/", "*")
-    fun_fixed <- c("log", NA, NA)
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
-
-  Yearplusone <- c(Year, max(Year) + 1)
-
-  nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
-  Assessment <- new("Assessment", Model = "SP", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
-                    FMSY = report$FMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
-                    B0 = report$K, VB0 = report$K, FMort = structure(report$F, names = Year),
-                    F_FMSY = structure(report$F/report$FMSY, names = Year),
-                    B = structure(report$B, names = Yearplusone),
-                    B_BMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                    B_B0 = structure(report$B/report$K, names = Yearplusone),
-                    VB = structure(report$B, names = Yearplusone),
-                    VB_VBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                    VB_VB0 = structure(report$B/report$K, names = Yearplusone),
-                    SSB = structure(report$B, names = Yearplusone),
-                    SSB_SSBMSY = structure(report$B/report$BMSY, names = Yearplusone),
-                    SSB_SSB0 = structure(report$B/report$K, names = Yearplusone),
-                    Obs_Catch = structure(C_hist, names = Year),
-                    Obs_Index = structure(I_hist, names = Year),
-                    Catch = structure(report$Cpred, names = Year),
-                    Index = structure(report$Ipred, names = Year),
-                    NLL = structure(c(nll_report, report$nll - report$penalty - report$prior, report$penalty, report$prior),
-                                    names = c("Total", "Index", "Penalty", "Prior")),
-                    info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
-                    dependencies = dependencies)
-
-  if(Assessment@conv) {
-    Assessment@SE_FMSY <- SD$sd[names(SD$value) == "FMSY"]
-    Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
-    Assessment@SE_F_FMSY_final <- SD$sd[names(SD$value) == "F_FMSY_final"]
-    Assessment@SE_B_BMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
-    Assessment@SE_B_B0_final <- SD$sd[names(SD$value) == "B_K_final"]
-    Assessment@SE_VB_VBMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
-    Assessment@SE_VB_VB0_final <- SD$sd[names(SD$value) == "B_K_final"]
-  }
-  return(Assessment)
+  SP_(x = x, Data = Data, AddInd = AddInd, state_space = FALSE, rescale = rescale, start = start, fix_dep = fix_dep, fix_n = fix_n, fix_sigma = TRUE,
+      fix_tau = TRUE, LWT = LWT, n_seas = n_seas, n_itF = n_itF, use_r_prior = use_r_prior, r_reps = r_reps, SR_type = SR_type, integrate = FALSE,
+      silent = silent, opt_hess = opt_hess, n_restart = n_restart, control = control, inner.control = list(), ...)
 }
 class(SP) <- "Assess"
 
 
 #' @rdname SP
 #' @export
-#' @importFrom TMB MakeADFun
-#' @importFrom stats nlminb
-#' @useDynLib MSEtool
-SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
+SP_SS <- function(x = 1, Data, AddInd = 0, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                   fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
                   use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
                   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
+  SP_(x = x, Data = Data, AddInd = AddInd, state_space = TRUE, rescale = rescale, start = start, fix_dep = fix_dep, fix_n = fix_n, fix_sigma = fix_sigma,
+      fix_tau = fix_tau, early_dev = early_dev, LWT = LWT, n_seas = n_seas, n_itF = n_itF, use_r_prior = use_r_prior, r_reps = r_reps,
+      SR_type = SR_type, integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
+      control = control, inner.control = inner.control, ...)
+}
+class(SP_SS) <- "Assess"
+
+#' @rdname SP
+#' @export
+SP_Fox <- function(x = 1, Data, ...) {
+  SP_args <- c(x = x, Data = Data, list(...))
+  SP_args$start$n <- 1
+  SP_args$fix_n <- TRUE
+
+  do.call(SP, SP_args)
+}
+class(SP_Fox) <- "Assess"
+
+
+#' @importFrom TMB MakeADFun
+#' @importFrom stats nlminb
+#' @useDynLib MSEtool
+SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
+                fix_tau = TRUE, early_dev = c("all", "index"), LWT = NULL, n_seas = 4L, n_itF = 3L,
+                use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
+                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
+
   dependencies = "Data@Cat, Data@Ind"
   dots <- list(...)
   start <- lapply(start, eval, envir = environment())
@@ -277,18 +197,38 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
   if(any(is.na(C_hist))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
-  I_hist <- Data@Ind[x, yind]
-  I_hist[I_hist < 0] <- NA
   ny <- length(C_hist)
-
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  if(early_dev == "all") est_B_dev <- rep(1, ny)
-  if(early_dev == "index") {
-    est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], 0, 1)
+
+  AddInd <- as.integer(AddInd)
+  if(any(!AddInd)) {
+    I_hist0 <- Data@Ind[x, yind]
+    I_hist0[I_hist0 < 0] <- NA
+    I_sd0 <- sdconv(1, Data@CV_Ind[x, yind])
+  } else I_hist0 <- I_sd0 <- NULL
+  if(any(AddInd)) {
+    I_hist <- Data@AddInd[x, , ][AddInd[which(AddInd > 0)], yind, drop = FALSE] %>% t()
+    I_sd <- sdconv(1, Data@CV_AddInd[x, , ][AddInd[which(AddInd > 0)], yind, drop = FALSE]) %>% t()
+  } else I_hist <- I_sd <- NULL
+  if(is.null(I_hist0) && is.null(I_hist)) stop("No indices found.")
+
+  I_hist <- cbind(I_hist0, I_hist)
+  I_sd <- cbind(I_sd0, I_sd)
+  nsurvey <- ncol(I_hist)
+
+  if(state_space) {
+    if(early_dev == "all") est_B_dev <- rep(1, ny)
+    if(early_dev == "index") est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], 0, 1)
+  } else {
+    if(nsurvey == 1 || AddInd == 0) fix_sigma <- FALSE # Override: estimate sigma if there's a single survey
+    est_B_dev <- rep(0, ny)
   }
 
-  data <- list(model = "SP_SS", C_hist = C_hist * rescale, I_hist = I_hist, ny = ny, est_B_dev = est_B_dev,
-               nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
+  if(is.null(LWT)) LWT <- rep(1, nsurvey)
+  if(length(LWT) != nsurvey) stop("LWT needs to be a vector of length ", nsurvey)
+  data <- list(model = "SP", C_hist = C_hist * rescale, I_hist = I_hist, I_sd = I_sd, I_lambda = LWT,
+               fix_sigma = as.integer(fix_sigma), nsurvey = nsurvey, ny = ny,
+               est_B_dev = est_B_dev, nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
 
   if(use_r_prior) {
     if(!is.null(start$r_prior) && length(start$r_prior) == 2) {
@@ -307,7 +247,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
     if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
     if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
-    if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma[1])
+    if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
   if(is.null(params$log_FMSY)) {
@@ -320,19 +260,16 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   }
   if(is.null(params$log_dep)) params$log_dep <- log(1)
   if(is.null(params$log_n)) params$log_n <- log(2)
-  if(is.null(params$log_sigma)) {
-    sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE)
-    params$log_sigma <- log(sigmaI)
-  }
+  if(is.null(params$log_sigma)) params$log_sigma <- rep(log(0.05), nsurvey)
   if(is.null(params$log_tau)) params$log_tau <- log(0.1)
   params$log_B_dev <- rep(0, ny)
 
   map <- list()
-  if(any(!est_B_dev)) map$log_B_dev <- factor(ifelse(est_B_dev, 1:sum(est_B_dev), NA))
   if(fix_dep) map$log_dep <- factor(NA)
   if(fix_n) map$log_n <- factor(NA)
-  if(fix_sigma) map$log_sigma <- factor(NA)
+  if(fix_sigma) map$log_sigma <- factor(rep(NA, nsurvey))
   if(fix_tau) map$log_tau <- factor(NA)
+  if(any(!est_B_dev)) map$log_B_dev <- factor(ifelse(est_B_dev, 1:sum(est_B_dev), NA))
 
   random <- NULL
   if(integrate) random <- "log_B_dev"
@@ -359,7 +296,7 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
   Yearplusone <- c(Year, max(Year) + 1)
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "SP_SS", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
+  Assessment <- new("Assessment", Model = ifelse(state_space, "SP_SS", "SP"), Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     FMSY = report$FMSY, MSY = report$MSY, BMSY = report$BMSY, VBMSY = report$BMSY,
                     B0 = report$K, VB0 = report$K, FMort = structure(report$F, names = Year),
                     F_FMSY = structure(report$F/report$FMSY, names = Year),
@@ -372,21 +309,32 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
                     SSB = structure(report$B, names = Yearplusone),
                     SSB_SSBMSY = structure(report$B/report$BMSY, names = Yearplusone),
                     SSB_SSB0 = structure(report$B/report$K, names = Yearplusone),
-                    Obs_Catch = structure(C_hist, names = Year), Obs_Index = structure(I_hist, names = Year),
-                    Catch = structure(report$Cpred, names = Year), Index = structure(report$Ipred, names = Year),
-                    Dev = structure(report$log_B_dev, names = Year), Dev_type = "log-Biomass deviations",
-                    NLL = structure(c(nll_report, report$nll_comp, report$penalty, report$prior),
+                    Obs_Catch = structure(C_hist, names = Year), Obs_Index = structure(I_hist, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
+                    Catch = structure(report$Cpred, names = Year), Index = structure(report$Ipred, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
+                    NLL = structure(c(nll_report, sum(report$nll_comp[1:nsurvey]), report$nll_comp[nsurvey+1], report$penalty, report$prior),
                                     names = c("Total", "Index", "Dev", "Penalty", "Prior")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
-  if(Assessment@conv) {
-    if(integrate) {
-      SE_Dev <- ifelse(est_B_dev, sqrt(SD$diag.cov.random), 0)
-    } else {
-      SE_Dev <- ifelse(est_B_dev, sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"]), 0)
-    }
+  if(state_space) {
+    Assessment@Dev <- structure(report$log_B_dev, names = Year)
+    Assessment@Dev_type <- "log-Biomass deviations"
+    Assessment@NLL <- structure(c(nll_report, report$nll_comp, report$penalty, report$prior),
+                                names = c("Total", paste0("Index_", 1:nsurvey), "Dev", "Penalty", "Prior"))
+  } else {
+    Assessment@NLL <- structure(c(nll_report, report$nll_comp[1:nsurvey], report$penalty, report$prior),
+                                names = c("Total", paste0("Index_", 1:nsurvey), "Penalty", "Prior"))
+  }
 
+  if(Assessment@conv) {
+    if(state_space) {
+      if(integrate) {
+        SE_Dev <- ifelse(est_B_dev, sqrt(SD$diag.cov.random), 0)
+      } else {
+        SE_Dev <- ifelse(est_B_dev, sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) =="log_B_dev"]), 0)
+      }
+      Assessment@SE_Dev <- structure(SE_Dev, names = Year)
+    }
     Assessment@SE_FMSY <- SD$sd[names(SD$value) == "FMSY"]
     Assessment@SE_MSY <- SD$sd[names(SD$value) == "MSY"]
     Assessment@SE_F_FMSY_final <- SD$sd[names(SD$value) == "F_FMSY_final"]
@@ -394,22 +342,9 @@ SP_SS <- function(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE, 
     Assessment@SE_B_B0_final <- SD$sd[names(SD$value) == "B_K_final"]
     Assessment@SE_VB_VBMSY_final <- SD$sd[names(SD$value) == "B_BMSY_final"]
     Assessment@SE_VB_VB0_final <- SD$sd[names(SD$value) == "B_K_final"]
-    Assessment@SE_Dev <- structure(SE_Dev, names = Year)
   }
   return(Assessment)
 }
-class(SP_SS) <- "Assess"
-
-#' @rdname SP
-#' @export
-SP_Fox <- function(x = 1, Data, ...) {
-  SP_args <- c(x = x, Data = Data, list(...))
-  SP_args$start$n <- 1
-  SP_args$fix_n <- TRUE
-
-  do.call(SP, SP_args)
-}
-class(SP_Fox) <- "Assess"
 
 
 r_prior_fn <- function(x = 1, Data, r_reps = 1e2, SR_type = c("BH", "Ricker"), seed = x) {

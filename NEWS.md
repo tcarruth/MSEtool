@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.4.4
+- `SP` and `SP_SS` now support multiple indices in the model, using `Data@AddInd` and `Data@CV_AddInd`.
+
 ## MSEtool 1.4.3
 
 ### Updates to SRA_scope

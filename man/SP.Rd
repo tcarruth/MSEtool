@@ -10,9 +10,11 @@ SP(
   x = 1,
   Data,
   rescale = "mean1",
+  AddInd = 0L,
   start = NULL,
   fix_dep = TRUE,
   fix_n = TRUE,
+  LWT = NULL,
   n_seas = 4L,
   n_itF = 3L,
   use_r_prior = FALSE,
@@ -28,6 +30,7 @@ SP(
 SP_SS(
   x = 1,
   Data,
+  AddInd = 0,
   rescale = "mean1",
   start = NULL,
   fix_dep = TRUE,
@@ -61,6 +64,8 @@ Otherwise, equals to 1 When running an assessment interactively.}
 can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
 Output is re-converted back to original units.}
 
+\item{AddInd}{A vector of integers indicating the indices to be used in the model. Integers assign the index to}
+
 \item{start}{Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.}
 
 \item{fix_dep}{Logical, whether to fix the initial depletion (ratio of biomass to carrying capacity in the
@@ -71,6 +76,8 @@ first year of the model). If \code{TRUE}, uses the value in \code{start}, otherw
 uses the value in \code{start}, otherwise equal to \code{n = 2}, where the biomass at MSY
 is half of carrying capacity.}
 
+\item{LWT}{A vector of likelihood weights for each survey.}
+
 \item{n_seas}{Integer, the number of seasons in the model for calculating continuous surplus production.}
 
 \item{n_itF}{Integer, the number of iterations to solve F conditional on the observed catch given multiple seasons within an annual time step.
@@ -79,7 +86,8 @@ Ignored if \code{n_seas} = 1.}
 \item{use_r_prior}{Logical, whether a prior for the intrinsic rate of increase will be used in the model. See details.}
 
 \item{r_reps}{If \code{use_r_prior = TRUE}, the number of samples of natural mortality and steepness for calculating the
-mean and standard deviation of the r prior.}
+mean and standard deviation of the r prior. To override and directly provide the r-prior mean and standard deviation, use the start list, e.g.
+\code{start = list(r_prior = c(0.1, 0.05))} (mean of 0.1 and s.d. of 0.05).}
 
 \item{SR_type}{If \code{use_r_prior = TRUE}, the stock-recruit relationship used to calculate unfished recruits per spawner at the origin
 of spwaning biomass approaches zero. Used for the r prior.}

@@ -14,6 +14,7 @@
   ret_yr = 0L,
   open_file = TRUE,
   quiet = TRUE,
+  render_args = list(),
   ...
 )
 
@@ -24,6 +25,7 @@
   dir = tempdir(),
   open_file = TRUE,
   quiet = TRUE,
+  render_args = list(),
   ...
 )
 }
@@ -41,7 +43,9 @@ to the number of peels (the maximum number of terminal years for which the data 
 
 \item{quiet}{Logical, whether to silence the markdown rendering function.}
 
-\item{...}{Other arguments to pass to \link[rmarkdown]{render}.}
+\item{render_args}{Arguments to pass to \link[rmarkdown]{render}.}
+
+\item{...}{Other arguments.}
 
 \item{y}{An object of class \linkS4class{retro}.}
 }

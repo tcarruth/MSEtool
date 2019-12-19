@@ -18,12 +18,7 @@ summary_SP <- function(Assessment, state_space = FALSE) {
     Description <- c(Description, "Production exponent")
     rownam <- c(rownam, "n")
   }
-  if("log_sigma" %in% names(obj$env$map)) {
-    Value <- c(Value, TMB_report$sigma)
-    Description <- c(Description, "Index SD (log-space)")
-    rownam <- c(rownam, "sigma")
-  }
-  if("log_tau" %in% names(obj$env$map)) {
+  if(state_space && "log_tau" %in% names(obj$env$map)) {
     Value <- c(Value, TMB_report$tau)
     Description <- c(Description, "Biomass deviation SD (log-space)")
     rownam <- c(rownam, "tau")
@@ -57,28 +52,31 @@ summary_SP <- function(Assessment, state_space = FALSE) {
   } else {
     model_estimates <- SD
   }
+  model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
 
   model_name <- "Surplus Production"
   if(state_space) model_name <- paste(model_name, "(State-Space)")
   output <- list(model = model_name, current_status = current_status,
                  input_parameters = input_parameters, derived_quantities = derived,
-                 model_estimates = model_estimates)
+                 model_estimates = model_estimates,
+                 log_likelihood = structure(matrix(NLL, ncol = 1), dimnames = list(names(NLL), "Neg.LL")))
   return(output)
 }
 
-rmd_SP <- function(Assessment, state_space = FALSE) {
+rmd_SP <- function(Assessment, state_space = FALSE, ...) {
   if(state_space) {
     ss <- rmd_summary("Surplus Production (State-Space)")
   } else ss <- rmd_summary("Surplus Production")
 
   # Data section
-  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"), rmd_data_timeseries("Index"))
+  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"), rmd_data_timeseries("Index", is_matrix = is.matrix(Assessment@Obs_Index),
+                                                                                            nsets = ncol(Assessment@Obs_Index)))
 
   # Assessment
   #### Pars and Fit
   assess_fit <- c(rmd_FMSY(header = "## Assessment {.tabset}\n### Estimates and Model Fit\n"), rmd_MSY(),
                   rmd_F_FMSY_terminal(), rmd_B_BMSY_terminal(), rmd_B_B0_terminal(),
-                  rmd_assess_fit("Index", "index"), rmd_assess_resid("Index"), rmd_assess_qq("Index", "index"),
+                  rmd_assess_fit_series(nsets = ncol(Assessment@Index)),
                   rmd_assess_fit("Catch", "catch", match = TRUE))
 
   if(state_space) {
@@ -178,7 +176,8 @@ retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
     ny_ret <- ny - i
     data_ret$ny <- ny_ret
     data_ret$C_hist <- info$data$C_hist[1:ny_ret]
-    data_ret$I_hist <- info$data$I_hist[1:ny_ret]
+    data_ret$I_hist <- info$data$I_hist[1:ny_ret, , drop = FALSE]
+    data_ret$I_sd <- info$data$I_sd[1:ny_ret, , drop = FALSE]
 
     map <- obj$env$map
     if(state_space) {
@@ -232,7 +231,7 @@ retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
 
 summary_SP_SS <- function(Assessment) summary_SP(Assessment, TRUE)
 
-rmd_SP_SS <- function(Assessment) rmd_SP(Assessment, TRUE)
+rmd_SP_SS <- function(Assessment, ...) rmd_SP(Assessment, TRUE, ...)
 
 profile_likelihood_SP_SS <- profile_likelihood_SP
 

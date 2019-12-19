@@ -49,7 +49,7 @@ summary_SCA <- function(Assessment, SCA2 = FALSE) {
   return(output)
 }
 
-rmd_SCA <- function(Assessment, SCA2 = FALSE) {
+rmd_SCA <- function(Assessment, SCA2 = FALSE, ...) {
   ss <- rmd_summary(paste("Statistical Catch-at-Age", ifelse(SCA2, "(SCA2)", "(SCA)")))
 
   # Life History
