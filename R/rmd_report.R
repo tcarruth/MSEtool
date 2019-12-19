@@ -37,7 +37,9 @@ rmd_summary <- function(modname) {
            "### Derived Quantities",
            "`r sx[[3]]`\n",
            "### Model Estimates",
-           "`r sx[[4]]`\n")
+           "`r sx[[4]]`\n",
+           "### Likelihoods",
+           "`r sx[[5]]`\n")
   return(ans)
 }
 
@@ -81,13 +83,23 @@ rmd_mat <- function(age, mat, fig.cap) rmd_at_age(age, mat, fig.cap, "Maturity")
 
 
 #### Data
-rmd_data_timeseries <- function(type, header = NULL) {
-  ans <- c(paste0("```{r, fig.cap=\"", type, " time series.\"}"),
-           paste0("plot_timeseries(as.numeric(names(Obs_", type, ")), Obs_", type, ", label = \"", type, "\")"),
-           "```\n")
+rmd_data_timeseries <- function(type, header = NULL, is_matrix = FALSE, nsets = 1) {
+  if(is_matrix) {
+    lapply_fn <- function(x) {
+      c(paste0("```{r, fig.cap=\"", type, " ", x, " time series.\"}"),
+        paste0("plot_timeseries(as.numeric(rownames(Obs_", type, ")), Obs_", type, "[, ", x, "], label = paste(\"", type, "\", ", x, "))"),
+        "```\n")
+    }
+    ans <- do.call(c, lapply(1:nsets, lapply_fn))
+  } else {
+    ans <- c(paste0("```{r, fig.cap=\"", type, " time series.\"}"),
+             paste0("plot_timeseries(as.numeric(names(Obs_", type, ")), Obs_", type, ", label = \"", type, "\")"),
+             "```\n")
+  }
   if(!is.null(header)) ans <- c(header, ans)
   return(ans)
 }
+
 
 rmd_data_age_comps <- function(type = c("bubble", "annual"), ages = "NULL", annual_yscale = "\"proportions\"",
                                annual_ylab = "\"Frequency\"")  {
@@ -219,9 +231,10 @@ rmd_assess_fit <- function(par, fig.cap, label = par, match = FALSE) {
   c(paste0("```{r, fig.cap=\"", fig.cap2, "\"}"),
     paste0("plot_timeseries(as.numeric(names(", par, ")), Obs_", par, ", ", par, ", label = \"", label, "\")"),
     "```\n")
+
 }
 
-rmd_assess_resid <- function(par, fig.cap = paste(par, "residuals in log-space."), label = paste("log(", par, ") Residual")) {
+rmd_assess_resid <- function(par, fig.cap = paste(par, "residuals in log-space."), label = paste0("log(", par, ") Residual")) {
   c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
     paste0("plot_residuals(as.numeric(names(", par, ")), log(Obs_", par, "/", par, "), label = \"", label, "\")"),
     "```\n")
@@ -235,6 +248,26 @@ rmd_assess_qq <- function(par, fig.cap) {
     paste0("qqline(log(Obs_", par, "/", par, "))"),
     "```\n")
 }
+
+rmd_assess_fit_series <- function(par = "Index", fig.cap = "index", label = par, nsets = 1) {
+
+  lapply_fn <- function(x) {
+    c(paste0("```{r, fig.cap=\"Observed (black) and predicted (red) values of ", fig.cap, " ", x, ".\"}"),
+      paste0("plot_timeseries(as.numeric(rownames(", par, ")), Obs_", par, "[, ", x, "], ", par, "[, ", x, "], label = paste(\"", label, "\", ", x, "))"),
+      "```\n",
+      paste0("```{r, fig.cap=\"", par, " ", x, " residuals in log-space.\"}"),
+      paste0("plot_residuals(as.numeric(rownames(", par, ")), log(Obs_", par, "[, ", x, "]/", par, "[, ", x, "]), "),
+      paste0("               label = paste(\"", label, "\", ", x, ", \"log-residuals\"))"),
+      "```\n",
+      paste0("```{r, fig.cap=\"QQ-plot of log-residuals from ", label, " ", x, ".\"}"),
+      paste0("qqnorm(log(Obs_", par, "[, ", x, "]/", par, "[, ", x, "]), main = \"\")"),
+      paste0("qqline(log(Obs_", par, "[, ", x, "]/", par, "[, ", x, "]))"),
+      "```\n")
+  }
+  do.call(c, lapply(1:nsets, lapply_fn))
+
+}
+
 
 rmd_assess_timeseries <- function(par, fig.cap, label, header = NULL, conv_check = FALSE, one_line = FALSE) {
   if(conv_check) {

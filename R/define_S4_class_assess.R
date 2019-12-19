@@ -8,6 +8,7 @@
 setOldClass("sdreport")
 setClassUnion("sdreportAssess", members = c("character", "sdreport"))
 setClassUnion("optAssess", members = c("list", "character"))
+setClassUnion("vectormatrix", members = c("vector", "matrix"))
 
 
 
@@ -99,8 +100,8 @@ Assessment <- setClass("Assessment",
                                  SSB = "numeric", SSB_SSBMSY = "numeric", SSB_SSB0 = "numeric", VB = "numeric",
                                  VB_VBMSY = "numeric", VB_VB0 = "numeric",
                                  R = "numeric", N = "numeric", N_at_age = "matrix",
-                                 Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "numeric",
-                                 Obs_C_at_age = "matrix", Catch = "numeric", Index = "numeric",
+                                 Selectivity = "matrix", Obs_Catch = "numeric", Obs_Index = "vectormatrix",
+                                 Obs_C_at_age = "matrix", Catch = "numeric", Index = "vectormatrix",
                                  C_at_age = "matrix", Dev = "numeric", Dev_type = "character",
                                  NLL = "numeric", SE_UMSY = "numeric", SE_FMSY = "numeric", SE_MSY = "numeric",
                                  SE_U_UMSY_final = "numeric", SE_F_FMSY_final = "numeric",
@@ -142,7 +143,8 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' to the number of peels (the maximum number of terminal years for which the data are removed).
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
-#' @param ... Other arguments to pass to \link[rmarkdown]{render}.
+#' @param render_args Arguments to pass to \link[rmarkdown]{render}.
+#' @param ... Other arguments.
 #' @return Returns invisibly the output from \link[rmarkdown]{render}.
 #' @examples
 #' \donttest{
@@ -154,14 +156,15 @@ setMethod("summary", signature(object = "Assessment"), function(object) {
 #' @seealso \link{retrospective}
 #' @exportMethod plot
 setMethod("plot", signature(x = "Assessment", y = "missing"),
-          function(x, filename = paste0("report_", x@Model), dir = tempdir(), ret_yr = 0L, open_file = TRUE, quiet = TRUE, ...) {
+          function(x, filename = paste0("report_", x@Model), dir = tempdir(), ret_yr = 0L,
+                   open_file = TRUE, quiet = TRUE, render_args = list(), ...) {
             # Generating retrospective
             if(is.numeric(ret_yr) && ret_yr > 0) {
               ret_yr <- as.integer(ret_yr)
               message("Running retrospective...")
               ret <- retrospective(x, nyr = ret_yr, figure = FALSE)
             } else ret <- NULL
-            report(x, ret, filename = filename, dir = dir, open_file = open_file, quiet = quiet, ...)
+            report(x, ret, filename = filename, dir = dir, open_file = open_file, quiet = quiet, render_args = render_args, ...)
           })
 
 

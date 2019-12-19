@@ -37,7 +37,7 @@ summary_VPA <- function(Assessment) {
 }
 class(VPA) <- "Assessment"
 
-rmd_VPA <- function(Assessment) {
+rmd_VPA <- function(Assessment, ...) {
   ss <- rmd_summary("Virtual Population Analysis (VPA)")
 
   # Life History

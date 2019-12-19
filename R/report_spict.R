@@ -34,7 +34,7 @@ summary_spict <- function(Assessment) {
   return(output)
 }
 
-rmd_spict <- function(Assessment) {
+rmd_spict <- function(Assessment, ...) {
   ss <- rmd_summary("SPiCT")
 
   # Data section

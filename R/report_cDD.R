@@ -50,7 +50,7 @@ summary_cDD <- function(Assessment, state_space = FALSE) {
 
 
 
-rmd_cDD <- function(Assessment, state_space = FALSE) {
+rmd_cDD <- function(Assessment, state_space = FALSE, ...) {
   if(state_space) {
     ss <- rmd_summary("Continuous Delay-Differential (State-Space)")
   } else ss <- rmd_summary("Continuous Delay-Differential")
@@ -285,7 +285,7 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
 
 summary_cDD_SS <- function(Assessment) summary_cDD(Assessment, TRUE)
 
-rmd_cDD_SS <- function(Assessment) rmd_cDD(Assessment, TRUE)
+rmd_cDD_SS <- function(Assessment, ...) rmd_cDD(Assessment, TRUE, ...)
 
 profile_likelihood_cDD_SS <- profile_likelihood_cDD
 

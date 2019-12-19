@@ -44,7 +44,7 @@ summary_SCA_Pope <- function(Assessment) {
   return(output)
 }
 
-rmd_SCA_Pope <- function(Assessment) {
+rmd_SCA_Pope <- function(Assessment, ...) {
   ss <- rmd_summary("Statistical Catch-at-Age (SCA_Pope)")
 
   # Life History
@@ -178,7 +178,7 @@ retrospective_SCA_Pope <- function(Assessment, nyr) {
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)
   attr(retro, "TS_lab") <- c("Harvest rate", expression(U/U[MSY]), "Spawning biomass", expression(SSB/SSB[MSY]), "Spawning depletion",
                              "Recruitment", "Vulnerable biomass")
-							 
+
   return(retro)
 }
 
