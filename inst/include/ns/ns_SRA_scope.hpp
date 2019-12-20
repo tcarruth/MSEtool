@@ -37,13 +37,13 @@ vector<Type> calc_NPR0(matrix<Type> M, int max_age, int y) {
 template<class Type>
 vector<Type> calc_NPR(vector<Type> F, array<Type> vul, int nfleet, matrix<Type> M, int max_age, int y) {
   vector<Type> NPR(max_age);
+  vector<Type> Z = M.row(y);
   NPR(0) = 1;
-  for(int a=1;a<max_age;a++) {
-    Type Z = M(y,a);
-    for(int ff=0;ff<nfleet;ff++) Z += vul(y,a,ff) * F(ff);
-    NPR(a) = NPR(a-1) * exp(-Z);
-    if(a == max_age-1) NPR(a) /= 1 - exp(-Z);
+  for(int a=0;a<max_age;a++) {
+    for(int ff=0;ff<nfleet;ff++) Z(a) += vul(y,a,ff) * F(ff);
+    if(a > 0) NPR(a) = NPR(a-1) * exp(-Z(a-1));
   }
+  NPR(max_age-1) /= 1 - exp(-Z(max_age-1));
   return NPR;
 }
 

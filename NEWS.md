@@ -1,7 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
-## MSEtool 1.4.2
+## MSEtool 1.4.2-3
 - Absolute indices, i.e., indices where q = 1, and age-specific indices are accommodated in `SRA_scope`.
+- An indexing error for initial biomass calcs in SRA_scope has been fixed.
 
 ## MSEtool 1.4.1
 - Fixed error in Solaris build.
