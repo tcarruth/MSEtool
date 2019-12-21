@@ -57,6 +57,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
   DATA_VECTOR(LWT_Index); // LIkelihood weights for the index
+  DATA_STRING(comp_like);
 
   DATA_SCALAR(max_F);     // Maximum F in the model
   DATA_SCALAR(rescale);   // Catch rescaler, needed in case q = 1
@@ -277,7 +278,7 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   array<Type> s_CAApred(n_y, max_age, nsurvey);
   array<Type> s_CALpred(n_y, nlbin, nsurvey);
-  vector<Type> s_CN(n_y, nsurvey);
+  matrix<Type> s_CN(n_y, nsurvey);
   matrix<Type> B_sur(n_y, nsurvey); // Biomass vulnerable to the survey
 
   s_CAApred.setZero();
@@ -324,28 +325,16 @@ Type SRA_scope(objective_function<Type> *obj) {
   nll_Ceq.setZero();
 
   for(int sur=0;sur<nsurvey;sur++) {
+    if(comp_like == "multinomial") {
+      nll_s_CAA(sur) = comp_multinom(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, n_y, max_age, sur);
+      nll_s_CAL(sur) = comp_multinom(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, n_y, nlbin, sur);
+    } else {
+      nll_s_CAA(sur) = comp_lognorm(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, n_y, max_age, sur);
+      nll_s_CAL(sur) = comp_lognorm(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, n_y, nlbin, sur);
+    }
+
     for(int y=0;y<n_y;y++) {
       if(!R_IsNA(asDouble(I_hist(y,sur)))) nll_Index(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), sigma_I(y,sur), true);
-
-      if(!R_IsNA(asDouble(s_CAA_n(y,sur))) && s_CAA_n(y,sur) > 0) {
-        vector<Type> loglike_CAAobs(max_age);
-        vector<Type> loglike_CAApred(max_age);
-        for(int a=0;a<max_age;a++) {
-          loglike_CAApred(a) = s_CAApred(y,a,sur)/s_CN(y,sur);
-          loglike_CAAobs(a) = s_CAA_hist(y,a,sur);
-        }
-        nll_s_CAA(sur) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
-      }
-
-      if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
-        vector<Type> loglike_CALobs(nlbin);
-        vector<Type> loglike_CALpred(nlbin);
-        for(int len=0;len<nlbin;len++) {
-          loglike_CALpred(len) = s_CALpred(y,len,sur)/s_CN(y,sur);
-          loglike_CALobs(len) = s_CAL_hist(y,len,sur);
-        }
-        nll_s_CAL(sur) -= dmultinom(loglike_CALobs, loglike_CALpred, true);
-      }
     }
     nll_Index(sur) *= LWT_Index(sur,0);
     nll_s_CAA(sur) *= LWT_Index(sur,1);
@@ -353,31 +342,17 @@ Type SRA_scope(objective_function<Type> *obj) {
   }
 
   for(int ff=0;ff<nfleet;ff++) {
+    if(comp_like == "multinomial") {
+      nll_CAA(ff) = comp_multinom(CAA_hist, CAApred, CN, CAA_n, n_y, max_age, ff);
+      nll_CAL(ff) = comp_multinom(CAL_hist, CALpred, CN, CAL_n, n_y, nlbin, ff);
+    } else {
+      nll_CAA(ff) = comp_lognorm(CAA_hist, CAApred, CN, CAA_n, n_y, max_age, ff);
+      nll_CAL(ff) = comp_lognorm(CAL_hist, CALpred, CN, CAL_n, n_y, nlbin, ff);
+    }
+
     for(int y=0;y<n_y;y++) {
       if(C_hist(y,ff)>0 || E_hist(y,ff)>0) {
-
         if(condition == "catch" || nll_C) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
-
-        if(!R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
-          vector<Type> loglike_CAAobs(max_age);
-          vector<Type> loglike_CAApred(max_age);
-          for(int a=0;a<max_age;a++) {
-            loglike_CAApred(a) = CAApred(y,a,ff)/CN(y,ff);
-            loglike_CAAobs(a) = CAA_hist(y,a,ff);
-          }
-          nll_CAA(ff) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
-        }
-
-        if(!R_IsNA(asDouble(CAL_n(y,ff))) && CAL_n(y,ff) > 0) {
-          vector<Type> loglike_CALobs(nlbin);
-          vector<Type> loglike_CALpred(nlbin);
-          for(int len=0;len<nlbin;len++) {
-            loglike_CALpred(len) = CALpred(y,len,ff)/CN(y,ff);
-            loglike_CALobs(len) = CAL_hist(y,len,ff);
-          }
-          nll_CAL(ff) -= dmultinom(loglike_CALobs, loglike_CALpred, true);
-        }
-
         if(!R_IsNA(asDouble(mlen(y,ff))) && mlen(y,ff) > 0) {
           nll_ML(ff) -= dnorm(mlen(y,ff), mlen_pred(y,ff), sigma_mlen(ff), true);
         }

@@ -8,7 +8,8 @@
 \usage{
 \S4method{plot}{SRA,missing}(x, compare = TRUE, filename = "SRA_scope",
   dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL, f_name = NULL,
-  s_name = NULL, open_file = TRUE, quiet = TRUE, ...)
+  s_name = NULL, MSY_ref = c(0.5, 1), open_file = TRUE,
+  quiet = TRUE, ...)
 }
 \arguments{
 \item{x}{An object of class \linkS4class{SRA} (output from \link{SRA_scope}).}
@@ -27,6 +28,8 @@ and the SRA model output.}
 \item{f_name}{Character vector for fleet names.}
 
 \item{s_name}{Character vector for survey names.}
+
+\item{MSY_ref}{A numeric vector for reference horizontal lines for B/BMSY plots.}
 
 \item{open_file}{Logical, whether the HTML document is opened after it is rendered.}
 

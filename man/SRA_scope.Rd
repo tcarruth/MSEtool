@@ -8,8 +8,9 @@
 \usage{
 SRA_scope(OM, data = list(), condition = c("catch", "effort"),
   selectivity = "logistic", s_selectivity = NULL, LWT = list(),
-  ESS = c(30, 30), max_F = 3, cores = 1L, integrate = FALSE,
-  mean_fit = FALSE, drop_nonconv = FALSE, ...)
+  comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
+  max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE,
+  drop_nonconv = FALSE, ...)
 
 plot_SRA_scope(...)
 
@@ -31,8 +32,10 @@ Only used if any of the corresponding entries of \code{data$I_type = "est"} or i
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See details.}
 
-\item{ESS}{A numeric vector of length two to cap the maximum effective samples size of the age and length compositions, respectively, for the
-multinomial likelihood function. The effective sample size of an age or length composition sample is the minimum of ESS or the number of observations
+\item{comp_like}{A string indicating either "multinomial" (default) or "lognormal" distributions for the composition data.}
+
+\item{ESS}{If \code{comp_like = "multinomial"}, a numeric vector of length two to cap the maximum effective samples size of the age and length compositions,
+respectively, for the multinomial likelihood function. The effective sample size of an age or length composition sample is the minimum of ESS or the number of observations
 (sum across columns). For more flexibility, set ESS to be very large and alter the arrays as needed.}
 
 \item{max_F}{The maximum F for any fleet in the scoping model (higher F's in the model are penalized in the objective function).}

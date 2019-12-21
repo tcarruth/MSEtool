@@ -186,4 +186,39 @@ Type calc_q(matrix<Type> I_y, matrix<Type> B_y, int sur, int ff, matrix<Type> &I
 }
 
 
+// Multinomial likelihood
+template<class Type>
+Type comp_multinom(array<Type> obs, array<Type> pred, matrix<Type> N, matrix<Type> N_samp, int n_y, int n_bin, int ff) {
+  Type nll = 0;
+  for(int y=0;y<n_y;y++) {
+    if(!R_IsNA(asDouble(N_samp(y,ff))) && N_samp(y,ff) > 0) {
+      vector<Type> p_pred(n_bin);
+      vector<Type> N_obs(n_bin);
+      for(int bb=0;bb<n_bin;bb++) {
+        p_pred(bb) = pred(y,bb,ff)/N(y,ff);
+        N_obs(bb) = obs(y,bb,ff);
+      }
+      nll -= dmultinom(N_obs, p_pred, true);
+    }
+  }
+  return nll;
+}
+
+template<class Type>
+Type comp_lognorm(array<Type> obs, array<Type> pred, matrix<Type> N, matrix<Type> N_samp, int n_y, int n_bin, int ff) {
+  Type nll = 0;
+  for(int y=0;y<n_y;y++) {
+    if(!R_IsNA(asDouble(N_samp(y,ff))) && N_samp(y,ff) > 0) {
+      for(int bb=0;bb<n_bin;bb++) {
+        Type p_pred = pred(y,bb,ff)/N(y,ff);
+        Type p_obs = obs(y,bb,ff)/N_samp(y,ff);
+        nll -= dnorm(log(p_obs), log(p_pred), pow(0.02/p_obs, 0.5), true);
+      }
+    }
+  }
+  return nll;
+}
+
+
+
 }
