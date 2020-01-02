@@ -53,11 +53,28 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
           function(x, compare = TRUE, filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL,
                    f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), open_file = TRUE, quiet = TRUE, ...) {
 
+            ####### Function arguments for rmarkdown::render
+            filename_rmd <- paste0(filename, ".Rmd")
+
+            render_args <- list(...)
+            render_args$input <- file.path(dir, filename_rmd)
+            if(is.null(render_args$output_format)) {
+              render_args$output_format <- "html_document"
+            }
+            if(is.null(render_args$output_options)) {
+              if(render_args$output_format == "html_document") {
+                render_args$output_options <- list(df_print = "paged")
+              } else {
+                render_args$output_options <- list(toc = TRUE, df_print = "kable")
+              }
+            }
+            if(is.null(render_args$quiet)) render_args$quiet <- quiet
+
+            ####### Assign variables
             OM <- Sub_cpars(x@OM, sims)
             mean_fit <- x@mean_fit
             report_list <- x@Misc[sims]
 
-            ####### Assign variables
             nsim <- OM@nsim
             data <- x@data
 
@@ -121,9 +138,15 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
               SD2 <- rbind(summary(SD, "report"), summary(SD, "fixed"))
               if(SD$pdHess) SD2 <- SD2[SD2[, 2] > 0, ] %>% round(2) %>% as.data.frame()
-              sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
-                         "### SRA Model Estimates\n",
-                         "`r SD2`\n\n")
+              if(render_args$output_format == "html_document") {
+                sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
+                           "### SRA Model Estimates\n",
+                           "`r SD2`\n\n")
+              } else {
+                sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
+                           "### SRA Model Estimates\n",
+                           "`r SD2 %>% kable(format = \"markdown\")`\n\n")
+              }
 
               # Life History section
               LH_varies_fn <- function(x) {
@@ -269,18 +292,31 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                              rmd_N(), N_bubble, CAA_bubble, CAL_bubble)
 
               nll <- SRA_get_likelihoods(report, data$LWT, f_name, s_name)
-
-              nll_table <- c("### Likelihood components\n",
-                             "#### Summary\n",
-                             "`r nll[[1]]`\n\n",
-                             "#### Fleet likelihoods\n",
-                             "`r nll[[2]]`\n\n",
-                             "#### Fleet weights\n",
-                             "`r nll[[3]]`\n\n",
-                             "#### Survey likelihoods\n",
-                             "`r nll[[4]]`\n\n",
-                             "#### Survey weights\n",
-                             "`r nll[[5]]`\n\n")
+              if(render_args$output_format == "html_document") {
+                nll_table <- c("### Likelihood components\n",
+                               "#### Summary\n",
+                               "`r nll[[1]]`\n\n",
+                               "#### Fleet likelihoods\n",
+                               "`r nll[[2]]`\n\n",
+                               "#### Fleet weights\n",
+                               "`r nll[[3]]`\n\n",
+                               "#### Survey likelihoods\n",
+                               "`r nll[[4]]`\n\n",
+                               "#### Survey weights\n",
+                               "`r nll[[5]]`\n\n")
+              } else {
+                nll_table <- c("### Likelihood components\n",
+                               "#### Summary\n",
+                               "`r nll[[1]] %>% kable(format = \"markdown\")`\n\n",
+                               "#### Fleet likelihoods\n",
+                               "`r nll[[2]] %>% kable(format = \"markdown\")`\n\n",
+                               "#### Fleet weights\n",
+                               "`r nll[[3]] %>% kable(format = \"markdown\")`\n\n",
+                               "#### Survey likelihoods\n",
+                               "`r nll[[4]] %>% kable(format = \"markdown\")`\n\n",
+                               "#### Survey weights\n",
+                               "`r nll[[5]] %>% kable(format = \"markdown\")`\n\n")
+              }
 
               mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output, nll_table)
             } else mean_fit_rmd <- c("## Fit to mean parameters of OM {.tabset}\n",
@@ -400,26 +436,20 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             if(is.list(rmd)) rmd <- do.call(c, rmd)
 
             # Generate markdown report
-            filename_html <- paste0(filename, ".html")
-            filename_rmd <- paste0(filename, ".Rmd")
             if(!dir.exists(dir)) {
               message("Creating directory: \n", dir)
               dir.create(dir)
             }
-
-            message("Writing markdown file: ", file.path(dir, filename_rmd))
-
             write(rmd, file = file.path(dir, filename_rmd))
+            message("Generated markdown file: ", file.path(dir, filename_rmd))
 
             # Rendering markdown file
-            message("Rendering markdown file to HTML: ", file.path(dir, filename_html))
+            message("Rendering markdown file...")
+            output_filename <- do.call(rmarkdown::render, render_args)
+            message("Rendered file: ", output_filename)
 
-            output <- rmarkdown::render(file.path(dir, filename_rmd), "html_document", filename_html, dir,
-                                        output_options = list(df_print = "paged"), quiet = quiet, ...)
-            message("Rendering complete.")
-
-            if(open_file) browseURL(file.path(dir, filename_html))
-            invisible(output)
+            if(open_file) browseURL(output_filename)
+            invisible(output_filename)
           })
 
 
