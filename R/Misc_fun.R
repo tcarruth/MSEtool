@@ -157,13 +157,13 @@ rescale_report <- function(var_div, var_mult, var_trans = NULL, fun_trans = NULL
         fun_trans2 <- fun_trans[i]
         fun_fixed2 <- fun_fixed[i]
 
-        ind <- pmatch(var_trans2, names(SD$value))
+        ind <- var_trans2 == names(SD$value)
         SD$value[ind] <- do.call(match.fun(fun_trans2), list(SD$value[ind], output$rescale))
         SD$sd[ind] <- do.call(match.fun(fun_trans2), list(SD$sd[ind], output$rescale))
 
         if(!is.na(fun_fixed2)) {
           fixed_name <- paste0(fun_fixed2, "_", var_trans2)
-          ind_fixed <- pmatch(fixed_name, names(SD$par.fixed))
+          ind_fixed <- fixed_name == names(SD$par.fixed)
           SD$par.fixed[ind_fixed] <- do.call(match.fun(fun_fixed2), list(SD$value[var_trans2]))
         }
       }
