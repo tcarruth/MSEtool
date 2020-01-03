@@ -680,7 +680,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   map$log_sigma_mlen <- factor(rep(NA, nfleet))
   map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
   if(is.null(dots$map_log_rec_dev)) {
-    map$log_rec_dev <- factor(c(1:(nyears-1), NA))
+    map$log_rec_dev <- factor(1:nyears)
   } else {
     map$log_rec_dev <- factor(dots$map_log_rec_dev)
   }
