@@ -137,7 +137,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               conv <- report$conv
 
               SD2 <- rbind(summary(SD, "report"), summary(SD, "fixed"))
-              if(SD$pdHess) SD2 <- SD2[SD2[, 2] > 0, ] %>% round(2) %>% as.data.frame()
+              if(SD$pdHess) SD2 <- round(SD2, 2) %>% as.data.frame()
               if(render_args$output_format == "html_document") {
                 sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
                            "### SRA Model Estimates\n",
