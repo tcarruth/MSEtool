@@ -122,7 +122,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
                       comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
-  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev
+  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, rescale
   if(!is.null(dots$maxF)) max_F <- dots$maxF
 
   comp_like <- match.arg(comp_like)
@@ -563,7 +563,11 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   if(is.null(data$I_sd)) data$I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
 
   if(!is.null(data$Chist) && any(data$Chist > 0, na.rm = TRUE)) {
-    rescale <- 1/mean(data$Chist, na.rm = TRUE)
+    if(is.null(dots$rescale)) {
+      rescale <- 1/mean(data$Chist, na.rm = TRUE)
+    } else {
+      rescale <- dots$rescale
+    }
     C_hist <- data$Chist * rescale
   } else {
     rescale <- 1
@@ -692,21 +696,26 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "N_full", "VB",
-                "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_SR")
-  vars_mult <- c("Brec", "q")
-  var_trans <- c("R0", "q")
-  fun_trans <- c("/", "*")
+  if(rescale != 1) {
 
-  if(data$condition == "catch" || TMB_data_all$nll_C) {
-    fun_fixed <- c("log", NA)
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  } else if(any(data$Chist > 0, na.rm = TRUE)) {
-    rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
+    vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "N_full", "VB",
+                  "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_SR")
+    vars_mult <- c("Brec", "q")
+    var_trans <- c("R0", "q")
+    fun_trans <- c("/", "*")
 
-    fun_fixed <- c(NA, NA)
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+    if(data$condition == "catch" || TMB_data_all$nll_C) {
+      fun_fixed <- c("log", NA)
+      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+    } else if(any(data$Chist > 0, na.rm = TRUE)) {
+      rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
+
+      fun_fixed <- c(NA, NA)
+      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+    }
+
   }
+
   report$F_at_age <- report$Z - report$M[1:nyears, ]
   report$vul_len <- get_vul_len(report)
   report <- get_s_vul_len(report, TMB_data_all)
