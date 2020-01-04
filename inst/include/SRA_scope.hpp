@@ -381,11 +381,11 @@ Type SRA_scope(objective_function<Type> *obj) {
   nll += nll_log_rec_dev + nll_Ceq.sum();
   nll += penalty + prior;
 
-  ADREPORT(R0);
+  if(CppAD::Variable(log_R0)) ADREPORT(R0);
   ADREPORT(h);
-  ADREPORT(tau);
-  ADREPORT(q_effort);
-  ADREPORT(q);
+  if(CppAD::Variable(log_tau)) ADREPORT(tau);
+  if(condition == "effort") ADREPORT(q_effort);
+  if(nll_Index.sum() != 0) ADREPORT(q);
 
   REPORT(M);
   REPORT(length_bin);
