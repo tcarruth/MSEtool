@@ -282,6 +282,14 @@ update_SRA_data <- function(data, OM, condition, dots) {
     data$abs_I <- 0L
   }
 
+  # Index basis - biomass/abundance
+  if(data$nsurvey > 0) {
+    if(is.null(data$I_basis)) data$I_basis <- rep(1L, data$nsurvey)
+    if(length(data$I_basis) < data$nsurvey) stop("I_basis should be of length", data$nsurvey, call. = FALSE)
+  } else {
+    data$I_basis <- 1L
+  }
+
   return(list(data = data, OM = OM, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars))
 
 }

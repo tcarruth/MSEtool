@@ -53,6 +53,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_IVECTOR(s_vul_type); // Same but for surveys
   DATA_IVECTOR(I_type);   // Integer vector indicating the basis of the indices for fleet (1-nfleet) or surveys B (-1) or SSB (-2) or estimated (0)
   DATA_IVECTOR(abs_I);    // Boolean, whether index is an absolute (fix q = 1) or relative terms (estimate q)
+  DATA_IVECTOR(I_basis);  // Boolean, whether index is biomass based (= 1) or abundance-based (0)
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
@@ -293,7 +294,8 @@ Type SRA_scope(objective_function<Type> *obj) {
       for(int a=0;a<max_age;a++) {
         s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
         s_CN(y,sur) += s_CAApred(y,a,sur);
-        if(s_vul_type(sur) <= 0) {
+
+        if(I_basis(sur)) {
           B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
         }
         if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
@@ -301,7 +303,7 @@ Type SRA_scope(objective_function<Type> *obj) {
         }
       }
     }
-    if(s_vul_type(sur) > 0) B_sur.col(sur) = s_CN.col(sur);
+    if(!I_basis(sur)) B_sur.col(sur) = s_CN.col(sur);
     q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I, rescale);
   }
 
