@@ -4,9 +4,15 @@
 \alias{Awatea2OM}
 \title{Reads MCMC estimates from Awatea (Paul Starr) processed r file structure into an operating model}
 \usage{
-Awatea2OM(AwateaDir, nsim = 48, proyears = 50, Name = NULL,
-  Source = "No source provided", Author = "No author provided",
-  verbose = T)
+Awatea2OM(
+  AwateaDir,
+  nsim = 48,
+  proyears = 50,
+  Name = NULL,
+  Source = "No source provided",
+  Author = "No author provided",
+  verbose = T
+)
 }
 \arguments{
 \item{AwateaDir}{A folder with Awatea files}

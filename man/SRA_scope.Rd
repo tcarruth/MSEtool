@@ -6,11 +6,22 @@
 \alias{Sub_cpars}
 \title{Stock-reduction analysis (SRA) for conditioning operating models}
 \usage{
-SRA_scope(OM, data = list(), condition = c("catch", "effort"),
-  selectivity = "logistic", s_selectivity = NULL, LWT = list(),
-  comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
-  max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE,
-  drop_nonconv = FALSE, ...)
+SRA_scope(
+  OM,
+  data = list(),
+  condition = c("catch", "effort"),
+  selectivity = "logistic",
+  s_selectivity = NULL,
+  LWT = list(),
+  comp_like = c("multinomial", "lognormal"),
+  ESS = c(30, 30),
+  max_F = 3,
+  cores = 1L,
+  integrate = FALSE,
+  mean_fit = FALSE,
+  drop_nonconv = FALSE,
+  ...
+)
 
 plot_SRA_scope(...)
 
@@ -144,6 +155,7 @@ Zero (default) implies unfished conditions in year one. Otherwise, this is used 
 Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
 \item abs_I - Optional, an integer vector to indicate which indices are in absolute magnitude. Use 1 to set q = 1, otherwise use 0 to estimate q.
 }
+\item I_basis - Optional, an integer vector to indicate whether indices are biomass based (1) or abundance-based (0). By default, all are biomass-based.
 
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 }

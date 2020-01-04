@@ -4,10 +4,18 @@
 \alias{PRBcalc}
 \title{Calculate mahalanobis distance (null and alternative MSEs) and statistical power for all MPs in an MSE}
 \usage{
-PRBcalc(MSE_null, MSE_alt, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
-  stat = c("slp", "AAV", "mu", "slp", "slp"), dnam = c("C_S", "C_V",
-  "C_M", "I_S", "ML_S"), res = 6, alpha = 0.05, plotCC = FALSE,
-  removedat = FALSE, removethresh = 0.025)
+PRBcalc(
+  MSE_null,
+  MSE_alt,
+  tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
+  stat = c("slp", "AAV", "mu", "slp", "slp"),
+  dnam = c("C_S", "C_V", "C_M", "I_S", "ML_S"),
+  res = 6,
+  alpha = 0.05,
+  plotCC = FALSE,
+  removedat = FALSE,
+  removethresh = 0.025
+)
 }
 \arguments{
 \item{MSE_null}{An object of class MSE representing the null hypothesis}

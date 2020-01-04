@@ -4,9 +4,38 @@
 \alias{popdynOneMICE}
 \title{Population dynamics for a MICE model (single year)}
 \usage{
-popdynOneMICE(np, nf, nareas, maxage, Ncur, Vcur, FMretx, FMx, PerrYrp,
-  hsx, aRx, bRx, movy, Spat_targ, SRrelx, M_agecur, Mat_agecur, Asizex, Kx,
-  Linfx, t0x, Mx, R0x, R0ax, SSBpRx, ax, bx, Rel, SexPars, x)
+popdynOneMICE(
+  np,
+  nf,
+  nareas,
+  maxage,
+  Ncur,
+  Vcur,
+  FMretx,
+  FMx,
+  PerrYrp,
+  hsx,
+  aRx,
+  bRx,
+  movy,
+  Spat_targ,
+  SRrelx,
+  M_agecur,
+  Mat_agecur,
+  Asizex,
+  Kx,
+  Linfx,
+  t0x,
+  Mx,
+  R0x,
+  R0ax,
+  SSBpRx,
+  ax,
+  bx,
+  Rel,
+  SexPars,
+  x
+)
 }
 \arguments{
 \item{np}{Integer, the number of stocks}

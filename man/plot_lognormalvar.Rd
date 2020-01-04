@@ -4,8 +4,7 @@
 \alias{plot_lognormalvar}
 \title{Plots a lognormal variable}
 \usage{
-plot_lognormalvar(m, sd, label = NULL, logtransform = FALSE,
-  color = "black")
+plot_lognormalvar(m, sd, label = NULL, logtransform = FALSE, color = "black")
 }
 \arguments{
 \item{m}{A vector of means of the distribution.}

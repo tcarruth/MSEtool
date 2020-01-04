@@ -4,8 +4,7 @@
 \alias{multidebug}
 \title{A basic comparison of runMSE output (MSE) and multiMSE (MMSE)}
 \usage{
-multidebug(MSEsingle, MSEmulti, p = 1, f = 1, MPno = 1,
-  maxsims = 4)
+multidebug(MSEsingle, MSEmulti, p = 1, f = 1, MPno = 1, maxsims = 4)
 }
 \arguments{
 \item{MSEsingle}{An object of class MSE arising from a run of runMSE(OM, ...)}

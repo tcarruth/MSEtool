@@ -4,13 +4,27 @@
 \alias{VPA}
 \title{Virtual population analysis (VPA)}
 \usage{
-VPA(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"),
-  vulnerability = c("logistic", "dome", "free"), I_type = c("B", "VB",
-  "SSB"), rescale = "mean1", start = NULL, fix_h = TRUE,
-  fix_sigma = FALSE, fix_Fratio = TRUE, vul_pen = c(3, 0.4),
-  R_pen = c(3, Data@sigmaR[x]), nitF = 5L, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 2e+05, eval.max = 4e+05), ...)
+VPA(
+  x = 1,
+  Data,
+  expanded = FALSE,
+  SR = c("BH", "Ricker"),
+  vulnerability = c("logistic", "dome", "free"),
+  I_type = c("B", "VB", "SSB"),
+  rescale = "mean1",
+  start = NULL,
+  fix_h = TRUE,
+  fix_sigma = FALSE,
+  fix_Fratio = TRUE,
+  vul_pen = c(3, 0.4),
+  R_pen = c(3, Data@sigmaR[x]),
+  nitF = 5L,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
+  ...
+)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}

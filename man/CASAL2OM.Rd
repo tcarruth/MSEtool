@@ -4,12 +4,28 @@
 \alias{CASAL2OM}
 \title{Reads MLE estimates from CASAL file structure into an operating model}
 \usage{
-CASAL2OM(CASALdir, Obs = DLMtool::Precise_Unbiased,
-  Imp = DLMtool::Perfect_Imp, Name = NA, Agency = NA, Region = NA,
-  Sponsor = NA, Latitude = NA, Longitude = NA, nsim = 48,
-  proyears = 50, interval = 4, pstar = 0.5, maxF = 2, reps = 1,
-  seed = 1, Common_Name = NA, Species = NA, Source = NA,
-  Author = NA)
+CASAL2OM(
+  CASALdir,
+  Obs = DLMtool::Precise_Unbiased,
+  Imp = DLMtool::Perfect_Imp,
+  Name = NA,
+  Agency = NA,
+  Region = NA,
+  Sponsor = NA,
+  Latitude = NA,
+  Longitude = NA,
+  nsim = 48,
+  proyears = 50,
+  interval = 4,
+  pstar = 0.5,
+  maxF = 2,
+  reps = 1,
+  seed = 1,
+  Common_Name = NA,
+  Species = NA,
+  Source = NA,
+  Author = NA
+)
 }
 \arguments{
 \item{CASALdir}{A folder with CASAL input and output files in it}

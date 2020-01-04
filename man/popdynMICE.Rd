@@ -4,10 +4,41 @@
 \alias{popdynMICE}
 \title{Population dynamics for a MICE model (multiyear)}
 \usage{
-popdynMICE(qsx, qfracx, np, nf, nyears, nareas, maxage, Nx, VFx, FretAx,
-  Effind, movx, Spat_targ, M_ageArrayx, Mat_agex, Asizex, Kx, Linfx, t0x,
-  Mx, R0x, R0ax, SSBpRx, hsx, aRx, bRx, ax, bx, Perrx, SRrelx, Rel,
-  SexPars, x)
+popdynMICE(
+  qsx,
+  qfracx,
+  np,
+  nf,
+  nyears,
+  nareas,
+  maxage,
+  Nx,
+  VFx,
+  FretAx,
+  Effind,
+  movx,
+  Spat_targ,
+  M_ageArrayx,
+  Mat_agex,
+  Asizex,
+  Kx,
+  Linfx,
+  t0x,
+  Mx,
+  R0x,
+  R0ax,
+  SSBpRx,
+  hsx,
+  aRx,
+  bRx,
+  ax,
+  bx,
+  Perrx,
+  SRrelx,
+  Rel,
+  SexPars,
+  x
+)
 }
 \arguments{
 \item{qsx}{Total catchability}

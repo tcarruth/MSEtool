@@ -7,37 +7,84 @@
 \alias{SCA_Pope}
 \title{Statistical catch-at-age (SCA) model}
 \usage{
-SCA(x = 1, Data, SR = c("BH", "Ricker"),
-  vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial",
-  "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", max_age = Data@MaxAge, start = NULL,
-  fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, early_dev = c("comp_onegen",
-  "comp", "all"), late_dev = "comp50", integrate = FALSE,
-  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
-  1), control = list(iter.max = 2e+05, eval.max = 4e+05),
-  inner.control = list(), ...)
-
-SCA2(x = 1, Data, SR = c("BH", "Ricker"),
-  vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial",
-  "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", max_age = Data@MaxAge, start = NULL,
-  fix_h = TRUE, fix_F_equilibrium = TRUE, fix_omega = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, common_dev = "comp50",
-  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
-  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 2e+05,
-  eval.max = 4e+05), inner.control = list(), ...)
-
-SCA_Pope(x = 1, Data, SR = c("BH", "Ricker"),
-  vulnerability = c("logistic", "dome"), CAA_dist = c("multinomial",
-  "lognormal"), CAA_multiplier = 50, I_type = c("B", "VB", "SSB"),
-  rescale = "mean1", max_age = Data@MaxAge, start = NULL,
-  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sigma = FALSE,
-  fix_tau = TRUE, early_dev = c("comp_onegen", "comp", "all"),
-  late_dev = "comp50", integrate = FALSE, silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+SCA(
+  x = 1,
+  Data,
+  SR = c("BH", "Ricker"),
+  vulnerability = c("logistic", "dome"),
+  CAA_dist = c("multinomial", "lognormal"),
+  CAA_multiplier = 50,
+  I_type = c("B", "VB", "SSB"),
+  rescale = "mean1",
+  max_age = Data@MaxAge,
+  start = NULL,
+  fix_h = TRUE,
+  fix_F_equilibrium = TRUE,
+  fix_omega = TRUE,
+  fix_sigma = FALSE,
+  fix_tau = TRUE,
+  early_dev = c("comp_onegen", "comp", "all"),
+  late_dev = "comp50",
+  integrate = FALSE,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
   control = list(iter.max = 2e+05, eval.max = 4e+05),
-  inner.control = list(), ...)
+  inner.control = list(),
+  ...
+)
+
+SCA2(
+  x = 1,
+  Data,
+  SR = c("BH", "Ricker"),
+  vulnerability = c("logistic", "dome"),
+  CAA_dist = c("multinomial", "lognormal"),
+  CAA_multiplier = 50,
+  I_type = c("B", "VB", "SSB"),
+  rescale = "mean1",
+  max_age = Data@MaxAge,
+  start = NULL,
+  fix_h = TRUE,
+  fix_F_equilibrium = TRUE,
+  fix_omega = TRUE,
+  fix_sigma = FALSE,
+  fix_tau = TRUE,
+  common_dev = "comp50",
+  integrate = FALSE,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
+  inner.control = list(),
+  ...
+)
+
+SCA_Pope(
+  x = 1,
+  Data,
+  SR = c("BH", "Ricker"),
+  vulnerability = c("logistic", "dome"),
+  CAA_dist = c("multinomial", "lognormal"),
+  CAA_multiplier = 50,
+  I_type = c("B", "VB", "SSB"),
+  rescale = "mean1",
+  max_age = Data@MaxAge,
+  start = NULL,
+  fix_h = TRUE,
+  fix_U_equilibrium = TRUE,
+  fix_sigma = FALSE,
+  fix_tau = TRUE,
+  early_dev = c("comp_onegen", "comp", "all"),
+  late_dev = "comp50",
+  integrate = FALSE,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
+  inner.control = list(),
+  ...
+)
 }
 \arguments{
 \item{x}{A position in the Data object (by default, equal to one for assessments).}

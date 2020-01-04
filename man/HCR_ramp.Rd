@@ -6,8 +6,16 @@
 \alias{HCR60_20}
 \title{Linearly ramped harvest control rules}
 \usage{
-HCR_ramp(Assessment, reps = 1, LRP, TRP, rel_min = 0, rel_max = 1,
-  RP_type = c("SSB_SSB0", "SSB_SSBMSY"), ...)
+HCR_ramp(
+  Assessment,
+  reps = 1,
+  LRP,
+  TRP,
+  rel_min = 0,
+  rel_max = 1,
+  RP_type = c("SSB_SSB0", "SSB_SSBMSY"),
+  ...
+)
 
 HCR40_10(Assessment, reps = 1, ...)
 

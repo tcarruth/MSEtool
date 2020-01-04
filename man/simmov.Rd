@@ -5,8 +5,15 @@
 \alias{plot_mov}
 \title{Calculates movement matrices from user inputs}
 \usage{
-simmov(OM, dist = c(0.1, 0.2, 0.3, 0.4), prob = 0.5, distE = 0.1,
-  probE = 0.1, prob2 = NA, figure = TRUE)
+simmov(
+  OM,
+  dist = c(0.1, 0.2, 0.3, 0.4),
+  prob = 0.5,
+  distE = 0.1,
+  probE = 0.1,
+  prob2 = NA,
+  figure = TRUE
+)
 
 plot_mov(mov, age = 1, type = c("matrix", "all"))
 }

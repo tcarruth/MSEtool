@@ -4,9 +4,18 @@
 \alias{projection}
 \title{Projections for assessment models}
 \usage{
-projection(Assessment, constrain = c("F", "Catch"), FMort = NULL,
-  Catch = NULL, p_years = 50, p_sim = 200, obs_error = NULL,
-  process_error = NULL, max_F = 3, seed = 499)
+projection(
+  Assessment,
+  constrain = c("F", "Catch"),
+  FMort = NULL,
+  Catch = NULL,
+  p_years = 50,
+  p_sim = 200,
+  obs_error = NULL,
+  process_error = NULL,
+  max_F = 3,
+  seed = 499
+)
 }
 \arguments{
 \item{Assessment}{An object of class \linkS4class{Assessment}.}

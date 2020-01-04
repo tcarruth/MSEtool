@@ -4,8 +4,13 @@
 \alias{plot_steepness}
 \title{Plots probability distribution function of stock-recruit steepness}
 \usage{
-plot_steepness(m, sd, is_transform = FALSE, SR = c("BH", "Ricker"),
-  color = "black")
+plot_steepness(
+  m,
+  sd,
+  is_transform = FALSE,
+  SR = c("BH", "Ricker"),
+  color = "black"
+)
 }
 \arguments{
 \item{m}{The mean of the distribution (vectorized).}

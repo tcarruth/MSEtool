@@ -4,10 +4,19 @@
 \alias{plot_timeseries}
 \title{Plot time series of data}
 \usage{
-plot_timeseries(Year, obs, fit = NULL, obs_CV = NULL,
-  obs_CV_CI = 0.95, obs_upper = NULL, obs_lower = NULL,
-  obs_ind_blue = NULL, fit_linewidth = 3, fit_color = "red",
-  label = "Observed data")
+plot_timeseries(
+  Year,
+  obs,
+  fit = NULL,
+  obs_CV = NULL,
+  obs_CV_CI = 0.95,
+  obs_upper = NULL,
+  obs_lower = NULL,
+  obs_ind_blue = NULL,
+  fit_linewidth = 3,
+  fit_color = "red",
+  label = "Observed data"
+)
 }
 \arguments{
 \item{Year}{A vector of years for the data.}

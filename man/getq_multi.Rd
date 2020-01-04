@@ -4,9 +4,33 @@
 \alias{getq_multi}
 \title{optimize for catchability (q)}
 \usage{
-getq_multi(x, D, SSB0, nareas, maxage, Np, pyears, M_ageArray, Mat_age,
-  Asize, Wt_age, FleetP, Perr, mov, SRrel, hs, R0a, SSBpR, aR, bR,
-  bounds = c(1e-05, 15), maxF, MPAc, CFp, useCPP = TRUE)
+getq_multi(
+  x,
+  D,
+  SSB0,
+  nareas,
+  maxage,
+  Np,
+  pyears,
+  M_ageArray,
+  Mat_age,
+  Asize,
+  Wt_age,
+  FleetP,
+  Perr,
+  mov,
+  SRrel,
+  hs,
+  R0a,
+  SSBpR,
+  aR,
+  bR,
+  bounds = c(1e-05, 15),
+  maxF,
+  MPAc,
+  CFp,
+  useCPP = TRUE
+)
 }
 \arguments{
 \item{x}{Integer, the simulation number}

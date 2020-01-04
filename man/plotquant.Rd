@@ -4,8 +4,15 @@
 \alias{plotquant}
 \title{A fairly tidy time-series quantile plot}
 \usage{
-plotquant(x, p = c(0.05, 0.25, 0.75, 0.95), yrs, qcol, lcol,
-  addline = T, ablines = NA)
+plotquant(
+  x,
+  p = c(0.05, 0.25, 0.75, 0.95),
+  yrs,
+  qcol,
+  lcol,
+  addline = T,
+  ablines = NA
+)
 }
 \arguments{
 \item{x}{Matrix. A time series quantity [simulation, year]}

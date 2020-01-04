@@ -4,10 +4,45 @@
 \alias{qestMICE}
 \title{Internal function for optimizing catchability (q) for a MICE model}
 \usage{
-qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, maxage,
-  Nx, VFx, FretAx, Effind, distx, movx, Spat_targ, M_ageArrayx, Mat_agex,
-  Asizex, Kx, Linfx, t0x, Mx, R0x, R0ax, SSBpRx, SSB0x, hsx, aRx, bRx, ax,
-  bx, Perrx, SRrelx, Rel, SexPars, x)
+qestMICE(
+  par,
+  depc,
+  CFc,
+  mode = "opt",
+  np,
+  nf,
+  nyears,
+  nareas,
+  maxage,
+  Nx,
+  VFx,
+  FretAx,
+  Effind,
+  distx,
+  movx,
+  Spat_targ,
+  M_ageArrayx,
+  Mat_agex,
+  Asizex,
+  Kx,
+  Linfx,
+  t0x,
+  Mx,
+  R0x,
+  R0ax,
+  SSBpRx,
+  SSB0x,
+  hsx,
+  aRx,
+  bRx,
+  ax,
+  bx,
+  Perrx,
+  SRrelx,
+  Rel,
+  SexPars,
+  x
+)
 }
 \arguments{
 \item{par}{Integer, the simulation number}
@@ -16,7 +51,7 @@ qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, maxage,
 
 \item{CFc}{Matrix [nstock, nfleet], a catch fraction among fleets (sums to 1 for each stock (row))}
 
-\item{nf}{Integer, number of stocks}
+\item{nf}{Integer, number of fleets}
 
 \item{nyears}{Integer, number of historical years (unfished til today)}
 
@@ -75,8 +110,6 @@ qestMICE(par, depc, CFc, mode = "opt", np, nf, nyears, nareas, maxage,
 \item{x}{Integer. The simulation number}
 
 \item{mod}{Character if 'opt' qestMICE returns the objective function otherwise the fitted values in a list}
-
-\item{nf}{Integer, number of fleets}
 
 \item{Linf}{Vector [stock] of von B asymptotic length parameter Linf}
 

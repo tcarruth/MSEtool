@@ -4,9 +4,18 @@
 \alias{plot_residuals}
 \title{Plot residuals}
 \usage{
-plot_residuals(Year, res, res_sd = NULL, res_sd_CI = 0.95,
-  res_upper = NULL, res_lower = NULL, res_ind_blue = NULL,
-  draw_zero = TRUE, zero_linetype = 2, label = "Residual")
+plot_residuals(
+  Year,
+  res,
+  res_sd = NULL,
+  res_sd_CI = 0.95,
+  res_upper = NULL,
+  res_lower = NULL,
+  res_ind_blue = NULL,
+  draw_zero = TRUE,
+  zero_linetype = 2,
+  label = "Residual"
+)
 }
 \arguments{
 \item{Year}{A vector of years for the data.}

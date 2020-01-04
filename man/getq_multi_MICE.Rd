@@ -4,9 +4,26 @@
 \alias{getq_multi_MICE}
 \title{optimize for catchability (q) and fishing dist for a MICE model}
 \usage{
-getq_multi_MICE(x, StockPars, FleetPars, np, nf, nareas, maxage, nyears, N,
-  VF, FretA, maxF = 0.9, MPA, CatchFrac, bounds = c(1e-05, 15),
-  tol = 1e-06, Rel, SexPars)
+getq_multi_MICE(
+  x,
+  StockPars,
+  FleetPars,
+  np,
+  nf,
+  nareas,
+  maxage,
+  nyears,
+  N,
+  VF,
+  FretA,
+  maxF = 0.9,
+  MPA,
+  CatchFrac,
+  bounds = c(1e-05, 15),
+  tol = 1e-06,
+  Rel,
+  SexPars
+)
 }
 \arguments{
 \item{x}{Integer, the simulation number}

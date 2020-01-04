@@ -4,8 +4,7 @@
 \alias{Probs}
 \title{Calculates mahalanobis distance and rejection of the Null operating model}
 \usage{
-Probs(indPPD, indData, alpha = 0.05, removedat = FALSE,
-  removethresh = 0.05)
+Probs(indPPD, indData, alpha = 0.05, removedat = FALSE, removethresh = 0.05)
 }
 \arguments{
 \item{indPPD}{A 3D array of results arising from running getind on an MSE of the Null operating model (type of data/stat (e.g. mean catches),time period (chunk), simulation)}

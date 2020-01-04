@@ -6,19 +6,48 @@
 \alias{SP_Fox}
 \title{Surplus production model with FMSY and MSY as leading parameters}
 \usage{
-SP(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, n_seas = 4L, n_itF = 3L, use_r_prior = FALSE,
-  r_reps = 100, SR_type = c("BH", "Ricker"), silent = TRUE,
-  opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-  control = list(iter.max = 5000, eval.max = 10000), ...)
+SP(
+  x = 1,
+  Data,
+  rescale = "mean1",
+  start = NULL,
+  fix_dep = TRUE,
+  fix_n = TRUE,
+  n_seas = 4L,
+  n_itF = 3L,
+  use_r_prior = FALSE,
+  r_reps = 100,
+  SR_type = c("BH", "Ricker"),
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 5000, eval.max = 10000),
+  ...
+)
 
-SP_SS(x = 1, Data, rescale = "mean1", start = NULL, fix_dep = TRUE,
-  fix_n = TRUE, fix_sigma = TRUE, fix_tau = TRUE,
-  early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
-  use_r_prior = FALSE, r_reps = 100, SR_type = c("BH", "Ricker"),
-  integrate = FALSE, silent = TRUE, opt_hess = FALSE,
-  n_restart = ifelse(opt_hess, 0, 1), control = list(iter.max = 5000,
-  eval.max = 10000), inner.control = list(), ...)
+SP_SS(
+  x = 1,
+  Data,
+  rescale = "mean1",
+  start = NULL,
+  fix_dep = TRUE,
+  fix_n = TRUE,
+  fix_sigma = TRUE,
+  fix_tau = TRUE,
+  early_dev = c("all", "index"),
+  n_seas = 4L,
+  n_itF = 3L,
+  use_r_prior = FALSE,
+  r_reps = 100,
+  SR_type = c("BH", "Ricker"),
+  integrate = FALSE,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 5000, eval.max = 10000),
+  inner.control = list(),
+  ...
+)
 
 SP_Fox(x = 1, Data, ...)
 }

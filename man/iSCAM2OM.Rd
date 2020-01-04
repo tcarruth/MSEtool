@@ -4,9 +4,16 @@
 \alias{iSCAM2OM}
 \title{Reads MLE estimates from iSCAM file structure into an operating model}
 \usage{
-iSCAM2OM(iSCAMdir, nsim = 48, proyears = 50, mcmc = F, Name = NULL,
-  Source = "No source provided", length_timestep = 1,
-  Author = "No author provided")
+iSCAM2OM(
+  iSCAMdir,
+  nsim = 48,
+  proyears = 50,
+  mcmc = F,
+  Name = NULL,
+  Source = "No source provided",
+  length_timestep = 1,
+  Author = "No author provided"
+)
 }
 \arguments{
 \item{iSCAMdir}{A folder with iSCAM input and output files in it}

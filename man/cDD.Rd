@@ -5,17 +5,41 @@
 \alias{cDD_SS}
 \title{Continuous Delay-differential assessment model}
 \usage{
-cDD(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
-  start = NULL, fix_h = TRUE, fix_F_equilibrium = TRUE, n_itF = 5L,
-  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
-  1), control = list(iter.max = 5000, eval.max = 10000), ...)
+cDD(
+  x = 1,
+  Data,
+  SR = c("BH", "Ricker"),
+  rescale = "mean1",
+  start = NULL,
+  fix_h = TRUE,
+  fix_F_equilibrium = TRUE,
+  n_itF = 5L,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 5000, eval.max = 10000),
+  ...
+)
 
-cDD_SS(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1",
-  start = NULL, fix_h = TRUE, fix_F_equilibrium = TRUE,
-  fix_sigma = FALSE, fix_tau = TRUE, n_itF = 5L, integrate = FALSE,
-  silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0,
-  1), control = list(iter.max = 5000, eval.max = 10000),
-  inner.control = list(), ...)
+cDD_SS(
+  x = 1,
+  Data,
+  SR = c("BH", "Ricker"),
+  rescale = "mean1",
+  start = NULL,
+  fix_h = TRUE,
+  fix_F_equilibrium = TRUE,
+  fix_sigma = FALSE,
+  fix_tau = TRUE,
+  n_itF = 5L,
+  integrate = FALSE,
+  silent = TRUE,
+  opt_hess = FALSE,
+  n_restart = ifelse(opt_hess, 0, 1),
+  control = list(iter.max = 5000, eval.max = 10000),
+  inner.control = list(),
+  ...
+)
 }
 \arguments{
 \item{x}{An index for the objects in \code{Data} when running in closed loop simulation.

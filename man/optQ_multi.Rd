@@ -4,9 +4,36 @@
 \alias{optQ_multi}
 \title{Optimize q for a single simulation}
 \usage{
-optQ_multi(par, depc, SSB0c, nareas, maxage, Ncurr, pyears, M_age, MatAge,
-  Asize_c, WtAge, Vuln, Retc, Prec, movc, SRrelc, Effind, Spat_targc, hc,
-  R0c, SSBpRc, aRc, bRc, maxF, MPAc, CFc, useCPP, mode = "opt")
+optQ_multi(
+  par,
+  depc,
+  SSB0c,
+  nareas,
+  maxage,
+  Ncurr,
+  pyears,
+  M_age,
+  MatAge,
+  Asize_c,
+  WtAge,
+  Vuln,
+  Retc,
+  Prec,
+  movc,
+  SRrelc,
+  Effind,
+  Spat_targc,
+  hc,
+  R0c,
+  SSBpRc,
+  aRc,
+  bRc,
+  maxF,
+  MPAc,
+  CFc,
+  useCPP,
+  mode = "opt"
+)
 }
 \arguments{
 \item{depc}{Depletion value}

@@ -4,8 +4,25 @@
 \alias{HistMICE}
 \title{Reconstruct historical dynamics}
 \usage{
-HistMICE(x, StockPars, FleetPars, np, nf, nareas, maxage, nyears, N, VF,
-  FretA, maxF = 0.9, MPA, Rel, SexPars, qs, qfrac)
+HistMICE(
+  x,
+  StockPars,
+  FleetPars,
+  np,
+  nf,
+  nareas,
+  maxage,
+  nyears,
+  N,
+  VF,
+  FretA,
+  maxF = 0.9,
+  MPA,
+  Rel,
+  SexPars,
+  qs,
+  qfrac
+)
 }
 \arguments{
 \item{x}{Integer, the simulation number}

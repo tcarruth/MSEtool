@@ -4,8 +4,13 @@
 \alias{getinds}
 \title{Characterize posterior predictive data}
 \usage{
-getinds(PPD, styr, res = 6, tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
-  stat = c("slp", "AAV", "mu", "slp", "slp"))
+getinds(
+  PPD,
+  styr,
+  res = 6,
+  tsd = c("Cat", "Cat", "Cat", "Ind", "ML"),
+  stat = c("slp", "AAV", "mu", "slp", "slp")
+)
 }
 \arguments{
 \item{PPD}{An object of class Data stored in the Misc slot of an MSE object following a call of \code{runMSE(PPD = TRUE)}.}

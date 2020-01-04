@@ -4,8 +4,13 @@
 \alias{iSCAM2Data}
 \title{Reads data from iSCAM file structure into a DLMtool Data object}
 \usage{
-iSCAM2Data(iSCAMdir, Name = NULL, Source = "No source provided",
-  length_timestep = 1, Author = "No author provided")
+iSCAM2Data(
+  iSCAMdir,
+  Name = NULL,
+  Source = "No source provided",
+  length_timestep = 1,
+  Author = "No author provided"
+)
 }
 \arguments{
 \item{iSCAMdir}{A folder with iSCAM input and output files in it}

@@ -4,8 +4,7 @@
 \alias{retrospective_AM}
 \title{retrospective_AM (retrospective of Assessment model in MSE)}
 \usage{
-retrospective_AM(MSE, sim = 1, MP, MSE_Hist = NULL,
-  plot_legend = FALSE)
+retrospective_AM(MSE, sim = 1, MP, MSE_Hist = NULL, plot_legend = FALSE)
 }
 \arguments{
 \item{MSE}{An object of class MSE created by \code{\link[DLMtool]{runMSE}} with \code{PPD = TRUE}.}
