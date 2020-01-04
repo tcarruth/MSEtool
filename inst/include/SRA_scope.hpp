@@ -118,7 +118,7 @@ Type SRA_scope(objective_function<Type> *obj) {
 
     for(int y=0;y<n_y;y++) {
       if(condition == "catch") {
-        F(y,ff) = CppAD::CondExpLt(max_F - exp(log_F(y)), Type(0), max_F - posfun(max_F - exp(log_F(y,ff)), Type(0), penalty),
+        F(y,ff) = CppAD::CondExpLt(max_F - exp(log_F(y,ff)), Type(0), max_F - posfun(max_F - exp(log_F(y,ff)), Type(0), penalty),
           exp(log_F(y,ff)));
       } else {
         F(y,ff) = CppAD::CondExpLt(max_F - q_effort(ff) * E_hist(y,ff), Type(0), max_F - posfun(max_F - q_effort(ff) * E_hist(y,ff), Type(0), penalty),
