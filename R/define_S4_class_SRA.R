@@ -265,7 +265,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                                   "expression(SSB[0])")
               } else SSB_plot <- NULL
 
-              SSB_SSB0 <- structure(report$E/c(report$E0, report$E0[length(report$E0)]), names = c(Year, max(Year) + 1))
+              SSB_SSB0 <- structure(report$E/report$E0_SR, names = c(Year, max(Year) + 1))
 
               R <- structure(report$R, names = c(Year, max(Year) + 1))
               N_at_age <- report$N
