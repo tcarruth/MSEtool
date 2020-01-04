@@ -66,6 +66,7 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
+  DATA_IVECTOR(yindF);
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
@@ -115,15 +116,22 @@ Type SRA_scope(objective_function<Type> *obj) {
     q_effort(ff) = exp(log_q_effort(ff));
     if(condition == "catch" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
     if(condition == "effort" && E_eq(ff)>0) F_equilibrium(ff) = q_effort(ff) * E_eq(ff);
+    if(condition == "catch") {
+      Type tmp = max_F - exp(log_F(yindF(ff),ff));
+      F(yindF(ff),ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), exp(log_F(yindF(ff),ff)));
 
-    for(int y=0;y<n_y;y++) {
-      if(condition == "catch") {
-        F(y,ff) = CppAD::CondExpLt(max_F - exp(log_F(y,ff)), Type(0), max_F - posfun(max_F - exp(log_F(y,ff)), Type(0), penalty),
-          exp(log_F(y,ff)));
-      } else {
-        F(y,ff) = CppAD::CondExpLt(max_F - q_effort(ff) * E_hist(y,ff), Type(0), max_F - posfun(max_F - q_effort(ff) * E_hist(y,ff), Type(0), penalty),
-          q_effort(ff) * E_hist(y,ff));
+      for(int y=0;y<n_y;y++) {
+        if(y != yindF(ff)) {
+          Type Ftmp = F(yindF(ff),ff) * exp(log_F(y,ff));
+          Type tmp2 = max_F - Ftmp;
+          F(y,ff) = CppAD::CondExpLt(tmp2, Type(0), max_F - posfun(tmp2, Type(0), penalty), Ftmp);
+        }
       }
+
+    } else {
+      F(y,ff) = CppAD::CondExpLt(max_F - q_effort(ff) * E_hist(y,ff), Type(0), max_F - posfun(max_F - q_effort(ff) * E_hist(y,ff), Type(0), penalty),
+        q_effort(ff) * E_hist(y,ff));
+
     }
   }
 

@@ -594,7 +594,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, I_type = I_type, abs_I = data$abs_I,
                        I_basis = data$I_basis, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
                        max_F = max_F, rescale = rescale, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       est_early_rec_dev = rep(0, max_age-1))
+                       est_early_rec_dev = rep(0, max_age-1), yindF = as.integer(rep(0.5 * nyears, nfleet)))
 
   if(data$condition == "catch") {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
@@ -654,10 +654,12 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     map_s_vul_par <- dots$map_s_vul_par
   }
 
+  log_F_start <- matrix(0, nyears, nfleet)
+  log_F_start[TMB_data$yindF, 1:nfleet] <- log(0.1)
   TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 0, log(StockPars$R0[x])),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
-                     log_F = matrix(log(0.05), nyears, nfleet), log_F_equilibrium = rep(log(0.05), nfleet),
+                     log_F = log_F_start, log_F_equilibrium = rep(log(0.05), nfleet),
                      log_sigma_mlen = log(data$ML_sd), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
