@@ -129,9 +129,11 @@ Type SRA_scope(objective_function<Type> *obj) {
       }
 
     } else {
-      F(y,ff) = CppAD::CondExpLt(max_F - q_effort(ff) * E_hist(y,ff), Type(0), max_F - posfun(max_F - q_effort(ff) * E_hist(y,ff), Type(0), penalty),
-        q_effort(ff) * E_hist(y,ff));
-
+      for(int y=0;y<n_y;y++) {
+        Type tmp = max_F - q_effort(ff) * E_hist(y,ff);
+        F(y,ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty),
+          q_effort(ff) * E_hist(y,ff));
+      }
     }
   }
 
