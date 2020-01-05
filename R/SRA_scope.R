@@ -65,8 +65,8 @@
 #' \item E_eq - The equilibrium effort for each fleet in \code{Ehist} prior to the first year of the operating model.
 #' Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
 #' \item abs_I - Optional, an integer vector to indicate which indices are in absolute magnitude. Use 1 to set q = 1, otherwise use 0 to estimate q.
-#' }
 #' \item I_basis - Optional, an integer vector to indicate whether indices are biomass based (1) or abundance-based (0). By default, all are biomass-based.
+#' }
 #'
 #' Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 #'
@@ -503,13 +503,13 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   max_age <- dim(data$CAA)[2]
   nsurvey <- ncol(data$Index)
 
-  data$CAA[data$CAA < 1e-8] <- 1e-8
-  data$CAL[data$CAL < 1e-8] <- 1e-8
+  data$CAA <- apply(data$CAA, c(1, 3), SRA_tiny_comp) %>% aperm(c(2, 1, 3))
+  data$CAL <- apply(data$CAL, c(1, 3), SRA_tiny_comp) %>% aperm(c(2, 1, 3))
   CAA_n <- apply(data$CAA, c(1, 3), sum, na.rm = TRUE)
   CAL_n <- apply(data$CAL, c(1, 3), sum, na.rm = TRUE)
 
-  data$s_CAA[data$s_CAA < 1e-8] <- 1e-8
-  data$s_CAL[data$s_CAL < 1e-8] <- 1e-8
+  data$s_CAA <- apply(data$s_CAA, c(1, 3), SRA_tiny_comp) %>% aperm(c(2, 1, 3))
+  data$s_CAL <- apply(data$s_CAL, c(1, 3), SRA_tiny_comp) %>% aperm(c(2, 1, 3))
   s_CAA_n <- apply(data$s_CAA, c(1, 3), sum, na.rm = TRUE)
   s_CAL_n <- apply(data$s_CAL, c(1, 3), sum, na.rm = TRUE)
 
@@ -655,7 +655,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   log_F_start <- matrix(0, nyears, nfleet)
-  log_F_start[TMB_data$yindF, 1:nfleet] <- log(0.1)
+  log_F_start[TMB_data$yindF - 1, 1:nfleet] <- log(0.1)
   TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 0, log(StockPars$R0[x])),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
@@ -690,7 +690,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   TMB_data$est_rec_dev <- ifelse(is.na(map$log_rec_dev), 0, 1)
 
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
-
+  browser()
   obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 

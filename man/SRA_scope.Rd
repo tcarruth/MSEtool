@@ -154,8 +154,8 @@ Zero (default) implies unfished conditions in year one. Otherwise, this is used 
 \item E_eq - The equilibrium effort for each fleet in \code{Ehist} prior to the first year of the operating model.
 Zero (default) implies unfished conditions in year one. Otherwise, this is used to estimate depletion in the first year of the data.
 \item abs_I - Optional, an integer vector to indicate which indices are in absolute magnitude. Use 1 to set q = 1, otherwise use 0 to estimate q.
-}
 \item I_basis - Optional, an integer vector to indicate whether indices are biomass based (1) or abundance-based (0). By default, all are biomass-based.
+}
 
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 }

@@ -24,7 +24,14 @@ SRA_scope_data <- function (OM, Data, ...) {
   return(out)
 }
 
-
+SRA_tiny_comp <- function(x) {
+  all_zero <- all(is.na(x)) | sum(x, na.rm = TRUE) == 0
+  if(!all_zero) {
+    ind <- is.na(x) | x == 0
+    if(any(ind)) x[ind] <- 1e-8
+  }
+  return(x)
+}
 
 update_SRA_data <- function(data, OM, condition, dots) {
 

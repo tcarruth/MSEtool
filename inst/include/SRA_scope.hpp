@@ -337,16 +337,24 @@ Type SRA_scope(objective_function<Type> *obj) {
   nll_Ceq.setZero();
 
   for(int sur=0;sur<nsurvey;sur++) {
-    if(comp_like == "multinomial") {
-      nll_s_CAA(sur) = comp_multinom(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, n_y, max_age, sur);
-      nll_s_CAL(sur) = comp_multinom(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, n_y, nlbin, sur);
-    } else {
-      nll_s_CAA(sur) = comp_lognorm(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, n_y, max_age, sur);
-      nll_s_CAL(sur) = comp_lognorm(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, n_y, nlbin, sur);
-    }
-
     for(int y=0;y<n_y;y++) {
       if(!R_IsNA(asDouble(I_hist(y,sur)))) nll_Index(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), sigma_I(y,sur), true);
+
+      if(!R_IsNA(asDouble(s_CAA_n(y,sur))) && s_CAA_n(y,sur) > 0) {
+        if(comp_like == "multinomial") {
+          nll_s_CAA(sur) -= comp_multinom(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, y, max_age, sur);
+        } else {
+          nll_s_CAA(sur) -= comp_lognorm(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, y, max_age, sur);
+        }
+      }
+
+      if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+        if(comp_like == "multinomial") {
+          nll_s_CAL(sur) -= comp_multinom(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, y, nlbin, sur);
+        } else {
+          nll_s_CAL(sur) = comp_lognorm(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, y, nlbin, sur);
+        }
+      }
     }
     nll_Index(sur) *= LWT_Index(sur,0);
     nll_s_CAA(sur) *= LWT_Index(sur,1);
@@ -354,16 +362,24 @@ Type SRA_scope(objective_function<Type> *obj) {
   }
 
   for(int ff=0;ff<nfleet;ff++) {
-    if(comp_like == "multinomial") {
-      nll_CAA(ff) = comp_multinom(CAA_hist, CAApred, CN, CAA_n, n_y, max_age, ff);
-      nll_CAL(ff) = comp_multinom(CAL_hist, CALpred, CN, CAL_n, n_y, nlbin, ff);
-    } else {
-      nll_CAA(ff) = comp_lognorm(CAA_hist, CAApred, CN, CAA_n, n_y, max_age, ff);
-      nll_CAL(ff) = comp_lognorm(CAL_hist, CALpred, CN, CAL_n, n_y, nlbin, ff);
-    }
-
     for(int y=0;y<n_y;y++) {
       if(C_hist(y,ff)>0 || E_hist(y,ff)>0) {
+        if(!R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
+          if(comp_like == "multinomial") {
+            nll_CAA(ff) -= comp_multinom(CAA_hist, CAApred, CN, CAA_n, y, max_age, ff);
+          } else {
+            nll_CAA(ff) -= comp_lognorm(CAA_hist, CAApred, CN, CAA_n, y, max_age, ff);
+          }
+        }
+
+        if(!R_IsNA(asDouble(CAL_n(y,ff))) && CAL_n(y,ff) > 0) {
+          if(comp_like == "multinomial") {
+            nll_CAL(ff) -= comp_multinom(CAL_hist, CALpred, CN, CAL_n, y, nlbin, ff);
+          } else {
+            nll_CAL(ff) = comp_lognorm(CAL_hist, CALpred, CN, CAL_n, y, nlbin, ff);
+          }
+        }
+
         if(condition == "catch" || nll_C) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
         if(!R_IsNA(asDouble(mlen(y,ff))) && mlen(y,ff) > 0) {
           nll_ML(ff) -= dnorm(mlen(y,ff), mlen_pred(y,ff), sigma_mlen(ff), true);
