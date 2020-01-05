@@ -15,6 +15,7 @@
   f_name = NULL,
   s_name = NULL,
   MSY_ref = c(0.5, 1),
+  bubble_adj = 10,
   open_file = TRUE,
   quiet = TRUE,
   ...
@@ -39,6 +40,8 @@ and the SRA model output.}
 \item{s_name}{Character vector for survey names.}
 
 \item{MSY_ref}{A numeric vector for reference horizontal lines for B/BMSY plots.}
+
+\item{bubble_adj}{A number to adjust the size of bubble plots (for residuals of age and length comps).}
 
 \item{open_file}{Logical, whether the HTML document is opened after it is rendered.}
 

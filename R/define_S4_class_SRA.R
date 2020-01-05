@@ -42,6 +42,7 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @param f_name Character vector for fleet names.
 #' @param s_name Character vector for survey names.
 #' @param MSY_ref A numeric vector for reference horizontal lines for B/BMSY plots.
+#' @param bubble_adj A number to adjust the size of bubble plots (for residuals of age and length comps).
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
 #' @param ... Other arguments to pass to \link[rmarkdown]{render}.
@@ -51,7 +52,8 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @exportMethod plot
 setMethod("plot", signature(x = "SRA", y = "missing"),
           function(x, compare = TRUE, filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL,
-                   f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), open_file = TRUE, quiet = TRUE, ...) {
+                   f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), bubble_adj = 10,
+                   open_file = TRUE, quiet = TRUE, ...) {
 
             ####### Function arguments for rmarkdown::render
             filename_rmd <- paste0(filename, ".Rmd")
@@ -82,6 +84,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             age <- 1:max_age
             nyears <- OM@nyears
             if(is.null(Year)) Year <- (OM@CurrentYr - nyears + 1):OM@CurrentYr
+            Yearplusone <- c(Year, max(Year) + 1))
 
             nfleet <- x@data$nfleet
             nsurvey <- x@data$nsurvey
@@ -109,7 +112,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
             ####### Updated historical OM parameters
             Year_matrix <- matrix(Year, ncol = nsim, nrow = nyears)
-            Yearplusone_matrix <- matrix(c(Year, max(Year) + 1), ncol = nsim, nrow = nyears+1)
+            Yearplusone_matrix <- matrix(Yearplusone, ncol = nsim, nrow = nyears+1)
 
             OM_update <- c("# Summary {.tabset}\n",
                            "## Updated historical OM parameters\n", rmd_SRA_R0(),
@@ -278,11 +281,11 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               N_bubble <- rmd_bubble("c(Year, max(Year)+1)", "N_at_age", fig.cap = "Predicted abundance-at-age.")
 
               CAA_all <- apply(report$CAApred, c(1, 2), sum)
-              CAA_bubble <- rmd_bubble("Year", "CAA_all", fig.cap = "Predicted catch-at-age (summed over all fleets).", bubble_adj = "10")
+              CAA_bubble <- rmd_bubble("Year", "CAA_all", fig.cap = "Predicted catch-at-age (summed over all fleets).", bubble_adj = as.character(bubble_adj))
 
               CAL_all <- apply(report$CALpred, c(1, 2), sum)
               CAL_bubble <- rmd_bubble("Year", "CAL_all", CAL_bins = "data_mean_fit$length_bin",
-                                       fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = "10")
+                                       fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = as.character(bubble_adj))
 
               ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_R(),
                              rmd_residual("log_rec_dev", fig.cap = "Time series of recruitment deviations.", label = "log-Recruitment deviations"),
@@ -515,7 +518,7 @@ rmd_SRA_D <- function(fig.cap = "Histogram of historical depletion.") {
 rmd_SRA_Perr <- function(fig.cap = "Recruitment deviations among simulations.") {
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "Perr <- OM@cpars$Perr_y[, max_age:(max_age+nyears-1), drop = FALSE]",
-    "matplot(Year_matrix, t(Perr), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment deviations\",",
+    "matplot(Year, t(Perr), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment deviations\",",
     "        ylim = c(0, 1.1 * max(Perr)))",
     "abline(h = 0, col = \"grey\")",
     "```\n")
@@ -523,7 +526,7 @@ rmd_SRA_Perr <- function(fig.cap = "Recruitment deviations among simulations.") 
 
 rmd_SRA_Find <- function(fig.cap = "Apical F from SRA model. These values may be subsequently re-scaled in the operating model in order to match the specified depletion") {
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
-    "matplot(Year_matrix, t(OM@cpars$Find), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Apical F\")",
+    "matplot(Year, t(OM@cpars$Find), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Apical F\")",
     "abline(h = 0, col = \"grey\")",
     "```\n")
 }
@@ -560,45 +563,45 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "",
            paste0("```{r, fig.cap = \"Fishing Mortality of ", f_name[ff], ".\"}"),
            paste0("FM <- do.call(cbind, lapply(report_list, function(x) x$F[, ", ff, "]))"),
-           paste0("matplot(Year_matrix, FM, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Fishing Mortality of ", f_name[ff], "\")"),
+           paste0("matplot(Year, FM, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Fishing Mortality of ", f_name[ff], "\")"),
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) catch from ", f_name[ff], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) catch from ", f_name[ff], ".\"}"),
            paste0("if(any(data$Chist[, ", ff, "] > 0)) {"),
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]))"),
            paste0("  Chist <- data$Chist[, ", ff, "]"),
            "  ylim <- c(0.9, 1.1) * range(c(Cpred, Chist), na.rm = TRUE)",
-           paste0("  matplot(Year_matrix, Cpred, type = \"o\", pch = 1, col = \"black\", xlab = \"Year\", ylab = \"Catch of ", f_name[ff], "\", ylim = ylim)"),
-           paste0("  lines(Year, Chist, col = \"red\", lwd = 3)"),
+           paste0("  plot(Year, Chist, type = \"o\", xlab = \"Year\", ylab = \"Catch of ", f_name[ff], "\", ylim = ylim)"),
+           paste0("  matlines(Year, Cpred, col = \"red\")"),
            "} else {",
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]/mean(x$Cpred[, ", ff, "])))"),
-           paste0("  matplot(Year_matrix, Cpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Predicted relative catch of ", f_name[ff], "\")"),
+           paste0("  matlines(Year, Cpred, col = \"red\", xlab = \"Year\", ylab = \"Predicted relative catch of ", f_name[ff], "\")"),
            "}",
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean ages from ", f_name[ff], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) mean ages from ", f_name[ff], ".\"}"),
            paste0("MApred <- do.call(cbind, lapply(report_list, function(x) x$CAApred[, , ", ff, "] %*% age/x$CN[, ", ff, "]))"),
            paste0("MAobs <- (data$CAA[, , ", ff, "] %*% age)/rowSums(data$CAA[, , ", ff, "], na.rm = TRUE)"),
            "ylim <- c(0.9, 1.1) * range(c(MApred, MAobs), na.rm = TRUE)",
-           "matplot(Year_matrix, MApred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean age\", ylim = ylim)",
+           "matplot(Year, MApred, type = \"l\", col = \"red\", xlab = \"Year\", ylab = \"Mean age\", ylim = ylim)",
            paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
-           paste0("  lines(Year, MAobs, col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
+           paste0("  lines(Year, MAobs, col = \"black\", typ = \"o\")"),
            "}",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) mean lengths from ", f_name[ff], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) mean lengths from ", f_name[ff], ".\"}"),
            paste0("MLpred <- do.call(cbind, lapply(report_list, function(x) x$mlen_pred[, ", ff, "]))"),
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  MLobs <- (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE)"),
            paste0("} else if(any(data$ML[, ", ff, "] > 0, na.rm = TRUE)) MLobs <- data$ML[, ", ff, "] else MLobs <- NA"),
            "ylim <- c(0.9, 1.1) * range(c(MLpred, MLobs), na.rm = TRUE)",
-           "matplot(Year_matrix, MLpred, type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Mean length\", ylim = ylim)",
-           "if(!all(is.na(MLobs))) lines(Year, MLobs, col = \"red\", lwd = 3, typ = \"o\", pch = 16)",
+           "matplot(Year, MLpred, type = \"l\", col = \"red\", xlab = \"Year\", ylab = \"Mean length\", ylim = ylim)",
+           "if(!all(is.na(MLobs))) lines(Year, MLobs, col = \"black\", typ = \"o\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) age composition from ", f_name[ff], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) age composition from ", f_name[ff], ".\"}"),
            paste0("if(any(data$CAA[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("if(nsim == 1) CAA_plot <- array(x@CAA[, , , ", ff, "], c(1, nyears, max_age)) else CAA_plot <- x@CAA[, , , ", ff, "]"),
            paste0("plot_composition_SRA(Year, CAA_plot, data$CAA[, , ", ff, "])"),
@@ -610,7 +613,7 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "}",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) length composition from ", f_name[ff], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) length composition from ", f_name[ff], ".\"}"),
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("if(nsim == 1) CAL_plot <- array(x@CAL[, , , ", ff, "], c(1, nyears, length(data$length_bin))) else CAL_plot <- x@CAL[, , , ", ff, "]"),
            paste0("plot_composition_SRA(Year, CAL_plot, data$CAL[, , ", ff, "], CAL_bins = data$length_bin)"),
@@ -637,32 +640,32 @@ rmd_SRA_survey_output <- function(sur, s_name) {
            "}",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) index values for ", s_name[sur], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) index values for ", s_name[sur], ".\"}"),
            paste0("Ipred <- do.call(cbind, lapply(report_list, function(x) x$Ipred[, ", sur, "]))"),
-           paste0("matplot(Year_matrix, Ipred, type = \"l\", col = \"black\", ylim = c(0, 1.1 * max(c(Ipred, data$Index[, ", sur, "]), na.rm = TRUE)), xlab = \"Year\", ylab = \"", s_name[sur], "\")"),
-           paste0("lines(Year, data$Index[, ", sur, "], col = \"red\", lwd = 3, typ = \"o\", pch = 16)"),
+           paste0("matplot(Year, Ipred, type = \"l\", col = \"red\", ylim = c(0, 1.1 * max(c(Ipred, data$Index[, ", sur, "]), na.rm = TRUE)), xlab = \"Year\", ylab = \"", s_name[sur], "\")"),
+           paste0("lines(Year, data$Index[, ", sur, "], col = \"black\", typ = \"o\")"),
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) index values for ", s_name[sur], ". Error bars indicate 95% confidence intervals for observed values.\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) index values for ", s_name[sur], ". Error bars indicate 95% confidence intervals for observed values.\"}"),
            paste0("Ipred <- do.call(cbind, lapply(report_list, function(x) x$Ipred[, ", sur, "]))"),
            paste0("II <- data$Index[, ", sur, "]"),
            "ind <- seq(min(which(!is.na(II))), max(which(!is.na(II))), 1)",
            paste0("err <- exp(log(II) + outer(data$I_sd[, ", sur, "], c(-1.96, 1.96)))"),
-           paste0("matplot(Year[ind], Ipred[ind, ], type = \"l\", col = \"black\", ylim = c(0, 1.1 * max(c(Ipred[ind, ], II[ind], err[ind, ]), na.rm = TRUE)), xlab = \"Year\", ylab = \"", s_name[sur], "\")"),
-           "points(Year[ind], II[ind], col = \"red\", lwd = 3, pch = 16)",
-           "arrows(Year[ind], y0 = err[ind, 1], y1 = err[ind, 2], col = \"red\", length = 0)",
+           paste0("matplot(Year[ind], Ipred[ind, ], type = \"l\", col = \"red\", ylim = c(0, 1.1 * max(c(Ipred[ind, ], II[ind], err[ind, ]), na.rm = TRUE)), xlab = \"Year\", ylab = \"", s_name[sur], "\")"),
+           "points(Year[ind], II[ind], lwd = 3, pch = 16)",
+           "arrows(Year[ind], y0 = err[ind, 1], y1 = err[ind, 2], length = 0, lwd = 1.5)",
            "abline(h = 0, col = \"grey\")",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) age composition from ", s_name[sur], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) age composition from ", s_name[sur], ".\"}"),
            paste0("if(!is.null(data$s_CAA) && any(data$s_CAA[, , ", sur, "] > 0, na.rm = TRUE)) {"),
            paste0("pred_sCAA <- lapply(report_list, function(x) x$s_CAA[,, ", sur, "]) %>% unlist() %>% array(dim = c(nyears, max_age, nsim)) %>% aperm(perm = c(3, 1, 2))"),
            paste0("plot_composition_SRA(Year, pred_sCAA, data$s_CAA[, , ", sur, "])"),
            "}",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Observed (red) and predicted (black) length composition from ", s_name[sur], ".\"}"),
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) length composition from ", s_name[sur], ".\"}"),
            paste0("if(!is.null(data$s_CAL) && any(data$s_CAL[, , ", sur, "] > 0, na.rm = TRUE)) {"),
            paste0("pred_sCAL <- lapply(report_list, function(x) x$s_CAL[,, ", sur, "]) %>% unlist() %>% array(dim = c(nyears, length(data$length_bin), nsim)) %>% aperm(perm = c(3, 1, 2))"),
            paste0("plot_composition_SRA(Year, pred_sCAL, data$s_CAL[, , ", sur, "], CAL_bins = data$length_bin)"),
@@ -681,7 +684,7 @@ rmd_SRA_initD <- function(fig.cap = "Histogram of initial depletion among all si
 rmd_SRA_R_output <- function() {
   c("```{r, fig.cap = \"Estimated recruitment among all simulations.\"}",
     "R_out <- do.call(cbind, lapply(report_list, getElement, \"R\"))",
-    "matplot(Yearplusone_matrix, R_out, ylim = c(0, 1.1 * max(R_out)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment\")",
+    "matplot(Yearplusone, R_out, ylim = c(0, 1.1 * max(R_out)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment\")",
     "abline(h = 0, col = \"grey\")",
     "```\n")
 }
@@ -689,13 +692,13 @@ rmd_SRA_R_output <- function() {
 rmd_SRA_SSB_output <- function() {
   c("```{r, fig.cap = \"Estimated spawning biomass among all simulations.\"}",
     "E <- do.call(cbind, lapply(report_list, getElement, \"E\"))",
-    "matplot(Yearplusone_matrix, E, ylim = c(0, 1.1 * max(E)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Spawning biomass\")",
+    "matplot(Yearplusone, E, ylim = c(0, 1.1 * max(E)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Spawning biomass\")",
     "abline(h = 0, col = \"grey\")",
     "```\n",
     "",
     "```{r, fig.cap = \"Estimated spawning depletion among all simulations. Unfished spawning biomass is the value calculated from first year life history parameters.\"}",
     "E_E0 <- do.call(cbind, lapply(report_list, function(x) x$E/x$E0_SR))",
-    "matplot(Yearplusone_matrix, E_E0, ylim = c(0, 1.1 * max(E_E0)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Spawning depletion\")",
+    "matplot(Yearplusone, E_E0, ylim = c(0, 1.1 * max(E_E0)), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Spawning depletion\")",
     "abline(h = 0, col = \"grey\")",
     "```\n")
 }
@@ -711,7 +714,7 @@ rmd_log_rec_dev <- function() {
 
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
-                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 3, dat_color = "red") {
+                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 2, dat_color = "black") {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
   par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
@@ -769,9 +772,9 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
     }
 
     if(dim(SRA_plot)[1] == 1) {
-      plot(data_val, SRA_plot[, i, ], type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      plot(data_val, SRA_plot[, i, ], type = "l", col = "red", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
     } else {
-      matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "black", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = "red", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
     }
     abline(h = 0, col = 'grey')
     if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = dat_linewidth, col = dat_color)
