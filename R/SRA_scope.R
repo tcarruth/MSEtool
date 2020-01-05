@@ -690,7 +690,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   TMB_data$est_rec_dev <- ifelse(is.na(map$log_rec_dev), 0, 1)
 
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev") else random <- NULL
-  browser()
+
   obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 
