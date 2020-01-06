@@ -17,6 +17,7 @@
   MSY_ref = c(0.5, 1),
   bubble_adj = 10,
   scenario = list(),
+  title = NULL,
   open_file = TRUE,
   quiet = TRUE,
   ...
@@ -46,6 +47,8 @@ and the SRA model output.}
 
 \item{scenario}{Optional, a named list to label each simulation in the SRA for plotting, e.g.:
 \code{list(names = c("low M", "high M"), col = c("blue", "red"))}.}
+
+\item{title}{Optional character string for an alternative title for the markdown report.}
 
 \item{open_file}{Logical, whether the HTML document is opened after it is rendered.}
 

@@ -45,6 +45,7 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @param bubble_adj A number to adjust the size of bubble plots (for residuals of age and length comps).
 #' @param scenario Optional, a named list to label each simulation in the SRA for plotting, e.g.:
 #' \code{list(names = c("low M", "high M"), col = c("blue", "red"))}.
+#' @param title Optional character string for an alternative title for the markdown report.
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
 #' @param ... Other arguments to pass to \link[rmarkdown]{render}.
@@ -54,7 +55,7 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @exportMethod plot
 setMethod("plot", signature(x = "SRA", y = "missing"),
           function(x, compare = TRUE, filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL,
-                   f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), bubble_adj = 10, scenario = list(),
+                   f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), bubble_adj = 10, scenario = list(), title = NULL,
                    open_file = TRUE, quiet = TRUE, ...) {
 
             # Update scenario
@@ -107,8 +108,9 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             if(is.null(s_name)) s_name <- paste("Survey", 1:nsurvey)
 
             ####### Document header
+            if(is.null(title)) title <- "Operating model (OM) conditioning for `r ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))`"
             header <- c("---",
-                        "title: \"Operating model (OM) conditioning for `r ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))`\"",
+                        paste0("title: \"", title, "\""),
                         "subtitle: Output from Stock Reduction Analysis scoping function (SRA_scope)",
                         "date: \"`r Sys.Date()`\"",
                         "---",
