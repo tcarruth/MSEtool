@@ -30,7 +30,8 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @title Plot SRA scope output
 #' @description Produces HTML file (via markdown) figures of parameter estimates and output from an \linkS4class{Assessment} object.
 #' Plots histograms of operating model parameters that are updated by the SRA scoping function, as well as diagnostic plots
-#' for the fits to the SRA for each simulation.
+#' for the fits to the SRA for each simulation. \code{compare_SRA} plots a short report that compares output from multiple SRA objects,
+#' assuming the same model structure but different data weightings, data omissions, etc.
 #'
 #' @param x An object of class \linkS4class{SRA} (output from \link{SRA_scope}).
 #' @param compare Logical, if TRUE, the function will run \code{runMSE} to compare the historical period of the operating model
@@ -48,7 +49,8 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 #' @param title Optional character string for an alternative title for the markdown report.
 #' @param open_file Logical, whether the HTML document is opened after it is rendered.
 #' @param quiet Logical, whether to silence the markdown rendering function.
-#' @param ... Other arguments to pass to \link[rmarkdown]{render}.
+#' @param render_args A list of other arguments to pass to \link[rmarkdown]{render}.
+#' @param ... For \code{compare_SRA}, multiple SRA objects for comparison.
 #' @return Returns invisibly the output from \link[rmarkdown]{render}.
 #' @importFrom rmarkdown render
 #' @seealso \linkS4class{SRA} \link{SRA_scope}
@@ -56,7 +58,7 @@ SRA <- setClass("SRA", slots = c(OM = "ANY", SSB = "matrix", NAA = "array",
 setMethod("plot", signature(x = "SRA", y = "missing"),
           function(x, compare = TRUE, filename = "SRA_scope", dir = tempdir(), sims = 1:x@OM@nsim, Year = NULL,
                    f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), bubble_adj = 10, scenario = list(), title = NULL,
-                   open_file = TRUE, quiet = TRUE, ...) {
+                   open_file = TRUE, quiet = TRUE, render_args, ...) {
 
             # Update scenario
             if(is.null(scenario$col)) {
@@ -72,7 +74,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             ####### Function arguments for rmarkdown::render
             filename_rmd <- paste0(filename, ".Rmd")
 
-            render_args <- list(...)
+            if(missing(render_args)) render_args <- list()
             render_args$input <- file.path(dir, filename_rmd)
             if(is.null(render_args$output_format)) {
               render_args$output_format <- "html_document"
@@ -846,7 +848,8 @@ SRA_get_likelihoods <- function(x, LWT, f_name, s_name) {
   return(res)
 }
 
-
+#' @rdname plot.SRA
+#' @export
 compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tempdir(), Year = NULL,
                         f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), bubble_adj = 10, scenario = list(), title = NULL,
                         open_file = TRUE, quiet = TRUE, render_args) {
@@ -947,8 +950,21 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
                  "abline(h = c(0, MSY_ref), col = \"grey\")",
                  "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty)",
                  "```\n")
+
+    ref_pt_fn <- function(x) c(x@Ref$FMSY[1], x@Ref$MSY[1], x@Ref$SSBMSY_SSB0[1])
+    ref_pt <- do.call(cbind, lapply(Hist, ref_pt_fn)) %>%
+      structure(dimnames = list(c("FMSY", "MSY", "Spawning depletion at MSY"), scenario$names)) %>% as.data.frame()
+
+    if(render_args$output_format == "html_document") {
+      rmd_ref_pt <- paste0("## Reference points \n",
+                           "`r ref_pt`\n\n")
+    } else {
+      rmd_ref_pt <- paste0("## Reference points \n",
+                           "`r ref_pt %>% kable(format = \"markdown\")`\n\n")
+    }
+
   } else {
-    SSB_MSY <- ""
+    SSB_MSY <- rmd_ref_pt <- ""
   }
 
   all_sims_output <- c("# Summary {.tabset}\n\n", fleet_output, survey_output, "### Model predictions\n",
@@ -998,7 +1014,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
                    do.call(c, lapply(1:length(dots), nll_table_fn, ii = 5)))
   }
 
-  rmd <- c(header, all_sims_output, nll_table, rmd_footer())
+  rmd <- c(header, all_sims_output, nll_table, rmd_ref_pt, rmd_footer())
   if(is.list(rmd)) rmd <- do.call(c, rmd)
 
   # Generate markdown report

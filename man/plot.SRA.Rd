@@ -3,6 +3,7 @@
 \name{plot.SRA}
 \alias{plot.SRA}
 \alias{plot,SRA,missing-method}
+\alias{compare_SRA}
 \title{Plot SRA scope output}
 \usage{
 \S4method{plot}{SRA,missing}(
@@ -20,7 +21,25 @@
   title = NULL,
   open_file = TRUE,
   quiet = TRUE,
+  render_args,
   ...
+)
+
+compare_SRA(
+  ...,
+  compare = TRUE,
+  filename = "compare_SRA",
+  dir = tempdir(),
+  Year = NULL,
+  f_name = NULL,
+  s_name = NULL,
+  MSY_ref = c(0.5, 1),
+  bubble_adj = 10,
+  scenario = list(),
+  title = NULL,
+  open_file = TRUE,
+  quiet = TRUE,
+  render_args
 )
 }
 \arguments{
@@ -54,7 +73,9 @@ and the SRA model output.}
 
 \item{quiet}{Logical, whether to silence the markdown rendering function.}
 
-\item{...}{Other arguments to pass to \link[rmarkdown]{render}.}
+\item{render_args}{A list of other arguments to pass to \link[rmarkdown]{render}.}
+
+\item{...}{For \code{compare_SRA}, multiple SRA objects for comparison.}
 }
 \value{
 Returns invisibly the output from \link[rmarkdown]{render}.
@@ -62,7 +83,8 @@ Returns invisibly the output from \link[rmarkdown]{render}.
 \description{
 Produces HTML file (via markdown) figures of parameter estimates and output from an \linkS4class{Assessment} object.
 Plots histograms of operating model parameters that are updated by the SRA scoping function, as well as diagnostic plots
-for the fits to the SRA for each simulation.
+for the fits to the SRA for each simulation. \code{compare_SRA} plots a short report that compares output from multiple SRA objects,
+assuming the same model structure but different data weightings, data omissions, etc.
 }
 \seealso{
 \linkS4class{SRA} \link{SRA_scope}
