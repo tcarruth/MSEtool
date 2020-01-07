@@ -858,11 +858,9 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   # Update scenario
   if(is.null(scenario$names)) scenario$names <- paste("Scenario", 1:length(dots))
   if(is.null(scenario$col)) {
-    scenario$col <- "red"
-    scenario$col2 <- "black"
-  } else {
-    scenario$col2 <- scenario$col
+    scenario$col <- gplots::rich.colors(length(dots))
   }
+  scenario$col2 <- scenario$col
 
   if(is.null(scenario$lwd)) scenario$lwd <- 1
   if(is.null(scenario$lty)) scenario$lty <- 1:5
