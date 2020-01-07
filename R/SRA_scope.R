@@ -125,6 +125,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
 
   dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, rescale
   if(!is.null(dots$maxF)) max_F <- dots$maxF
+  if(length(ESS) == 1) ESS <- rep(ESS, 2)
 
   comp_like <- match.arg(comp_like)
   condition <- match.arg(condition)
