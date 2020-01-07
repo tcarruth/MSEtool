@@ -57,7 +57,7 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
-  DATA_VECTOR(LWT_Index); // LIkelihood weights for the index
+  DATA_MATRIX(LWT_Index); // LIkelihood weights for the index
   DATA_STRING(comp_like);
 
   DATA_SCALAR(max_F);     // Maximum F in the model
