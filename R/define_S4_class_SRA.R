@@ -883,6 +883,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   if(is.null(render_args$quiet)) render_args$quiet <- quiet
 
   ####### Assign variables
+  x <- dots[[1]] # Dummy variable
   report_list <- lapply(dots, function(x) if(length(x@mean_fit) > 0) return(x@mean_fit$report) else stop("Error in SRA objects."))
 
   nsim <- length(report_list)
