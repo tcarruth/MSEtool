@@ -657,7 +657,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   log_F_start <- matrix(0, nyears, nfleet)
   log_F_start[TMB_data$yindF - 1, 1:nfleet] <- log(0.1)
-  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, 0, log(StockPars$R0[x])),
+  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
                      log_F = log_F_start, log_F_equilibrium = rep(log(0.05), nfleet),
