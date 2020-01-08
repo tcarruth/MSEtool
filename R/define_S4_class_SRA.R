@@ -826,6 +826,7 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
 
 SRA_get_likelihoods <- function(x, LWT, f_name, s_name) {
   f_nll <- rbind(x$nll_Catch + x$nll_Ceq, x$nll_CAA, x$nll_CAL, x$nll_ML)
+  f_nll[is.na(f_nll)] <- 0
   f_nll <- cbind(f_nll, rowSums(f_nll))
   f_nll <- rbind(f_nll, colSums(f_nll))
   colnames(f_nll) <- c(f_name, "Sum")
@@ -834,6 +835,7 @@ SRA_get_likelihoods <- function(x, LWT, f_name, s_name) {
   f_wt <- structure(rbind(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML), dimnames = list(rownames(f_nll)[1:4], f_name))
 
   s_nll <- rbind(x$nll_Index, x$nll_s_CAA, x$nll_s_CAL)
+  s_nll[is.na(s_nll)] <- 0
   s_nll <- cbind(s_nll, rowSums(s_nll))
   s_nll <- rbind(s_nll, colSums(s_nll))
   colnames(s_nll) <- c(s_name, "Sum")
@@ -841,8 +843,9 @@ SRA_get_likelihoods <- function(x, LWT, f_name, s_name) {
 
   s_wt <- structure(rbind(LWT$Index, LWT$s_CAA, LWT$s_CAL), dimnames = list(rownames(s_nll)[1:3], s_name))
 
-  tot <- matrix(c(x$nll, x$nll_log_rec_dev, f_nll[5, length(f_name) + 1], s_nll[4, length(s_name) + 1]), ncol = 1,
-                dimnames = list(c("Total", "Recruitment Deviations", "Fleets", "Surveys"), "Negative log-likelihood"))
+  tot <- matrix(c(x$nll_log_rec_dev, f_nll[5, length(f_name) + 1], s_nll[4, length(s_name) + 1]), ncol = 1)
+  tot <- rbind(colSums(tot), tot)
+  dimnames(tot) <- list(c("Total", "Recruitment Deviations", "Fleets", "Surveys"), "Negative log-likelihood")
 
   res <- list(tot, f_nll, f_wt, s_nll, s_wt) %>% lapply(FUN = function(xx) xx %>% round(2) %>% as.data.frame())
   return(res)
