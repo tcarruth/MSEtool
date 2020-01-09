@@ -71,7 +71,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
   for(int ff=0;ff<vul_type.size();ff++) {
 
     if(vul_type(ff) <= 0) { // Logistic or dome
-      LFS(ff) = invlogit(vul_par(0,ff)) * 0.95 * Linf;
+      LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
       L5(ff) = LFS(ff) - exp(vul_par(1,ff));
       Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
       if(vul_type(ff) < 0) { // Logistic
@@ -127,7 +127,7 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
     } else if(I_type(ff) == 0) { // est
 
       if(vul_type(ff) <= 0) { // Logistic or dome
-        LFS(ff) = invlogit(vul_par(0,ff)) * 0.95 * Linf;
+        LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
         L5(ff) = LFS(ff) - exp(vul_par(1,ff));
         Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
         if(vul_type(ff) < 0) { // Logistic
