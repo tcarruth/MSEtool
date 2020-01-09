@@ -617,7 +617,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     vul_par <- dots$vul_par
   }
   vul_par[2, ] <- log(vul_par[1, ] - vul_par[2, ])
-  vul_par[1, ] <- logit(pmin(vul_par[1, ]/StockPars$Linf[x]/0.95, 0.95))
+  vul_par[1, ] <- logit(pmin(vul_par[1, ]/StockPars$Linf[x]/0.99, 0.99))
   vul_par[3, ] <- logit(pmin(vul_par[3, ], 0.99))
 
   if(is.null(dots$map_vul_par)) {
@@ -639,7 +639,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     s_vul_par <- dots$s_vul_par
   }
   s_vul_par[2, ] <- log(s_vul_par[1, ] - s_vul_par[2, ])
-  s_vul_par[1, ] <- logit(min(s_vul_par[1, ]/StockPars$Linf[x]/0.95, 0.95))
+  s_vul_par[1, ] <- logit(min(s_vul_par[1, ]/StockPars$Linf[x]/0.99, 0.99))
   s_vul_par[3, ] <- logit(pmin(s_vul_par[3, ], 0.99))
 
   if(is.null(dots$map_s_vul_par)) {
@@ -656,7 +656,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   log_F_start <- matrix(0, nyears, nfleet)
-  log_F_start[TMB_data$yindF - 1, 1:nfleet] <- log(0.1)
+  log_F_start[TMB_data_all$yindF - 1, 1:nfleet] <- log(0.75 * mean(TMB_data_all$M[nyears, ]))
   TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
