@@ -103,6 +103,69 @@ Type Ricker_SR(Type SSB, Type h, Type R0, Type SSB0) {
 #include "ns/ns_SP.hpp"
 
 
+// This is the Newton solver for the fleet-specific F in year y given the observed catches.
+// Let vector x = log(F_y,f)
+// Then g(x) = Cpred - Cobs = sum_a v_y,a,f F_y,f / Z_y,a * (1 - exp(-Z_y,a)) * N_y,a * wt_y,a - Cobs
+// g'(x) = sum_a v * N * w * deriv where deriv is defined in the code below
+// We iteratively solve for x where x_next = x_previous - g(x)/g'(x)
+template<class Type>
+vector<Type> Newton_SRA_F(matrix<Type> C_hist, matrix<Type> N, matrix<Type> M, matrix<Type> wt, matrix<Type> VB_out, array<Type> vul,
+                          Type max_F, int y, int max_age, int nfleet, int nit_F, Type &penalty) {
+
+  vector<Type> F_out(nfleet);
+  vector<Type> x_loop(nfleet);
+  vector<Type> C_hist_y = C_hist.row(y);
+  for(int ff=0;ff<nfleet;ff++) { // Starting values of x = log(F)
+    Type F_start = CppAD::CondExpGt(C_hist(y,ff)/VB_out(y,ff), Type(0.95), Type(3), -log(1 - C_hist(y,ff)/VB_out(y,ff)));
+    x_loop(ff) = log(F_start);
+  }
+
+  for(int i=0;i<nit_F;i++) { // Loop for Newton-Raphson
+    vector<Type> Z = M.row(y);
+    matrix<Type> VB(max_age, nfleet);
+    vector<Type> Cpred(nfleet);
+    vector<Type> F_loop(nfleet);
+    Cpred.setZero();
+
+    for(int ff=0;ff<nfleet;ff++) {
+      F_loop(ff) = exp(x_loop(ff));
+      VB.col(ff) = N.row(y);
+      for(int a=0;a<max_age;a++) {
+        VB(a,ff) *= vul(y,a,ff) * wt(y,a);
+        Z(a) += vul(y,a,ff) * F_loop(ff);
+      }
+    }
+
+    for(int ff=0;ff<nfleet;ff++) {
+      for(int a=0;a<max_age;a++) Cpred(ff) += VB(a,ff) * F_loop(ff) * (1 - exp(-Z(a)))/Z(a);
+    }
+
+    if(i<nit_F-1) {
+      vector<Type> Newton_fn = Cpred - C_hist_y;
+      vector<Type> Newton_gr(nfleet);
+      Newton_gr.setZero();
+      for(int ff=0;ff<nfleet;ff++) {
+        for(int a=0;a<max_age;a++) {
+          Type deriv = F_loop(ff) * Z(a);
+          deriv -= vul(y,a,ff) * F_loop(ff) * F_loop(ff);
+          deriv *= 1 - exp(-Z(a));
+          deriv += vul(y,a,ff) * F_loop(ff) * F_loop(ff) * Z(a) * exp(-Z(a));
+          deriv /= Z(a) * Z(a);
+          Newton_gr(ff) += VB(a,ff) * deriv;
+        }
+      }
+      x_loop -= Newton_fn/Newton_gr; // Newton-Raphson
+
+    } else {
+      for(int ff=0;ff<nfleet;ff++) {
+        Type tmp = max_F - F_loop(ff);
+        F_out(ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), F_loop(ff)); //posfun
+      }
+    }
+  }
+  return F_out;
+}
+
 
 #include "cDD.hpp"
 #include "cDD_SS.hpp"

@@ -66,14 +66,15 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
-  DATA_IVECTOR(yindF);
+  DATA_INTEGER(nit_F);
+  //DATA_IVECTOR(yindF);
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
   PARAMETER_MATRIX(s_vul_par);
   PARAMETER_VECTOR(log_q_effort);
-  PARAMETER_MATRIX(log_F);
+  //PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
 
   PARAMETER_VECTOR(log_sigma_mlen);
@@ -116,19 +117,20 @@ Type SRA_scope(objective_function<Type> *obj) {
     q_effort(ff) = exp(log_q_effort(ff));
     if(condition == "catch" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
     if(condition == "effort" && E_eq(ff)>0) F_equilibrium(ff) = q_effort(ff) * E_eq(ff);
-    if(condition == "catch") {
-      Type tmp = max_F - exp(log_F(yindF(ff),ff));
-      F(yindF(ff),ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), exp(log_F(yindF(ff),ff)));
-
-      for(int y=0;y<n_y;y++) {
-        if(y != yindF(ff)) {
-          Type Ftmp = F(yindF(ff),ff) * exp(log_F(y,ff));
-          Type tmp2 = max_F - Ftmp;
-          F(y,ff) = CppAD::CondExpLt(tmp2, Type(0), max_F - posfun(tmp2, Type(0), penalty), Ftmp);
-        }
-      }
-
-    } else {
+    //if(condition == "catch") {
+    //  Type tmp = max_F - exp(log_F(yindF(ff),ff));
+    //  F(yindF(ff),ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), exp(log_F(yindF(ff),ff)));
+	//
+    //  for(int y=0;y<n_y;y++) {
+    //    if(y != yindF(ff)) {
+    //      Type Ftmp = F(yindF(ff),ff) * exp(log_F(y,ff));
+    //      Type tmp2 = max_F - Ftmp;
+    //      F(y,ff) = CppAD::CondExpLt(tmp2, Type(0), max_F - posfun(tmp2, Type(0), penalty), Ftmp);
+    //    }
+    //  }
+	//
+	//} else {
+    if(condition == "effort") {
       for(int y=0;y<n_y;y++) {
         Type tmp = max_F - q_effort(ff) * E_hist(y,ff);
         F(y,ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty),
@@ -255,6 +257,8 @@ Type SRA_scope(objective_function<Type> *obj) {
     N(y+1,0) = R(y+1);
     ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
 
+	if(condition == "catch") F.row(y) = Newton_SRA_F(C_hist, N, M, wt, VB, vul, max_F, y, max_age, nfleet, nit_F, penalty);
+
     for(int a=0;a<max_age;a++) {
       for(int ff=0;ff<nfleet;ff++) Z(y,a) += vul(y,a,ff) * F(y,ff);
       Type mean_N = N(y,a) * (1 - exp(-Z(y,a))) / Z(y,a);
@@ -338,9 +342,11 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   for(int sur=0;sur<nsurvey;sur++) {
     for(int y=0;y<n_y;y++) {
-      if(!R_IsNA(asDouble(I_hist(y,sur)))) nll_Index(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), sigma_I(y,sur), true);
+      if(LWT_Index(sur,0) > 0 && !R_IsNA(asDouble(I_hist(y,sur)))) {
+        nll_Index(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), sigma_I(y,sur), true);
+      }
 
-      if(!R_IsNA(asDouble(s_CAA_n(y,sur))) && s_CAA_n(y,sur) > 0) {
+      if(LWT_Index(sur,1) > 0 && !R_IsNA(asDouble(s_CAA_n(y,sur))) && s_CAA_n(y,sur) > 0) {
         if(comp_like == "multinomial") {
           nll_s_CAA(sur) -= comp_multinom(s_CAA_hist, s_CAApred, s_CN, s_CAA_n, y, max_age, sur);
         } else {
@@ -348,7 +354,7 @@ Type SRA_scope(objective_function<Type> *obj) {
         }
       }
 
-      if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+      if(LWT_Index(sur,2) > 0 && !R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
         if(comp_like == "multinomial") {
           nll_s_CAL(sur) -= comp_multinom(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, y, nlbin, sur);
         } else {
@@ -364,7 +370,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   for(int ff=0;ff<nfleet;ff++) {
     for(int y=0;y<n_y;y++) {
       if(C_hist(y,ff)>0 || E_hist(y,ff)>0) {
-        if(!R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
+        if(LWT_C(ff,1) > 0 && !R_IsNA(asDouble(CAA_n(y,ff))) && CAA_n(y,ff) > 0) {
           if(comp_like == "multinomial") {
             nll_CAA(ff) -= comp_multinom(CAA_hist, CAApred, CN, CAA_n, y, max_age, ff);
           } else {
@@ -372,7 +378,7 @@ Type SRA_scope(objective_function<Type> *obj) {
           }
         }
 
-        if(!R_IsNA(asDouble(CAL_n(y,ff))) && CAL_n(y,ff) > 0) {
+        if(LWT_C(ff,2) > 0 && !R_IsNA(asDouble(CAL_n(y,ff))) && CAL_n(y,ff) > 0) {
           if(comp_like == "multinomial") {
             nll_CAL(ff) -= comp_multinom(CAL_hist, CALpred, CN, CAL_n, y, nlbin, ff);
           } else {
@@ -380,8 +386,8 @@ Type SRA_scope(objective_function<Type> *obj) {
           }
         }
 
-        if(condition == "catch" || nll_C) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
-        if(!R_IsNA(asDouble(mlen(y,ff))) && mlen(y,ff) > 0) {
+        if(LWT_C(ff,0) > 0 && condition == "effort" && nll_C) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
+        if(LWT_C(ff,3) > 0 && !R_IsNA(asDouble(mlen(y,ff))) && mlen(y,ff) > 0) {
           nll_ML(ff) -= dnorm(mlen(y,ff), mlen_pred(y,ff), sigma_mlen(ff), true);
         }
       }
@@ -426,7 +432,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(L5);
   REPORT(Vmaxlen);
   REPORT(log_q_effort);
-  REPORT(log_F);
+  //REPORT(log_F);
   REPORT(log_F_equilibrium);
 
   REPORT(log_sigma_mlen);

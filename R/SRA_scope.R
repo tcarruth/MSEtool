@@ -461,6 +461,26 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
     output@OM@cpars$Data <- real_Data
   }
 
+  # Check whether observed matches predicted
+  if(condition == "catch") {
+    catch_check_fn <- function(x, report, data) {
+      if(report[[x]]$conv) {
+        catch_diff <- report[[x]]$Cpred/data$Chist - 1
+        flag <- max(abs(catch_diff)) > 0.01
+      } else {
+        flag <- FALSE
+      }
+      return(flag)
+    }
+
+    do_catch_check <- vapply(1:length(res), catch_check_fn, logical(1), report = res, data = data)
+    if(any(do_catch_check)) {
+      flag_ind <- paste(which(do_catch_check), collapse = " ")
+      message("There is predicted catch that deviates from observed catch by more than 1% in simulations:")
+      message(flag_ind)
+      message("\nTry increasing nit_F or max_F.\n")
+    }
+  }
   message("Complete.")
 
   return(output)
@@ -584,8 +604,9 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     E_hist <- matrix(0, nyears, nfleet)
   }
 
+  if(is.null(dots$nit_F)) nit_F <- 3L else nit_F <- dots$nit_F
   TMB_data_all <- list(condition = data$condition,
-                       nll_C = as.integer((all(CAA_n <= 0) & all(CAL_n <= 0) & all(is.na(data$ML)) & all(is.na(data$Index))) || nfleet > 1), # if condition = "effort"
+                       nll_C = as.integer(data$condition == "effort" && nfleet > 1),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
                        CAL_hist = data$CAL, CAL_n = pmin(CAL_n, ESS[2]), s_CAA_hist = data$s_CAA, s_CAA_n = s_CAA_n,
                        s_CAL_hist = data$s_CAL, s_CAL_n = s_CAL_n, length_bin = data$length_bin, mlen = data$ML,
@@ -595,7 +616,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, I_type = I_type, abs_I = data$abs_I,
                        I_basis = data$I_basis, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
                        max_F = max_F, rescale = rescale, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       est_early_rec_dev = rep(0, max_age-1), yindF = as.integer(rep(0.5 * nyears, nfleet)))
+                       est_early_rec_dev = rep(0, max_age-1), nit_F = nit_F)
 
   if(data$condition == "catch") {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
@@ -655,12 +676,13 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     map_s_vul_par <- dots$map_s_vul_par
   }
 
-  log_F_start <- matrix(0, nyears, nfleet)
-  log_F_start[TMB_data_all$yindF - 1, 1:nfleet] <- log(0.75 * mean(TMB_data_all$M[nyears, ]))
-  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C, log(StockPars$R0[x] * rescale), 0),
+  #log_F_start <- matrix(0, nyears, nfleet)
+  #log_F_start[TMB_data_all$yindF - 1, 1:nfleet] <- log(0.75 * mean(TMB_data_all$M[nyears, ]))
+  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
-                     log_F = log_F_start, log_F_equilibrium = rep(log(0.05), nfleet),
+                     #log_F = log_F_start,
+                     log_F_equilibrium = rep(log(0.05), nfleet),
                      log_sigma_mlen = log(data$ML_sd), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
