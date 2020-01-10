@@ -1,8 +1,14 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
-## MSEtool 1.4.2-3
-- Absolute indices, i.e., indices where q = 1, and age-specific indices are accommodated in `SRA_scope`.
-- An indexing error for initial biomass calcs in SRA_scope has been fixed.
+## MSEtool 1.4.3
+
+### Updates to SRA_scope
+- Bugs in (1) likelihood weights, and (2) indexing for initial biomass calcs have been fixed.
+- Absolute indices, i.e., indices where q = 1, age-specific indices, and abundance/biomass-based indices can now be accommodated.
+- The lognormal likelihood for composition data is now available as an alternative to the multinomial.
+- When conditioned on catch, fishing mortality is estimated as deviations from the F in the middle of the time series (instead of all independent parameters) for more stability.
+- Markdown reporting now includes likelihood weights. Slight changes in color schemes are included for consistency among plots. 
+- `compare_SRA` is a function that compares output and fits from multiple SRA objects with identical model structures in slot `SRA@mean_fit` but different data weightings, omissions, multipliers, etc.
 
 ## MSEtool 1.4.1
 - Fixed error in Solaris build.

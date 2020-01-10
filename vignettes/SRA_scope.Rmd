@@ -277,6 +277,13 @@ $$ p_{y,a,f} = \dfrac{C^N_{y,a,f}}{\sum_a C^N_{y,a,f}}.$$
 The proportion of the catch-at-length is
 $$ p_{y,\ell,f} = \dfrac{C^N_{y,\ell,f}}{\sum_{\ell}C^N_{y,\ell,f}}.$$
 
+If the $s^{\textrm{th}}$ survey is biomass-based, then the survey value $I_{y,s}$ is calculated as
+$$ I_{y,s} = q_s \sum_a v_{y,a,s} N_{y,a} w_{y,a}, $$
+where $q$ is the scaling coefficient and $s$ indexes survey.
+
+If the survey is abundance-based, then 
+$$ I_{y,s} = q_s \sum_a v_{y,a,s} N_{y,a} . $$
+
 
 ## Likelihoods
 
@@ -286,15 +293,14 @@ $$\Lambda_1 = \sum_f \left[\lambda^{\tilde{C}}_f \sum_y \left(-\log(0.01) - \dfr
 where $\textrm{obs}$ and $\textrm{pred}$ indicate observed and predicted quantities, respectively, and $\lambda$ are likelihood weights. With a small standard deviation for the catch likelihood relative to the variance in other likelihood components, the predicted catch should match the observed catch.
 
 The log-likelihood component $\Lambda_2$ of survey data is
-$$\Lambda_2 = \sum_s \left[ \lambda^I_s \sum_y \left(-\log(\sigma_{y,s}) - \dfrac{[\log(I_{y,s}) - \log(q_s B_{y,s})]^2}{2\sigma_{y,s}^2}\right) \right],$$
-where $I$ is the value of the survey with $s$ indexing survey, $\sigma_{y,s}$ is the corresponding standard deviation of the survey, $q$ is a scaling coefficient, and $B_{y,s}$ is the reference biomass that corresponds to the index, e.g., spawning biomass or vulnerable biomass.
+$$\Lambda_2 = \sum_s \left[ \lambda^I_s \sum_y \left(-\log(\sigma_{y,s}) - \dfrac{[\log(I^{\textrm{obs}}_{y,s}) - \log(I^{\textrm{pred}}_{y,s})]^2}{2\sigma_{y,s}^2}\right) \right].$$
 
 The log-likelihood component $\Lambda_3$ of catch-at-age data is
-$$\Lambda_3 = \sum_f \lambda^A_f \left[\sum_y O^A_{y,f} \log(p_{y,a,f})\right],$$
+$$\Lambda_3 = \sum_f \lambda^A_f \left[\sum_y O^A_{y,f} \sum_a p^{\textrm{obs}}_{y,a,f} \log(p^{\textrm{pred}}_{y,a,f})\right],$$
 where $O^A$ is the annual sample sizes for the age compositions.
 
 The log-likelihood component $\Lambda_4$ of catch-at-length data is
-$$\Lambda_4 = \sum_f \lambda^L_f \left[ \sum_y O^L_{y,f} \log(p_{y,\ell,f}) \right]$$
+$$\Lambda_4 = \sum_f \lambda^L_f \left[ \sum_y O^L_{y,f} \sum_{\ell} p^{\textrm{obs}}_{y,\ell,f} \log(p^{\textrm{pred}}_{y,\ell,f})\right]$$
 where $O^L$ is the annual sample sizes for the length compositions.
 
 The log-likelihood component $\Lambda_5$ of observed mean lengths in the catch is
