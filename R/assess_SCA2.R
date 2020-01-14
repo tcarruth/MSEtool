@@ -55,7 +55,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
                vul_type = vulnerability, I_type = I_type, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev,
-               est_rec_dev = est_rec_dev)
+               est_rec_dev = est_rec_dev, yindF = as.integer(0.5 * n_y))
   data$CAA_hist[data$CAA_hist < 1e-8] <- 1e-8
 
   # Starting values
@@ -83,7 +83,13 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
                             logit(1/(max_age - start$vul_par[1])), logit(start$vul_par[4]))
       }
     }
-    if(!is.null(start$F) && is.numeric(start$F)) params$logF <- log(start$F)
+    if(!is.null(start$F) && is.numeric(start$F)) {
+      Fstart <- numeric(n_y)
+      Fstart_ind <- data$yindF-1
+      Fstart[Fstart_ind] <- log(start$F[Fstart_ind])
+      Fstart[-Fstart_ind] <- log(start$F[-Fstart_ind]/Fstart[Fstart_ind])
+      params$logF <- Fstart
+    }
 
     if(!is.null(start$omega) && is.numeric(start$omega)) params$log_omega <- log(start$omega)
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
@@ -115,7 +121,11 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     }
   }
   if(is.na(params$vul_par[1])) params$vul_par[1] <- 1
-  if(is.null(params$logF)) params$logF <- rep(log(0.1), n_y)
+  if(is.null(params$logF)) {
+    Fstart <- numeric(n_y)
+    Fstart[data$yindF-1] <- log(0.75 * mean(data$M))
+    params$logF <- Fstart
+  }
 
   if(is.null(params$log_omega)) {
     sigmaC <- max(0.01, sdconv(1, Data@CV_Cat[x]), na.rm = TRUE)
