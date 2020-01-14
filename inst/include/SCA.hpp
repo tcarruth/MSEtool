@@ -25,6 +25,7 @@ Type SCA(objective_function<Type> *obj) {
   DATA_STRING(CAA_dist);  // String indicating whether CAA is multinomial or lognormal
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
+  DATA_INTEGER(yindF);    // Year for which to estimate F, all other F are deviations from this F
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
@@ -133,6 +134,7 @@ Type SCA(objective_function<Type> *obj) {
   }
 
   // Loop over all other years
+  F(yindF) = exp(logF(yindF));
   for(int y=0;y<n_y;y++) {
     if(SR_type == "BH") {
       R(y+1) = BH_SR(E(y), h, R0, E0);
@@ -145,7 +147,11 @@ Type SCA(objective_function<Type> *obj) {
     }
     N(y+1,0) = R(y+1);
 
-    F(y) = CppAD::CondExpLt(3 - exp(logF(y)), Type(0), 3 - posfun(3 - exp(logF(y)), Type(0), penalty), exp(logF(y)));
+    if(y != yindF) {
+      Type Ftmp = F(yindF) * exp(logF(y));
+      Type tmp2 = 3 - Ftmp;
+      F(y) = CppAD::CondExpLt(tmp2, Type(0), 3 - posfun(tmp2, Type(0), penalty), Ftmp);
+    }
 
     for(int a=0;a<max_age;a++) {
       Type meanN = N(y,a) * (1 - exp(-vul(a) * F(y) - M(a))) / (vul(a) * F(y) + M(a));
