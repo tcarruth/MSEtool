@@ -294,7 +294,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     }
     if(!is.null(start$F) && is.numeric(start$F)) {
       Fstart <- numeric(n_y)
-      Fstart_ind <- data$yindF-1
+      Fstart_ind <- data$yindF + 1
       Fstart[Fstart_ind] <- log(start$F[Fstart_ind])
       Fstart[-Fstart_ind] <- log(start$F[-Fstart_ind]/Fstart[Fstart_ind])
       params$logF <- Fstart
@@ -340,7 +340,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(is.na(params$vul_par[1])) params$vul_par[1] <- 1
   if(is.null(params$logF)) {
     Fstart <- numeric(n_y)
-    Fstart[data$yindF-1] <- log(0.75 * mean(data$M))
+    Fstart[data$yindF + 1] <- log(0.75 * mean(data$M))
     params$logF <- Fstart
   }
 

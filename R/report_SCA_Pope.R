@@ -40,7 +40,8 @@ summary_SCA_Pope <- function(Assessment) {
 
   output <- list(model = "Statistical Catch-at-Age (SCA_Pope)",
                  current_status = current_status, input_parameters = input_parameters,
-                 derived_quantities = derived, model_estimates = model_estimates)
+                 derived_quantities = derived, model_estimates = model_estimates,
+                 log_likelihood = matrix(NLL, ncol = 1, dimnames = list(names(NLL), "Neg.LL")))
   return(output)
 }
 

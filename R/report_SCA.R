@@ -45,7 +45,8 @@ summary_SCA <- function(Assessment, SCA2 = FALSE) {
 
   output <- list(model = paste("Statistical Catch-at-Age", ifelse(SCA2, "(SCA2)", "(SCA)")),
                  current_status = current_status, input_parameters = input_parameters,
-                 derived_quantities = derived, model_estimates = model_estimates)
+                 derived_quantities = derived, model_estimates = model_estimates,
+                 log_likelihood = matrix(NLL, ncol = 1, dimnames = list(names(NLL), "Neg.LL")))
   return(output)
 }
 
@@ -192,9 +193,9 @@ retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
     params_ret$log_rec_dev <- rep(0, n_y_ret)
     params_ret$logF <- info$params$logF[1:n_y_ret]
 
-    if(n_y_ret - 1 < data$yindF) {
+    if(data$yindF + 1 > n_y_ret) {
       data_ret$yindF <- as.integer(0.5 * data_ret$n_y)
-      params_ret$logF[data_ret$yindF - 1] <- info$params$logF[info$data$yindF - 1]
+      params_ret$logF[data_ret$yindF + 1] <- info$params$logF[info$data$yindF + 1]
     }
 
     map <- obj$env$map
