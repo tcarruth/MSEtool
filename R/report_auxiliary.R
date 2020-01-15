@@ -121,11 +121,7 @@ report <- function(Assessment, retro = NULL, filename = paste0("report_", Assess
   rmd_model <- f(Assessment, ...)
 
   if(!is.null(retro)) {
-    rmd_ret <- c("## Retrospective\n",
-                 "```{r}",
-                 "as.data.frame(summary(retro))",
-                 "plot(retro)",
-                 "```\n")
+    rmd_ret <- rmd_retrospective()
   } else rmd_ret <- ""
 
   rmd <- c(rmd_head(name), rmd_model, rmd_ret, rmd_footer())

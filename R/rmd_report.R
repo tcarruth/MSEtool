@@ -440,6 +440,13 @@ rmd_sp <- function(conv_check = TRUE, depletion = TRUE) {
     "```\n")
 }
 
+rmd_retrospective <- function() {
+  c("## Retrospective\n",
+    "```{r}",
+    "as.data.frame(summary(retro))",
+    "plot(retro)",
+    "```\n")
+}
 
 #### Footer
 rmd_footer <- function() {

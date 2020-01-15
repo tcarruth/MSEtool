@@ -870,3 +870,126 @@ get_s_vul_len <- function(report, I_type, nsurvey, parametric) {
   }
   return(s_vul_len)
 }
+
+SRA_retro <- function(x, nyr = 5) {
+  if(length(x@mean_fit) == 0) stop("Re-run SRA_scope() with argument `mean_fit = TRUE`", .call = FALSE)
+
+  data <- x@mean_fit$obj$env$data
+  params <- x@mean_fit$obj$env$parameters
+  n_y <- data$n_y
+  rescale <- x@mean_fit$report$rescale
+  map <- x@mean_fit$obj$env$map
+
+  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 4))
+  TS_var <- c("F", "SSB", "SSB_SSB0", "R")
+  dimnames(retro_ts) <- list(Peel = 0:nyr, Year = (x@OM@CurrentYr - n_y):x@OM@CurrentYr + 1, Var = TS_var)
+
+  new_args <- lapply(n_y - 0:nyr, SRA_retro_subset, data = data, params = params, map = map)
+  for(i in 0:nyr) {
+    obj2 <- MakeADFun(data = new_args[[i+1]]$data, parameters = new_args[[i+1]]$params, map = new_args[[i+1]]$map,
+                      random = x@mean_fit$obj$env$random, DLL = "MSEtool", silent = TRUE)
+    if(data$condition == "catch2") {
+      R0_test <- any(is.na(obj2$report(obj2$par)$F)) || any(is.infinite(obj2$report(obj2$par)$F))
+      if(R0_test) {
+        for(ii in 1:10) {
+          obj2$par["log_R0"] <- 0.5 + obj2$par["log_R0"]
+          if(all(!is.na(obj2$report(obj2$par)$F)) && all(!is.infinite(obj2$report(obj2$par)$F))) break
+        }
+      }
+    }
+    mod <- optimize_TMB_model(obj2, control = list(iter.max = 2e+05, eval.max = 4e+05), restart = 0)
+    opt2 <- mod[[1]]
+    SD <- mod[[2]]
+
+    if(!is.character(opt2) && !is.character(SD)) {
+      report <- obj2$report(obj2$env$last.par.best)
+
+      if(rescale != 1) {
+        vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
+                      "R", "R_early", "R_eq", "R0", "B0", "E0", "N0", "E0_SR")
+        vars_mult <- c("Brec", "q")
+        var_trans <- c("R0", "q")
+        fun_trans <- c("/", "*")
+
+        if(data$nll_C || data$condition == "catch2") {
+          fun_fixed <- c("log", NA)
+          rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+        } else if(any(data$Chist > 0, na.rm = TRUE)) {
+          rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
+
+          fun_fixed <- c(NA, NA)
+          rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
+        }
+      }
+
+      FMort <- c(report$F, rep(NA, i + 1))
+      SSB <- c(report$E, rep(NA, i))
+      SSB_SSB0 <- SSB/report$E0_SR
+      R <- c(report$R, rep(NA, i))
+
+      retro_ts[i+1, , ] <- cbind(FMort, SSB, SSB_SSB0, R)
+      message("Peel ", i, " out of ", nyr, " was successful.")
+    } else {
+      message("Non-convergence when peel = ", i, " (years of data removed).")
+    }
+  }
+
+  retro <- new("retro", Model = "SRA_scope", Name = x@OM@Name, TS_var = TS_var, TS = retro_ts)
+  attr(retro, "TS_lab") <- c("Fishing mortality", "Spawning biomass", "Spawning depletion", "Recruitment")
+
+  return(retro)
+}
+
+
+SRA_retro_subset <- function(yr, data, params, map) {
+  ##### Data object
+  data_out <- structure(data, check.passed = NULL)
+
+  mat <- c("C_hist", "E_hist", "I_hist", "sigma_I", "CAA_n", "CAL_n", "s_CAA_n", "s_CAL_n", "mlen", "M")
+  mat_ind <- match(mat, names(data_out))
+  data_out[mat_ind] <- lapply(data_out[mat_ind], function(x) x[1:yr, , drop = FALSE])
+
+  mat2 <- c("len_age", "wt", "mat", "sel_block")
+  mat_ind2 <- match(mat2, names(data_out))
+  data_out[mat_ind2] <- lapply(data_out[mat_ind2], function(x) x[1:(yr+1), , drop = FALSE])
+
+  # Update nsel_block, n_y
+  data_out$nsel_block <- unique(data_out$sel_block) %>% length()
+  data_out$n_y <- yr
+
+  # Array 1:yr first index
+  arr <- c("CAA_hist", "CAL_hist", "s_CAA_hist", "s_CAL_hist")
+  arr_ind <- match(arr, names(data_out))
+  data_out[arr_ind] <- lapply(data_out[arr_ind], function(x) x[1:yr, , , drop = FALSE])
+
+  # Vector 1:yr
+  data_out$est_rec_dev <- data_out$est_rec_dev[1:yr]
+
+  ##### Parameters
+  params_out <- structure(params, check.passed = NULL)
+  for(i in 1:length(params)) {
+    if(!is.null(attr(params[[i]], "map"))) params_out[[i]] <- attr(params[[i]], "shape")
+  }
+
+  # Update rec devs
+  params_out$log_rec_dev <- params_out$log_rec_dev[1:yr]
+  if(!is.null(map$log_rec_dev)) map$log_rec_dev <- map$log_rec_dev[1:yr] %>% factor()
+
+  # Update F
+  if(data_out$condition == "catch") {
+    params_out$log_F <- params_out$log_F[1:yr, , drop = FALSE]
+
+    if(any(data_out$yind_F + 1 > yr)) {
+      data_out$yind_F <- as.integer(0.5 * yr)
+      params_out$log_F[data_out$yind_F + 1, ] <- params$log_F[data$yind_F + 1, ]
+    }
+  }
+
+  ## Update nsel block if needed
+  if(data$nsel_block > data_out$nsel_block) {
+    params_out$vul_par <- params_out$vul_par[, unique(data_out$sel_block), drop = FALSE]
+    if(!is.null(map$vul_par)) map$vul_par <- map$vul_par[, unique(data_out$sel_block), drop = FALSE] %>% factor()
+  }
+
+  return(list(data = data_out, params = params_out, map = map))
+}

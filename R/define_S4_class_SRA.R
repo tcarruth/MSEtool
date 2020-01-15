@@ -60,6 +60,18 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                    f_name = NULL, s_name = NULL, MSY_ref = c(0.5, 1), bubble_adj = 10, scenario = list(), title = NULL,
                    open_file = TRUE, quiet = TRUE, render_args, ...) {
 
+            # Run retrospective (dots$retrospective = TRUE with dots$nyr)
+            # Or directly provide a retrospective object (dots$retro)
+            dots <- list(...)
+            if(!is.null(dots$retrospective) && dots$retrospective) {
+              message("Running retrospective on mean fit object...")
+              if(is.null(dots$nyr)) {
+                retro <- retrospective(x)
+              } else retro <- retrospective(x, dots$nyr)
+            } else if(!is.null(dots$retro)) {
+              retro <- dots$retro
+            }
+
             # Update scenario
             if(is.null(scenario$col)) {
               scenario$col <- "red"
@@ -352,7 +364,11 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                 }
               } else nll_table <- NULL
 
-              mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output, nll_table)
+              if(exists("retro", inherits = FALSE)) {
+                ret <- rmd_SRA_retrospective()
+              } else ret <- NULL
+
+              mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output, nll_table, ret)
             } else mean_fit_rmd <- c("## Fit to mean parameters of OM {.tabset}\n",
                                      "No model found. Re-run `SRA_scope()` with `mean_fit = TRUE`.\n\n")
 
@@ -786,6 +802,15 @@ rmd_SRA_SR <- function() {
     "plot_SR(report$E[1:nyears], expectedR, report$R0, report$E0_SR, report$R[2:(nyears+1)])",
     "```\n")
 }
+
+rmd_SRA_retrospective <- function() {
+  c("### Retrospective\n",
+    "```{r}",
+    "as.data.frame(summary(retro))",
+    "plot(retro)",
+    "```\n")
+}
+
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
                                  annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 2, dat_color = "black") {
