@@ -88,6 +88,7 @@ value. Otherwise, an integer for each independent parameter. By default, selecti
 or survey, otherwise estimated.
 \item map_s_vul_par: The map argument for the survey selectivity parameters (same dimension as s_vul_par).
 \item map_log_rec_dev: A vector of length OM@nyears that indexes which recruitment deviates are fixed (using NA) or estimated (a separate integer).
+\item plusgroup: Logical for whether the maximum age is a plusgroup or not.
 }
 
 Survey selectivity is estimated only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should

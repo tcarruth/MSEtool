@@ -25,17 +25,17 @@ matrix<Type> generate_ALK(vector<Type> length_bin, matrix<Type> len_age, Type CV
 }
 
 template<class Type>
-vector<Type> calc_NPR0(matrix<Type> M, int max_age, int y) {
+vector<Type> calc_NPR0(matrix<Type> M, int max_age, int y, int plusgroup) {
   vector<Type> NPR(max_age);
   NPR(0) = 1;
   for(int a=1;a<max_age;a++) NPR(a) = NPR(a-1) * exp(-M(y,a-1));
-  NPR(max_age-1) /= 1 - exp(-M(y,max_age-1));
+  if(plusgroup) NPR(max_age-1) /= 1 - exp(-M(y,max_age-1));
   return NPR;
 }
 
 
 template<class Type>
-vector<Type> calc_NPR(vector<Type> F, array<Type> vul, int nfleet, matrix<Type> M, int max_age, int y) {
+vector<Type> calc_NPR(vector<Type> F, array<Type> vul, int nfleet, matrix<Type> M, int max_age, int y, int plusgroup) {
   vector<Type> NPR(max_age);
   vector<Type> Z = M.row(y);
   NPR(0) = 1;
@@ -43,7 +43,7 @@ vector<Type> calc_NPR(vector<Type> F, array<Type> vul, int nfleet, matrix<Type> 
     for(int ff=0;ff<nfleet;ff++) Z(a) += vul(y,a,ff) * F(ff);
     if(a > 0) NPR(a) = NPR(a-1) * exp(-Z(a-1));
   }
-  NPR(max_age-1) /= 1 - exp(-Z(max_age-1));
+  if(plusgroup) NPR(max_age-1) /= 1 - exp(-Z(max_age-1));
   return NPR;
 }
 

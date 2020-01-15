@@ -66,7 +66,8 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
-  DATA_INTEGER(nit_F);
+  DATA_INTEGER(nit_F);    // Number of iterations for Newton-Raphson method to solve for F
+  DATA_INTEGER(plusgroup) // Whether the maximum age in the plusgroup is modeled.
   //DATA_IVECTOR(yindF);
 
   PARAMETER(log_R0);
@@ -117,19 +118,6 @@ Type SRA_scope(objective_function<Type> *obj) {
     q_effort(ff) = exp(log_q_effort(ff));
     if(condition == "catch" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
     if(condition == "effort" && E_eq(ff)>0) F_equilibrium(ff) = q_effort(ff) * E_eq(ff);
-    //if(condition == "catch") {
-    //  Type tmp = max_F - exp(log_F(yindF(ff),ff));
-    //  F(yindF(ff),ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), exp(log_F(yindF(ff),ff)));
-	//
-    //  for(int y=0;y<n_y;y++) {
-    //    if(y != yindF(ff)) {
-    //      Type Ftmp = F(yindF(ff),ff) * exp(log_F(y,ff));
-    //      Type tmp2 = max_F - Ftmp;
-    //      F(y,ff) = CppAD::CondExpLt(tmp2, Type(0), max_F - posfun(tmp2, Type(0), penalty), Ftmp);
-    //    }
-    //  }
-	//
-	//} else {
     if(condition == "effort") {
       for(int y=0;y<n_y;y++) {
         Type tmp = max_F - q_effort(ff) * E_hist(y,ff);
@@ -138,7 +126,6 @@ Type SRA_scope(objective_function<Type> *obj) {
       }
     }
   }
-
 
   ////// Equilibrium reference points and per-recruit quantities - calculate annually
   vector<vector<Type> > NPR_unfished(n_y);
@@ -149,7 +136,7 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   Type E0_SR = 0;
   for(int y=0;y<n_y;y++) {
-    NPR_unfished(y) = calc_NPR0(M, max_age, y);
+    NPR_unfished(y) = calc_NPR0(M, max_age, y, plusgroup);
 
     EPR0(y) = sum_EPR(NPR_unfished(y), wt, mat, max_age, y);
     E0(y) = R0 * EPR0(y);
@@ -208,7 +195,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   E.setZero();
 
   // Equilibrium quantities (leading into first year of model)
-  vector<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, nfleet, M, max_age, 0);
+  vector<Type> NPR_equilibrium = calc_NPR(F_equilibrium, vul, nfleet, M, max_age, 0, plusgroup);
   Type EPR_eq = sum_EPR(NPR_equilibrium, wt, mat, max_age, 0);
   Type R_eq;
 
@@ -257,14 +244,16 @@ Type SRA_scope(objective_function<Type> *obj) {
     N(y+1,0) = R(y+1);
     ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
 
-	if(condition == "catch") F.row(y) = Newton_SRA_F(C_hist, N, M, wt, VB, vul, max_F, y, max_age, nfleet, nit_F, penalty);
+    if(condition == "catch") {
+      F.row(y) = Newton_SRA_F(C_hist, N, M, wt, VB, vul, max_F, y, max_age, nfleet, nit_F, penalty);
+    }
 
     for(int a=0;a<max_age;a++) {
       for(int ff=0;ff<nfleet;ff++) Z(y,a) += vul(y,a,ff) * F(y,ff);
       Type mean_N = N(y,a) * (1 - exp(-Z(y,a))) / Z(y,a);
 
       if(a<max_age-1) N(y+1,a+1) = N(y,a) * exp(-Z(y,a));
-      if(a==max_age-1) N(y+1,a) += N(y,a) * exp(-Z(y,a));
+      if(plusgroup && a==max_age-1) N(y+1,a) += N(y,a) * exp(-Z(y,a));
 
       for(int ff=0;ff<nfleet;ff++) {
         CAApred(y,a,ff) = vul(y,a,ff) * F(y,ff) * mean_N;
@@ -275,7 +264,6 @@ Type SRA_scope(objective_function<Type> *obj) {
           CALpred(y,len,ff) += CAApred(y,a,ff) * ALK(y)(a,len);
           mlen_pred(y,ff) += CAApred(y,a,ff) * ALK(y)(a,len) * length_bin(len);
         }
-
         VB(y+1,ff) += vul(y+1,a,ff) * N(y+1,a) * wt(y+1,a);
       }
 
@@ -309,9 +297,7 @@ Type SRA_scope(objective_function<Type> *obj) {
         s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
         s_CN(y,sur) += s_CAApred(y,a,sur);
 
-        if(I_basis(sur)) {
-          B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
-        }
+        if(I_basis(sur)) B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
         if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
           for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
         }
@@ -432,7 +418,6 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(L5);
   REPORT(Vmaxlen);
   REPORT(log_q_effort);
-  //REPORT(log_F);
   REPORT(log_F_equilibrium);
 
   REPORT(log_sigma_mlen);
@@ -503,7 +488,6 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(s_Vmaxlen);
 
   return nll;
-
 }
 
 #undef TMB_OBJECTIVE_PTR

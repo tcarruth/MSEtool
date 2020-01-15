@@ -84,6 +84,7 @@
 #' or survey, otherwise estimated.
 #' \item map_s_vul_par: The map argument for the survey selectivity parameters (same dimension as s_vul_par).
 #' \item map_log_rec_dev: A vector of length OM@@nyears that indexes which recruitment deviates are fixed (using NA) or estimated (a separate integer).
+#' \item plusgroup: Logical for whether the maximum age is a plusgroup or not.
 #' }
 #'
 #' Survey selectivity is estimated only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should
@@ -123,7 +124,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
                       comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
-  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, rescale
+  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, rescale, plusgroup
   if(!is.null(dots$maxF)) max_F <- dots$maxF
   if(length(ESS) == 1) ESS <- rep(ESS, 2)
 
@@ -425,7 +426,11 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
 
   OM@cpars$h <- StockPars$hs
 
-  OM@cpars$plusgroup <- rep(1L, nsim)
+  if(!is.null(dots$plusgroup)) {
+    OM@cpars$plusgroup <- rep(as.integer(dots$plusgroup), nsim)
+  } else {
+    OM@cpars$plusgroup <- rep(1L, nsim)
+  }
   OM@cpars$Iobs <- ObsPars$Iobs
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")
 
@@ -605,6 +610,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   if(is.null(dots$nit_F)) nit_F <- 3L else nit_F <- dots$nit_F
+  if(is.null(dots$plusgroup)) plusgroup <- as.integer(dots$plusgroup) else plusgroup <- 1L
   TMB_data_all <- list(condition = data$condition,
                        nll_C = as.integer(data$condition == "effort" && nfleet > 1),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
@@ -616,7 +622,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, I_type = I_type, abs_I = data$abs_I,
                        I_basis = data$I_basis, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
                        max_F = max_F, rescale = rescale, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       est_early_rec_dev = rep(0, max_age-1), nit_F = nit_F)
+                       est_early_rec_dev = rep(0, max_age-1), nit_F = nit_F, plusgroup = plusgroup)
 
   if(data$condition == "catch") {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
