@@ -163,8 +163,12 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   }
 
   # Selectivity
-  if(length(selectivity) == 1) selectivity <- rep(selectivity, nfleet)
-  if(length(selectivity) < nfleet) stop("selectivity vector should be of length nfleet (", nfleet, ").", call. = FALSE)
+  if(is.null(data$sel_block)) {
+    data$sel_block <- matrix(1:data$nfleet, nrow = nrow(data$Chist), ncol = data$nfleet, byrow = TRUE)
+    data$nsel_block <- length(unique(data$sel_block))
+  }
+  if(length(selectivity) == 1) selectivity <- rep(selectivity, data$nsel_block)
+  if(length(selectivity) < data$nsel_block) stop("selectivity vector should be of length ", data$nsel_block, ").", call. = FALSE)
   sel_test <- match(selectivity, c("logistic", "dome"))
   if(any(is.na(sel_test))) stop("selectivity vector should be either \"logistic\" or \"dome\".", call. = FALSE)
   sel <- ifelse(selectivity == "logistic", -1, 0)
@@ -332,7 +336,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   ### Selectivity and F
   ### Find
   OM@isRel <- FALSE
-  if(nfleet > 1) {
+  if(data$nsel_block > 1) {
     F_matrix <- lapply(res, getElement, "F_at_age")
     apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
     Find <- do.call(rbind, apical_F)
@@ -350,7 +354,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
     message("Historical F and selectivity trends set in OM@cpars$Find and OM@cpars$V, respectively.")
     message("Selectivity during projection period is set to that in most recent historical year.")
 
-  } else { # nfleet = 1
+  } else { # nsel_block = 1
 
     OM@cpars$L5 <- vapply(res, getElement, numeric(1), "L5")
     message("Range of OM@cpars$L5: ", paste(round(range(OM@cpars$L5), 2), collapse = " - "))
@@ -389,7 +393,10 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
 
   make_early_Perr <- function(x) {
     res <- x$report$R_eq * x$report$NPR_equilibrium / (x$report$R0 * x$report$NPR_unfished[[1]])
-    return(rev(res[-1]))
+    bias_corr <- ifelse(x$obj$env$data$est_early_rec_dev, exp(-0.5 * x$report$tau^2), 1)
+    early_dev <- exp(x$report$log_early_rec_dev) * bias_corr
+    out <- res[-1] * early_dev
+    return(rev(out))
   }
   early_Perr <- do.call(rbind, lapply(mod, make_early_Perr))
 
@@ -610,19 +617,21 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   if(is.null(dots$nit_F)) nit_F <- 3L else nit_F <- dots$nit_F
-  if(is.null(dots$plusgroup)) plusgroup <- as.integer(dots$plusgroup) else plusgroup <- 1L
+  if(is.null(dots$plusgroup)) plusgroup <- 1L else plusgroup <- as.integer(dots$plusgroup)
   TMB_data_all <- list(condition = data$condition,
                        nll_C = as.integer(data$condition == "effort" && nfleet > 1),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
                        CAL_hist = data$CAL, CAL_n = pmin(CAL_n, ESS[2]), s_CAA_hist = data$s_CAA, s_CAA_n = s_CAA_n,
                        s_CAL_hist = data$s_CAL, s_CAL_n = s_CAL_n, length_bin = data$length_bin, mlen = data$ML,
+                       sel_block = rbind(data$sel_block, data$sel_block[nyears, ]), nsel_block = data$nsel_block,
                        n_y = nyears, max_age = max_age, nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
                        Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
-                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = selectivity, s_vul_type = s_selectivity, I_type = I_type, abs_I = data$abs_I,
-                       I_basis = data$I_basis, SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
+                       mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = as.integer(selectivity),
+                       s_vul_type = as.integer(s_selectivity), I_type = as.integer(I_type), abs_I = data$abs_I,
+                       I_basis = as.integer(data$I_basis), SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
                        max_F = max_F, rescale = rescale, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       est_early_rec_dev = rep(0, max_age-1), nit_F = nit_F, plusgroup = plusgroup)
+                       nit_F = nit_F, plusgroup = plusgroup)
 
   if(data$condition == "catch") {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
@@ -639,7 +648,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   Vmaxlen <- FleetPars$Vmaxlen[nyears, x]
 
   if(is.null(dots$vul_par)) {
-    vul_par <- matrix(c(LFS, L5, Vmaxlen), 3, nfleet)
+    vul_par <- matrix(c(LFS, L5, Vmaxlen), 3, data$nsel_block)
   } else {
     vul_par <- dots$vul_par
   }
@@ -648,15 +657,17 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   vul_par[3, ] <- logit(pmin(vul_par[3, ], 0.99))
 
   if(is.null(dots$map_vul_par)) {
-    map_vul_par <- matrix(0, 3, nfleet)
+    map_vul_par <- matrix(0, 3, data$nsel_block)
     map_vul_par[3, as.logical(selectivity)] <- NA
 
     for(ff in 1:nfleet) {
-      if(all(data$CAA[,,ff] <= 0, na.rm = TRUE) && all(data$CAL[,,ff] <= 0, na.rm = TRUE)) map_vul_par[, ff] <- NA
+      if(all(data$CAA[,,ff] <= 0, na.rm = TRUE) && all(data$CAL[,,ff] <= 0, na.rm = TRUE)) {
+        map_vul_par[, unique(data$nsel_block[, ff])] <- NA
+      }
     }
     if(any(!is.na(map_vul_par))) map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
   } else {
-    map_vul_par <- dots$map_vul_par
+    map_vul_par <- factor(dots$map_vul_par)
   }
 
   # s_vul_par, and map
@@ -666,7 +677,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     s_vul_par <- dots$s_vul_par
   }
   s_vul_par[2, ] <- log(s_vul_par[1, ] - s_vul_par[2, ])
-  s_vul_par[1, ] <- logit(min(s_vul_par[1, ]/StockPars$Linf[x]/0.99, 0.99))
+  s_vul_par[1, ] <- logit(pmin(s_vul_par[1, ]/StockPars$Linf[x]/0.99, 0.99))
   s_vul_par[3, ] <- logit(pmin(s_vul_par[3, ], 0.99))
 
   if(is.null(dots$map_s_vul_par)) {
@@ -679,15 +690,12 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     }
     if(any(!is.na(map_s_vul_par))) map_s_vul_par[!is.na(map_s_vul_par)] <- 1:sum(!is.na(map_s_vul_par))
   } else {
-    map_s_vul_par <- dots$map_s_vul_par
+    map_s_vul_par <- factor(dots$map_s_vul_par)
   }
 
-  #log_F_start <- matrix(0, nyears, nfleet)
-  #log_F_start[TMB_data_all$yindF - 1, 1:nfleet] <- log(0.75 * mean(TMB_data_all$M[nyears, ]))
   TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet),
-                     #log_F = log_F_start,
                      log_F_equilibrium = rep(log(0.05), nfleet),
                      log_sigma_mlen = log(data$ML_sd), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
@@ -710,7 +718,14 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   map$log_sigma_mlen <- factor(rep(NA, nfleet))
-  map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
+
+  if(is.null(dots$map_log_early_rec_dev)) {
+    map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
+  } else {
+    map$log_early_rec_dev <- factor(dots$map_log_early_rec_dev)
+  }
+  TMB_data$est_early_rec_dev <- ifelse(is.na(map$log_early_rec_dev), 0, 1)
+
   if(is.null(dots$map_log_rec_dev)) {
     map$log_rec_dev <- factor(1:nyears)
   } else {
@@ -723,6 +738,16 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 
+  if(data$condition == "catch") {
+    R0_test <- any(is.na(obj$report(obj$par)$F)) || any(is.infinite(obj$report(obj$par)$F))
+    if(R0_test) {
+      for(i in 1:30) {
+        obj$par["log_R0"] <- 0.5 + obj$par["log_R0"]
+        if(all(!is.na(obj$report(obj$par)$F)) && all(!is.infinite(obj$report(obj$par)$F))) break
+      }
+    }
+  }
+
   mod <- optimize_TMB_model(obj, control, restart = 0)
   opt <- mod[[1]]
   SD <- mod[[2]]
@@ -730,8 +755,8 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(rescale != 1) {
 
-    vars_div <- c("B", "E", "Cat", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "N_full", "VB",
-                  "R", "R_early", "R_eq", "VB0", "R0", "B0", "E0", "N0", "E0_SR")
+    vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
+                  "R", "R_early", "R_eq", "R0", "B0", "E0", "N0", "E0_SR")
     vars_mult <- c("Brec", "q")
     var_trans <- c("R0", "q")
     fun_trans <- c("/", "*")
