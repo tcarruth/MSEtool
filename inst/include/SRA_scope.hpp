@@ -37,6 +37,9 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_VECTOR(length_bin);// Vector of length bins
   DATA_MATRIX(mlen);      // Vector of annual mean lengths by year and fleet
 
+  DATA_IMATRIX(sel_block); // Assigns selectivity by year and fleet
+  DATA_INTEGER(nsel_block); // The number of selectivity "blocks"
+
   DATA_INTEGER(n_y);      // Number of years in model
   DATA_INTEGER(max_age);  // Maximum age (plus-group)
   DATA_INTEGER(nfleet);   // Number of fleets
@@ -68,14 +71,12 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
   DATA_INTEGER(nit_F);    // Number of iterations for Newton-Raphson method to solve for F
   DATA_INTEGER(plusgroup) // Whether the maximum age in the plusgroup is modeled.
-  //DATA_IVECTOR(yindF);
 
   PARAMETER(log_R0);
   PARAMETER(transformed_h);
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
   PARAMETER_MATRIX(s_vul_par);
   PARAMETER_VECTOR(log_q_effort);
-  //PARAMETER_MATRIX(log_F);
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
 
   PARAMETER_VECTOR(log_sigma_mlen);
@@ -100,10 +101,10 @@ Type SRA_scope(objective_function<Type> *obj) {
   // Vulnerability (length-based) and F parameters
   Type penalty = 0;
   Type prior = 0.;
-  vector<Type> LFS(nfleet);
-  vector<Type> L5(nfleet);
-  vector<Type> Vmaxlen(nfleet);
-  array<Type> vul = calc_vul(vul_par, vul_type, len_age, LFS, L5, Vmaxlen, Linf);
+  vector<Type> LFS(nsel_block);
+  vector<Type> L5(nsel_block);
+  vector<Type> Vmaxlen(nsel_block);
+  array<Type> vul = calc_vul(vul_par, vul_type, len_age, LFS, L5, Vmaxlen, Linf, nfleet, sel_block, nsel_block);
 
   vector<Type> q_effort(nfleet);
   vector<Type> sigma_mlen(nfleet);
@@ -445,7 +446,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(E0_SR);
   REPORT(EPR0_SR);
 
-  REPORT(ALK);
+  if(nll_CAL.sum() != 0 || nll_s_CAL.sum() != 0 || nll_ML.sum() != 0) REPORT(ALK);
   REPORT(N);
   REPORT(CAApred);
   REPORT(CALpred);

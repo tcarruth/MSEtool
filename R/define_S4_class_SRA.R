@@ -103,6 +103,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             Yearplusone <- c(Year, max(Year) + 1)
 
             nfleet <- x@data$nfleet
+            nsel_block <- x@data$nsel_block
             nsurvey <- x@data$nsurvey
             length_bin <- x@data$length_bin
 
@@ -270,9 +271,9 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, ML_plots, s_CAA_plots, s_CAL_plots)
 
               # Model output
-              sel_matplot <- rmd_matplot(x = "matrix(data_mean_fit$length_bin, nrow(report$vul_len), nfleet)", y = "report$vul_len", col = "rich.colors(nfleet)",
-                                         xlab = "Length", ylab = "Selectivity", legend.lab = "f_name",
-                                         fig.cap = "Selectivity by fleet.", header = "### Output \n")
+              sel_matplot <- rmd_matplot(x = "matrix(age, max_age, nfleet)", y = "matrix(report$vul[nyears, , ], max_age, nfleet)", col = "rich.colors(nfleet)",
+                                         xlab = "Age", ylab = "Selectivity", legend.lab = "f_name",
+                                         fig.cap = "Terminal year selectivity by fleet.", header = "### Output \n")
 
               F_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "report$F", col = "rich.colors(nfleet)",
                                        xlab = "Year", ylab = "Fishing Mortality (F)", legend.lab = "f_name",
@@ -555,10 +556,10 @@ rmd_SRA_Find <- function(fig.cap = "Apical F from SRA model. These values may be
 
 rmd_SRA_sel <- function(fig.cap = "Operating model selectivity among simulations.") {
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
-    "if(nfleet == 1) {",
+    "if(nsel_block == 1) {",
     "  vul <- do.call(cbind, lapply(report_list, getElement, \"vul_len\"))",
     "  matplot(matrix(length_bin, ncol = nsim, nrow = length(length_bin)), vul, type = \"l\", col = \"black\",",
-    "          xlab = \"Length\", ylab = \"Selectivity\", ylim = c(0, 1.1))",
+    "          xlab = \"Length\", ylab = \"Selectivity (last historical year)\", ylim = c(0, 1.1))",
     "} else {",
     "  if(nsim == 1) V_plot <- matrix(OM@cpars$V[, , nyears], 1, byrow = TRUE) else V_plot <- OM@cpars$V[, , nyears]",
     "  matplot(matrix(age, ncol = nsim, nrow = max_age), t(V_plot), type = \"l\", col = \"black\",",
@@ -572,22 +573,36 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
   if(ff == 1) header <- "## SRA output {.tabset}\n" else header <- NULL
   ans <- c(paste("### ", f_name[ff], "\n"),
            paste0("```{r, fig.cap = \"Selectivity of ", f_name[ff], ".\"}"),
-           paste0("vul_ff <- do.call(cbind, lapply(report_list, function(x) x$vul_len[, ", ff, "]))"),
-           paste0("matplot(length_bin, vul_ff, type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Length\", ylim = c(0, 1), ylab = \"Selectivity of ", f_name[ff], "\")"),
+           paste0("matplot(length_bin, length_bin, type = \"n\", xlab = \"Length\", ylim = c(0, 1), ylab = \"Selectivity of Fleet ", ff, "\")"),
            "abline(h = 0, col = \"grey\")",
-           "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
+           "",
+           paste0("bl <- unique(data$sel_block[, ", ff, "])"),
+           "bl_col <- gplots::rich.colors(length(bl))",
+           "Year_legend <- character(length(bl))",
+           "for(bb in 1:length(bl)) {",
+           "  vul_bb <- do.call(cbind, lapply(report_list, function(x) x$vul_len[, bl[bb]]))",
+           "  matlines(length_bin, vul_bb, type = \"l\", col = bl_col[bb], lty = scenario$lty, lwd = scenario$lwd)",
+           paste0("  Year_legend[bb] <- Year[data$sel_block[, ", ff, "] == bl[bb]] %>% range() %>% paste(collapse = \"-\")"), #ff = 1
+           "}",
+           "if(length(bl) > 1) legend(\"topright\", Year_legend, col = bl_col, lwd = 1)",
+           #"if(!is.null(scenario$names)) legend("topleft", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
            "```\n",
            "",
-           paste0("```{r, fig.cap = \"Corresponding age-based selectivity of ", f_name[ff], " in last historical year.\"}"),
-           paste0("vul_ff_age <- do.call(cbind, lapply(report_list, function(x) x$vul[nyears, , ", ff, "]))"),
-           paste0("matplot(age, vul_ff_age, type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Age\", ylim = c(0, 1), ylab = \"Selectivity of ", f_name[ff], "\")"),
+           paste0("```{r, fig.cap = \"Corresponding age-based selectivity of ", f_name[ff], ".\"}"),
+           paste0("matplot(age, age, type = \"n\", xlab = \"Age\", ylim = c(0, 1), ylab = \"Selectivity of Fleet ", ff, "\")"),
            "abline(h = 0, col = \"grey\")",
-           "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
+           "",
+           "for(bb in 1:length(bl)) {",
+           paste0("  vul_bb_age <- do.call(rbind, lapply(report_list, function(x) x$vul[data$sel_block[, ", ff, "] == bl[bb], , ", ff, "])) %>% t()"),
+           "  matlines(age, vul_bb_age, type = \"l\", col = bl_col[bb], lty = scenario$lty, lwd = scenario$lwd)",
+           "}",
+           "if(length(bl) > 1) legend(\"topleft\", Year_legend, col = bl_col, lwd = 1)",
+           #"if(!is.null(scenario$names)) legend("topleft", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Fishing Mortality of ", f_name[ff], ".\"}"),
            paste0("FM <- do.call(cbind, lapply(report_list, function(x) x$F[, ", ff, "]))"),
-           paste0("matplot(Year, FM, type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Fishing Mortality of ", f_name[ff], "\")"),
+           paste0("matplot(Year, FM, type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, ylim = c(0, 1.1 * max(FM)), xlab = \"Year\", ylab = \"Fishing Mortality of ", f_name[ff], "\")"),
            "abline(h = 0, col = \"grey\")",
            "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
            "```\n",
