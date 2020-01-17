@@ -50,7 +50,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
 
   if(is.null(data$Chist) && !is.null(data$Ehist)) condition <- "effort"
 
-  if(condition == "catch") {
+  if(condition == "catch" || condition == "catch2") {
     if(is.null(data$Chist)) {
       stop("Full time series of catch is needed.", call. = FALSE)
     } else {
@@ -71,7 +71,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
         data$condition <- "effort"
         data$Ehist <- matrix(1, data$nyears, data$nfleet)
       } else {
-        data$condition <- "catch"
+        data$condition <- condition
       }
     }
   }
@@ -94,7 +94,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
     }
   }
 
-  message("SRA model is conditioned on ", data$condition)
+  message("SRA model is conditioned on: ", data$condition)
   message(data$nfleet, " fleet(s) detected.")
   message(data$nyears, " years of data detected.")
 
@@ -102,11 +102,11 @@ update_SRA_data <- function(data, OM, condition, dots) {
   if(OM@nyears != data$nyears) {
     cpars_cond <- length(OM@cpars) > 0 && any(vapply(OM@cpars, function(x) class(x) == "matrix" || class(x) == "array", logical(1)))
     if(cpars_cond) {
-      stmt <- paste0("OM@nyears != length(", ifelse(data$condition == "catch", "Chist", "Ehist"), "). ",
+      stmt <- paste0("OM@nyears != length(", ifelse(data$condition == "catch" || data$condition == "catch2", "Chist", "Ehist"), "). ",
                      "There will be indexing errors in your custom parameters (OM@cpars).")
       stop(stmt, call. = FALSE)
     } else {
-      message("OM@nyears was updated to length(", ifelse(data$condition == "catch", "Chist", "Ehist"), "): ", data$nyears)
+      message("OM@nyears was updated to length(", ifelse(data$condition == "catch" || data$condition == "catch2", "Chist", "Ehist"), "): ", data$nyears)
       OM@nyears <- data$nyears
     }
   }
@@ -224,7 +224,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
 
   # Process equilibrium catch/effort - Ceq
   if(is.null(data$C_eq)) data$C_eq <- rep(0, data$nfleet)
-  if(data$condition == "catch") {
+  if(data$condition == "catch" || data$condition == "catch2") {
     if(length(data$C_eq) == 1) data$C_eq <- rep(data$C_eq, data$nfleet)
     if(length(data$C_eq) < data$nfleet) stop("C_eq needs to be of length nfleet (", data$nfleet, ").", call. = FALSE)
   }

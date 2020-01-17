@@ -9,7 +9,7 @@
 SRA_scope(
   OM,
   data = list(),
-  condition = c("catch", "effort"),
+  condition = c("catch", "catch2", "effort"),
   selectivity = "logistic",
   s_selectivity = NULL,
   LWT = list(),
@@ -33,7 +33,8 @@ steepness, maturity parameters (L50 and L50_95), standard deviation of recruitme
 
 \item{data}{A list of data inputs. See Data section below.}
 
-\item{condition}{String to indicate whether the SRA model is conditioned on catch or effort.}
+\item{condition}{String to indicate whether the SRA model is conditioned on "catch" (where F is estimated), "catch2" (where F is solved internally using Newton's method),
+or "effort".}
 
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
 

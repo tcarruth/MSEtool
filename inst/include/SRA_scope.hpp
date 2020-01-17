@@ -16,8 +16,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_MATRIX(E_hist);    // Effort by year and fleet
   DATA_VECTOR(E_eq);      // Equilibrium effort by fleet
 
-  DATA_STRING(condition); // Indicates whether the model will condition on effort or catch
-  DATA_INTEGER(nll_C);    // Indicates whether there is a likelihood for the catch if condition = "effort"
+  DATA_STRING(condition); // Indicates whether the model will condition on 'effort', 'catch' (estimated F's), 'catch2' (internally optimize for F)
+  DATA_INTEGER(nll_C);    // Indicates whether there is a likelihood for the catch. TRUE when (a) condition = 'catch' or (b) 'effort' with nfleet > 1
 
   DATA_MATRIX(I_hist);    // Index by year and survey
   DATA_MATRIX(sigma_I);   // Standard deviation of index by year and survey
@@ -60,29 +60,31 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
-  DATA_MATRIX(LWT_Index); // LIkelihood weights for the index
-  DATA_STRING(comp_like);
+  DATA_MATRIX(LWT_Index); // Likelihood weights for the index
+  DATA_STRING(comp_like); // Whether to use "multinomial" or "lognormal" distribution for age/lengthc comps
 
   DATA_SCALAR(max_F);     // Maximum F in the model
-  DATA_SCALAR(rescale);   // Catch rescaler, needed in case q = 1
+  DATA_SCALAR(rescale);   // Catch rescaler, needed in cases where q = 1
   DATA_INTEGER(ageM);     // Age of maturity used for averaging E0 and EPR0
 
-  DATA_IVECTOR(est_early_rec_dev);
-  DATA_IVECTOR(est_rec_dev); // Indicator whether to estimate rec_dev
-  DATA_INTEGER(nit_F);    // Number of iterations for Newton-Raphson method to solve for F
-  DATA_INTEGER(plusgroup) // Whether the maximum age in the plusgroup is modeled.
+  DATA_IVECTOR(est_early_rec_dev); // Indicates years in which log_early_rec_dev are estimated. Then, lognormal bias correction estimates are added..
+  DATA_IVECTOR(est_rec_dev); // Indicates years in which log_rec_dev are estimated.
+  DATA_IVECTOR(yind_F);   // When condition = "catch", the year in F's are estimated and all other F parameters are deviations from this F
+  DATA_INTEGER(nit_F);    // When condition = "catch2", the number of iterations for Newton-Raphson method to solve for F
+  DATA_INTEGER(plusgroup) // Boolean, whether the maximum age in the plusgroup is modeled.
 
-  PARAMETER(log_R0);
-  PARAMETER(transformed_h);
-  PARAMETER_MATRIX(vul_par);            // Matrix of vul_par
-  PARAMETER_MATRIX(s_vul_par);
-  PARAMETER_VECTOR(log_q_effort);
-  PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium U by fleet
+  PARAMETER(log_R0);                    // Unfished recruitment
+  PARAMETER(transformed_h);             // Steepness
+  PARAMETER_MATRIX(vul_par);            // Matrix of vul_par 3 rows and nsel_block columns
+  PARAMETER_MATRIX(s_vul_par);          // Matrix of selectivity parameters, 3 rows and nsurvey columns
+  PARAMETER_VECTOR(log_q_effort);       // log_q for F when condition = "effort"
+  PARAMETER_MATRIX(log_F);              // log_F_deviations when condition = "catch"
+  PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium F by fleet when condition != "effort"
 
-  PARAMETER_VECTOR(log_sigma_mlen);
-  PARAMETER(log_tau);
-  PARAMETER_VECTOR(log_early_rec_dev);
-  PARAMETER_VECTOR(log_rec_dev);
+  PARAMETER_VECTOR(log_sigma_mlen);     // Std. dev. of mean lengths
+  PARAMETER(log_tau);                   // Std. dev. of rec devs
+  PARAMETER_VECTOR(log_early_rec_dev);  // Rec devs for first year abundance
+  PARAMETER_VECTOR(log_rec_dev);        // Rec devs for all other years in the model
 
   int nlbin = length_bin.size();
   Type bin_width = length_bin(1) - length_bin(0);
@@ -117,14 +119,11 @@ Type SRA_scope(objective_function<Type> *obj) {
   for(int ff=0;ff<nfleet;ff++) {
     sigma_mlen(ff) = exp(log_sigma_mlen(ff));
     q_effort(ff) = exp(log_q_effort(ff));
-    if(condition == "catch" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
+    if(condition != "effort" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
     if(condition == "effort" && E_eq(ff)>0) F_equilibrium(ff) = q_effort(ff) * E_eq(ff);
-    if(condition == "effort") {
-      for(int y=0;y<n_y;y++) {
-        Type tmp = max_F - q_effort(ff) * E_hist(y,ff);
-        F(y,ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty),
-          q_effort(ff) * E_hist(y,ff));
-      }
+    if(condition == "catch") {
+      Type tmp = max_F - exp(log_F(yind_F(ff),ff));
+      F(yind_F(ff),ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), exp(log_F(yind_F(ff),ff)));
     }
   }
 
@@ -246,7 +245,19 @@ Type SRA_scope(objective_function<Type> *obj) {
     ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
 
     if(condition == "catch") {
+      for(int ff=0;ff<nfleet;ff++) {
+        if(y != yind_F(ff)) {
+          Type tmp = max_F - F(yind_F(ff),ff) * exp(log_F(y,ff));
+          F(y,ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), F(yind_F(ff),ff) * exp(log_F(y,ff)));
+        }
+      }
+    } else if(condition == "catch2") {
       F.row(y) = Newton_SRA_F(C_hist, N, M, wt, VB, vul, max_F, y, max_age, nfleet, nit_F, penalty);
+    } else {
+      for(int ff=0;ff<nfleet;ff++) {
+        Type tmp = max_F - q_effort(ff) * E_hist(y,ff);
+        F(y,ff) = CppAD::CondExpLt(tmp, Type(0), max_F - posfun(tmp, Type(0), penalty), q_effort(ff) * E_hist(y,ff));
+      }
     }
 
     for(int a=0;a<max_age;a++) {
@@ -373,7 +384,7 @@ Type SRA_scope(objective_function<Type> *obj) {
           }
         }
 
-        if(LWT_C(ff,0) > 0 && condition == "effort" && nll_C) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
+        if(nll_C && LWT_C(ff,0) > 0) nll_Catch(ff) -= dnorm(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
         if(LWT_C(ff,3) > 0 && !R_IsNA(asDouble(mlen(y,ff))) && mlen(y,ff) > 0) {
           nll_ML(ff) -= dnorm(mlen(y,ff), mlen_pred(y,ff), sigma_mlen(ff), true);
         }
@@ -385,8 +396,9 @@ Type SRA_scope(objective_function<Type> *obj) {
     nll_CAL(ff) *= LWT_C(ff,2);
     nll_ML(ff) *= LWT_C(ff,3);
 
-    if(condition == "catch" && C_eq(ff) > 0) nll_Ceq(ff) = -1 * LWT_C(ff,4) * dnorm(log(C_eq(ff)), log(C_eq_pred(ff)), Type(0.01), true);
-
+    if(LWT_C(ff,4) > 0 && C_eq(ff) > 0 && condition != "effort") {
+      nll_Ceq(ff) = -1 * LWT_C(ff,4) * dnorm(log(C_eq(ff)), log(C_eq_pred(ff)), Type(0.01), true);
+    }
   }
 
   for(int y=0;y<n_y;y++) {
@@ -421,7 +433,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(log_q_effort);
   REPORT(log_F_equilibrium);
 
-  REPORT(log_sigma_mlen);
+  if(nll_ML.sum() != 0) REPORT(log_sigma_mlen);
   REPORT(log_tau);
   REPORT(log_early_rec_dev);
   REPORT(log_rec_dev);
@@ -429,7 +441,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(R0);
   REPORT(h);
   REPORT(tau);
-  REPORT(sigma_mlen);
+  if(nll_ML.sum() != 0) REPORT(sigma_mlen);
+  if(condition == "catch") REPORT(log_F);
   REPORT(F_equilibrium);
   REPORT(vul);
   REPORT(F);
@@ -465,7 +478,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(R_eq);
 
   REPORT(C_eq_pred);
-  REPORT(q);
+  if(nll_Index.sum() != 0) REPORT(q);
 
   REPORT(nll_Catch);
   REPORT(nll_Index);
@@ -481,12 +494,14 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(penalty);
   REPORT(prior);
 
-  REPORT(s_CAApred);
-  REPORT(s_CALpred);
-  REPORT(s_vul);
-  REPORT(s_L5);
-  REPORT(s_LFS);
-  REPORT(s_Vmaxlen);
+  if(nll_Index.sum() != 0) {
+    REPORT(s_CAApred);
+    REPORT(s_CALpred);
+    REPORT(s_vul);
+    REPORT(s_L5);
+    REPORT(s_LFS);
+    REPORT(s_Vmaxlen);
+  }
 
   return nll;
 }

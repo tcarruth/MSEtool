@@ -13,7 +13,8 @@
 #' @param OM An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
 #' steepness, maturity parameters (L50 and L50_95), standard deviation of recruitment variability (Perr), as well as index uncertainty (Iobs).
 #' @param data A list of data inputs. See Data section below.
-#' @param condition String to indicate whether the SRA model is conditioned on catch or effort.
+#' @param condition String to indicate whether the SRA model is conditioned on "catch" (where F is estimated), "catch2" (where F is solved internally using Newton's method),
+#' or "effort".
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
 #' @param s_selectivity A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
 #' for an age-specific index.
@@ -120,7 +121,7 @@
 #' @seealso \link{plot.SRA} \linkS4class{SRA}
 #' @importFrom dplyr %>%
 #' @export
-SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selectivity = "logistic", s_selectivity = NULL, LWT = list(),
+SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effort"), selectivity = "logistic", s_selectivity = NULL, LWT = list(),
                       comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
@@ -433,9 +434,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
 
   OM@cpars$h <- StockPars$hs
 
-  if(!is.null(dots$plusgroup)) {
-    OM@cpars$plusgroup <- rep(as.integer(dots$plusgroup), nsim)
-  } else {
+  if(is.null(dots$plusgroup) || dots$plusgroup) {
     OM@cpars$plusgroup <- rep(1L, nsim)
   }
   OM@cpars$Iobs <- ObsPars$Iobs
@@ -474,7 +473,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
   }
 
   # Check whether observed matches predicted
-  if(condition == "catch") {
+  if(condition == "catch" || condition == "catch2") {
     catch_check_fn <- function(x, report, data) {
       if(report[[x]]$conv) {
         catch_diff <- report[[x]]$Cpred/data$Chist - 1
@@ -488,9 +487,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "effort"), selec
     do_catch_check <- vapply(1:length(res), catch_check_fn, logical(1), report = res, data = data)
     if(any(do_catch_check)) {
       flag_ind <- paste(which(do_catch_check), collapse = " ")
-      message("There is predicted catch that deviates from observed catch by more than 1% in simulations:")
+      message("Note: there is predicted catch that deviates from observed catch by more than 1% in simulations:")
       message(flag_ind)
-      message("\nTry increasing nit_F or max_F.\n")
     }
   }
   message("Complete.")
@@ -619,7 +617,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   if(is.null(dots$nit_F)) nit_F <- 3L else nit_F <- dots$nit_F
   if(is.null(dots$plusgroup)) plusgroup <- 1L else plusgroup <- as.integer(dots$plusgroup)
   TMB_data_all <- list(condition = data$condition,
-                       nll_C = as.integer(data$condition == "effort" && nfleet > 1),
+                       nll_C = as.integer((data$condition == "effort" & nfleet > 1) || data$condition == "catch"),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
                        CAL_hist = data$CAL, CAL_n = pmin(CAL_n, ESS[2]), s_CAA_hist = data$s_CAA, s_CAA_n = s_CAA_n,
                        s_CAL_hist = data$s_CAL, s_CAL_n = s_CAL_n, length_bin = data$length_bin, mlen = data$ML,
@@ -631,9 +629,9 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        s_vul_type = as.integer(s_selectivity), I_type = as.integer(I_type), abs_I = data$abs_I,
                        I_basis = as.integer(data$I_basis), SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
                        max_F = max_F, rescale = rescale, ageM = min(nyears, ceiling(StockPars$ageM[x, 1])),
-                       nit_F = nit_F, plusgroup = plusgroup)
+                       yind_F = as.integer(rep(0.5 * nyears, nfleet)), nit_F = nit_F, plusgroup = plusgroup)
 
-  if(data$condition == "catch") {
+  if(data$condition == "catch" || data$condition == "catch2") {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
   } else {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = rep(0, nfleet), E_hist = E_hist, E_eq = data$E_eq * rescale_effort)
@@ -662,12 +660,12 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
     for(ff in 1:nfleet) {
       if(all(data$CAA[,,ff] <= 0, na.rm = TRUE) && all(data$CAL[,,ff] <= 0, na.rm = TRUE)) {
-        map_vul_par[, unique(data$nsel_block[, ff])] <- NA
+        map_vul_par[, unique(data$sel_block[, ff])] <- NA
       }
     }
     if(any(!is.na(map_vul_par))) map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))
   } else {
-    map_vul_par <- factor(dots$map_vul_par)
+    map_vul_par <- dots$map_vul_par
   }
 
   # s_vul_par, and map
@@ -690,12 +688,15 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     }
     if(any(!is.na(map_s_vul_par))) map_s_vul_par[!is.na(map_s_vul_par)] <- 1:sum(!is.na(map_s_vul_par))
   } else {
-    map_s_vul_par <- factor(dots$map_s_vul_par)
+    map_s_vul_par <- dots$map_s_vul_par
   }
 
-  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch", log(StockPars$R0[x] * rescale), 0),
+  log_F_start <- matrix(0, nyears, nfleet)
+  if(data$condition == "catch") log_F_start[TMB_data_all$yindF + 1, 1:nfleet] <- log(0.5 * mean(TMB_data_all$M[nyears, ]))
+
+  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
-                     log_q_effort = rep(log(0.1), nfleet),
+                     log_q_effort = rep(log(0.1), nfleet), log_F = log_F_start,
                      log_F_equilibrium = rep(log(0.05), nfleet),
                      log_sigma_mlen = log(data$ML_sd), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
@@ -705,7 +706,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   map$transformed_h <- map$log_tau <- factor(NA)
   map$vul_par <- factor(map_vul_par)
   map$s_vul_par <- factor(map_s_vul_par)
-  if(data$condition == "catch") {
+  if(data$condition != "effort") {
     map$log_q_effort <- factor(rep(NA, nfleet))
     if(any(data$C_eq == 0)) {
       map_log_F_equilibrium <- rep(NA, nfleet)
@@ -713,10 +714,9 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
       map$log_F_equilibrium <- factor(map_log_F_equilibrium)
     }
   } else {
-    map$log_F <- factor(matrix(NA, nyears, nfleet))
     map$log_F_equilibrium <- factor(rep(NA, nfleet))
   }
-
+  if(data$condition != "catch") map$log_F <- factor(matrix(NA, nyears, nfleet))
   map$log_sigma_mlen <- factor(rep(NA, nfleet))
 
   if(is.null(dots$map_log_early_rec_dev)) {
@@ -738,10 +738,10 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   obj <- MakeADFun(data = c(TMB_data, TMB_data_all), parameters = TMB_params, map = map, random = random,
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 
-  if(data$condition == "catch") {
+  if(data$condition == "catch2") {
     R0_test <- any(is.na(obj$report(obj$par)$F)) || any(is.infinite(obj$report(obj$par)$F))
     if(R0_test) {
-      for(i in 1:30) {
+      for(i in 1:10) {
         obj$par["log_R0"] <- 0.5 + obj$par["log_R0"]
         if(all(!is.na(obj$report(obj$par)$F)) && all(!is.infinite(obj$report(obj$par)$F))) break
       }
@@ -754,14 +754,13 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   report <- obj$report(obj$env$last.par.best)
 
   if(rescale != 1) {
-
     vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
                   "R", "R_early", "R_eq", "R0", "B0", "E0", "N0", "E0_SR")
     vars_mult <- c("Brec", "q")
     var_trans <- c("R0", "q")
     fun_trans <- c("/", "*")
 
-    if(data$condition == "catch" || TMB_data_all$nll_C) {
+    if(TMB_data_all$nll_C || data$condition == "catch2") {
       fun_fixed <- c("log", NA)
       rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
     } else if(any(data$Chist > 0, na.rm = TRUE)) {
@@ -770,7 +769,6 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
       fun_fixed <- c(NA, NA)
       rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
     }
-
   }
 
   report$F_at_age <- report$Z - report$M[1:nyears, ]
