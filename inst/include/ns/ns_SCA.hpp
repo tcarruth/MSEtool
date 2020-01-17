@@ -1,6 +1,11 @@
 
 namespace ns_SCA {
 
+template <class Type>
+Type log2(Type x) {
+  return log(x)/log(Type(2));
+}
+
 template<class Type>
 vector<Type> calc_NPR(Type F, vector<Type> vul, vector<Type> M, int max_age) {
   vector<Type> NPR(max_age);
@@ -39,6 +44,39 @@ Type sum_VBPR(vector<Type> NPR, vector<Type> weight, vector<Type> vul) {
   Type answer = 0.;
   for(int a=0;a<NPR.size();a++) answer += NPR(a) * weight(a) * vul(a);
   return answer;
+}
+
+template<class Type>
+vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior, vector<Type> LAA, Type Linf) {
+  vector<Type> vul(max_age);
+  Type LFS = invlogit(vul_par(0)) * (0.9 * Linf - min(LAA)) + min(LAA);
+  Type L5 = LFS - exp(vul_par(1));
+  Type sl = (LFS - L5) / pow(-log2(0.05), 0.5);
+
+  for(int a=0;a<max_age;a++) {
+    Type lo = pow(2,-((LAA(a) - LFS)/sl*(LAA(a)-LFS)/sl));
+    vul(a) = CppAD::CondExpGt(LAA(a), LFS, Type(1), lo);
+  }
+  vul /= max(vul);
+  return vul;
+}
+
+template<class Type>
+vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior, vector<Type> LAA, Type Linf) {
+  vector<Type> vul(max_age);
+  Type LFS = invlogit(vul_par(0)) * (0.9 * Linf - min(LAA)) + min(LAA);
+  Type L5 = LFS - exp(vul_par(1));
+  Type Vmaxlen = invlogit(vul_par(2));
+  Type sl = (LFS - L5) / pow(-log2(0.05), 0.5);
+  Type sr = (Linf - LFS) / pow(-log2(Vmaxlen), 0.5);
+
+  for(int a=0;a<max_age;a++) {
+    Type lo = pow(2,-((LAA(a) - LFS)/sl*(LAA(a)-LFS)/sl));
+    Type hi = pow(2,-((LAA(a) - LFS)/sr*(LAA(a)-LFS)/sr));
+    vul(a) = CppAD::CondExpGt(LAA(a), LFS, hi, lo);
+  }
+  vul /= max(vul);
+  return vul;
 }
 
 template<class Type>

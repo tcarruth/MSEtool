@@ -17,6 +17,8 @@ Type SCA(objective_function<Type> *obj) {
   DATA_INTEGER(n_y);      // Number of years in model
   DATA_INTEGER(max_age);  // Maximum age (plus-group)
   DATA_VECTOR(M);         // Natural mortality at age
+  DATA_VECTOR(LAA);       // Length at age for calculating selectivity
+  DATA_SCALAR(Linf);      // For calculating selectivity
   DATA_VECTOR(weight);    // Weight-at-age at the beginning of the year
   DATA_VECTOR(mat);       // Maturity-at-age at the beginning of the year
   DATA_STRING(vul_type);  // String indicating whether logistic or dome vul is used
@@ -59,9 +61,9 @@ Type SCA(objective_function<Type> *obj) {
   // Vulnerability
   vector<Type> vul(max_age);
   if(vul_type == "logistic") {
-    vul = calc_logistic_vul(vul_par, max_age, prior);
+    vul = calc_logistic_vul(vul_par, max_age, prior, LAA, Linf);
   } else {
-    vul = calc_dome_vul(vul_par, max_age, prior);
+    vul = calc_dome_vul(vul_par, max_age, prior, LAA, Linf);
   }
 
   ////// Equilibrium reference points and per-recruit quantities

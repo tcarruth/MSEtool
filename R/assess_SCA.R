@@ -253,7 +253,7 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "SCA", C_hist = C_hist * rescale, I_hist = I_hist,
                CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
-               CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M,
+               CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, LAA = La, Linf = Linf,
                weight = Wa, mat = mat_age, vul_type = vulnerability, I_type = I_type,
                SR_type = SR, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev,
                est_rec_dev = est_rec_dev, yindF = as.integer(0.5 * n_y))
@@ -273,23 +273,21 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
     }
     if(!is.null(start$F_equilibrium) && is.numeric(start$F_equilibrium)) params$F_equilibrium <- start$F_equilibrium
     if(!is.null(start$vul_par) && is.numeric(start$vul_par)) {
-      if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be less than 0.75 * Data@MaxAge (see help).")
+      if(start$vul_par[1] > 0.9 * Linf) stop("start$vul_par[1] needs to be less than 0.9 * Linf.")
+      if(start$vul_par[1] < min(La)) stop("start$vul_par[1] needs to be greater than length at age 1: ", min(La))
       if(vulnerability == "logistic") {
         if(length(start$vul_par) < 2) stop("Two parameters needed for start$vul_par with logistic vulnerability (see help).")
         if(start$vul_par[1] <= start$vul_par[2]) stop("start$vul_par[1] needs to be greater than start$vul_par[2] (see help).")
 
-        params$vul_par <- c(logit(start$vul_par[1]/max_age/0.75), log(start$vul_par[1] - start$vul_par[2]))
+        params$vul_par <- c(logit((start$vul_par[1] - min(La))/(0.9 * Linf - min(La))), log(start$vul_par[1] - start$vul_par[2]))
       }
       if(vulnerability == "dome") {
-        if(length(start$vul_par) < 4) stop("Four parameters needed for start$vul_par with dome vulnerability (see help).")
+        if(length(start$vul_par) < 3) stop("Three parameters needed for start$vul_par with dome vulnerability (see help).")
         if(start$vul_par[1] <= start$vul_par[2]) stop("start$vul_par[1] needs to be greater than start$vul_par[2] (see help).")
-        if(start$vul_par[3] <= start$vul_par[1] || start$vul_par[3] >= max_age) {
-          stop("start$vul_par[3] needs to be between start$vul_par[1] and Data@MaxAge (see help).")
-        }
-        if(start$vul_par[4] <= 0 || start$vul_par[4] >= 1) stop("start$vul_par[4] needs to be between 0-1 (see help).")
+        if(start$vul_par[3] <= 0 || start$vul_par[3] >= 1) stop("start$vul_par[3] needs to be between 0-1 (see help).")
 
-        params$vul_par <- c(logit(start$vul_par[1]/max_age/0.75), log(start$vul_par[1] - start$vul_par[2]),
-                            logit(1/(max_age - start$vul_par[1])), logit(start$vul_par[4]))
+        params$vul_par <- c(logit((start$vul_par[1] - min(La))/(0.9 * Linf - min(La))), log(start$vul_par[1] - start$vul_par[2]),
+                            logit(start$vul_par[4]))
       }
     }
     if(!is.null(start$F) && is.numeric(start$F)) {
@@ -319,25 +317,23 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   }
   if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
   if(is.null(params$vul_par)) {
-    CAA_mode <- which.max(colSums(CAA_hist, na.rm = TRUE))
     if((is.na(Data@LFC[x]) && is.na(Data@LFS[x])) || (Data@LFC[x] > Linf) || (Data@LFS[x] > Linf)) {
-      if(vulnerability == "logistic") params$vul_par <- c(logit(CAA_mode/max_age/0.75), log(1))
-      if(vulnerability == "dome") {
-        params$vul_par <- c(logit(CAA_mode/max_age/0.75), log(1), logit(1/(max_age - CAA_mode)), logit(0.5))
+      CAL_mode <- try(which.max(colSums(Data@CAL[x, yind, ], na.rm = TRUE)), silent = TRUE)
+      if(is.character(CAL_mode) || all(is.na(CAL_hist))) {
+        CAL_mode <- La[which.max(colSums(CAA_hist, na.rm = TRUE))]
       }
+      LFS <- Data@CAL_mids[CAL_mode]
+      L5 <- 0.4 * LFS
     } else {
-      A5 <- min(iVB(t0, K, Linf, Data@LFC[x]), CAA_mode-1)
-      Afull <- min(iVB(t0, K, Linf, Data@LFS[x]), 0.5 * max_age)
-      A5 <- min(A5, Afull - 0.5)
-      A50_vul <- mean(c(A5, Afull))
-
-      if(vulnerability == "logistic") params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul))
-      if(vulnerability == "dome") {
-        params$vul_par <- c(logit(Afull/max_age/0.75), log(Afull - A50_vul), logit(0.1/(max_age - Afull)), logit(0.5))
-      }
+      LFS <- Data@LFS[x]
+      L5 <- min(0.4 * LFS, Data@LFC[x])
+    }
+    LFS <- max(LFS, min(La))
+    if(vulnerability == "logistic") params$vul_par <- c(logit((LFS - min(La))/(0.9 * Linf - min(La))), log(LFS - L5))
+    if(vulnerability == "dome") {
+      params$vul_par <- c(logit((LFS - min(La))/(0.9 * Linf - min(La))), log(LFS - L5), logit(0.5))
     }
   }
-  if(is.na(params$vul_par[1])) params$vul_par[1] <- 1
   if(is.null(params$logF)) {
     Fstart <- numeric(n_y)
     Fstart[data$yindF + 1] <- log(0.75 * mean(data$M))
@@ -378,7 +374,6 @@ SCA <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logistic
   if(fix_tau) map$log_tau <- factor(NA)
   if(any(!est_early_rec_dev)) map$log_early_rec_dev <- factor(ifelse(est_early_rec_dev, 1:sum(est_early_rec_dev), NA))
   if(any(!est_rec_dev)) map$log_rec_dev <- factor(ifelse(est_rec_dev, 1:sum(est_rec_dev), NA))
-  if(vulnerability == "dome") map$vul_par <- factor(c(1, 2, NA, 3))
 
   random <- NULL
   if(integrate) random <- c("log_early_rec_dev", "log_rec_dev")
