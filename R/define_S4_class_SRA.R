@@ -102,10 +102,16 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             if(is.null(Year)) Year <- (OM@CurrentYr - nyears + 1):OM@CurrentYr
             Yearplusone <- c(Year, max(Year) + 1)
 
-            nfleet <- x@data$nfleet
-            nsel_block <- x@data$nsel_block
-            nsurvey <- x@data$nsurvey
-            length_bin <- x@data$length_bin
+            # Backwards compatibility
+            if(is.null(data$nsel_block)) {
+              data$nsel_block <- data$nfleet
+              data$sel_block <- matrix(1:data$nfleet, nyears, data$nfleet, byrow = TRUE)
+            }
+
+            nfleet <- data$nfleet
+            nsel_block <- data$nsel_block
+            nsurvey <- data$nsurvey
+            length_bin <- data$length_bin
 
             if(is.null(f_name)) f_name <- paste("Fleet", 1:nfleet)
             if(is.null(s_name)) s_name <- paste("Survey", 1:nsurvey)
@@ -154,6 +160,12 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               report <- x@mean_fit$report
               length_bin <- x@mean_fit$report$length_bin
               data_mean_fit <- x@mean_fit$obj$env$data
+
+              # Backwards compatibility
+              if(is.null(data_mean_fit$nsel_block)) {
+                data_mean_fit$nsel_block <- data$nfleet
+                data_mean_fit$sel_block <- matrix(1:data$nfleet, nyears, data$nfleet, byrow = TRUE)
+              }
 
               conv <- report$conv
 
@@ -914,6 +926,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   x <- dots[[1]] # Dummy variable
   report_list <- lapply(dots, function(x) if(length(x@mean_fit) > 0) return(x@mean_fit$report) else stop("Error in SRA objects."))
 
+
   nsim <- length(report_list)
   data <- dots[[1]]@data
 
@@ -926,6 +939,12 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   nfleet <- vapply(dots, function(x) x@data$nfleet, numeric(1)) %>% unique()
   nsurvey <- vapply(dots, function(x) x@data$nsurvey, numeric(1)) %>% unique()
   length_bin <- dots[[1]]@data$length_bin
+
+  # Backwards compatibility
+  if(is.null(data$nsel_block)) {
+    data$nsel_block <- data$nfleet
+    data$sel_block <- matrix(1:data$nfleet, nyears, data$nfleet, byrow = TRUE)
+  }
 
   if(is.null(f_name)) f_name <- paste("Fleet", 1:nfleet)
   if(is.null(s_name)) s_name <- paste("Survey", 1:nsurvey)
