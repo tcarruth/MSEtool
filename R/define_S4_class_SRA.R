@@ -323,32 +323,34 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                           label = "log-Recruitment deviations", conv_check = TRUE),
                              rmd_N(), N_bubble, CAA_bubble, CAL_bubble)
 
-              nll <- SRA_get_likelihoods(report, data$LWT, f_name, s_name)
-              if(render_args$output_format == "html_document") {
-                nll_table <- c("### Likelihood components\n",
-                               "#### Summary\n",
-                               "`r nll[[1]]`\n\n",
-                               "#### Fleet likelihoods\n",
-                               "`r nll[[2]]`\n\n",
-                               "#### Fleet weights\n",
-                               "`r nll[[3]]`\n\n",
-                               "#### Survey likelihoods\n",
-                               "`r nll[[4]]`\n\n",
-                               "#### Survey weights\n",
-                               "`r nll[[5]]`\n\n")
-              } else {
-                nll_table <- c("### Likelihood components\n",
-                               "#### Summary\n",
-                               "`r nll[[1]] %>% kable(format = \"markdown\")`\n\n",
-                               "#### Fleet likelihoods\n",
-                               "`r nll[[2]] %>% kable(format = \"markdown\")`\n\n",
-                               "#### Fleet weights\n",
-                               "`r nll[[3]] %>% kable(format = \"markdown\")`\n\n",
-                               "#### Survey likelihoods\n",
-                               "`r nll[[4]] %>% kable(format = \"markdown\")`\n\n",
-                               "#### Survey weights\n",
-                               "`r nll[[5]] %>% kable(format = \"markdown\")`\n\n")
-              }
+              if(!is.null(data$LWT)) { # Backwards compatibility
+                nll <- SRA_get_likelihoods(report, data$LWT, f_name, s_name)
+                if(render_args$output_format == "html_document") {
+                  nll_table <- c("### Likelihood components\n",
+                                 "#### Summary\n",
+                                 "`r nll[[1]]`\n\n",
+                                 "#### Fleet likelihoods\n",
+                                 "`r nll[[2]]`\n\n",
+                                 "#### Fleet weights\n",
+                                 "`r nll[[3]]`\n\n",
+                                 "#### Survey likelihoods\n",
+                                 "`r nll[[4]]`\n\n",
+                                 "#### Survey weights\n",
+                                 "`r nll[[5]]`\n\n")
+                } else {
+                  nll_table <- c("### Likelihood components\n",
+                                 "#### Summary\n",
+                                 "`r nll[[1]] %>% kable(format = \"markdown\")`\n\n",
+                                 "#### Fleet likelihoods\n",
+                                 "`r nll[[2]] %>% kable(format = \"markdown\")`\n\n",
+                                 "#### Fleet weights\n",
+                                 "`r nll[[3]] %>% kable(format = \"markdown\")`\n\n",
+                                 "#### Survey likelihoods\n",
+                                 "`r nll[[4]] %>% kable(format = \"markdown\")`\n\n",
+                                 "#### Survey weights\n",
+                                 "`r nll[[5]] %>% kable(format = \"markdown\")`\n\n")
+                }
+              } else nll_table <- NULL
 
               mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output, nll_table)
             } else mean_fit_rmd <- c("## Fit to mean parameters of OM {.tabset}\n",
