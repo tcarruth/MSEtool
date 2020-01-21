@@ -653,9 +653,11 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   } else {
     vul_par <- dots$vul_par
   }
-  vul_par[2, ] <- log(vul_par[1, ] - vul_par[2, ])
-  vul_par[1, ] <- logit(pmin(vul_par[1, ]/StockPars$Linf[x]/0.99, 0.99))
-  vul_par[3, ] <- logit(pmin(vul_par[3, ], 0.99))
+
+  sel_check <- selectivity == -1 | selectivity == 0
+  vul_par[2, sel_check] <- log(vul_par[1, sel_check] - vul_par[2, sel_check])
+  vul_par[1, sel_check] <- logit(pmin(vul_par[1, sel_check]/StockPars$Linf[x]/0.99, 0.99))
+  vul_par[3, sel_check] <- logit(pmin(vul_par[3, sel_check], 0.99))
 
   if(is.null(dots$map_vul_par)) {
     map_vul_par <- matrix(0, 3, data$nsel_block)
