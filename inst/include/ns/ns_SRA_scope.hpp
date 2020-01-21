@@ -71,7 +71,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
   vector<Type> srs(nsel_block);
 
   for(int b=0;b<nsel_block;b++) { // Parameters for sel_block
-    if(vul_type(b) <= 0) { // Logistic or dome
+    if(vul_type(b) <= 0 && vul_type(b) > -2) { // Logistic or dome
       LFS(b) = invlogit(vul_par(0,b)) * 0.99 * Linf;
       L5(b) = LFS(b) - exp(vul_par(1,b));
       sls(b) = (LFS(b) - L5(b))/pow(-log2(0.05), 0.5);
@@ -88,7 +88,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
     for(int y=0;y<Len_age.rows();y++) {
       int vul_ind = sel_block(y,ff) - 1;
 
-      if(vul_type(vul_ind) <= 0) { // Logistic or dome
+      if(vul_type(vul_ind) <= 0 && vul_type(vul_ind) > -2) { // Logistic or dome
         for(int a=0;a<Len_age.cols();a++) {
           Type lo = pow(2, -((Len_age(y,a) - LFS(vul_ind))/sls(vul_ind) * (Len_age(y,a) - LFS(vul_ind))/sls(vul_ind)));
           Type hi;
@@ -100,6 +100,8 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
           }
           vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(vul_ind), lo, hi);
         }
+      } else if(vul_type(vul_ind) == -2) { // Free parameters
+        for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = invlogit(vul_par(a, vul_ind));
       } else { // Age-specific index
         vul(y,vul_type(vul_ind)-1,ff) = 1;
       }
@@ -132,7 +134,7 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
 
     } else if(I_type(ff) == 0) { // est
 
-      if(vul_type(ff) <= 0) { // Logistic or dome
+      if(vul_type(ff) <= 0 && vul_type(ff) >= -1) { // Logistic or dome
         LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
         L5(ff) = LFS(ff) - exp(vul_par(1,ff));
         Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
@@ -155,6 +157,10 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
             }
             vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
           }
+        }
+      } else if(vul_type(ff) == -2) { // Free parameters
+        for(int y=0;y<Len_age.rows();y++) {
+          for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = invlogit(vul_par(a,ff));
         }
       } else { // Age-specific index
         for(int y=0;y<Len_age.rows();y++) vul(y,vul_type(ff)-1,ff) = 1;

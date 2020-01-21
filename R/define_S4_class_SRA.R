@@ -595,7 +595,7 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "Year_legend <- character(length(bl))",
            "for(bb in 1:length(bl)) {",
            "  vul_bb <- do.call(cbind, lapply(report_list, function(x) x$vul_len[, bl[bb]]))",
-           "  matlines(length_bin, vul_bb, type = \"l\", col = bl_col[bb], lty = scenario$lty, lwd = scenario$lwd)",
+           "  if(!any(is.na(vul_bb))) matlines(length_bin, vul_bb, type = \"l\", col = bl_col[bb], lty = scenario$lty, lwd = scenario$lwd)",
            paste0("  Year_legend[bb] <- Year[data$sel_block[, ", ff, "] == bl[bb]] %>% range() %>% paste(collapse = \"-\")"), #ff = 1
            "}",
            "if(length(bl) > 1) legend(\"topright\", Year_legend, col = bl_col, lwd = 1)",

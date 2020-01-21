@@ -170,9 +170,11 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
   if(length(selectivity) == 1) selectivity <- rep(selectivity, data$nsel_block)
   if(length(selectivity) < data$nsel_block) stop("selectivity vector should be of length ", data$nsel_block, ").", call. = FALSE)
-  sel_test <- match(selectivity, c("logistic", "dome"))
-  if(any(is.na(sel_test))) stop("selectivity vector should be either \"logistic\" or \"dome\".", call. = FALSE)
-  sel <- ifelse(selectivity == "logistic", -1, 0)
+  sel <- match(selectivity, c("free", "logistic", "dome"))
+  if(any(is.na(sel))) stop("selectivity vector should be either \"logistic\" or \"dome\".", call. = FALSE)
+  sel[selectivity == "free"] <- -2
+  sel[selectivity == "logistic"] <- -1
+  sel[selectivity == "dome"] <- 0
 
   if(nsurvey > 0) {
     if(is.null(s_selectivity)) s_selectivity <- rep("logistic", nsurvey)
@@ -182,6 +184,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     } else {
       if(length(s_selectivity) < nsurvey) stop("s_selectivity vector should be of length nsurvey (", nsurvey, ").", call. = FALSE)
       s_sel <- suppressWarnings(as.numeric(s_selectivity))
+      s_sel[s_selectivity == "free"] <- -2
       s_sel[s_selectivity == "logistic"] <- -1
       s_sel[s_selectivity == "dome"] <- 0
       if(any(s_sel > 0 && I_type2 == 0)) {
@@ -337,7 +340,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   ### Selectivity and F
   ### Find
   OM@isRel <- FALSE
-  if(data$nsel_block > 1) {
+  if(data$nsel_block > 1 || sel == -2) {
     F_matrix <- lapply(res, getElement, "F_at_age")
     apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
     Find <- do.call(rbind, apical_F)
@@ -674,9 +677,11 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   } else {
     s_vul_par <- dots$s_vul_par
   }
-  s_vul_par[2, ] <- log(s_vul_par[1, ] - s_vul_par[2, ])
-  s_vul_par[1, ] <- logit(pmin(s_vul_par[1, ]/StockPars$Linf[x]/0.99, 0.99))
-  s_vul_par[3, ] <- logit(pmin(s_vul_par[3, ], 0.99))
+
+  parametric_sel <- s_selectivity == -1 | s_selectivity == 0
+  s_vul_par[2, parametric_sel] <- log(s_vul_par[1, parametric_sel] - s_vul_par[2, parametric_sel])
+  s_vul_par[1, parametric_sel] <- logit(pmin(s_vul_par[1, parametric_sel]/StockPars$Linf[x]/0.99, 0.99))
+  s_vul_par[3, parametric_sel] <- logit(pmin(s_vul_par[3, parametric_sel], 0.99))
 
   if(is.null(dots$map_s_vul_par)) {
     map_s_vul_par <- matrix(0, 3, nsurvey)
@@ -772,8 +777,8 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   report$F_at_age <- report$Z - report$M[1:nyears, ]
-  report$vul_len <- get_vul_len(report)
-  report <- get_s_vul_len(report, TMB_data_all)
+  report$vul_len <- get_vul_len(report, selectivity)
+  report$s_vul_len <- get_s_vul_len(report, I_type, length(I_type), parametric_sel)
   report$rescale <- rescale
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
@@ -832,22 +837,28 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
 }
 
 
-get_vul_len <- function(report) {
-  sls <- (report$LFS - report$L5)/sqrt(-log(0.05, 2))
-  srs <- (report$Linf - report$LFS)/sqrt(-log(report$Vmaxlen, 2))
+get_vul_len <- function(report, selectivity) {
+  vul <- matrix(NA, length(report$length_bin), length(selectivity))
+  sel_ind  <- selectivity == 0 | selectivity == -1
+  LFS <- report$LFS[sel_ind]
+  L5 <- report$L5[sel_ind]
+  Vmaxlen <- report$Vmaxlen[sel_ind]
 
-  asc <- Map(function(x, y) 2^-((report$length_bin - y)/x * (report$length_bin - y)/x), x = sls, y = report$LFS)
+  sls <- (LFS - L5)/sqrt(-log(0.05, 2))
+  srs <- (report$Linf - LFS)/sqrt(-log(Vmaxlen, 2))
+  asc <- Map(function(x, y) 2^-((report$length_bin - y)/x * (report$length_bin - y)/x), x = sls, y = LFS)
   dsc <- Map(function(x, y, z) ifelse(z > rep(0.99, length(report$length_bin)), 1, 2^-((report$length_bin - y)/x * (report$length_bin - y)/x)),
-             x = srs, y = report$LFS, z = report$Vmaxlen)
-  vul <- Map(function(x, y, z) ifelse(report$length_bin > x, y, z), x = report$LFS, y = dsc, z = asc)
-  do.call(cbind, vul)
+             x = srs, y = LFS, z = Vmaxlen)
+  vul_out <- Map(function(x, y, z) ifelse(report$length_bin > x, y, z), x = LFS, y = dsc, z = asc)
+  vul[, sel_ind] <- do.call(cbind, vul_out)
+  return(vul)
 }
 
-get_s_vul_len <- function(report, TMB_data) {
-  s_vul_len <- matrix(NA, length(TMB_data$length_bin), TMB_data$nsurvey) # length-based: matrix of dimension nlbin, nsurvey
+get_s_vul_len <- function(report, I_type, nsurvey, parametric) {
+  s_vul_len <- matrix(NA, length(report$length_bin), nsurvey) # length-based: matrix of dimension nlbin, nsurvey
 
-  for(i in 1:TMB_data$nsurvey) {
-    if(TMB_data$I_type[i] == 0) {
+  for(i in 1:nsurvey) {
+    if(I_type[i] == 0 && parametric[i]) {
       sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
       srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
 
@@ -855,10 +866,7 @@ get_s_vul_len <- function(report, TMB_data) {
       dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
                     2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
       s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
-    }
-    if(TMB_data$I_type[i] > 0) s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
+    } else if(I_type[i] > 0) s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
   }
-
-  report$s_vul_len <- s_vul_len
-  return(report)
+  return(s_vul_len)
 }
