@@ -817,6 +817,15 @@ rmd_SRA_retrospective <- function() {
 }
 
 
+rmd_SRA_retrospective <- function() {
+  c("### Retrospective\n",
+    "```{r}",
+    "as.data.frame(summary(retro))",
+    "plot(retro)",
+    "```\n")
+}
+
+
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
                                  annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 2, dat_color = "black") {
   old_par <- par(no.readonly = TRUE)
