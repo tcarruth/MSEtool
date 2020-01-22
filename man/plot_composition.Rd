@@ -16,6 +16,7 @@ plot_composition(
   annual_ylab = "Frequency",
   annual_yscale = c("proportions", "raw"),
   bubble_adj = 5,
+  bubble_color = c("black", "white"),
   fit_linewidth = 3,
   fit_color = "red"
 )
@@ -49,6 +50,8 @@ and \code{fit}. Ignored for age data.}
 
 \item{bubble_adj}{Numeric, for adjusting the relative size of bubbles in bubble plots
 (larger number = larger bubbles).}
+
+\item{bubble_color}{Colors for negative and positive residuals, respectively, for bubble plots.}
 
 \item{fit_linewidth}{Argument \code{lwd} for fitted line.}
 

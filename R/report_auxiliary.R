@@ -625,6 +625,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 #' (larger number = larger bubbles).
 #' @param fit_linewidth Argument \code{lwd} for fitted line.
 #' @param fit_color Color of fitted line.
+#' @param bubble_color Colors for negative and positive residuals, respectively, for bubble plots.
 #' @return Plots depending on \code{plot_type}.
 #' @author Q. Huynh
 #' @export plot_composition
@@ -641,7 +642,7 @@ plot_residuals <- function(Year, res, res_sd = NULL, res_sd_CI = 0.95,
 plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c('annual', 'bubble_data', 'bubble_residuals', 'mean'),
                              N = rowSums(obs), CAL_bins = NULL, ages = NULL, ind = 1:nrow(obs),
                              annual_ylab = "Frequency", annual_yscale = c("proportions", "raw"),
-                             bubble_adj = 5, fit_linewidth = 3, fit_color = "red") {
+                             bubble_adj = 5, bubble_color = c("black", "white"), fit_linewidth = 3, fit_color = "red") {
   plot_type <- match.arg(plot_type)
   annual_yscale <- match.arg(annual_yscale)
   if(is.null(CAL_bins)) data_type <- "age" else data_type <- "length"
@@ -703,17 +704,16 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
 
     resid <- N * (obs_prob - fit_prob) / sqrt(N * fit_prob)
     diameter_max <- bubble_adj / pmin(10, max(abs(resid), na.rm = TRUE))
-    plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year",
-         ylim = range(data_val), ylab = data_lab)
+    plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year", ylim = range(data_val), ylab = data_lab)
 
     Year_mat <- matrix(Year, ncol = ncol(resid), nrow = nrow(resid))
     data_mat <- matrix(data_val, ncol = ncol(resid), nrow = nrow(resid), byrow = TRUE)
     isPositive <- resid > 0
-    points(Year_mat[!isPositive], data_mat[!isPositive], cex = pmin(0.5 * diameter_max * abs(resid[!isPositive]), diameter_max), pch = 21, bg = "grey80")
-    points(Year_mat[isPositive], data_mat[isPositive], cex = pmin(0.5 * diameter_max * resid[isPositive], diameter_max), pch = 21, bg = "white")
+    points(Year_mat[!isPositive], data_mat[!isPositive], cex = pmin(0.5 * diameter_max * abs(resid[!isPositive]), diameter_max), pch = 21, bg = bubble_color[1])
+    points(Year_mat[isPositive], data_mat[isPositive], cex = pmin(0.5 * diameter_max * resid[isPositive], diameter_max), pch = 21, bg = bubble_color[2])
     legend("topleft", legend = c("<-10", "-1", "1", ">10"),
            pt.cex = c(diameter_max, 0.5 * diameter_max, 0.5 * diameter_max, diameter_max),
-           pt.bg = c("grey80", "grey80", "white", "white"), pch = 21, horiz = TRUE)
+           pt.bg = rep(bubble_color, each = 2), pch = 21, horiz = TRUE)
 
     return(invisible())
   }
