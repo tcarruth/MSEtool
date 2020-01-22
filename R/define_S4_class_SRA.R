@@ -816,16 +816,6 @@ rmd_SRA_retrospective <- function() {
     "```\n")
 }
 
-
-rmd_SRA_retrospective <- function() {
-  c("### Retrospective\n",
-    "```{r}",
-    "as.data.frame(summary(retro))",
-    "plot(retro)",
-    "```\n")
-}
-
-
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
                                  annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 2, dat_color = "black") {
   old_par <- par(no.readonly = TRUE)
@@ -861,28 +851,8 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
   las <- 1
 
   for(i in 1:length(Year)) {
-
-    if(i < length(Year)) {
-      if(i %% 16 %in% c(1:4)) { # First column
-        yaxt <- 's'
-
-        # First three rows
-        if(i %% 4 %in% c(1:3)) {
-          xaxt <- 'n'
-        } else {
-          xaxt <- 's'
-        }
-      } else { # All other columns
-        if(i %% 4 %in% c(1:3)) { # First three rows
-          xaxt <- yaxt <- 'n'
-        } else {
-          xaxt <- 's'
-        }
-      }
-    } else {
-      xaxt <- 's'
-      if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
-    }
+    yaxt <- ifelse(i %% 16 %in% c(1:4), "s", "n") # TRUE = first column
+    xaxt <- ifelse(i < length(Year) & i %% 4 %in% c(1:3), "n", "s") # TRUE = first three rows
 
     if(dim(SRA_plot)[1] == 1) {
       plot(data_val, SRA_plot[, i, ], type = "l", col = dat_color, ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
@@ -893,7 +863,7 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
     if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = 1.5)
     legend("topright", legend = c(Year[i], ifelse(is.null(N) || is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
 
-    if(i %% 16 == 0 || i == length(Year)) {
+    if(i %% 16 == 1) {
       mtext(data_lab, side = 1, line = 3, outer = TRUE)
       mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)
     }

@@ -868,7 +868,7 @@ get_s_vul_len <- function(report, I_type, nsurvey, parametric) {
       dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
                     2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
       s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
-    } else if(I_type[i] > 0) s_vul_len[, i] <- report$vul_len[, TMB_data$I_type[i]]
+    } else if(I_type[i] > 0) s_vul_len[, i] <- report$vul_len[, I_type[i]]
   }
   return(s_vul_len)
 }

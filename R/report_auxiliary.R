@@ -755,29 +755,9 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     if(max(obs_prob_all, fit_prob_all, na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
 
     las <- 1
-    type <- "o"
     for(i in 1:length(Year)) {
-      if(i < length(Year)) {
-        if(i %% 16 %in% c(1:4)) { # First column
-          yaxt <- "s"
-
-          # First three rows
-          if(i %% 4 %in% c(1:3)) {
-            xaxt <- "n"
-          } else {
-            xaxt <- "s"
-          }
-        } else { # All other columns
-          if(i %% 4 %in% c(1:3)) { # First three rows
-            xaxt <- yaxt <- "n"
-          } else {
-            xaxt <- "s"
-          }
-        }
-      } else {
-        xaxt <- "s"
-        if(i %% 16 %in% c(1:4)) yaxt <- "s" else yaxt <- "n"
-      }
+      yaxt <- ifelse(i %% 16 %in% c(1:4), "s", "n") # TRUE = first column
+      xaxt <- ifelse(i < length(Year) & i %% 4 %in% c(1:3), "n", "s") # TRUE = first three rows
 
       plot(data_val, obs_prob[i, ], typ = "n", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
       abline(h = 0, col = "grey")
@@ -785,7 +765,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
       if(!is.null(fit)) lines(data_val, fit_prob[i, ], lwd = fit_linewidth, col = fit_color)
       legend("topright", legend = c(Year[i], ifelse(is.null(N), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
 
-      if(i %% 16 == 0 || i == length(Year)) {
+      if(i %% 16 == 1) {
         mtext(data_lab, side = 1, line = 3, outer = TRUE)
         mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)
       }
