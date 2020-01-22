@@ -304,7 +304,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               CAL_bubble <- rmd_bubble("Year", "CAL_all", CAL_bins = "data_mean_fit$length_bin",
                                        fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = as.character(bubble_adj))
 
-              ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_R(),
+              ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_R(), rmd_SRA_SR(),
                              rmd_residual("log_rec_dev", fig.cap = "Time series of recruitment deviations.", label = "log-Recruitment deviations"),
                              rmd_residual("log_rec_dev", "log_rec_dev_SE", fig.cap = "Time series of recruitment deviations with 95% confidence intervals.",
                                           label = "log-Recruitment deviations", conv_check = TRUE),
@@ -747,6 +747,16 @@ rmd_log_rec_dev <- function() {
     "```\n")
 }
 
+rmd_SRA_SR <- function() {
+  c("```{r, fig.cap = \"Stock-recruit relationship and estimated recruitment.\"}",
+    "if(OM@SRrel == 1) {",
+    "  expectedR <- report$Arec * report$E[1:nyears] / (1 + report$Brec * report$E[1:nyears])",
+    "} else {",
+    "  expectedR <- report$Arec * report$E[1:nyears] * exp(-report$Brec * report$E[1:nyears])",
+    "}",
+    "plot_SR(report$E[1:nyears], expectedR, report$R0, report$E0_SR, report$R[2:(nyears+1)])",
+    "```\n")
+}
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
                                  annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 2, dat_color = "black") {
