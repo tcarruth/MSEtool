@@ -759,10 +759,15 @@ rmd_SRA_SR <- function() {
 }
 
 plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = NULL, annual_ylab = "Frequency",
-                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)), dat_linewidth = 2, dat_color = "black") {
+                                 annual_yscale = c("proportions", "raw"), N = if(is.null(dat)) NULL else round(rowSums(dat)),
+                                 dat_linewidth = 2, dat_color = "black", byrow = TRUE) {
   old_par <- par(no.readonly = TRUE)
   on.exit(par(old_par))
-  par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
+  if(byrow) {
+    par(mfrow = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
+  } else {
+    par(mfcol = c(4, 4), mar = rep(0, 4), oma = c(5.1, 5.1, 2.1, 2.1))
+  }
 
   annual_yscale <- match.arg(annual_yscale)
   if(is.null(CAL_bins)) data_type <- "age" else data_type <- "length"
@@ -791,29 +796,20 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
   if(max(SRA_plot, dat_plot, na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
 
   las <- 1
-
   for(i in 1:length(Year)) {
-
-    if(i < length(Year)) {
-      if(i %% 16 %in% c(1:4)) { # First column
-        yaxt <- 's'
-
-        # First three rows
-        if(i %% 4 %in% c(1:3)) {
-          xaxt <- 'n'
-        } else {
-          xaxt <- 's'
-        }
-      } else { # All other columns
-        if(i %% 4 %in% c(1:3)) { # First three rows
-          xaxt <- yaxt <- 'n'
-        } else {
-          xaxt <- 's'
-        }
+    if(byrow) {
+      yaxt <- ifelse(i %% 16 %in% c(1, 5, 9, 13), "s", "n") # TRUE = first column
+      n_plot <- ceiling(length(Year)/16)
+      leftover_rows <- n_plot > length(Year)/16
+      if(leftover_rows && ceiling(i/16) == n_plot) { # Last panel is incomplete
+        extra_years <- i - 16 * (n_plot - 1)
+        xaxt <- ifelse(extra_years %% 16 %in% 0:3, "s", "n") # TRUE = last row
+      } else {
+        xaxt <- ifelse(i %% 16 %in% c(13:15, 0), "s", "n") # TRUE = last row
       }
     } else {
-      xaxt <- 's'
-      if(i %% 16 %in% c(1:4)) yaxt <- 's' else yaxt <- 'n'
+      yaxt <- ifelse(i %% 16 %in% c(1:4), "s", "n") # TRUE = first column
+      xaxt <- ifelse(i < length(Year) & i %% 4 %in% c(1:3), "n", "s") # TRUE = first three rows
     }
 
     if(dim(SRA_plot)[1] == 1) {
@@ -821,11 +817,11 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
     } else {
       matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = dat_color, ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
     }
-    abline(h = 0, col = 'grey')
+    abline(h = 0, col = "grey")
     if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = 1.5)
     legend("topright", legend = c(Year[i], ifelse(is.null(N) || is.na(N[i]), "", paste0("N = ", N[i]))), bty = "n", xjust = 1)
 
-    if(i %% 16 == 0 || i == length(Year)) {
+    if(i %% 16 == 1) {
       mtext(data_lab, side = 1, line = 3, outer = TRUE)
       mtext(annual_ylab, side = 2, line = 3.5, outer = TRUE)
     }
