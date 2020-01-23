@@ -882,8 +882,8 @@ SRA_retro <- function(x, nyr = 5) {
   rescale <- x@mean_fit$report$rescale
   map <- x@mean_fit$obj$env$map
 
-  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, 4))
-  TS_var <- c("F", "SSB", "SSB_SSB0", "R")
+  retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, data$nfleet + 3))
+  TS_var <- c(paste("F", 1:data$nfleet), "SSB", "SSB_SSB0", "R")
   dimnames(retro_ts) <- list(Peel = 0:nyr, Year = (x@OM@CurrentYr - n_y):x@OM@CurrentYr + 1, Var = TS_var)
 
   new_args <- lapply(n_y - 0:nyr, SRA_retro_subset, data = data, params = params, map = map)
@@ -902,6 +902,7 @@ SRA_retro <- function(x, nyr = 5) {
     mod <- optimize_TMB_model(obj2, control = list(iter.max = 2e+05, eval.max = 4e+05), restart = 0)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
+
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
@@ -924,7 +925,7 @@ SRA_retro <- function(x, nyr = 5) {
         }
       }
 
-      FMort <- c(report$F, rep(NA, i + 1))
+      FMort <- rbind(report$F, matrix(NA, i + 1, ncol(report$F)))
       SSB <- c(report$E, rep(NA, i))
       SSB_SSB0 <- SSB/report$E0_SR
       R <- c(report$R, rep(NA, i))
@@ -937,7 +938,8 @@ SRA_retro <- function(x, nyr = 5) {
   }
 
   retro <- new("retro", Model = "SRA_scope", Name = x@OM@Name, TS_var = TS_var, TS = retro_ts)
-  attr(retro, "TS_lab") <- c("Fishing mortality", "Spawning biomass", "Spawning depletion", "Recruitment")
+  attr(retro, "TS_lab") <- c(paste("Fishing mortality of Fleet", 1:ncol(FMort)),
+                             "Spawning biomass", "Spawning depletion", "Recruitment")
 
   return(retro)
 }
