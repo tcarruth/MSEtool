@@ -88,7 +88,7 @@ $$B_{MSY} = \dfrac{MSY}{F_{MSY}},$$
 the carrying capacity $K$ is
 $$K = n^{1/(n-1)} \times B_{MSY} ,$$
 and the intrinsic rate of population increase $r$ is
-$$ r = n^{1/(1-n)} \times F_{MSY}.$$
+$$ r = n \times F_{MSY}.$$
 The production parameter $n$ is typically fixed and the model has a symmetric productive curve ($B_{MSY}/K = 0.5$) when $n = 2$.
 
 # Schaefer model

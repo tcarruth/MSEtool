@@ -242,7 +242,7 @@ Type SRA_scope(objective_function<Type> *obj) {
       if(est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
     }
     N(y+1,0) = R(y+1);
-    ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
+    if(Type(max_age) != Linf) ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
 
     if(condition == "catch") {
       for(int ff=0;ff<nfleet;ff++) {
@@ -272,17 +272,20 @@ Type SRA_scope(objective_function<Type> *obj) {
         CN(y,ff) += CAApred(y,a,ff);
         Cpred(y,ff) += CAApred(y,a,ff) * wt(y,a);
 
-        for(int len=0;len<nlbin;len++) {
-          CALpred(y,len,ff) += CAApred(y,a,ff) * ALK(y)(a,len);
-          mlen_pred(y,ff) += CAApred(y,a,ff) * ALK(y)(a,len) * length_bin(len);
+        if(Type(max_age) != Linf) {
+          for(int len=0;len<nlbin;len++) {
+            CALpred(y,len,ff) += CAApred(y,a,ff) * ALK(y)(a,len);
+            mlen_pred(y,ff) += CAApred(y,a,ff) * ALK(y)(a,len) * length_bin(len);
+          }
         }
+
         VB(y+1,ff) += vul(y+1,a,ff) * N(y+1,a) * wt(y+1,a);
       }
 
       B(y+1) += N(y+1,a) * wt(y+1,a);
       E(y+1) += N(y+1,a) * wt(y+1,a) * mat(y+1,a);
     }
-    for(int ff=0;ff<nfleet;ff++) mlen_pred(y,ff) /= CN(y,ff);
+    if(Type(max_age) != Linf) for(int ff=0;ff<nfleet;ff++) mlen_pred(y,ff) /= CN(y,ff);
   }
 
   // Calculate nuisance parameters and likelihood
@@ -310,7 +313,7 @@ Type SRA_scope(objective_function<Type> *obj) {
         s_CN(y,sur) += s_CAApred(y,a,sur);
 
         if(I_basis(sur)) B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
-        if(!R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+        if(Type(max_age) != Linf && !R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
           for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
         }
       }
@@ -495,6 +498,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(prior);
 
   if(nll_Index.sum() != 0) {
+    REPORT(s_vul_par);
     REPORT(s_CAApred);
     REPORT(s_CALpred);
     REPORT(s_vul);

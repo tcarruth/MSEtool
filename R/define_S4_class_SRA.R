@@ -326,8 +326,10 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               CAA_bubble <- rmd_bubble("Year", "CAA_all", fig.cap = "Predicted catch-at-age (summed over all fleets).", bubble_adj = as.character(bubble_adj))
 
               CAL_all <- apply(report$CALpred, c(1, 2), sum)
-              CAL_bubble <- rmd_bubble("Year", "CAL_all", CAL_bins = "data_mean_fit$length_bin",
-                                       fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = as.character(bubble_adj))
+              if(!all(is.na(CAL_all))) {
+                CAL_bubble <- rmd_bubble("Year", "CAL_all", CAL_bins = "data_mean_fit$length_bin",
+                                         fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = as.character(bubble_adj))
+              } else CAL_bubble <- ""
 
               ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_R(), rmd_SRA_SR(),
                              rmd_residual("log_rec_dev", fig.cap = "Time series of recruitment deviations.", label = "log-Recruitment deviations"),
@@ -673,10 +675,12 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  MLobs <- (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE)"),
            paste0("} else if(any(data$ML[, ", ff, "] > 0, na.rm = TRUE)) MLobs <- data$ML[, ", ff, "] else MLobs <- NA"),
-           "ylim <- c(0.9, 1.1) * range(c(MLpred, MLobs), na.rm = TRUE)",
-           "matplot(Year, MLpred, type = \"l\", col = scenario$col, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Mean length\", ylim = ylim)",
-           "if(!all(is.na(MLobs))) lines(Year, MLobs, col = \"black\", typ = \"o\")",
-           "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd)",
+           "if(!all(is.na(MLpred))) {",
+           "  ylim <- c(0.9, 1.1) * range(c(MLpred, MLobs), na.rm = TRUE)",
+           "  matplot(Year, MLpred, type = \"l\", col = scenario$col, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Mean length\", ylim = ylim)",
+           "  if(!all(is.na(MLobs))) lines(Year, MLobs, col = \"black\", typ = \"o\")",
+           "  if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd)",
+           "}",
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Observed (black) and predicted (red) age composition from ", f_name[ff], ".\"}"),
@@ -936,7 +940,6 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   ####### Assign variables
   x <- dots[[1]] # Dummy variable
   report_list <- lapply(dots, function(x) if(length(x@mean_fit) > 0) return(x@mean_fit$report) else stop("Error in SRA objects."))
-
 
   nsim <- length(report_list)
   data <- dots[[1]]@data

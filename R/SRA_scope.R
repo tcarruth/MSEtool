@@ -396,7 +396,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   Perr <- do.call(rbind, lapply(mod, make_Perr))
 
   make_early_Perr <- function(x) {
-    res <- x$report$R_eq * x$report$NPR_equilibrium / (x$report$R0 * x$report$NPR_unfished[[1]])
+    res <- x$report$R_eq * x$report$NPR_equilibrium / x$report$R0 / x$report$NPR_unfished[1, ]
     bias_corr <- ifelse(x$obj$env$data$est_early_rec_dev, exp(-0.5 * x$report$tau^2), 1)
     early_dev <- exp(x$report$log_early_rec_dev) * bias_corr
     out <- res[-1] * early_dev
@@ -619,6 +619,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(is.null(dots$nit_F)) nit_F <- 3L else nit_F <- dots$nit_F
   if(is.null(dots$plusgroup)) plusgroup <- 1L else plusgroup <- as.integer(dots$plusgroup)
+  age_only_model <- StockPars$Len_age[x, , 1:(nyears+1)] %>% apply(2, function(x) all(x == 1:max_age)) %>% all()
   TMB_data_all <- list(condition = data$condition,
                        nll_C = as.integer((data$condition == "effort" & nfleet > 1) || data$condition == "catch"),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
@@ -627,7 +628,8 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        sel_block = rbind(data$sel_block, data$sel_block[nyears, ]), nsel_block = data$nsel_block,
                        n_y = nyears, max_age = max_age, nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
-                       Linf = StockPars$Linf[x], CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
+                       Linf = ifelse(age_only_model, max_age, StockPars$Linf[x]),
+                       CV_LAA = StockPars$LenCV[x], wt = t(StockPars$Wt_age[x, , 1:(nyears+1)]),
                        mat = t(StockPars$Mat_age[x, , 1:(nyears+1)]), vul_type = as.integer(selectivity),
                        s_vul_type = as.integer(s_selectivity), I_type = as.integer(I_type), abs_I = data$abs_I,
                        I_basis = as.integer(data$I_basis), SR_type = SR_type, LWT_C = LWT_C, LWT_Index = LWT_Index, comp_like = comp_like,
@@ -656,7 +658,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   sel_check <- selectivity == -1 | selectivity == 0
   vul_par[2, sel_check] <- log(vul_par[1, sel_check] - vul_par[2, sel_check])
-  vul_par[1, sel_check] <- logit(pmin(vul_par[1, sel_check]/StockPars$Linf[x]/0.99, 0.99))
+  vul_par[1, sel_check] <- logit(pmin(vul_par[1, sel_check]/TMB_data_all$Linf/0.99, 0.99))
   vul_par[3, sel_check] <- logit(pmin(vul_par[3, sel_check], 0.99))
 
   if(is.null(dots$map_vul_par)) {
@@ -682,7 +684,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   parametric_sel <- s_selectivity == -1 | s_selectivity == 0
   s_vul_par[2, parametric_sel] <- log(s_vul_par[1, parametric_sel] - s_vul_par[2, parametric_sel])
-  s_vul_par[1, parametric_sel] <- logit(pmin(s_vul_par[1, parametric_sel]/StockPars$Linf[x]/0.99, 0.99))
+  s_vul_par[1, parametric_sel] <- logit(pmin(s_vul_par[1, parametric_sel]/TMB_data_all$Linf/0.99, 0.99))
   s_vul_par[3, parametric_sel] <- logit(pmin(s_vul_par[3, parametric_sel], 0.99))
 
   if(is.null(dots$map_s_vul_par)) {
@@ -779,9 +781,18 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   report$F_at_age <- report$Z - report$M[1:nyears, ]
-  report$vul_len <- get_vul_len(report, selectivity)
-  report$s_vul_len <- get_s_vul_len(report, I_type, length(I_type), parametric_sel)
+  if(age_only_model) {
+    report$vul_len <- matrix(NA, length(report$length_bin), length(selectivity))
+    report$s_vul_len <- matrix(NA, length(report$length_bin), length(I_type))
+    report$mlen_pred <- matrix(NA, nyears, nfleet)
+    report$CALpred <- array(NA, dim(report$CALpred))
+    report$s_CALpred <- array(NA, dim(report$s_CALpred))
+  } else {
+    report$vul_len <- get_vul_len(report, selectivity)
+    report$s_vul_len <- get_s_vul_len(report, I_type, length(I_type), parametric_sel)
+  }
   report$rescale <- rescale
+  report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
@@ -958,7 +969,7 @@ SRA_retro_subset <- function(yr, data, params, map) {
   data_out[mat_ind2] <- lapply(data_out[mat_ind2], function(x) x[1:(yr+1), , drop = FALSE])
 
   # Update nsel_block, n_y
-  data_out$nsel_block <- unique(data_out$sel_block) %>% length()
+  data_out$nsel_block <- data_out$sel_block %>% as.vector() %>% unique() %>% length()
   data_out$n_y <- yr
 
   # Array 1:yr first index
@@ -991,8 +1002,9 @@ SRA_retro_subset <- function(yr, data, params, map) {
 
   ## Update nsel block if needed
   if(data$nsel_block > data_out$nsel_block) {
-    params_out$vul_par <- params_out$vul_par[, unique(data_out$sel_block), drop = FALSE]
-    if(!is.null(map$vul_par)) map$vul_par <- map$vul_par[, unique(data_out$sel_block), drop = FALSE] %>% factor()
+    sel_block_ind <- data_out$sel_block %>% as.vector() %>% unique()
+    params_out$vul_par <- params_out$vul_par[, sel_block_ind, drop = FALSE]
+    if(!is.null(map$vul_par)) map$vul_par <- map$vul_par[, sel_block_ind, drop = FALSE] %>% factor()
   }
 
   return(list(data = data_out, params = params_out, map = map))

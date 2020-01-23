@@ -48,7 +48,7 @@ Type SP(objective_function<Type> *obj) {
 
   Type BMSY = MSY/FMSY;
   Type K = BMSY / n_term2;
-  Type r = MSY * n_term / K; // r = FMSY * pow(n, 1/(1-n))
+  Type r = MSY * n_term / K; // r = FMSY * n
 
   vector<Type> B(ny+1);
   vector<Type> SP(ny);
