@@ -37,6 +37,7 @@ SP_SS(
   fix_n = TRUE,
   fix_sigma = TRUE,
   fix_tau = TRUE,
+  LWT = NULL,
   early_dev = c("all", "index"),
   n_seas = 4L,
   n_itF = 3L,

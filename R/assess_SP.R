@@ -151,7 +151,7 @@ class(SP) <- "Assess"
 #' @rdname SP
 #' @export
 SP_SS <- function(x = 1, Data, AddInd = 0, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
-                  fix_tau = TRUE, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
+                  fix_tau = TRUE, LWT = NULL, early_dev = c("all", "index"), n_seas = 4L, n_itF = 3L,
                   use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
                   silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
