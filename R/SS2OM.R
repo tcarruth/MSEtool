@@ -401,7 +401,12 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   }
 
   dev_for_AC <- dev_for_AC[!is.na(dev_for_AC)]
-  AC <- acf(dev_for_AC[dev_for_AC != 0], plot = FALSE)$acf[2, 1, 1]
+  if(all(dev_for_AC == 0)) {
+    if(!silent) message("Note: no recruitment deviates appear to be estimated.")
+    AC <- 0
+  } else {
+    AC <- acf(dev_for_AC[dev_for_AC != 0], plot = FALSE)$acf[2, 1, 1]
+  }
   if(is.na(AC)) AC <- 0
   if(!silent) message("Recruitment autocorrelation for projection period is estimated from historical recruitment deviations. OM@AC = ", round(AC, 3), ".")
 
