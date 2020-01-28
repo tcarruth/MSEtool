@@ -701,7 +701,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   }
 
   log_F_start <- matrix(0, nyears, nfleet)
-  if(data$condition == "catch") log_F_start[TMB_data_all$yindF + 1, 1:nfleet] <- log(0.5 * mean(TMB_data_all$M[nyears, ]))
+  if(data$condition == "catch") log_F_start[TMB_data_all$yind_F + 1, 1:nfleet] <- log(0.5 * mean(TMB_data_all$M[nyears, ]))
 
   TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
