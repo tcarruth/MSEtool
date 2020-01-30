@@ -424,6 +424,9 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
   ### Assign OM variables that were used in the SRA to the output
   OM@cpars$Len_age <- StockPars$Len_age
+  OM@cpars$Linf <- StockPars$Linf
+  OM@cpars$K <- StockPars$K
+  OM@cpars$t0 <- StockPars$t0
   OM@cpars$LenCV <- StockPars$LenCV
   OM@cpars$Wt_age <- StockPars$Wt_age
 
@@ -440,7 +443,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   if(is.null(dots$plusgroup) || dots$plusgroup) {
     OM@cpars$plusgroup <- rep(1L, nsim)
   }
-  OM@cpars$Iobs <- ObsPars$Iobs
+  if(is.null(data$I_sd) || !any(data$I_sd > 0, na.rm = TRUE)) OM@cpars$Iobs <- ObsPars$Iobs
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")
 
   ### Output list
@@ -595,7 +598,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     ObsPars$Isd <- mean_vector(ObsPars$Isd)
   }
 
-  if(is.null(data$I_sd)) data$I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
+  if(is.null(data$I_sd) || !any(data$I_sd > 0, na.rm = TRUE)) data$I_sd <- matrix(sdconv(1, ObsPars$Isd[x]), nyears, nsurvey)
 
   if(!is.null(data$Chist) && any(data$Chist > 0, na.rm = TRUE)) {
     if(is.null(dots$rescale)) {
