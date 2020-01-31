@@ -104,8 +104,6 @@
 #' the annual number of observations (summed over columns) should be equal to the presumed effective sample size. Argument \code{ESS} provides a shortcut
 #' to cap the the effective sample size.
 #'
-#' \code{plot_SRA_scope} is now deprecated in favor of \link{plot.SRA}.
-#'
 #' Parameters that were used in the fitting model are placed in objects in \code{OM@@cpars}.
 #'
 #' \code{Sub_cpars} is a convenient function to subset simulations
@@ -125,7 +123,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
                       comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
 
-  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, rescale, plusgroup
+  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, map_early_rec_dev, rescale, plusgroup, resample
   if(!is.null(dots$maxF)) max_F <- dots$maxF
   if(length(ESS) == 1) ESS <- rep(ESS, 2)
 
@@ -259,70 +257,88 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   # SR
   message(ifelse(OM@SRrel == 1, "Beverton-Holt", "Ricker"), " stock-recruitment relationship used.")
 
-  # Fit model
-  message("\nFitting model (", nsim, " simulations) ...")
-
-  if(cores > 1 && !snowfall::sfIsRunning()) DLMtool::setup(as.integer(cores))
-  if(snowfall::sfIsRunning()) {
-    mod <- snowfall::sfClusterApplyLB(1:nsim, SRA_scope_est, data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
-                                      SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
-                                      max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
-                                      FleetPars = FleetPars, dots = dots)
-  } else {
-    mod <- lapply(1:nsim, SRA_scope_est, data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
-                  SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
-                  max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
-                  FleetPars = FleetPars, dots = dots)
-  }
-  #assign('mod', mod, envir = globalenv())
-  res <- lapply(mod, getElement, "report")
-  conv <- vapply(res, getElement, logical(1), name = "conv")
-  message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
-  if(sum(conv) < nsim) message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
-  if(sum(conv) < nsim && drop_nonconv) {
-    message("Non-converged iterations will be removed.\n")
-    keep <- conv
-  } else {
-    keep <- !logical(OM@nsim)
-  }
-
   # Test for identical sims
-  all_identical_sims_fn <- function() {
-    vector_fn <- function(x) sum(mean(x) - x) == 0
-    array_fn <- function(x) {
-      x_mean <- apply(x, 2:length(dim(x)), mean)
-      all(apply(x, 1, identical, x_mean))
-    }
-    run_test <- function(x) if(is.null(dim(x))) vector_fn(x) else array_fn(x)
-    StockPars_subset <- StockPars[c("hs", "procsd", "ageM", "M_ageArray", "Linf", "Len_age", "Wt_age", "Mat_age")]
-    if(!any(data$CAL > 0, na.rm = TRUE) || !any(data$s_CAL > 0, na.rm = TRUE) || !any(data$ML > 0, na.rm = TRUE)) {
-      StockPars_subset <- c(StockPars_subset, StockPars["LenCV"])
-    }
-    S_test <- vapply(StockPars_subset, run_test, logical(1))
-    if(data$nfleet == 1 && !any(data$CAL > 0, na.rm = TRUE) && !any(data$CAA > 0, na.rm = TRUE)) {
-      FleetPars_subset <- StockPars[c("L5", "LFS", "Vmaxlen")]
-      FleetPars_subset <- lapply(FleetPars_subset, function(x) x[nyears, ])
-      F_test <- vapply(FleetPars_subset, run_test, logical(1))
-    } else {
-      F_test <- TRUE
-    }
-    if(data$nsurvey > 0 && !any(data$I_sd > 0, na.rm = TRUE)) {
-      O_test <- run_test(ObsPars$Isd)
-    } else {
-      O_test <- TRUE
-    }
-    return(all(c(S_test, F_test, O_test)))
-  }
-  if(all_identical_sims_fn()) { # All identical sims detected
-    mean_fit_output <- mod[[1]]
-  } else if(mean_fit) { ### Fit to life history means if mean_fit = TRUE
-    message("Generating additional model fit from mean values of parameters in the operating model...\n")
+  all_identical_sims <- all_identical_sims_fn(StockPars, FleetPars, ObsPars, data)
+
+  # Fit model
+  if(!is.null(dots$resample) && dots$resample) { # Re-sample covariance matrix
+
+    if(is.null(dots$rescale)) dots$rescale <- 1
+
+    message("\nResample = TRUE. Running mean fit model first...")
     mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                                      SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
                                      max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
                                      FleetPars = FleetPars, mean_fit = TRUE, dots = dots)
-  } else mean_fit_output <- list()
-  if(length(mean_fit_output) > 0 && !mean_fit_output$report$conv) warning("Mean fit model did not appear to converge.")
+
+    if(length(mean_fit_output) > 0 && !mean_fit_output$report$conv) {
+      warning("Mean fit model did not appear to converge. Will not be able to sample the covariance matrix.")
+      output <- new("SRA", data = data, mean_fit = mean_fit_output)
+      return(output)
+    } else {
+      message("Model converged. Sampling covariance matrix for nsim = ", nsim, " replicates...")
+      if(!all_identical_sims_fn()) message("Note: not all ", nsim, " replicates are identical.")
+
+      samps <- mvtnorm::rmvnorm(nsim, mean_fit_output$opt$par, mean_fit_output$SD$cov.fixed)
+
+      report_internal_fn <- function(x, samps, obj) {
+        report <- obj$report(samps[x, ])
+        report <- SRA_posthoc_adjust(report, obj)
+        return(report)
+      }
+
+      res <- lapply(1:nsim, report_internal_fn, samps = samps, obj = mean_fit_output$obj)
+      mod <- lapply(res, function(x) list(obj = mean_fit_output$obj, report = x))
+      conv <- keep <- !logical(nsim)
+    }
+
+  } else {
+
+    if(all_identical_sims) { # All identical sims detected
+      message("\nAll ", nsim, " replicates are identical. Fitting once and replicating single fit...")
+
+      mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
+                                       SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
+                                       max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
+                                       FleetPars = FleetPars, mean_fit = TRUE, dots = dots)
+
+      mod <- lapply(1:nsim, function(x) return(mean_fit_output))
+    } else {
+
+      message("\nFitting model (", nsim, " simulations) ...")
+      if(cores > 1 && !snowfall::sfIsRunning()) DLMtool::setup(as.integer(cores))
+      if(snowfall::sfIsRunning()) {
+        mod <- snowfall::sfClusterApplyLB(1:nsim, SRA_scope_est, data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
+                                          SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
+                                          max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
+                                          FleetPars = FleetPars, dots = dots)
+      } else {
+        mod <- lapply(1:nsim, SRA_scope_est, data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
+                      SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
+                      max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
+                      FleetPars = FleetPars, dots = dots)
+      }
+
+      if(mean_fit) { ### Fit to life history means if mean_fit = TRUE
+        message("Generating additional model fit from mean values of parameters in the operating model...\n")
+        mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
+                                         SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
+                                         max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
+                                         FleetPars = FleetPars, mean_fit = TRUE, dots = dots)
+      } else mean_fit_output <- list()
+    }
+    res <- lapply(mod, getElement, "report")
+    conv <- vapply(res, getElement, logical(1), name = "conv")
+    message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
+    if(sum(conv) < nsim) message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
+    if(sum(conv) < nsim && drop_nonconv) {
+      message("Non-converged iterations will be removed.\n")
+      keep <- conv
+    } else {
+      keep <- !logical(OM@nsim)
+    }
+    if(length(mean_fit_output) > 0 && !mean_fit_output$report$conv) warning("Mean fit model did not appear to converge.")
+  }
 
   ### R0
   OM@cpars$R0 <- vapply(1:length(mod), function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
@@ -622,7 +638,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(is.null(dots$nit_F)) nit_F <- 3L else nit_F <- dots$nit_F
   if(is.null(dots$plusgroup)) plusgroup <- 1L else plusgroup <- as.integer(dots$plusgroup)
-  age_only_model <- StockPars$Len_age[x, , 1:(nyears+1)] %>% apply(2, function(x) all(x == 1:max_age)) %>% all()
+  age_only_model <- StockPars$Len_age[x, , 1:(nyears+1)] %>% apply(2, function(xx) length(xx) == max_age & max(xx) == max_age) %>% all()
   TMB_data_all <- list(condition = data$condition,
                        nll_C = as.integer((data$condition == "effort" & nfleet > 1) || data$condition == "catch"),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
@@ -783,29 +799,13 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     }
   }
 
-  report$F_at_age <- report$Z - report$M[1:nyears, ]
-  if(age_only_model) {
-    report$vul_len <- matrix(NA, length(report$length_bin), length(selectivity))
-    report$s_vul_len <- matrix(NA, length(report$length_bin), length(I_type))
-    report$mlen_pred <- matrix(NA, nyears, nfleet)
-    report$CALpred <- array(NA, dim(report$CALpred))
-    report$s_CALpred <- array(NA, dim(report$s_CALpred))
-  } else {
-    report$vul_len <- get_vul_len(report, selectivity)
-    report$s_vul_len <- get_s_vul_len(report, I_type, length(I_type), parametric_sel)
-  }
-  report$rescale <- rescale
-  report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
+  report <- SRA_posthoc_adjust(report, obj)
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
 
 
-#' @rdname SRA_scope
-#' @export
-plot_SRA_scope <- function(...) {
-  .Deprecated("report_SRA_scope", msg = "plot_SRA_scope is now deprecated in favor of plot() which generates a markdown report.")
-}
+
 
 #' @rdname SRA_scope
 #' @export
@@ -852,6 +852,58 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
   return(OM)
 }
 
+all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data) {
+  vector_fn <- function(x) sum(mean(x) - x) == 0
+  array_fn <- function(x) {
+    x_mean <- apply(x, 2:length(dim(x)), mean)
+    all(apply(x, 1, identical, x_mean))
+  }
+  run_test <- function(x) if(is.null(dim(x))) vector_fn(x) else array_fn(x)
+
+  StockPars_subset <- StockPars[c("hs", "procsd", "ageM", "M_ageArray", "Linf", "Len_age", "Wt_age", "Mat_age")]
+  if(any(data$CAL > 0, na.rm = TRUE) || any(data$s_CAL > 0, na.rm = TRUE) || any(data$ML > 0, na.rm = TRUE)) {
+    StockPars_subset <- c(StockPars_subset, StockPars["LenCV"])
+  }
+  S_test <- vapply(StockPars_subset, run_test, logical(1))
+
+  if(data$nfleet == 1 && !any(data$CAL > 0, na.rm = TRUE) && !any(data$CAA > 0, na.rm = TRUE)) {
+    FleetPars_subset <- FleetPars[c("L5", "LFS", "Vmaxlen")]
+    FleetPars_subset <- lapply(FleetPars_subset, function(x) x[data$nyears, ])
+    F_test <- vapply(FleetPars_subset, run_test, logical(1))
+  } else {
+    F_test <- TRUE
+  }
+
+  if(data$nsurvey > 0 && !any(data$I_sd > 0, na.rm = TRUE)) {
+    O_test <- run_test(ObsPars$Isd)
+  } else {
+    O_test <- TRUE
+  }
+
+  return(all(c(S_test, F_test, O_test)))
+}
+
+
+SRA_posthoc_adjust <- function(report, obj) {
+  report$F_at_age <- report$Z - obj$env$data$M
+  report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
+  report$rescale <- obj$env$data$rescale
+
+  age_only_model <- obj$env$data$len_age %>%
+    apply(2, function(x) length(x) == obj$env$data$max_age && max(x) == obj$env$data$max_age) %>% all()
+  if(age_only_model) {
+    report$vul_len <- matrix(NA, length(report$length_bin), dim(report$vul)[3])
+    report$s_vul_len <- matrix(NA, length(report$length_bin), dim(report$s_vul)[3])
+
+    report$mlen_pred <- matrix(NA, nrow(report$F), ncol(report$F))
+    report$CALpred <- array(NA, dim(report$CALpred))
+    report$s_CALpred <- array(NA, dim(report$s_CALpred))
+  } else {
+    report$vul_len <- get_vul_len(report, obj$env$data$vul_type)
+    report$s_vul_len <- get_s_vul_len(report, obj$env$data$I_type, obj$env$data$s_vul_type)
+  }
+  return(report)
+}
 
 get_vul_len <- function(report, selectivity) {
   vul <- matrix(NA, length(report$length_bin), length(selectivity))
@@ -870,11 +922,12 @@ get_vul_len <- function(report, selectivity) {
   return(vul)
 }
 
-get_s_vul_len <- function(report, I_type, nsurvey, parametric) {
-  s_vul_len <- matrix(NA, length(report$length_bin), nsurvey) # length-based: matrix of dimension nlbin, nsurvey
+get_s_vul_len <- function(report, I_type, s_selectivity) {
+  s_vul_len <- matrix(NA, length(report$length_bin), length(I_type)) # length-based: matrix of dimension nlbin, nsurvey
+  sel_ind <- s_selectivity == 0 | s_selectivity == -1
 
-  for(i in 1:nsurvey) {
-    if(I_type[i] == 0 && parametric[i]) {
+  for(i in 1:ncol(s_vul_len)) {
+    if(I_type[i] == 0 && sel_ind[i]) {
       sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
       srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
 
@@ -916,7 +969,6 @@ SRA_retro <- function(x, nyr = 5) {
     mod <- optimize_TMB_model(obj2, control = list(iter.max = 2e+05, eval.max = 4e+05), restart = 0)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
-
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)

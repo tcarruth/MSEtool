@@ -2,7 +2,6 @@
 % Please edit documentation in R/SRA_scope.R
 \name{SRA_scope}
 \alias{SRA_scope}
-\alias{plot_SRA_scope}
 \alias{Sub_cpars}
 \title{Stock-reduction analysis (SRA) for conditioning operating models}
 \usage{
@@ -22,8 +21,6 @@ SRA_scope(
   drop_nonconv = FALSE,
   ...
 )
-
-plot_SRA_scope(...)
 
 Sub_cpars(OM, sims = 1:OM@nsim)
 }
@@ -107,8 +104,6 @@ By default, all likelihood weights are equal to one if not specified by the user
 multinomial sample size. For \code{CAA}, \code{CAL}, \code{s_CAA}, and \code{s_CAL}, the arrays should be set up so that
 the annual number of observations (summed over columns) should be equal to the presumed effective sample size. Argument \code{ESS} provides a shortcut
 to cap the the effective sample size.
-
-\code{plot_SRA_scope} is now deprecated in favor of \link{plot.SRA}.
 
 Parameters that were used in the fitting model are placed in objects in \code{OM@cpars}.
 
