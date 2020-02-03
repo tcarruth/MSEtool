@@ -30,6 +30,7 @@
 #' @param mean_fit Logical, whether to run an additional with mean values of life history parameters from the OM.
 #' @param sims A logical vector of length \code{OM@@nsim} or a numberic vector indicating which simulations to keep.
 #' @param drop_nonconv Logical, whether to drop non-converged fits of the SRA model.
+#' @param control A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to \code{\link[stats]{nlminb}}.
 #' @param ... Other arguments to pass in for starting values of parameters and fixing parameters. See details.
 #' @return An object of class \linkS4class{SRA}, including the updated operating model object.
 #'
@@ -121,7 +122,8 @@
 #' @export
 SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effort"), selectivity = "logistic", s_selectivity = NULL, LWT = list(),
                       comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
-                      max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE, ...) {
+                      max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE,
+                      control = list(iter.max = 2e+05, eval.max = 4e+05), ...) {
 
   dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, map_early_rec_dev, rescale, plusgroup, resample
   if(!is.null(dots$maxF)) max_F <- dots$maxF
@@ -300,7 +302,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                                        SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
                                        max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
-                                       FleetPars = FleetPars, mean_fit = TRUE, dots = dots)
+                                       FleetPars = FleetPars, mean_fit = TRUE, control = control, dots = dots)
 
       mod <- lapply(1:nsim, function(x) return(mean_fit_output))
     } else {
@@ -311,12 +313,12 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
         mod <- snowfall::sfClusterApplyLB(1:nsim, SRA_scope_est, data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                                           SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
                                           max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
-                                          FleetPars = FleetPars, dots = dots)
+                                          FleetPars = FleetPars, control = control, dots = dots)
       } else {
         mod <- lapply(1:nsim, SRA_scope_est, data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                       SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
                       max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
-                      FleetPars = FleetPars, dots = dots)
+                      FleetPars = FleetPars, control = control, dots = dots)
       }
 
       if(mean_fit) { ### Fit to life history means if mean_fit = TRUE
@@ -324,7 +326,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
         mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                                          SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
                                          max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
-                                         FleetPars = FleetPars, mean_fit = TRUE, dots = dots)
+                                         FleetPars = FleetPars, mean_fit = TRUE, control = control, dots = dots)
       } else mean_fit_output <- list()
     }
     res <- lapply(mod, getElement, "report")

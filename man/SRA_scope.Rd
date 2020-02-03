@@ -19,6 +19,7 @@ SRA_scope(
   integrate = FALSE,
   mean_fit = FALSE,
   drop_nonconv = FALSE,
+  control = list(iter.max = 2e+05, eval.max = 4e+05),
   ...
 )
 
@@ -56,6 +57,8 @@ respectively, for the multinomial likelihood function. The effective sample size
 \item{mean_fit}{Logical, whether to run an additional with mean values of life history parameters from the OM.}
 
 \item{drop_nonconv}{Logical, whether to drop non-converged fits of the SRA model.}
+
+\item{control}{A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to \code{\link[stats]{nlminb}}.}
 
 \item{...}{Other arguments to pass in for starting values of parameters and fixing parameters. See details.}
 
