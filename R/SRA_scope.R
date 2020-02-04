@@ -125,7 +125,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
                       max_F = 3, cores = 1L, integrate = FALSE, mean_fit = FALSE, drop_nonconv = FALSE,
                       control = list(iter.max = 2e+05, eval.max = 4e+05), ...) {
 
-  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, map_early_rec_dev, rescale, plusgroup, resample
+  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, map_early_rec_dev, rescale, plusgroup, resample, OMeff
   if(!is.null(dots$maxF)) max_F <- dots$maxF
   if(length(ESS) == 1) ESS <- rep(ESS, 2)
 
@@ -608,7 +608,10 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     StockPars_ind <- match("ageM", names(StockPars))
     StockPars[StockPars_ind] <- lapply(StockPars[StockPars_ind], mean_matrix)
 
-    if(data$condition == "effort") StockPars$R0 <- mean_vector(StockPars$R0)
+    if(data$condition == "effort") {
+      StockPars$R0 <- mean_vector(StockPars$R0)
+      if(!is.null(dots$OMeff) && dots$OMeff) FleetPars$Find <- mean_matrix(FleetPars$Find)
+    }
 
     FleetPars_ind <- match(c("L5", "LFS", "Vmaxlen"), names(FleetPars))
     FleetPars[FleetPars_ind] <- lapply(FleetPars[FleetPars_ind], mean_matrix)
@@ -630,6 +633,9 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     C_hist <- matrix(0, nyears, nfleet)
   }
 
+  if(data$condition == "effort" && !is.null(dots$OMeff) && dots$OMeff) {
+    data$Ehist <- matrix(FleetPars$Find[x, ], nyears, nfleet)
+  }
   if(!is.null(data$Ehist) && any(data$Ehist > 0, na.rm = TRUE)) {
     rescale_effort <- 1/mean(data$Ehist, na.rm = TRUE)
     E_hist <- data$Ehist * rescale_effort
@@ -854,7 +860,7 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
   return(OM)
 }
 
-all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data) {
+all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
   vector_fn <- function(x) sum(mean(x) - x) == 0
   array_fn <- function(x) {
     x_mean <- apply(x, 2:length(dim(x)), mean)
@@ -871,10 +877,14 @@ all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data) {
   if(data$nfleet == 1 && !any(data$CAL > 0, na.rm = TRUE) && !any(data$CAA > 0, na.rm = TRUE)) {
     FleetPars_subset <- FleetPars[c("L5", "LFS", "Vmaxlen")]
     FleetPars_subset <- lapply(FleetPars_subset, function(x) x[data$nyears, ])
-    F_test <- vapply(FleetPars_subset, run_test, logical(1))
-  } else {
-    F_test <- TRUE
-  }
+    F_test_sel <- vapply(FleetPars_subset, run_test, logical(1))
+  } else F_test_sel <- TRUE
+
+  if(data$condition == "effort" && !is.null(dots$OMeff) && dots$OMeff) {
+    F_test_Find <- run_test(FleetPars$Find)
+  } else F_test_Find <- TRUE
+
+  F_test <- c(F_test_sel, F_test_Find)
 
   if(data$nsurvey > 0 && !any(data$I_sd > 0, na.rm = TRUE)) {
     O_test <- run_test(ObsPars$Isd)
