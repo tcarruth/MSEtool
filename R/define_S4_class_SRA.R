@@ -126,7 +126,13 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             length_bin <- data$length_bin
 
             if(is.null(f_name)) f_name <- paste("Fleet", 1:nfleet)
-            if(is.null(s_name)) s_name <- paste("Survey", 1:nsurvey)
+            if(is.null(s_name)) {
+              if(nsurvey > 0) {
+                s_name <- paste("Survey", 1:nsurvey)
+              } else {
+                s_name <- "Survey"
+              }
+            }
 
             ####### Document header
             if(is.null(title)) title <- "Operating model (OM) conditioning for `r ifelse(nchar(OM@Name) > 0, OM@Name, substitute(OM))`"
@@ -257,7 +263,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                   E_header <- "#### Effort \n"
                 }
                 E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$Ehist", col = "rich.colors(nfleet)",
-                                         xlab = "Year", ylab = "Effort", legend.lab = "f_name", fig.cap = "Effort time series.", E_header)
+                                         xlab = "Year", ylab = "Effort", legend.lab = "f_name", fig.cap = "Effort time series.", header = E_header)
               } else E_matplot <- NULL
 
               if(any(data$Index > 0, na.rm = TRUE)) {
@@ -653,7 +659,7 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            paste0("  matlines(Year, Cpred, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd)"),
            "} else {",
            paste0("  Cpred <- do.call(cbind, lapply(report_list, function(x) x$Cpred[, ", ff, "]/mean(x$Cpred[, ", ff, "])))"),
-           paste0("  matlines(Year, Cpred, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Predicted relative catch of ", f_name[ff], "\")"),
+           paste0("  matplot(Year, Cpred, col = scenario$col, type = \"l\", lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Predicted relative catch of ", f_name[ff], "\")"),
            "}",
            "abline(h = 0, col = \"grey\")",
            "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd)",

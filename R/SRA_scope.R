@@ -260,7 +260,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   message(ifelse(OM@SRrel == 1, "Beverton-Holt", "Ricker"), " stock-recruitment relationship used.")
 
   # Test for identical sims
-  all_identical_sims <- all_identical_sims_fn(StockPars, FleetPars, ObsPars, data)
+  all_identical_sims <- all_identical_sims_fn(StockPars, FleetPars, ObsPars, data, dots)
 
   # Fit model
   if(!is.null(dots$resample) && dots$resample) { # Re-sample covariance matrix
