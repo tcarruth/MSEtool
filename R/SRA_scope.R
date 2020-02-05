@@ -610,7 +610,9 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
     if(data$condition == "effort") {
       StockPars$R0 <- mean_vector(StockPars$R0)
-      if(!is.null(dots$OMeff) && dots$OMeff) FleetPars$Find <- mean_matrix(FleetPars$Find)
+      if(!is.null(dots$OMeff) && dots$OMeff) {
+        FleetPars$Find <- apply(FleetPars$Find, 2, mean) %>% matrix(length(StockPars$R0), data$nyears, byrow = TRUE)
+      }
     }
 
     FleetPars_ind <- match(c("L5", "LFS", "Vmaxlen"), names(FleetPars))
