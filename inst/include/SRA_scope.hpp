@@ -106,7 +106,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   vector<Type> LFS(nsel_block);
   vector<Type> L5(nsel_block);
   vector<Type> Vmaxlen(nsel_block);
-  array<Type> vul = calc_vul(vul_par, vul_type, len_age, LFS, L5, Vmaxlen, Linf, nfleet, sel_block, nsel_block);
+  array<Type> vul = calc_vul(vul_par, vul_type, len_age, LFS, L5, Vmaxlen, Linf, nfleet, sel_block, nsel_block, prior);
 
   vector<Type> q_effort(nfleet);
   vector<Type> sigma_mlen(nfleet);
@@ -304,7 +304,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   s_CN.setZero();
   B_sur.setZero();
 
-  array<Type> s_vul = calc_vul_sur(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf, mat, I_type, vul);
+  array<Type> s_vul = calc_vul_sur(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf, mat, I_type, vul, prior);
   vector<Type> q(nsurvey);
   for(int sur=0;sur<nsurvey;sur++) {
     for(int y=0;y<n_y;y++) {

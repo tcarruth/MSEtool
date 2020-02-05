@@ -64,7 +64,7 @@ Type sum_BPR(vector<Type> NPR, matrix<Type> wt, int max_age, int y) {
 
 template<class Type>
 array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Len_age, vector<Type> &LFS, vector<Type> &L5,
-                     vector<Type> &Vmaxlen, Type Linf, int nfleet, matrix<int> sel_block, int nsel_block) {
+                     vector<Type> &Vmaxlen, Type Linf, int nfleet, matrix<int> sel_block, int nsel_block, Type &prior) {
   array<Type> vul(Len_age.rows(), Len_age.cols(), nfleet);
   vul.setZero();
   vector<Type> sls(nsel_block);
@@ -72,12 +72,16 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 
   for(int b=0;b<nsel_block;b++) { // Parameters for sel_block
     if(vul_type(b) <= 0 && vul_type(b) > -2) { // Logistic or dome
+      prior -= dnorm(vul_par(0,b), Type(0), Type(3), true);
+      prior -= dnorm(vul_par(1,b), Type(0), Type(3), true);
+
       LFS(b) = invlogit(vul_par(0,b)) * 0.99 * Linf;
       L5(b) = LFS(b) - exp(vul_par(1,b));
       sls(b) = (LFS(b) - L5(b))/pow(-log2(0.05), 0.5);
       if(vul_type(b) < 0) { // Logistic
         Vmaxlen(b) = 1;
       } else { // Dome
+        prior -= dnorm(vul_par(2,b), Type(0), Type(3), true);
         Vmaxlen(b) = invlogit(vul_par(2,b));
         srs(b) = (Linf - LFS(b))/pow(-log2(Vmaxlen(b)), 0.5);
       }
@@ -114,7 +118,8 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 
 template<class Type>
 array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Len_age, vector<Type> &LFS, vector<Type> &L5,
-                         vector<Type> &Vmaxlen, Type Linf, matrix<Type> mat, vector<int> I_type, array<Type> fleet_var) {
+                         vector<Type> &Vmaxlen, Type Linf, matrix<Type> mat, vector<int> I_type, array<Type> fleet_var,
+                         Type &prior) {
   array<Type> vul(Len_age.rows(), Len_age.cols(), vul_type.size());
   vul.setZero();
 
@@ -135,12 +140,16 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
     } else if(I_type(ff) == 0) { // est
 
       if(vul_type(ff) <= 0 && vul_type(ff) >= -1) { // Logistic or dome
+        prior -= dnorm(vul_par(0,ff), Type(0), Type(3), true);
+        prior -= dnorm(vul_par(1,ff), Type(0), Type(3), true);
+
         LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
         L5(ff) = LFS(ff) - exp(vul_par(1,ff));
         Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
         if(vul_type(ff) < 0) { // Logistic
           Vmaxlen(ff) = 1;
         } else { // Dome
+          prior -= dnorm(vul_par(2,ff), Type(0), Type(3), true);
           Vmaxlen(ff) = invlogit(vul_par(2,ff));
         }
 

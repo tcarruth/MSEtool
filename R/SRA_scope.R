@@ -497,7 +497,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
 
   # Check whether observed matches predicted
-  if(condition == "catch" || condition == "catch2") {
+  if(data$condition == "catch" || data$condition == "catch2") {
     catch_check_fn <- function(x, report, data) {
       if(report[[x]]$conv) {
         catch_diff <- report[[x]]$Cpred/data$Chist - 1
