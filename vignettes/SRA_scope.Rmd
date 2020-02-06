@@ -105,13 +105,15 @@ Multiple surveys and fleets can be accommodated with `SRA_scope`. One of these s
 
 Here are the required pre-specified OM parameters needed for SRA scoping:
 
-- Growth (length-at-age) using slots `OM@Linf, OM@K, OM@t0` (or alternatively, `OM@cpars$Len_age`) and  `OM@LenCV`
+- Growth (length-at-age) using slots `OM@Linf, OM@K, OM@t0` (or alternatively, `OM@cpars$Len_age`)
+- Variability in length-at-age `OM@LenCV` only if length data are used
 - Length-weight conversion factors using slots `OM@a` and `OM@b` (or alternatively, `OM@cpars$Wt_age`)
 - Natural mortality using slots `OM@M, OM@M2` or `OM@cpars$M_ageArray`
 - Maturity using slots `OM@L50, OM@L50_95` or `OM@cpars$Mat_age`
 - Standard deviation of recruitment deviations using slot `OM@Perr` or `OM@cpars$Perr`
 - Stock-recruit relationship with `OM@SRrel`
-- If no age or length compositions, selectivity is needed with `OM@L5`, `OM@LFS`, and `OM@Vmaxlen`
+- Selectivity parameters with `OM@L5`, `OM@LFS`, and `OM@Vmaxlen`. If there are no age or length compositions, then selectivity in the model is fixed to these values. Otherwise, these are used as starting values.
+- Unfished recruitment `OM@R0` as the starting value.
 
 If growth, natural mortality, or maturity are time-varying in the historical period, then the SRA will implement time-varying life history in the estimation model as well. For example, if we're setting up an operating model where the length of the historical period is 50 years, and we believe that natural mortality has doubled from 0.2 to 0.4 since Year 30 and will remain so into the future, this code can be used to set up this scenario:
 
@@ -140,17 +142,16 @@ Information about the slots in the OM object can be viewed through `class?OM`. I
 
 Historical OM parameters that are updated by the SRA scoping function include:
 
-- Unfished recruitment `OM@R0`, only if catch is provided
+- Unfished recruitment `OM@R0`, only if catch is provided.
 - Depletion `OM@D`
-- Relative effort `OM@cpars$Find`
-- Annual recruitment deviations `OM@cpars$Perr_y`
-- If age or length compositions were used, selectivity parameters `OM@L5, OM@LFS, and OM@Vmaxlen`
+- Annual fishing effort in `OM@EffYears`, `OM@EffLower`, `OM@EffUpper`, and `OM@cpars$Find`. In conjunction with depletion, effort will be equal to the apical fishing mortality.
+- Recruitment autocorrelation `OM@AC` which is estimated post-hoc from the recruitment deviation estimates.
+- Annual recruitment deviations `OM@cpars$Perr_y`. Historical recruitment are those estimated from the model, while future recruitment will be sampled with autocorrelation.
+- Selectivity parameters `OM@L5, OM@LFS, and OM@Vmaxlen`. If multiple fleets are modeled, then the F-at-age matrix is used to derive the effective selectivity and placed in `OM@cpars$V`.
 
 If initial depletion is estimated, then the recruitment deviations `OM@cpars$Perr_y` for the operating model are adjusted in order to produce the estimated abundance-at-age in the first year of the SRA model. 
 
-The SRA model will estimate and return R0 when conditioned on catch. When conditioning on effort, the model is generally scale-independent; there can be information to inform depletion but not the stock size. 
-
-The exception occurs when the SRA is conditioned on effort from multiple-fleets, in which case, catch data from all fleets (incomplete series are acceptable) are needed to inform the relative F's among fleets. In this scenario, R0 is estimated.
+The SRA model will estimate and return R0 when conditioned on catch. When conditioning on effort, the model is generally scale-independent; there can be information to inform depletion but not the stock size. The exception occurs when the SRA is conditioned on effort from multiple-fleets, in which case, catch data from all fleets (incomplete series are acceptable) are needed to inform the relative F's among fleets. In this scenario, R0 is estimated.
 
 Additionally, if multiple fleets are used for conditioning, then the annual selectivity can change based on the relative F among fleets. In this case, the annual selectivity is passed from the OM output in the `OM@cpars$V` slot. The default assumption in the projection period of the closed-loop simulation is that the selectivity and relative F among fleets are identical to those in the last historical year. Fleet allocation in management procedures can be explored in `multiMSE`, see `vignette("multiMSE")`.
 
@@ -184,6 +185,7 @@ It may be desirable to compare the SRA to a simple operating model before incorp
 
 To be added.
 
+
 # Mathematical description of the SRA model
 
 ## Selectivity and mortality
@@ -216,11 +218,11 @@ where the $R^{\textrm{eq}}$ is the equilibrium recruitment and $Z^{\textrm{eq}}_
 
 $$ R^{\textrm{eq}} = 
 \begin{cases}
-      \dfrac{\alpha^{\textrm{BH}}\phi^{\textrm{eq}} - 1}{\beta^{\textrm{BH}}\phi^{\textrm{eq}}} & \textrm{if Beverton-Holt stock-recruit relationship}\\
-      \dfrac{\log(\alpha^{\textrm{Ricker}}\phi^{\textrm{eq}})}{\beta^{\textrm{Ricker}}\phi^{\textrm{eq}}} & \textrm{if Ricker stock-recruit relationship}
+      \dfrac{\alpha^{\textrm{B}}\phi^{\textrm{eq}} - 1}{\beta^{\textrm{B}}\phi^{\textrm{eq}}} & \textrm{if Beverton-Holt stock-recruit relationship}\\
+      \dfrac{\log(\alpha^{\textrm{R}}\phi^{\textrm{eq}})}{\beta^{\textrm{R}}\phi^{\textrm{eq}}} & \textrm{if Ricker stock-recruit relationship}
 \end{cases},
 $$
-where $\phi^{\textrm{eq}}$ is the spawners-per-recruit when the mortality is $Z^{\textrm{eq}}_a$. From steepness $h$, $\alpha^{\textrm{BH}} = \frac{4h}{(1-h)\phi_0}$, $\beta^{\textrm{BH}} = \frac{5h-1}{(1-h)B^S_0}$, $\alpha^{\textrm{Ricker}} = \frac{(5h)^{1.25}}{\phi_0}$, $\beta^{\textrm{Ricker}} = \frac{\log(5h)}{B^S_0}$, where $\phi_0$ and $B^S_0$ are unfished spawners-per-recruit and unfished spawning biomass, respectively.
+where $\phi^{\textrm{eq}}$ is the spawners-per-recruit when the mortality is $Z^{\textrm{eq}}_a$. From steepness $h$, $\alpha^{\textrm{B}} = \frac{4h}{(1-h)\phi_0}$, $\beta^{\textrm{B}} = \frac{5h-1}{(1-h)B^S_0}$, $\alpha^{\textrm{R}} = \frac{(5h)^{1.25}}{\phi_0}$, $\beta^{\textrm{R}} = \frac{\log(5h)}{B^S_0}$, where $\phi_0$ and $B^S_0$ are unfished spawners-per-recruit and unfished spawning biomass, respectively.
 
 ## Dynamics equations
 After setting the equilibrium population age distribution in the first year of the model, the population abundance $N_{y,a}$ in subsequent years is
@@ -244,13 +246,14 @@ The spawning biomass is $B^S_y$ is
 $$B^S_y = \sum_a w_{y,a} m_{y,a} N_{y,a},$$
 where $m_{y,a}$ and $w_{y,a}$ are the maturity at age and weight at age, respectively.
 
+## Catch at age
 The catch (in numbers) $C^N$ at age for fleet $f$ is
 $$ C^N_{y,a,f} = \dfrac{v_{y,a,f} F_{y,f}}{Z_{y,a}} N_{y,a} (1 - \exp[-Z_{y,a}]).$$
 
-If the model is conditioned on catch, then $F_{y,f}$ are estimated. If the model is conditioned on effort, then
-$$ F_{y,f} = q_f E_{y,f},$$
-where $E_{y,f}$ is the observed effort and $q_f$ is the scaling coefficient.
+If the model is conditioned on catch, then $F_{y,f}$ can be estimated as parameters or solved iteratively to match the observed catch. If the model is conditioned on effort, then
+$$ F_{y,f} = q_f E_{y,f},$$ where $E_{y,f}$ is the observed effort and $q_f$ is the scaling coefficient.
 
+## Catch-at-length 
 The catch at length is calculated assuming a normally distributed length-at-age $P(\ell,a)$, where
 $$ C^N_{y,\ell,f} = \sum_a C^N_{y,a,f} P(\ell|a) $$
 and
@@ -277,6 +280,7 @@ $$ p_{y,a,f} = \dfrac{C^N_{y,a,f}}{\sum_a C^N_{y,a,f}}.$$
 The proportion of the catch-at-length is
 $$ p_{y,\ell,f} = \dfrac{C^N_{y,\ell,f}}{\sum_{\ell}C^N_{y,\ell,f}}.$$
 
+## Survey 
 If the $s^{\textrm{th}}$ survey is biomass-based, then the survey value $I_{y,s}$ is calculated as
 $$ I_{y,s} = q_s \sum_a v_{y,a,s} N_{y,a} w_{y,a}, $$
 where $q$ is the scaling coefficient and $s$ indexes survey.
@@ -287,7 +291,7 @@ $$ I_{y,s} = q_s \sum_a v_{y,a,s} N_{y,a} . $$
 
 ## Likelihoods
 
-If the model is conditioned on catch, then the log-likelihood component $\Lambda_1$ of the catch is
+If the model is conditioned on catch and fishing mortality rates are estimated parameters, then the log-likelihood component $\Lambda_1$ of the catch is
 $$\Lambda_1 = \sum_f \left[\lambda^{\tilde{C}}_f \sum_y \left(-\log(0.01) - \dfrac{[\log(\tilde{C}^{\textrm{obs}}_{y,f}) - \log(\tilde{C}^{\textrm{pred}}_{y,f})]^2}{2 \times 0.01^2}\right)\right],$$
 
 where $\textrm{obs}$ and $\textrm{pred}$ indicate observed and predicted quantities, respectively, and $\lambda$ are likelihood weights. With a small standard deviation for the catch likelihood relative to the variance in other likelihood components, the predicted catch should match the observed catch.
@@ -316,6 +320,48 @@ $$\Lambda_7 = \sum_f \lambda^{\tilde{C}}_f \left(-\log(0.01) - \dfrac{[\log(\til
 
 The total log-likelihood $\textrm{LL}$ to be maximized is
 $$\textrm{LL} = \sum_{i=1}^7\Lambda_i.$$
+
+# Estimated parameters
+
+The estimated parameters, denoted in this section as $x$, are unconstrained over all real numbers and then transformed in order to constrain the corresponding model parameters. For optimization, the transformation is also designed to reduce the scale of all estimated parameters to within an order of magnitude.
+
+## Selectivity
+
+For a fleet $f$ or survey $s$ for which selectivity is estimated, then parameters $x^{LFS}_f$ and $x^{L5}_f$ are estimated over all real numbers, where
+
+$$ \begin{align}
+L^{\textrm{FS}}_f &= 0.99 \times L_{\infty} \times \textrm{logit}^{-1}(x^{LFS}_f)\\
+L^5_f &= L^{\textrm{FS}}_f - \exp(x^{L5}_f) 
+\end{align}$$
+
+If a third parameter $x^{V}_f$is estimated for dome selectivity, then
+$$ V^{L_{\infty}}_f = \textrm{logit}^{-1}(x^V_f)$$
+
+## Fishing mortality
+
+If $F_{y,f}$ are estimated parameters (`condition = "catch"`), then one parameter $x^F_f$ is the estimated $F$ in log-space in the middle of the time series is estimated and all others are subsequent deviations, represented as $x^{F_{dev}}_{y,f}$:
+
+$$ F_{y,f} = 
+\begin{cases}
+\exp(x^F_f) & y \textrm{ is midpoint of the time series}\\ 
+\exp(x^F_f) \times \exp(x^{F_{dev}}_{y,f}) & \textrm{otherwise}\\
+\end{cases}
+$$
+
+If `condition = "effort"`, then $q_f$ is estimated in log space, where $$F_{y,f} = q_f E_{y,f} = \exp(x^q_f) \times E_{y,f}$$
+
+## Index catchability
+
+To scale biomass to index values, the index catchability $q_s$ is solved analytically in the model:
+
+$$ q_s = \exp\left(\dfrac{\sum_y \log(I^{\textrm{obs}}_{y,s}) - \sum_y \log(\sum_a v_{y,a,s}N_{y,a,s})}{n_s}\right),$$
+or
+$$ q_s = \exp\left(\dfrac{\sum_y \log(I^{\textrm{obs}}_{y,s}) - \sum_y \log(\sum_a v_{y,a,s}N_{y,a,s}w_{y,a})}{n_s}\right),$$
+for an abundance or biomass based index, respectively, where $n_s$ is the number of years with index values and the summation is over those $n_s$ years.
+
+## Other parameters
+
+Unfished recruitment is estimated in log-space, $R_0 = \dfrac{1}{z}\exp(x^{R_0})$ where $z$ is an optional rescaler, e.g. mean historical catch, to reduce the magnitude of the $x^{R_0}$ estimate. Recruitment deviations $\delta_y$ are directly estimated.
 
 # References
 

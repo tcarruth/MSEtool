@@ -23,6 +23,10 @@
 #' \item \href{../doc/VPA.html}{Virtual population analysis} (\link{VPA})
 #' }
 #'
+#'
+#' The \code{\link{SRA_scope}} model can be used to condition DLMtool operating models from real data. Information can be found
+#' \href{../doc/SRA_scope.html}{here}.
+#'
 #' MSEtool also contains \link{multiMSE}, a platform for multi-stock and multi-fleet operating models based on components
 #' from DLMtool. An overview of multiMSE is available in the \href{../doc/multiMSE.html}{multiMSE vignette}.
 #'
