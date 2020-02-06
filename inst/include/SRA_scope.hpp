@@ -64,7 +64,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_STRING(comp_like); // Whether to use "multinomial" or "lognormal" distribution for age/lengthc comps
 
   DATA_SCALAR(max_F);     // Maximum F in the model
-  DATA_SCALAR(rescale);   // Catch rescaler, needed in cases where q = 1
+  DATA_SCALAR(rescale);   // R0 rescaler
   DATA_INTEGER(ageM);     // Age of maturity used for averaging E0 and EPR0
 
   DATA_IVECTOR(est_early_rec_dev); // Indicates years in which log_early_rec_dev are estimated. Then, lognormal bias correction estimates are added..
@@ -89,7 +89,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   int nlbin = length_bin.size();
   Type bin_width = length_bin(1) - length_bin(0);
 
-  Type R0 = exp(log_R0);
+  Type R0 = exp(log_R0)/rescale;
   Type h;
   if(SR_type == "BH") {
     h = 0.8 * invlogit(transformed_h);
@@ -319,7 +319,7 @@ Type SRA_scope(objective_function<Type> *obj) {
       }
     }
     if(!I_basis(sur)) B_sur.col(sur) = s_CN.col(sur);
-    q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I, rescale);
+    q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
   }
 
   vector<Type> nll_Catch(nfleet);

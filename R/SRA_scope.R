@@ -285,7 +285,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
       report_internal_fn <- function(x, samps, obj) {
         report <- obj$report(samps[x, ])
-        report <- SRA_posthoc_adjust(report, obj)
+        report <- SRA_posthoc_adjust(report, obj$env$data)
         return(report)
       }
 
@@ -629,7 +629,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     } else {
       rescale <- dots$rescale
     }
-    C_hist <- data$Chist * rescale
+    C_hist <- data$Chist #* rescale
   } else {
     rescale <- 1
     C_hist <- matrix(0, nyears, nfleet)
@@ -666,7 +666,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                        yind_F = as.integer(rep(0.5 * nyears, nfleet)), nit_F = nit_F, plusgroup = plusgroup)
 
   if(data$condition == "catch" || data$condition == "catch2") {
-    TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq * rescale, E_hist = E_hist, E_eq = rep(0, nfleet))
+    TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = data$C_eq, E_hist = E_hist, E_eq = rep(0, nfleet))
   } else {
     TMB_data <- list(model = "SRA_scope", C_hist = C_hist, C_eq = rep(0, nfleet), E_hist = E_hist, E_eq = data$E_eq * rescale_effort)
   }
@@ -791,25 +791,18 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  if(rescale != 1) {
+  if(data$condition == "effort" && any(data$Chist > 0, na.rm = TRUE)) {
     vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
                   "R", "R_early", "R_eq", "R0", "B0", "E0", "N0", "E0_SR")
     vars_mult <- c("Brec", "q")
     var_trans <- c("R0", "q")
     fun_trans <- c("/", "*")
-
-    if(TMB_data_all$nll_C || data$condition == "catch2") {
-      fun_fixed <- c("log", NA)
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    } else if(any(data$Chist > 0, na.rm = TRUE)) {
-      rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
-
-      fun_fixed <- c(NA, NA)
-      rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-    }
+    rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
+    fun_fixed <- c(NA, NA)
+    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
 
-  report <- SRA_posthoc_adjust(report, obj)
+  report <- SRA_posthoc_adjust(report, obj$env$data)
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
@@ -898,13 +891,13 @@ all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
 }
 
 
-SRA_posthoc_adjust <- function(report, obj) {
-  report$F_at_age <- report$Z - obj$env$data$M
+SRA_posthoc_adjust <- function(report, data) {
+  report$F_at_age <- report$Z - data$M
   report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
-  report$rescale <- obj$env$data$rescale
+  report$rescale <- data$rescale
 
-  age_only_model <- obj$env$data$len_age %>%
-    apply(2, function(x) length(x) == obj$env$data$max_age && max(x) == obj$env$data$max_age) %>% all()
+  age_only_model <- data$len_age %>%
+    apply(2, function(x) length(x) == data$max_age && max(x) == data$max_age) %>% all()
   if(age_only_model) {
     report$vul_len <- matrix(NA, length(report$length_bin), dim(report$vul)[3])
     report$s_vul_len <- matrix(NA, length(report$length_bin), dim(report$s_vul)[3])
@@ -913,8 +906,8 @@ SRA_posthoc_adjust <- function(report, obj) {
     report$CALpred <- array(NA, dim(report$CALpred))
     report$s_CALpred <- array(NA, dim(report$s_CALpred))
   } else {
-    report$vul_len <- get_vul_len(report, obj$env$data$vul_type)
-    report$s_vul_len <- get_s_vul_len(report, obj$env$data$I_type, obj$env$data$s_vul_type)
+    report$vul_len <- get_vul_len(report, data$vul_type)
+    report$s_vul_len <- get_s_vul_len(report, data$I_type, data$s_vul_type)
   }
   return(report)
 }
@@ -987,22 +980,15 @@ SRA_retro <- function(x, nyr = 5) {
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
 
-      if(rescale != 1) {
+      if(data$condition == "effort" && any(data$Chist > 0, na.rm = TRUE)) {
         vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
                       "R", "R_early", "R_eq", "R0", "B0", "E0", "N0", "E0_SR")
         vars_mult <- c("Brec", "q")
         var_trans <- c("R0", "q")
         fun_trans <- c("/", "*")
-
-        if(data$nll_C || data$condition == "catch2") {
-          fun_fixed <- c("log", NA)
-          rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-        } else if(any(data$Chist > 0, na.rm = TRUE)) {
-          rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
-
-          fun_fixed <- c(NA, NA)
-          rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-        }
+        rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
+        fun_fixed <- c(NA, NA)
+        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
 
       FMort <- rbind(report$F, matrix(NA, i + 1, ncol(report$F)))
