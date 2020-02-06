@@ -262,7 +262,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                 } else {
                   E_header <- "#### Effort \n"
                 }
-                E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data$Ehist", col = "rich.colors(nfleet)",
+                E_matplot <- rmd_matplot(x = "matrix(Year, nyears, nfleet)", y = "data_mean_fit$Ehist", col = "rich.colors(nfleet)",
                                          xlab = "Year", ylab = "Effort", legend.lab = "f_name", fig.cap = "Effort time series.", header = E_header)
               } else E_matplot <- NULL
 

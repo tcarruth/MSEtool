@@ -204,7 +204,9 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
   if(any(!AddInd)) {
     I_hist0 <- Data@Ind[x, yind]
     I_hist0[I_hist0 < 0] <- NA
-    I_sd0 <- sdconv(1, Data@CV_Ind[x, yind])
+    if(!state_space && length(AddInd) == 1 && AddInd == 0) {
+      I_sd0 <- rep(0, length(I_hist0))
+    } else I_sd0 <- sdconv(1, Data@CV_Ind[x, yind])
   } else I_hist0 <- I_sd0 <- NULL
   if(any(AddInd)) {
     I_hist <- Data@AddInd[x, , ][AddInd[which(AddInd > 0)], yind, drop = FALSE] %>% t()
@@ -218,9 +220,12 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
 
   if(state_space) {
     if(early_dev == "all") est_B_dev <- rep(1, ny)
-    if(early_dev == "index") est_B_dev <- ifelse(1:ny < which(is.na(I_hist))[1], 0, 1)
+    if(early_dev == "index") {
+      first_year_index <- which(apply(I_hist, 1, function(x) any(!is.na(x))))[1]
+      est_B_dev <- ifelse(1:ny < first_year_index, 0, 1)
+    }
   } else {
-    if(nsurvey == 1 || AddInd == 0) fix_sigma <- FALSE # Override: estimate sigma if there's a single survey
+    if(nsurvey == 1 && AddInd == 0) fix_sigma <- FALSE # Override: estimate sigma if there's a single survey
     est_B_dev <- rep(0, ny)
   }
 
