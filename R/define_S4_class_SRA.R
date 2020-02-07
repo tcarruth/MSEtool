@@ -195,7 +195,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               } else {
                 sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
                            "### SRA Model Estimates\n",
-                           "`r SD2 %>% kable(format = \"markdown\")`\n\n")
+                           "`r SD2 %>% knitr::kable(format = \"markdown\")`\n\n")
               }
 
               # Life History section
@@ -360,15 +360,15 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                 } else {
                   nll_table <- c("### Likelihood components\n",
                                  "#### Summary\n",
-                                 "`r nll[[1]] %>% kable(format = \"markdown\")`\n\n",
+                                 "`r nll[[1]] %>% knitr::kable(format = \"markdown\")`\n\n",
                                  "#### Fleet likelihoods\n",
-                                 "`r nll[[2]] %>% kable(format = \"markdown\")`\n\n",
+                                 "`r nll[[2]] %>% knitr::kable(format = \"markdown\")`\n\n",
                                  "#### Fleet weights\n",
-                                 "`r nll[[3]] %>% kable(format = \"markdown\")`\n\n",
+                                 "`r nll[[3]] %>% knitr::kable(format = \"markdown\")`\n\n",
                                  "#### Survey likelihoods\n",
-                                 "`r nll[[4]] %>% kable(format = \"markdown\")`\n\n",
+                                 "`r nll[[4]] %>% knitr::kable(format = \"markdown\")`\n\n",
                                  "#### Survey weights\n",
-                                 "`r nll[[5]] %>% kable(format = \"markdown\")`\n\n")
+                                 "`r nll[[5]] %>% knitr::kable(format = \"markdown\")`\n\n")
                 }
               } else nll_table <- NULL
 
@@ -1026,7 +1026,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
                            "`r ref_pt`\n\n")
     } else {
       rmd_ref_pt <- paste0("## Reference points \n",
-                           "`r ref_pt %>% kable(format = \"markdown\")`\n\n")
+                           "`r ref_pt %>% knitr::kable(format = \"markdown\")`\n\n")
     }
 
   } else {
@@ -1065,11 +1065,11 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
 
     nll_table_fn <- function(i, ii) {
       c(paste0("#### ", scenario$names[i]),
-        paste0("`r nll[[", i, "]][[", ii, "]] %>% kable(format = \"markdown\")`\n\n"))
+        paste0("`r nll[[", i, "]][[", ii, "]] %>% knitr::kable(format = \"markdown\")`\n\n"))
     }
     nll_table <- c("## Likelihood components\n",
                    "### Summary\n",
-                   "`r summary_nll %>% kable(format = \"markdown\")`\n\n",
+                   "`r summary_nll %>% knitr::kable(format = \"markdown\")`\n\n",
                    "### Fleet likelihoods\n",
                    do.call(c, lapply(1:length(dots), nll_table_fn, ii = 2)),
                    "### Fleet weights\n",
