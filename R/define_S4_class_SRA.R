@@ -149,7 +149,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                         "",
                         "```{r setup, include = FALSE, echo = FALSE}",
                         "  knitr::opts_chunk$set(collapse = TRUE, echo = FALSE, message = FALSE,",
-                        "  fig.width = 6, fig.height = 4.5, out.width = \"650px\", comment = \"#>\")",
+                        "  fig.width = 6, fig.height = 4.5, dpi = 600, out.width = \"650px\", comment = \"#>\")",
                         "```\n")
 
             ####### Updated historical OM parameters
@@ -984,7 +984,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
               "",
               "```{r setup, include = FALSE, echo = FALSE}",
               "  knitr::opts_chunk$set(collapse = TRUE, echo = FALSE, message = FALSE,",
-              "  fig.width = 6, fig.height = 4.5, out.width = \"650px\", comment = \"#>\")",
+              "  fig.width = 6, fig.height = 4.5, dpi = 600, out.width = \"650px\", comment = \"#>\")",
               "```\n")
 
 

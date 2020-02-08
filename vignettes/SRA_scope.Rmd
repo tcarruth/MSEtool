@@ -193,7 +193,7 @@ $$ v_{y,a,f} =
 \begin{cases}
 2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{asc}}_f)]^2} & \textrm{if } L_{y,a} < L^{\textrm{FS}}_f\\ 
 1 & \textrm{if logistic and } L_{y,a} \ge L^{\textrm{FS}}_f,\\
-2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{des}}_f)]^2} & \textrm{if flat-topped and } L_{y,a} \ge L^{\textrm{FS}}_f
+2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{des}}_f)]^2} & \textrm{if dome and } L_{y,a} \ge L^{\textrm{FS}}_f
 \end{cases}
 $$
 
