@@ -430,7 +430,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   OM@cpars$AC <- apply(log_rec_dev, 1, function(x) acf(x, lag.max = 1, plot = FALSE)$acf[2])
   OM@AC <- range(OM@cpars$AC)
 
-  pro_Perr_y <- matrix(rnorm(proyears * nsim, rep(StockPars$procmu, proyears), rep(StockPars$procsd, proyears)),
+  proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
+  pro_Perr_y <- matrix(rnorm(proyears * nsim, rep(proc_mu, proyears), rep(StockPars$procsd, proyears)),
                        nsim, proyears)
   for(y in 2:proyears) pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y - 1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
   OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- exp(pro_Perr_y)
