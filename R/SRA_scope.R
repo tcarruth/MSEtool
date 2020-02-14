@@ -156,7 +156,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   I_type2[data$I_type == "est"] <- 0
 
   # No comp data
-  if(is.null(data$CAA) && is.null(data$CAL)) {
+  if(!any(data$CAA > 0) && !any(data$CAL > 0)) {
     fix_sel <- TRUE
     message("No fishery length or age compositions were provided. Selectivity is fixed to values from OM.")
   } else {
@@ -458,6 +458,13 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   OM@cpars$M_ageArray <- StockPars$M_ageArray
 
   OM@cpars$h <- StockPars$hs
+
+  if(any(data$CAL > 0, na.rm = TRUE) || any(data$ML > 0, na.rm = TRUE) || any(data$s_CAL > 0, na.rm = TRUE)) {
+    bw <- data$length_bin[2] - data$length_bin[1]
+    OM@cpars$binWidth <- bw
+    OM@cpars$CAL_binsmid <- data$length_bin
+    OM@cpars$CAL_bins <- c(data$length_bin - 0.5 * bw, max(data$length_bin) + 0.5 * bw)
+  }
 
   if(is.null(dots$plusgroup) || dots$plusgroup) {
     OM@cpars$plusgroup <- rep(1L, nsim)
