@@ -58,7 +58,13 @@ userguide <- function() {
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
 mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
 
-logit <- function(p) log(p/(1 - p))
+logit <- function(p, soft_bounds = FALSE, minp = 0.0001, maxp = 0.9999) {
+  if(soft_bounds) {
+    p <- pmax(minp, p)
+    p <- pmin(maxp, p)
+  }
+  log(p/(1 - p))
+}
 ilogit <- function(x) 1/(1 + exp(-x))
 ilogitm <- function(x) exp(x)/apply(exp(x), 1, sum)
 
