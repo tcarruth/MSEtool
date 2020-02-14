@@ -428,7 +428,9 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   OM@cpars$Perr_y[, OM@maxage:(OM@maxage + nyears - 1)] <- Perr
 
   log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
-  OM@cpars$AC <- apply(log_rec_dev, 1, function(x) acf(x, lag.max = 1, plot = FALSE)$acf[2])
+  OM@cpars$AC <- apply(log_rec_dev, 1, function(x) {
+    out <- acf(x, lag.max = 1, plot = FALSE)$acf[2]
+    ifelse(is.na(out), 0, out)})
   OM@AC <- range(OM@cpars$AC)
 
   proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
