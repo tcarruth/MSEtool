@@ -150,7 +150,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                         "",
                         "```{r setup, include = FALSE, echo = FALSE}",
                         "  knitr::opts_chunk$set(collapse = TRUE, echo = FALSE, message = FALSE,",
-                        "  fig.width = 6, fig.height = 4.5, dpi = 600, out.width = \"650px\", comment = \"#>\")",
+                        paste0("  fig.width = 6, fig.height = 4.5, ", ifelse(render_args$output_format == "html_document", "", "dpi = 400, "),
+                               "out.width = \"650px\", comment = \"#>\")"),
                         "```\n")
 
             ####### Updated historical OM parameters
