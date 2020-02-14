@@ -401,6 +401,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   OM@EffLower <- Eff[1, ]
   OM@EffUpper <- Eff[2, ]
   if(length(OM@EffYears) != nyears) OM@EffYears <- 1:nyears
+  if(length(OM@Esd) == 0 && is.null(OM@cpars$Esd)) OM@Esd <- c(0, 0)
   message("Historical effort trends set in OM@EffLower and OM@EffUpper.\n")
 
   ### Rec devs
@@ -697,6 +698,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   vul_par[2, sel_check] <- log(vul_par[1, sel_check] - vul_par[2, sel_check])
   vul_par[1, sel_check] <- logit(pmin(vul_par[1, sel_check]/TMB_data_all$Linf/0.99, 0.99))
   vul_par[3, sel_check] <- logit(pmin(vul_par[3, sel_check], 0.99))
+  vul_par[, selectivity == -2] <- logit(vul_par[, selectivity == -2], soft_bounds = TRUE)
 
   if(is.null(dots$map_vul_par)) {
     map_vul_par <- matrix(0, 3, data$nsel_block)
