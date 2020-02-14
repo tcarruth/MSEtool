@@ -111,6 +111,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             max_age <- OM@maxage
             age <- 1:max_age
             nyears <- OM@nyears
+            proyears <- OM@proyears
             if(is.null(Year)) Year <- (OM@CurrentYr - nyears + 1):OM@CurrentYr
             Yearplusone <- c(Year, max(Year) + 1)
 
@@ -576,12 +577,33 @@ rmd_SRA_D <- function(fig.cap = "Histogram of historical depletion.") {
     "```\n")
 }
 
-rmd_SRA_Perr <- function(fig.cap = "Recruitment deviations among simulations.") {
+rmd_SRA_Perr <- function(fig.cap = "Historical recruitment deviations among simulations.") {
   c(paste0("```{r, fig.cap = \"", fig.cap, "\"}"),
     "Perr <- OM@cpars$Perr_y[, max_age:(max_age+nyears-1), drop = FALSE]",
     "matplot(Year, t(Perr), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment deviations\",",
     "        ylim = c(0, 1.1 * max(Perr)))",
     "abline(h = 0, col = \"grey\")",
+    "```\n",
+    "",
+    "```{r, fig.cap = \"Future recruitment deviations (up to 5 simulations).\"}",
+    "Perr_future <- OM@cpars$Perr_y[, (max_age+nyears):(max_age+nyears+proyears-1)]",
+    "matplot(Year, t(Perr), type = \"l\", col = \"black\", xlab = \"Year\", ylab = \"Recruitment deviations\",",
+    "        xlim = c(min(Year), max(Year) + proyears), ylim = c(0, 1.1 * max(c(Perr, Perr_future))))",
+    "matlines(max(Year) + 1:proyears, t(Perr_future[1:min(5, nrow(OM@cpars$Perr_y)), ]), type = \"l\")",
+    "abline(h = 0, col = \"grey\")",
+    "```\n",
+    "",
+    "```{r, fig.cap = \"Annual mean and median of future recruitment deviations.\"}",
+    "matplot(Year, t(Perr), type = \"n\", xlab = \"Year\", ylab = \"Recruitment deviations\",",
+    "        xlim = c(min(Year), max(Year) + proyears), ylim = c(0, 1.1 * max(c(Perr, Perr_future))))",
+    "abline(h = c(0, 1), col = \"grey\")",
+    "matlines(Year, t(Perr), type = \"l\", col = \"black\")",
+    "lines(max(Year) + 1:proyears, apply(Perr_future, 2, mean), col = \"red\")",
+    "lines(max(Year) + 1:proyears, apply(Perr_future, 2, median), lty = 2)",
+    "legend(\"topleft\", c(\"Mean\", \"Median\"), col = c(\"red\", \"black\"), lty = c(1, 2))",
+    "```\n",
+    "```{r, fig.cap = \"Histogram of recruitment autocorrelation.\"}",
+    "if(!is.null(OM@cpars$AC)) hist(OM@cpars$AC, main = \"\", xlab = \"Recruitment Autocorrelation\")",
     "```\n")
 }
 
