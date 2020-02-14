@@ -1,7 +1,11 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
 ## MSEtool 1.4.4
+
+### SP
 - `SP` and `SP_SS` now support multiple indices in the model, using `Data@AddInd` and `Data@CV_AddInd`.
+
+### SRA_scope
 - Option to remove plusgroup in `SRA_scope` has been added.
 - When conditioned on catch, `SRA_scope` can now solve `F` iteratively using Newton's method (argument `condition = "catch2"`). F as independently estimated parameters is still available with argument `condition = "catch"`. 
 - Added a `retrospective` generic function for `SRA` objects.

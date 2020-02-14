@@ -361,6 +361,10 @@ check_OM_for_sampling <- function(OM, data) {
     if(!M_check2) stop("Natural mortality not found in OM.", call. = FALSE)
   }
 
+  # Msd - placeholder
+  Msd_check <- length(OM@Msd) == 2 || !is.null(cpars$Msd)
+  if(!Msd_check) OM@Msd <- c(0, 0)
+
   # Steepness
   h_check <- length(OM@h) == 2 || !is.null(cpars$h)
   if(!h_check) stop("Steepness (OM@h) not found.", call. = FALSE)
