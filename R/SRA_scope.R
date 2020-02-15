@@ -727,6 +727,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   s_vul_par[2, parametric_sel] <- log(s_vul_par[1, parametric_sel] - s_vul_par[2, parametric_sel])
   s_vul_par[1, parametric_sel] <- logit(pmin(s_vul_par[1, parametric_sel]/TMB_data_all$Linf/0.99, 0.99))
   s_vul_par[3, parametric_sel] <- logit(pmin(s_vul_par[3, parametric_sel], 0.99))
+  if(any(s_selectivity == -2)) s_vul_par[, s_selectivity == -2] <- logit(s_vul_par[, s_selectivity == -2], soft_bounds = TRUE)
 
   if(is.null(dots$map_s_vul_par)) {
     map_s_vul_par <- matrix(0, 3, nsurvey)
@@ -909,9 +910,9 @@ SRA_posthoc_adjust <- function(report, data) {
   report$rescale <- data$rescale
 
   age_only_model <- data$len_age %>%
-    apply(2, function(x) length(x) == data$max_age && max(x) == data$max_age) %>% all()
+    apply(1, function(x) length(x) == data$max_age && max(x) == data$max_age) %>% all()
   if(age_only_model) {
-    report$vul_len <- matrix(NA, length(report$length_bin), dim(report$vul)[3])
+    report$vul_len <- matrix(NA, length(report$length_bin), data$nsel_block)
     report$s_vul_len <- matrix(NA, length(report$length_bin), dim(report$s_vul)[3])
 
     report$mlen_pred <- matrix(NA, nrow(report$F), ncol(report$F))

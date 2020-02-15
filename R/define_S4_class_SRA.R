@@ -334,7 +334,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               CAA_bubble <- rmd_bubble("Year", "CAA_all", fig.cap = "Predicted catch-at-age (summed over all fleets).", bubble_adj = as.character(bubble_adj))
 
               CAL_all <- apply(report$CALpred, c(1, 2), sum)
-              if(!all(is.na(CAL_all))) {
+              if(sum(CAL_all, na.rm = TRUE) > 0) {
                 CAL_bubble <- rmd_bubble("Year", "CAL_all", CAL_bins = "data_mean_fit$length_bin",
                                          fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = as.character(bubble_adj))
               } else CAL_bubble <- ""
