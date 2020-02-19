@@ -185,6 +185,10 @@ update_SRA_data <- function(data, OM, condition, dots) {
   # Sample life history, selectivity, and obs parameters
   OM_samp <- check_OM_for_sampling(OM, data)
 
+  old_warning <- options()$warn
+  options(warn = -1)
+  on.exit(options(warn = old_warning))
+
   set.seed(OM@seed)
   StockPars <- SampleStockPars(OM_samp, msg = FALSE)
   ObsPars <- SampleObsPars(OM_samp)
