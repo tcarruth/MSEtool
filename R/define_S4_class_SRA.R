@@ -375,7 +375,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               } else nll_table <- NULL
 
               if(exists("retro", inherits = FALSE)) {
-                ret <- rmd_SRA_retrospective()
+                ret <- rmd_SRA_retrospective(render_args)
               } else ret <- NULL
 
               mean_fit_rmd <- c(sumry, LH_section, data_section, ts_output, nll_table, ret)
@@ -842,10 +842,16 @@ rmd_SRA_SR <- function() {
     "```\n")
 }
 
-rmd_SRA_retrospective <- function() {
+rmd_SRA_retrospective <- function(render_args) {
+  if(render_args$output_format == "html_document") {
+    x <- "summary(retro) %>% as.data.frame()"
+  } else {
+    x <- "summary(retro) %>% as.data.frame() %>% knitr::kable(format = \"markdown\")"
+  }
+
   c("### Retrospective\n",
     "```{r}",
-    "as.data.frame(summary(retro))",
+    x,
     "plot(retro)",
     "```\n")
 }
@@ -880,7 +886,7 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
   }
   ylim <- c(0, 1.1 * max(SRA_plot, dat_plot, na.rm = TRUE))
   yaxp <- c(0, max(pretty(ylim, n = 4)), 4)
-  if(max(SRA_plot, dat_plot, na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
+  if(max(c(SRA_plot, dat_plot), na.rm = TRUE) == 1) yaxp <- c(0, 1, 4)
 
   las <- 1
 
@@ -889,9 +895,13 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
     xaxt <- ifelse(i < length(Year) & i %% 4 %in% c(1:3), "n", "s") # TRUE = first three rows
 
     if(dim(SRA_plot)[1] == 1) {
-      plot(data_val, SRA_plot[, i, ], type = "l", col = dat_color, ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      plot(data_val, SRA_plot[, i, ], type = "n", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      abline(h = 0, col = 'grey')
+      lines(data_val, SRA_plot[, i, ], col = dat_color)
     } else {
-      matplot(data_val, t(SRA_plot[, i, ]), type = "l", col = dat_color, ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      matplot(data_val, t(SRA_plot[, i, ]), type = "n", ylim = ylim, yaxp = yaxp, xaxt = xaxt, yaxt = yaxt, las = las)
+      abline(h = 0, col = 'grey')
+      matlines(data_val, t(SRA_plot[, i, ]), col = dat_color)
     }
     abline(h = 0, col = 'grey')
     if(!is.null(dat)) lines(data_val, dat_plot[i, ], lwd = 1.5)
