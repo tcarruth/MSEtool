@@ -280,7 +280,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       return(output)
     } else {
       message("Model converged. Sampling covariance matrix for nsim = ", nsim, " replicates...")
-      if(!all_identical_sims_fn()) message("Note: not all ", nsim, " replicates are identical.")
+      if(!all_identical_sims) message("Note: not all ", nsim, " replicates are identical.")
 
       samps <- mvtnorm::rmvnorm(nsim, mean_fit_output$opt$par, mean_fit_output$SD$cov.fixed)
 
