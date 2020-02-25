@@ -349,7 +349,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
   ### Depletion and init D
   if(any(data$C_eq > 0) || any(data$E_eq > 0)) {
-    initD <- vapply(res, function(x) x$E[1]/x$E0[1], numeric(1))
+    initD <- vapply(res, function(x) x$E[1]/x$E0_SR, numeric(1))
     message("Estimated range in initial spawning depletion: ", paste(round(range(initD), 2), collapse = " - "))
   }
 
@@ -370,9 +370,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       rbind(x, y)
     }
     V <- lapply(V, expand_V_matrix)
-    V2 <- array(unlist(V), c(nyears + proyears, maxage, nsim))
-
-    OM@cpars$V <- aperm(V2, c(3, 2, 1))
+    OM@cpars$V <- unlist(V) %>% array(c(nyears + proyears, maxage, nsim)) %>% aperm(c(3, 2, 1))
     OM@cpars$Find <- Find
     message("Historical F and selectivity trends set in OM@cpars$Find and OM@cpars$V, respectively.")
     message("Selectivity during projection period is set to that in most recent historical year.")
@@ -435,8 +433,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   OM@AC <- range(OM@cpars$AC)
 
   proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
-  pro_Perr_y <- matrix(rnorm(proyears * nsim, rep(proc_mu, proyears), rep(StockPars$procsd, proyears)),
-                       nsim, proyears)
+  pro_Perr_y <- rnorm(proyears * nsim, rep(proc_mu, proyears), rep(StockPars$procsd, proyears)) %>% matrix(nsim, proyears)
   for(y in 2:proyears) pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y - 1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
   OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- exp(pro_Perr_y)
 
