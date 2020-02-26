@@ -19,6 +19,7 @@ SRA_scope(
   integrate = FALSE,
   mean_fit = FALSE,
   drop_nonconv = FALSE,
+  drop_highF = FALSE,
   control = list(iter.max = 2e+05, eval.max = 4e+05),
   ...
 )
@@ -48,7 +49,7 @@ Only used if any of the corresponding entries of \code{data$I_type = "est"} or i
 respectively, for the multinomial likelihood function. The effective sample size of an age or length composition sample is the minimum of ESS or the number of observations
 (sum across columns). For more flexibility, set ESS to be very large and alter the arrays as needed.}
 
-\item{max_F}{The maximum F for any fleet in the scoping model (higher F's in the model are penalized in the objective function).}
+\item{max_F}{The maximum F for any fleet in the scoping model (higher F's in the model are penalized in the objective function). See also `drop_highF`.}
 
 \item{cores}{Integer for the number of CPU cores for the stock reduction analysis.}
 
@@ -57,6 +58,8 @@ respectively, for the multinomial likelihood function. The effective sample size
 \item{mean_fit}{Logical, whether to run an additional with mean values of life history parameters from the OM.}
 
 \item{drop_nonconv}{Logical, whether to drop non-converged fits of the SRA model.}
+
+\item{drop_highF}{Logical, whether to drop fits of the SRA model where F hits `max_F`. Only applies if `drop_nonconv` is also `TRUE.`}
 
 \item{control}{A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to \code{\link[stats]{nlminb}}.}
 
