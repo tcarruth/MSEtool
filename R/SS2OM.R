@@ -369,7 +369,6 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   OM@Mexp <- OM@Msd <- c(0, 0)  # Time varying M would be in cpars
   if(!silent) message("Natural mortality found.")
 
-
   # ---- Depletion ----
   InitF <- replist$parameters$Value[grepl("InitF", replist$parameters$Label)]
   R_offset <- replist$parameters$Value[grepl("SR_R1_offset", replist$parameters$Label)]
@@ -386,15 +385,15 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   # ---- Recruitment deviations ----
   if(season_as_years) {
     replist$recruit$true_Yr <- seas1_yind_full$true_year[match(replist$recruit$Yr, seas1_yind_full$assess_year)]
-    recruit <- summarise(group_by(replist$recruit, true_Yr), bias_adjusted = sum(bias_adjusted), pred_recr = sum(pred_recr)) # Need to sum over season_as_years
-    hist_dev <- c(rep(1, maxage - 1), recruit$pred_recr[!is.na(recruit$true_Yr)]/recruit$bias_adjusted[!is.na(recruit$true_Yr)])
+    recruit <- summarise(group_by(replist$recruit, true_Yr), exp_recr = sum(exp_recr), pred_recr = sum(pred_recr)) # Need to sum over season_as_years
+    hist_dev <- c(rep(1, maxage - 1), recruit$pred_recr[!is.na(recruit$true_Yr)]/recruit$exp_recr[!is.na(recruit$true_Yr)])
     dev_for_AC <- log(hist_dev)
 
   } else {
 
     year_first_rec_dev <- mainyrs[1] - maxage
     rec_ind <- match(year_first_rec_dev:(max(mainyrs) - age_rec * ifelse(season_as_years, nseas, 1)), replist$recruit$Yr)
-    hist_dev <- replist$recruit$pred_recr[rec_ind]/replist$recruit$bias_adjusted[rec_ind] # In normal space
+    hist_dev <- replist$recruit$pred_recr[rec_ind]/replist$recruit$exp_recr[rec_ind] # In normal space
     hist_dev[is.na(hist_dev)] <- 1
     dev_for_AC <- replist$recruit$dev[rec_ind] # In log-space
 
