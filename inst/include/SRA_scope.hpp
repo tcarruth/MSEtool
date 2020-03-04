@@ -56,7 +56,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_IVECTOR(s_vul_type); // Same but for surveys
   DATA_IVECTOR(I_type);   // Integer vector indicating the basis of the indices for fleet (1-nfleet) or surveys B (-1) or SSB (-2) or estimated (0)
   DATA_IVECTOR(abs_I);    // Boolean, whether index is an absolute (fix q = 1) or relative terms (estimate q)
-  DATA_IVECTOR(I_basis);  // Boolean, whether index is biomass based (= 1) or abundance-based (0)
+  DATA_IVECTOR(I_units);  // Boolean, whether index is biomass based (= 1) or abundance-based (0)
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
@@ -294,15 +294,15 @@ Type SRA_scope(objective_function<Type> *obj) {
   vector<Type> s_L5(nsurvey);
   vector<Type> s_Vmaxlen(nsurvey);
 
-  array<Type> s_CAApred(n_y, max_age, nsurvey);
-  array<Type> s_CALpred(n_y, nlbin, nsurvey);
-  matrix<Type> s_CN(n_y, nsurvey);
-  matrix<Type> B_sur(n_y, nsurvey); // Biomass vulnerable to the survey
+  array<Type> s_CAApred(n_y, max_age, nsurvey); // Abundance at age vulnerable to survey
+  array<Type> s_CALpred(n_y, nlbin, nsurvey); // Abundance at length vulnerable to survey
+  matrix<Type> s_CN(n_y, nsurvey); // Total abundance vulnerable to the survey
+  matrix<Type> s_BN(n_y, nsurvey); // Biomass or abundance vulnerable to the survey
 
   s_CAApred.setZero();
   s_CALpred.setZero();
   s_CN.setZero();
-  B_sur.setZero();
+  s_BN.setZero();
 
   array<Type> s_vul = calc_vul_sur(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf, mat, I_type, vul, prior);
   vector<Type> q(nsurvey);
@@ -312,14 +312,14 @@ Type SRA_scope(objective_function<Type> *obj) {
         s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
         s_CN(y,sur) += s_CAApred(y,a,sur);
 
-        if(I_basis(sur)) B_sur(y,sur) += s_CAApred(y,a,sur) * wt(y,a);
+        if(I_units(sur)) s_BN(y,sur) += s_CAApred(y,a,sur) * wt(y,a); // Biomass vulnerable to survey
         if(Type(max_age) != Linf && !R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
           for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
         }
       }
     }
-    if(!I_basis(sur)) B_sur.col(sur) = s_CN.col(sur);
-    q(sur) = calc_q(I_hist, B_sur, sur, sur, Ipred, abs_I);
+    if(!I_units(sur)) s_BN.col(sur) = s_CN.col(sur); // Abundance vulnerable to survey
+    q(sur) = calc_q(I_hist, s_BN, sur, sur, Ipred, abs_I);
   }
 
   vector<Type> nll_Catch(nfleet);
