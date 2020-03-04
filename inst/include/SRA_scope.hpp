@@ -58,6 +58,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_IVECTOR(abs_I);    // Boolean, whether index is an absolute (fix q = 1) or relative terms (estimate q)
   DATA_IVECTOR(I_units);  // Boolean, whether index is biomass based (= 1) or abundance-based (0)
 
+  DATA_MATRIX(age_error); // Ageing error matrix
+
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
   DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
   DATA_MATRIX(LWT_Index); // Likelihood weights for the index
@@ -167,6 +169,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   matrix<Type> N(n_y+1, max_age);
 
   vector<Type> C_eq_pred(nfleet);
+  array<Type> CAAtrue(n_y, max_age, nfleet);   // Catch (in numbers) at year and age at the mid-point of the season
   array<Type> CAApred(n_y, max_age, nfleet);   // Catch (in numbers) at year and age at the mid-point of the season
   array<Type> CALpred(n_y, nlbin, nfleet);
   matrix<Type> mlen_pred(n_y, nfleet);
@@ -238,9 +241,8 @@ Type SRA_scope(objective_function<Type> *obj) {
       R(y+1) = Ricker_SR(E(y), h, R0, E0_SR);
     }
 
-    if(y<n_y-1) {
-      if(est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
-    }
+    if(y<n_y-1 && est_rec_dev(y+1)) R(y+1) *= exp(log_rec_dev(y+1) - 0.5 * tau * tau);
+
     N(y+1,0) = R(y+1);
     if(Type(max_age) != Linf) ALK(y) = generate_ALK(length_bin, len_age, CV_LAA, max_age, nlbin, bin_width, y);
 
@@ -268,16 +270,18 @@ Type SRA_scope(objective_function<Type> *obj) {
       if(plusgroup && a==max_age-1) N(y+1,a) += N(y,a) * exp(-Z(y,a));
 
       for(int ff=0;ff<nfleet;ff++) {
-        CAApred(y,a,ff) = vul(y,a,ff) * F(y,ff) * mean_N;
-        CN(y,ff) += CAApred(y,a,ff);
-        Cpred(y,ff) += CAApred(y,a,ff) * wt(y,a);
+        CAAtrue(y,a,ff) = vul(y,a,ff) * F(y,ff) * mean_N;
+        CN(y,ff) += CAAtrue(y,a,ff);
+        Cpred(y,ff) += CAAtrue(y,a,ff) * wt(y,a);
 
         if(Type(max_age) != Linf) {
           for(int len=0;len<nlbin;len++) {
-            CALpred(y,len,ff) += CAApred(y,a,ff) * ALK(y)(a,len);
-            mlen_pred(y,ff) += CAApred(y,a,ff) * ALK(y)(a,len) * length_bin(len);
+            CALpred(y,len,ff) += CAAtrue(y,a,ff) * ALK(y)(a,len);
+            mlen_pred(y,ff) += CAAtrue(y,a,ff) * ALK(y)(a,len) * length_bin(len);
           }
         }
+
+        for(int aa=0;aa<max_age;aa++) CAApred(y,aa,ff) += CAAtrue(y,a,ff) * age_error(a,aa); // a = true, aa = observed ages
 
         VB(y+1,ff) += vul(y+1,a,ff) * N(y+1,a) * wt(y+1,a);
       }
@@ -294,7 +298,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   vector<Type> s_L5(nsurvey);
   vector<Type> s_Vmaxlen(nsurvey);
 
-  array<Type> s_CAApred(n_y, max_age, nsurvey); // Abundance at age vulnerable to survey
+  array<Type> s_CAAtrue(n_y, max_age, nsurvey); // True abundance at age vulnerable to survey
+  array<Type> s_CAApred(n_y, max_age, nsurvey); // Predicted abundance (after ageing error) at age vulnerable to survey
   array<Type> s_CALpred(n_y, nlbin, nsurvey); // Abundance at length vulnerable to survey
   matrix<Type> s_CN(n_y, nsurvey); // Total abundance vulnerable to the survey
   matrix<Type> s_BN(n_y, nsurvey); // Biomass or abundance vulnerable to the survey
@@ -309,12 +314,14 @@ Type SRA_scope(objective_function<Type> *obj) {
   for(int sur=0;sur<nsurvey;sur++) {
     for(int y=0;y<n_y;y++) {
       for(int a=0;a<max_age;a++) {
-        s_CAApred(y,a,sur) = s_vul(y,a,sur) * N(y,a);
-        s_CN(y,sur) += s_CAApred(y,a,sur);
+        s_CAAtrue(y,a,sur) = s_vul(y,a,sur) * N(y,a);
+        s_CN(y,sur) += s_CAAtrue(y,a,sur);
 
-        if(I_units(sur)) s_BN(y,sur) += s_CAApred(y,a,sur) * wt(y,a); // Biomass vulnerable to survey
+        for(int aa=0;aa<max_age;aa++) s_CAApred(y,aa,sur) += s_CAAtrue(y,a,sur) * age_error(a,aa);
+
+        if(I_units(sur)) s_BN(y,sur) += s_CAAtrue(y,a,sur) * wt(y,a); // Biomass vulnerable to survey
         if(Type(max_age) != Linf && !R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
-          for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAApred(y,a,sur) * ALK(y)(a,len);
+          for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAAtrue(y,a,sur) * ALK(y)(a,len);
         }
       }
     }
@@ -496,6 +503,11 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(nll);
   REPORT(penalty);
   REPORT(prior);
+
+  if(age_error.trace() != Type(max_age)) {
+    REPORT(CAAtrue);
+    REPORT(s_CAAtrue);
+  }
 
   if(nll_Index.sum() != 0) {
     REPORT(s_vul_par);

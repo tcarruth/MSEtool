@@ -315,6 +315,10 @@ update_SRA_data <- function(data, OM, condition, dots) {
     data$I_basis <- 1L
   }
 
+  # Ageing error
+  if(is.null(data$age_error)) data$age_error <- diag(OM@maxage)
+  if(any(dim(data$age_error) != OM@maxage)) stop("data$age_error should be a square matrix of OM@maxage rows and columns", call. = FALSE)
+
   return(list(data = data, OM = OM, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars))
 
 }
