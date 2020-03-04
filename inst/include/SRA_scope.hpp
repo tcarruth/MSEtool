@@ -359,7 +359,7 @@ Type SRA_scope(objective_function<Type> *obj) {
         if(comp_like == "multinomial") {
           nll_s_CAL(sur) -= comp_multinom(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, y, nlbin, sur);
         } else {
-          nll_s_CAL(sur) = comp_lognorm(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, y, nlbin, sur);
+          nll_s_CAL(sur) -= comp_lognorm(s_CAL_hist, s_CALpred, s_CN, s_CAL_n, y, nlbin, sur);
         }
       }
     }
@@ -383,7 +383,7 @@ Type SRA_scope(objective_function<Type> *obj) {
           if(comp_like == "multinomial") {
             nll_CAL(ff) -= comp_multinom(CAL_hist, CALpred, CN, CAL_n, y, nlbin, ff);
           } else {
-            nll_CAL(ff) = comp_lognorm(CAL_hist, CALpred, CN, CAL_n, y, nlbin, ff);
+            nll_CAL(ff) -= comp_lognorm(CAL_hist, CALpred, CN, CAL_n, y, nlbin, ff);
           }
         }
 

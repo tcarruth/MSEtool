@@ -216,19 +216,19 @@ Type comp_multinom(array<Type> obs, array<Type> pred, matrix<Type> N, matrix<Typ
     p_pred(bb) = pred(y,bb,ff)/N(y,ff);
     N_obs(bb) = obs(y,bb,ff);
   }
-  Type nll = dmultinom(N_obs, p_pred, true);
-  return nll;
+  Type log_like = dmultinom(N_obs, p_pred, true);
+  return log_like;
 }
 
 template<class Type>
 Type comp_lognorm(array<Type> obs, array<Type> pred, matrix<Type> N, matrix<Type> N_samp, int y, int n_bin, int ff) {
-  Type nll = 0;
+  Type log_like = 0;
   for(int bb=0;bb<n_bin;bb++) {
     Type p_pred = pred(y,bb,ff)/N(y,ff);
     Type p_obs = obs(y,bb,ff)/N_samp(y,ff);
-    nll -= dnorm(log(p_obs), log(p_pred), pow(0.02/p_obs, 0.5), true);
+    log_like += dnorm(log(p_obs), log(p_pred), pow(0.02/p_obs, 0.5), true);
   }
-  return nll;
+  return log_like;
 }
 
 
