@@ -75,6 +75,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
         message("No data other than Chist is provided. Model will switch to conditioning on equilibrium effort.")
         data$condition <- "effort"
         data$Ehist <- matrix(1, data$nyears, data$nfleet)
+        data$E_eq <- rep(1, data$nfleet)
       } else {
         data$condition <- condition
       }
