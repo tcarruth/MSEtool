@@ -239,6 +239,11 @@ update_SRA_data <- function(data, OM, condition, dots) {
     if(length(data$C_eq) == 1) data$C_eq <- rep(data$C_eq, data$nfleet)
     if(length(data$C_eq) < data$nfleet) stop("C_eq needs to be of length nfleet (", data$nfleet, ").", call. = FALSE)
   }
+
+  if(data$condition == "catch2" && any(data$C_eq > 0)) {
+    message("Equilibrium catch was detected. Model conditioning will be switched to: \"catch\" (estimated F's)")
+  }
+
   if(is.null(data$E_eq)) data$E_eq <- rep(0, data$nfleet)
   if(data$condition == "effort") {
     if(length(data$E_eq) == 1) data$E_eq <- rep(data$E_eq, data$nfleet)
