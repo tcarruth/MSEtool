@@ -112,6 +112,7 @@ Here are the required pre-specified OM parameters needed for SRA scoping:
 - Maturity using slots `OM@L50, OM@L50_95` or `OM@cpars$Mat_age`
 - Standard deviation of recruitment deviations using slot `OM@Perr` or `OM@cpars$Perr`
 - Stock-recruit relationship with `OM@SRrel`
+- Steepness in `OM@h` or `OM@cpars$h`
 - Selectivity parameters with `OM@L5`, `OM@LFS`, and `OM@Vmaxlen`. If there are no age or length compositions, then selectivity in the model is fixed to these values. Otherwise, these are used as starting values.
 - Unfished recruitment `OM@R0` as the starting value.
 
@@ -144,7 +145,7 @@ Historical OM parameters that are updated by the SRA scoping function include:
 
 - Unfished recruitment `OM@R0`, only if catch is provided.
 - Depletion `OM@D`
-- Annual fishing effort in `OM@EffYears`, `OM@EffLower`, `OM@EffUpper`, and `OM@cpars$Find`. In conjunction with depletion, effort will be equal to the apical fishing mortality.
+- Annual fishing effort in `OM@EffYears`, `OM@EffLower`, `OM@EffUpper`, and `OM@cpars$Find`. The effort is equal to the apical fishing mortality when paired with the depletion values.
 - Recruitment autocorrelation `OM@AC` which is estimated post-hoc from the recruitment deviation estimates.
 - Annual recruitment deviations `OM@cpars$Perr_y`. Historical recruitment are those estimated from the model, while future recruitment will be sampled with autocorrelation.
 - Selectivity parameters `OM@L5, OM@LFS, and OM@Vmaxlen`. If multiple fleets are modeled, then the F-at-age matrix is used to derive the effective selectivity and placed in `OM@cpars$V`.
