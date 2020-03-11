@@ -155,10 +155,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   message("OM@maxF updated to ", max_F, ".")
 
   # Indices (by default selectivity of index is for total biomass)
-  I_type2 <- suppressWarnings(as.numeric(data$I_type))
-  I_type2[data$I_type == "B"] <- -1
-  I_type2[data$I_type == "SSB"] <- -2
-  I_type2[data$I_type == "est"] <- 0
+  I_type2 <- int_I_type(data$I_type)
 
   # No comp data
   if(!any(data$CAA > 0) && !any(data$CAL > 0)) {
@@ -175,11 +172,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
   if(length(selectivity) == 1) selectivity <- rep(selectivity, data$nsel_block)
   if(length(selectivity) < data$nsel_block) stop("selectivity vector should be of length ", data$nsel_block, ").", call. = FALSE)
-  sel <- match(selectivity, c("free", "logistic", "dome"))
-  if(any(is.na(sel))) stop("selectivity vector should be either \"logistic\" or \"dome\".", call. = FALSE)
-  sel[selectivity == "free"] <- -2
-  sel[selectivity == "logistic"] <- -1
-  sel[selectivity == "dome"] <- 0
+  sel <- int_sel(selectivity)
 
   if(nsurvey > 0) {
     if(is.null(s_selectivity)) s_selectivity <- rep("logistic", nsurvey)
@@ -188,10 +181,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       s_sel <- rep(1L, nsurvey)
     } else {
       if(length(s_selectivity) < nsurvey) stop("s_selectivity vector should be of length nsurvey (", nsurvey, ").", call. = FALSE)
-      s_sel <- suppressWarnings(as.numeric(s_selectivity))
-      s_sel[s_selectivity == "free"] <- -2
-      s_sel[s_selectivity == "logistic"] <- -1
-      s_sel[s_selectivity == "dome"] <- 0
+      s_sel <- int_sel(s_selectivity)
       if(any(s_sel > 0 && I_type2 == 0)) {
         ind <- which(s_sel > 0 && I_type2 == 0)
         stop("Selectivity for survey ", paste0(ind, collapse = " "), " is estimated but s_selectivity should be either \"logistic\" or \"dome\".", call. = FALSE)
@@ -649,7 +639,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     } else {
       rescale <- dots$rescale
     }
-    C_hist <- data$Chist #* rescale
+    C_hist <- data$Chist
   } else {
     rescale <- 1
     C_hist <- matrix(0, nyears, nfleet)
@@ -830,8 +820,23 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
 
+int_I_type <- function(I_type, nfleet) {
+  I_type2 <- suppressWarnings(as.numeric(I_type)) # Numbers match fleets, otherwise see next lines
+  I_type2[I_type == "B"] <- -1
+  I_type2[I_type == "SSB"] <- -2
+  I_type2[I_type == "est"] <- 0
 
+  return(I_type2)
+}
 
+int_sel <- function(selectivity) {
+  sel <- suppressWarnings(as.numeric(selectivity)) # Numbers match age-specific selectivity
+  sel[selectivity == "free"] <- -2
+  sel[selectivity == "logistic"] <- -1
+  sel[selectivity == "dome"] <- 0
+
+  return(sel)
+}
 
 #' @rdname SRA_scope
 #' @export
