@@ -983,7 +983,6 @@ SRA_retro <- function(x, nyr = 5) {
   data <- x@mean_fit$obj$env$data
   params <- x@mean_fit$obj$env$parameters
   n_y <- data$n_y
-  rescale <- x@mean_fit$report$rescale
   map <- x@mean_fit$obj$env$map
 
   retro_ts <- array(NA, dim = c(nyr+1, n_y + 1, data$nfleet + 3))

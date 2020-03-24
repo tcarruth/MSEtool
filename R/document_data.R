@@ -28,11 +28,5 @@
 #' ## Generate data (e.g., catch, length comps) from the fleets
 #' Hist <- multiMSE(Albacore_TwoFleet, Hist = TRUE)
 #' DataList <- Hist$Data
-#'
-#' # Fleet one
-#' summary(DataList[[1]][[1]])
-#'
-#' # Fleet two
-#' summary(DataList[[1]][[2]])
 #' }
 "Albacore_TwoFleet"

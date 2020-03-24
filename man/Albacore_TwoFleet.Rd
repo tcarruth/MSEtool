@@ -4,7 +4,9 @@
 \name{Albacore_TwoFleet}
 \alias{Albacore_TwoFleet}
 \title{A two-fleet Albacore operating model}
-\format{An object of class \linkS4class{MOM}.}
+\format{
+An object of class \linkS4class{MOM}.
+}
 \usage{
 Albacore_TwoFleet
 }
@@ -22,12 +24,6 @@ plot(Albacore_TwoFleet)
 ## Generate data (e.g., catch, length comps) from the fleets
 Hist <- multiMSE(Albacore_TwoFleet, Hist = TRUE)
 DataList <- Hist$Data
-
-# Fleet one
-summary(DataList[[1]][[1]])
-
-# Fleet two
-summary(DataList[[1]][[2]])
 }
 }
 \keyword{datasets}
