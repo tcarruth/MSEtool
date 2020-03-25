@@ -1,5 +1,5 @@
 ---
-title: "User guide to MSEtool"
+title: "1. User guide to MSEtool"
 subtitle: "Development, Testing and Implementation of Management Procedures for Data-Rich Fisheries"
 author: "Quang Huynh (<q.huynh@oceans.ubc.ca>), Tom Carruthers (<t.carruthers@oceans.ubc.ca>), 
          Adrian Hordyk (<a.hordyk@oceans.ubc.ca>)"
@@ -9,7 +9,7 @@ output:
     toc: true
     number_sections: true 
 vignette: >
-  %\VignetteIndexEntry{User guide to MSEtool}
+  %\VignetteIndexEntry{1. User guide to MSEtool}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -54,32 +54,6 @@ options(width = 650)
 ```{r, echo = FALSE, message = FALSE}
 library(MSEtool)
 ```
-# Version Notes
-
-The package is subject to ongoing testing. If you find a bug or a problem please send a report to <t.carruthers@oceans.ubc.ca> so that it can be fixed!  
-
-## New additions to this version (1.2)
-
-### multiMSE
-- The initial release for multi-fleet and multi-stock operating models and MSEs are released in this version, with `multiMSE` being the core function. The multiMSE vignette will be quite useful and can be accessed at `browseVignettes("MSEtool")`.
-
-### Assessment models
-Quite a few additions and changes have been made to the Assessment models. See the help manual and vignettes for descriptions of these new Assessment functions.
-
-- The continuous delay-differential model with deterministic and stochastic recruitment (`cDD` and `cDD_SS`, respectively) have been added as new Assessment models to the package. The continuous formulation should be more stable in high F situations.
-- A virtual population analysis `VPA` model has also been added to the package.
-- The surplus production model `SP` assumes continuous production and estimates continuous F's, similar to ASPIC. This formulation will be more stable in high F situations. The Fox model can be implemented by setting the production function exponent `n = 1`.
-- A wrapper function for `spict` (state-space surplus production model) has been written and is available in the `DLMextra` package (located on Github). While reporting functions are available in MSEtool, the output of the wrapper function can still be used with the diagnostic functions in the spict package.
-- `SCA` and `SCA2` estimate annual F's and include a likelihood function for the catch. In previous versions, `SCA` matched the predicted catch to observed catch. This feature has been transfered over to the `SCA_Pope` function.
-- Summary of assessment results can be obtained by the `plot` function which now generates a markdown report. This will be useful for diagnosing model fits and evaluating parameter estimates.
-
-### Other minor edits and additions, including:
-- `profile` and `retrospective` functions for profiling the likelihood and retrospective analyses, respectively, of assessment models are now improved.
-- The `compare_models` function has been added to compare time series estimates, e.g. B/BMSY and F/FMSY, among different assessment models.
-- Manual starting values (the `start` argument) for parameters of assessment models can be expressions and subsequently evaluated in the assessment function. This can be very helpful when passing starting values in the `make_MP` function.
-- The `CASAL2OM` function can be used to generate an operating model from CASAL assessments.
-- The `SS2OM` and `SS2Data` functions are updated for the latest versions of r4ss on Github.
-- More options are provided to increase flexibility for ramped harvest control rules (`HCR_ramp`).
 
 # Introduction 
 MSEtool is an extension of the DLMtool package for implementing closed-loop simulation testing of management procedures, a process often referred to as management strategy evaluation (MSE). The components of the operating model for conducting MSEs for data-rich stocks is wholly contained within DLMtool, but MSEtool provides the tools for implementing additional features to facilitate such MSEs. Whereas DLMtool is primarily designed for testing data-limited management procedures, MSEtool provides an object-oriented framework for creating data-rich management procedures (MPs), which typically involve combining an assessment model with a harvest control rule to provide a fishery management recommendation. Management procedures created by MSEtool are designed to be used with the operating model of DLMtool through the `runMSE` function. 

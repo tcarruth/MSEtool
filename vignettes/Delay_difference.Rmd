@@ -1,5 +1,5 @@
 ---
-title: "Description of the delay-difference and delay-differential models"
+title: "A. Description of the delay-difference and delay-differential models"
 author: "Quang Huynh (<q.huynh@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output: 
@@ -7,7 +7,7 @@ output:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{Delay-difference and delay-differential models}
+  %\VignetteIndexEntry{A. Delay-difference and delay-differential models}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---

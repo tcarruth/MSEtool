@@ -1,5 +1,5 @@
 ---
-title: "User guide for multiMSE"
+title: "3. User guide for multiMSE"
 subtitle: "Multi-stock, multi-fleet and MICE dynamics using MSEtool"
 author: "Tom Carruthers (<t.carruthers@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
@@ -9,7 +9,7 @@ output:
     number_sections: true 
     
 vignette: >
-  %\VignetteIndexEntry{User guide for multiMSE}
+  %\VignetteIndexEntry{3. User guide for multiMSE}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

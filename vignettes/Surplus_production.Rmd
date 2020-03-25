@@ -1,5 +1,5 @@
 ---
-title: "Description of the surplus production model"
+title: "C. Description of the surplus production model"
 author: "Quang Huynh (<q.huynh@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output:
@@ -7,7 +7,7 @@ output:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{Surplus production model}
+  %\VignetteIndexEntry{C. Surplus production model}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
