@@ -221,21 +221,15 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
   dimnames(retro_est) <- list(Peel = 0:nyr, Var = names(SD$par.fixed)[names(SD$par.fixed) != "log_rec_dev"],
                               Value = c("Estimate", "Std. Error"))
 
-  SD <- NULL
-  rescale <- info$rescale
+  lapply_fn <- function(i, info, obj, state_space) {
+    ny_ret <- info$data$ny - i
+    info$data$ny <- ny_ret
+    info$data$C_hist <- info$data$C_hist[1:ny_ret]
+    info$data$I_hist <- info$data$I_hist[1:ny_ret]
 
-  data_ret <- info$data
-  params_ret <- info$params
+    if(state_space) info$params$log_rec_dev <- rep(0, ny_ret - k)
 
-  for(i in 0:nyr) {
-    ny_ret <- ny - i
-    data_ret$ny <- ny_ret
-    data_ret$data$C_hist <- info$data$C_hist[1:ny_ret]
-    data_ret$I_hist <- info$data$I_hist[1:ny_ret]
-
-    if(state_space) params_ret$log_rec_dev <- rep(0, ny_ret - k)
-
-    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = obj$env$map, random = obj$env$random,
+    obj2 <- MakeADFun(data = info$data, parameters = info$params, map = obj$env$map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
@@ -246,6 +240,7 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
       ref_pt <- get_MSY_cDD(info$data, report$Arec, report$Brec)
       report <- c(report, ref_pt)
 
+      rescale <- info$rescale
       if(rescale != 1) {
         vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
         vars_mult <- c("Brec")
@@ -263,16 +258,19 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
       R <- c(report$R, rep(NA, i))
       VB <- B
 
-      retro_ts[i+1, , ] <- cbind(FMort, F_FMSY, B, B_BMSY, B_B0, R, VB)
+      retro_ts[i+1, , ] <<- cbind(FMort, F_FMSY, B, B_BMSY, B_B0, R, VB)
 
       sumry <- summary(SD, "fixed")
       sumry <- sumry[rownames(sumry) != "log_rec_dev", drop = FALSE]
-      retro_est[i+1, , ] <- sumry
-    } else {
-      message("Non-convergence when peel = ", i, " (years of data removed).")
-    }
+      retro_est[i+1, , ] <<- sumry
 
+      return(SD$pdHess)
+    }
+    return(FALSE)
   }
+
+  conv <- vapply(0:nyr, lapply_fn, logical(1), info = info, obj = obj, state_space = state_space)
+  if(any(!conv)) warning("Peels that did not converge: ", paste0(which(!conv) - 1, collapse = " "))
 
   retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)

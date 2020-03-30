@@ -175,28 +175,24 @@ retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
   retro_est <- array(NA, dim = c(nyr+1, dim(SD_nondev)))
   dimnames(retro_est) <- list(Peel = 0:nyr, Var = rownames(SD_nondev), Value = c("Estimate", "Std. Error"))
 
-  SD <- NULL
-  rescale <- info$rescale
-
-  data_ret <- info$data
-  params_ret <- info$params
-
-  for(i in 0:nyr) {
+  lapply_fn <- function(i, info, obj) {
     n_y_ret <- n_y - i
-    data_ret$n_y <- n_y_ret
-    data_ret$C_hist <- info$data$C_hist[1:n_y_ret]
-    data_ret$I_hist <- info$data$I_hist[1:n_y_ret]
-    data_ret$CAA_hist <- info$data$CAA_hist[1:n_y_ret, ]
-    data_ret$CAA_n <- info$data$CAA_n[1:n_y_ret]
-    data_ret$est_rec_dev <- info$data$est_rec_dev[1:n_y_ret]
-
-    params_ret$log_rec_dev <- rep(0, n_y_ret)
-    params_ret$logF <- info$params$logF[1:n_y_ret]
+    info$data$n_y <- n_y_ret
 
     if(info$data$yindF + 1 > n_y_ret) {
-      data_ret$yindF <- as.integer(0.5 * data_ret$n_y)
-      params_ret$logF[data_ret$yindF + 1] <- info$params$logF[info$data$yindF + 1]
+      info_old <- info
+      info$data$yindF <- as.integer(0.5 * n_y_ret)
+      info$params$logF[info$data$yindF + 1] <- info_old$params$logF[info_old$data$yindF + 1]
     }
+
+    info$data$C_hist <- info$data$C_hist[1:n_y_ret]
+    info$data$I_hist <- info$data$I_hist[1:n_y_ret]
+    info$data$CAA_hist <- info$data$CAA_hist[1:n_y_ret, ]
+    info$data$CAA_n <- info$data$CAA_n[1:n_y_ret]
+    info$data$est_rec_dev <- info$data$est_rec_dev[1:n_y_ret]
+
+    info$params$log_rec_dev <- rep(0, n_y_ret)
+    info$params$logF <- info$params$logF[1:n_y_ret]
 
     map <- obj$env$map
     if(any(names(map) == "log_rec_dev")) {
@@ -205,7 +201,7 @@ retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
     }
     if(any(names(map) == "logF")) map$logF <- map$logF[1:n_y_ret]
 
-    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = map, random = obj$env$random,
+    obj2 <- MakeADFun(data = info$data, parameters = info$params, map = map, random = obj$env$random,
                       inner.control = info$inner.control, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
@@ -223,6 +219,7 @@ retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
       }
 
       report <- c(report, ref_pt)
+      rescale <- info$rescale
       if(info$rescale != 1) {
         vars_div <- c(ifelse(SCA2, "meanR", "R0"), "B", "E", "CAApred", "CN", "Cpred", "N", "VB",
                       "R", "MSY", "VBMSY", "RMSY", "BMSY", "EMSY", "VB0",
@@ -243,14 +240,17 @@ retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
       VB <- c(report$E, rep(NA, i))
       #log_rec_dev <- c(report$log_rec_dev, rep(NA, i + 1))
 
-      retro_ts[i+1, , ] <- cbind(FMort, F_FMSY, SSB, SSB_SSBMSY, SSB_SSB0, R, VB)
-      retro_est[i+1, , ] <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev" &
+      retro_ts[i+1, , ] <<- cbind(FMort, F_FMSY, SSB, SSB_SSBMSY, SSB_SSB0, R, VB)
+      retro_est[i+1, , ] <<- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev" &
                                           rownames(summary(SD)) != "logF", ]
 
-    } else {
-      message("Non-convergence when peel = ", i, " (years of data removed).")
+      return(SD$pdHess)
     }
+    return(FALSE)
   }
+
+  conv <- vapply(0:nyr, lapply_fn, logical(1), info = info, obj = obj)
+  if(any(!conv)) warning("Peels that did not converge: ", paste0(which(!conv) - 1, collapse = " "))
 
   retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)

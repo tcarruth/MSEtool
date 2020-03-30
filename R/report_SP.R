@@ -166,27 +166,21 @@ retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
   dimnames(retro_est) <- list(Peel = 0:nyr, Var = names(SD$par.fixed)[names(SD$par.fixed) != "log_B_dev"],
                               Value = c("Estimate", "Std. Error"))
 
-  SD <- NULL
-  rescale <- info$rescale
-
-  data_ret <- info$data
-  params_ret <- info$params
-
-  for(i in 0:nyr) {
+  lapply_fn <- function(i, info, obj, state_space) {
     ny_ret <- ny - i
-    data_ret$ny <- ny_ret
-    data_ret$C_hist <- info$data$C_hist[1:ny_ret]
-    data_ret$I_hist <- info$data$I_hist[1:ny_ret, , drop = FALSE]
-    data_ret$I_sd <- info$data$I_sd[1:ny_ret, , drop = FALSE]
+    info$data$ny <- ny_ret
+    info$data$C_hist <- info$data$C_hist[1:ny_ret]
+    info$data$I_hist <- info$data$I_hist[1:ny_ret, , drop = FALSE]
+    info$data$I_sd <- info$data$I_sd[1:ny_ret, , drop = FALSE]
 
     map <- obj$env$map
     if(state_space) {
-      data_ret$est_B_dev <- info$data$est_B_dev[1:ny_ret]
-      params_ret$log_B_dev <- rep(0, ny_ret)
+      info$data$est_B_dev <- info$data$est_B_dev[1:ny_ret]
+      info$params$log_B_dev <- rep(0, ny_ret)
       map$log_B_dev <- obj$env$map$log_B_dev[1:ny_ret]
     }
 
-    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = map, random = obj$env$random,
+    obj2 <- MakeADFun(data = info$data, parameters = info$params, map = map, random = obj$env$random,
                       DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
@@ -194,6 +188,7 @@ retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
+      rescale <- info$rescale
       if(rescale != 1) {
         vars_div <- c("B", "BMSY",  "K", "MSY", "Cpred", "SP")
         vars_mult <- NULL
@@ -209,17 +204,19 @@ retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
       B_BMSY <- B/report$BMSY
       B_B0 <- B/report$K
 
-      retro_ts[i+1, , ] <- cbind(FMort, F_FMSY, B, B_BMSY, B_B0)
+      retro_ts[i+1, , ] <<- cbind(FMort, F_FMSY, B, B_BMSY, B_B0)
 
       sumry <- summary(SD, "fixed")
       sumry <- sumry[rownames(sumry) != "log_B_dev", drop = FALSE]
-      retro_est[i+1, , ] <- sumry
+      retro_est[i+1, , ] <<- sumry
 
-    } else {
-      message("Non-convergence when peel = ", i, " (years of data removed).")
+      return(SD$pdHess)
     }
-
+    return(FALSE)
   }
+
+  conv <- vapply(0:nyr, lapply_fn, logical(1), info = info, obj = obj, state_space = state_space)
+  if(any(!conv)) warning("Peels that did not converge: ", paste0(which(!conv) - 1, collapse = " "))
 
   retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)

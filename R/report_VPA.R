@@ -130,9 +130,7 @@ profile_likelihood_VPA <- function(Assessment, figure = TRUE, save_figure = TRUE
 #' @importFrom gplots rich.colors
 retrospective_VPA <- function(Assessment, nyr) {
   assign_Assessment_slots(Assessment)
-
   n_y <- info$data$n_y
-
   Year <- c(info$Year, max(info$Year) + 1)
 
   # Array dimension: Retroyr, Year, ts
@@ -144,26 +142,22 @@ retrospective_VPA <- function(Assessment, nyr) {
   retro_est <- array(NA, dim = c(nyr+1, dim(summary(SD))))
   dimnames(retro_est) <- list(Peel = 0:nyr, Var = rownames(summary(SD)), Value = c("Estimate", "Std. Error"))
 
-  SD <- NULL
-  rescale <- info$rescale
-  fix_h <- ifelse(is.null(info$h), FALSE, TRUE)
+  #fix_h <- ifelse(is.null(info$h), FALSE, TRUE)
 
-  data_ret <- info$data
-  params_ret <- info$params
-
-  for(i in 0:nyr) {
+  lapply_fn <- function(i, info, obj) {
     n_y_ret <- n_y - i
-    data_ret$n_y <- n_y_ret
-    data_ret$I_hist <- info$data$I_hist[1:n_y_ret]
-    data_ret$CAA_hist <- info$data$CAA_hist[1:n_y_ret, ]
+    info$data$n_y <- n_y_ret
+    info$data$I_hist <- info$data$I_hist[1:n_y_ret]
+    info$data$CAA_hist <- info$data$CAA_hist[1:n_y_ret, ]
 
-    obj2 <- MakeADFun(data = data_ret, parameters = params_ret, map = obj$env$map, DLL = "MSEtool", silent = TRUE)
+    obj2 <- MakeADFun(data = info$data, parameters = info$params, map = obj$env$map, DLL = "MSEtool", silent = TRUE)
     mod <- optimize_TMB_model(obj2, info$control)
     opt2 <- mod[[1]]
     SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
+      rescale <- info$rescale
       if(rescale != 1) {
         vars_div <- c("B", "E", "VB", "N", "CAApred")
         vars_mult <- NULL
@@ -184,13 +178,16 @@ retrospective_VPA <- function(Assessment, nyr) {
       R <- c(report$N[, 1], rep(NA, i))
       VB <- c(report$VB, rep(NA, i))
 
-      retro_ts[i+1, , ] <- cbind(FMort, U, SSB, R, VB)
-      retro_est[i+1, , ] <- summary(SD)
+      retro_ts[i+1, , ] <<- cbind(FMort, U, SSB, R, VB)
+      retro_est[i+1, , ] <<- summary(SD)
 
-    } else {
-      message("Non-convergence when peel = ", i, " (years of data removed).")
+      return(SD$pdHess)
     }
+    return(FALSE)
   }
+
+  conv <- vapply(0:nyr, lapply_fn, logical(1), info = info, obj = obj)
+  if(any(!conv)) warning("Peels that did not converge: ", paste0(which(!conv) - 1, collapse = " "))
 
   retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts,
                Est_var = dimnames(retro_est)[[2]], Est = retro_est)

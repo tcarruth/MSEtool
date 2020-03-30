@@ -999,10 +999,10 @@ SRA_retro <- function(x, nyr = 5) {
   dimnames(retro_ts) <- list(Peel = 0:nyr, Year = (x@OM@CurrentYr - n_y):x@OM@CurrentYr + 1, Var = TS_var)
 
   new_args <- lapply(n_y - 0:nyr, SRA_retro_subset, data = data, params = params, map = map)
-  for(i in 0:nyr) {
+  lapply_fn <- function(i, new_args, x) {
     obj2 <- MakeADFun(data = new_args[[i+1]]$data, parameters = new_args[[i+1]]$params, map = new_args[[i+1]]$map,
                       random = x@mean_fit$obj$env$random, DLL = "MSEtool", silent = TRUE)
-    if(data$condition == "catch2") {
+    if(new_args[[i+1]]$data$condition == "catch2") {
       R0_test <- any(is.na(obj2$report(obj2$par)$F)) || any(is.infinite(obj2$report(obj2$par)$F))
       if(R0_test) {
         for(ii in 1:10) {
@@ -1018,13 +1018,13 @@ SRA_retro <- function(x, nyr = 5) {
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
 
-      if(data$condition == "effort" && any(data$Chist > 0, na.rm = TRUE)) {
+      if(new_args[[i+1]]$data$condition == "effort" && any(new_args[[i+1]]$data$Chist > 0, na.rm = TRUE)) {
         vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
                       "R", "R_early", "R_eq", "R0", "B0", "E0", "N0", "E0_SR")
         vars_mult <- c("Brec", "q")
         var_trans <- c("R0", "q")
         fun_trans <- c("/", "*")
-        rescale <- 1/exp(mean(log(data$Chist/report$Cpred), na.rm = TRUE))
+        rescale <- 1/exp(mean(log(new_args[[i+1]]$data$Chist/report$Cpred), na.rm = TRUE))
         fun_fixed <- c(NA, NA)
         rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
       }
@@ -1034,15 +1034,18 @@ SRA_retro <- function(x, nyr = 5) {
       SSB_SSB0 <- SSB/report$E0_SR
       R <- c(report$R, rep(NA, i))
 
-      retro_ts[i+1, , ] <- cbind(FMort, SSB, SSB_SSB0, R)
-      message("Peel ", i, " out of ", nyr, " was successful.")
-    } else {
-      message("Non-convergence when peel = ", i, " (years of data removed).")
+      retro_ts[i+1, , ] <<- cbind(FMort, SSB, SSB_SSB0, R)
+
+      return(SD$pdHess)
     }
+    return(FALSE)
   }
 
+  conv <- vapply(0:nyr, lapply_fn, logical(1), new_args = new_args, x = x)
+  if(any(!conv)) warning("Peels that did not converge: ", paste0(which(!conv) - 1, collapse = " "))
+
   retro <- new("retro", Model = "SRA_scope", Name = x@OM@Name, TS_var = TS_var, TS = retro_ts)
-  attr(retro, "TS_lab") <- c(paste("Fishing mortality of Fleet", 1:ncol(FMort)),
+  attr(retro, "TS_lab") <- c(paste("Fishing mortality of Fleet", 1:data$nfleet),
                              "Spawning biomass", "Spawning depletion", "Recruitment")
 
   return(retro)
