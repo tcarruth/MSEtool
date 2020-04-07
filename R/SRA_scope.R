@@ -91,6 +91,7 @@
 #' \item map_s_vul_par: The map argument for the survey selectivity parameters (same dimension as s_vul_par). Placeholder parameters should have a map value of NA.
 #' \item map_log_rec_dev: A vector of length OM@@nyears that indexes which recruitment deviates are fixed (using NA) or estimated (a separate integer).
 #' \item plusgroup: Logical for whether the maximum age is a plusgroup or not.
+#' \item fix_dome: Logical for whether the dome selectivity parameter for fleets is fixed. Used primarily for backwards compatibility, this is overridden by map_vul_par.
 #' }
 #'
 #' Survey selectivity is estimated only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should
@@ -130,7 +131,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
                       drop_highF = FALSE,
                       control = list(iter.max = 2e+05, eval.max = 4e+05), ...) {
 
-  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, map_early_rec_dev, rescale, plusgroup, resample, OMeff
+  dots <- list(...) # can be vul_par, s_vul_par, map_vul_par, map_s_vul_par, map_log_rec_dev, map_early_rec_dev, rescale, plusgroup, resample, OMeff, fix_dome
   if(!is.null(dots$maxF)) max_F <- dots$maxF
   if(length(ESS) == 1) ESS <- rep(ESS, 2)
 
@@ -704,7 +705,8 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(is.null(dots$map_vul_par)) {
     map_vul_par <- matrix(0, 3, data$nsel_block)
-    map_vul_par[3, as.logical(selectivity)] <- NA
+    map_vul_par[3, selectivity != 0] <- NA
+    if(!is.null(dots$fix_dome) && dots$fix_dome) map_vul_par[3, selectivity == 0] <- NA
 
     for(ff in 1:nfleet) {
       if(all(data$CAA[,,ff] <= 0, na.rm = TRUE) && all(data$CAL[,,ff] <= 0, na.rm = TRUE)) {
