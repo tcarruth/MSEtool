@@ -43,6 +43,10 @@ pre { /* Code block */
 </style>
 
 
+```{r, echo = FALSE, include = FALSE}
+library(MSEtool)
+```
+
 ```{r set options, echo = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 knitr::opts_chunk$set(dpi=85)
@@ -51,9 +55,6 @@ options(width = 650)
 
 <br>
 
-```{r, echo = FALSE, message = FALSE}
-library(MSEtool)
-```
 
 # Introduction 
 MSEtool is an extension of the DLMtool package for implementing closed-loop simulation testing of management procedures, a process often referred to as management strategy evaluation (MSE). The components of the operating model for conducting MSEs for data-rich stocks is wholly contained within DLMtool, but MSEtool provides the tools for implementing additional features to facilitate such MSEs. Whereas DLMtool is primarily designed for testing data-limited management procedures, MSEtool provides an object-oriented framework for creating data-rich management procedures (MPs), which typically involve combining an assessment model with a harvest control rule to provide a fishery management recommendation. Management procedures created by MSEtool are designed to be used with the operating model of DLMtool through the `runMSE` function. 

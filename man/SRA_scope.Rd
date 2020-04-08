@@ -35,11 +35,11 @@ steepness, maturity parameters (L50 and L50_95), standard deviation of recruitme
 \item{condition}{String to indicate whether the SRA model is conditioned on "catch" (where F is estimated), "catch2" (where F is solved internally using Newton's method),
 or "effort".}
 
-\item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.}
+\item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
+If there is time-varying selectivity, this is a characte vector of length nsel_block (see Data section below).}
 
 \item{s_selectivity}{A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
-for an age-specific index.
-Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.}
+for an age-specific index. Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.}
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See details.}
 
@@ -69,6 +69,8 @@ respectively, for the multinomial likelihood function. The effective sample size
 }
 \value{
 An object of class \linkS4class{SRA}, including the updated operating model object.
+
+An object of class \linkS4class{SRA} (see link for descriptin of output).
 }
 \description{
 Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch or effort, and potentially
@@ -125,6 +127,12 @@ See section D.5 of \code{DLMtool::userguide()}.
 
 The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <- OM@Linfsd <- OM@Ksd <- c(0, 0)}.
 }
+\section{Vignette}{
+
+Two vignettes for the SRA model provide a general \href{../doc/SRA_scope.html}{overview} and more details on
+\href{../doc/SRA_scope2.html}{selectivity} settings.
+}
+
 \section{Data}{
 
 One of indices, age compositions, or length compositions should be provided in addition to the historical catch or effort. Not all arguments
@@ -162,6 +170,9 @@ Zero (default) implies unfished conditions in year one. Otherwise, this is used 
 \item I_units - Optional, an integer vector to indicate whether indices are biomass based (1) or abundance-based (0). By default, all are biomass-based.
 \item age_error - Optional, a square matrix of maxage rows and columns to specify ageing error. The aa-th column assigns a proportion of the true age in the
 a-th row to observed age. Thus, all \code{rowSums(age_error)} should be 1. Default is an identity matrix (no ageing error).
+\item sel_block - Optional, for time-varying fleet selectivity (in time blocks), a matrix of nyears x nfleet that assigns a selectivity function to a fleet-year combination.
+See \href{../doc/SRA_scope2.html}{selectivity} vignette.
+\item nsel_block - Optional, the number of selectivity blocks.
 }
 
 Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.

@@ -16,9 +16,9 @@
 #' @param condition String to indicate whether the SRA model is conditioned on "catch" (where F is estimated), "catch2" (where F is solved internally using Newton's method),
 #' or "effort".
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
+#' If there is time-varying selectivity, this is a characte vector of length nsel_block (see Data section below).
 #' @param s_selectivity A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
-#' for an age-specific index.
-#' Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.
+#' for an age-specific index. Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.
 #' @param LWT A named list of likelihood weights for the SRA model. See details.
 #' @param comp_like A string indicating either "multinomial" (default) or "lognormal" distributions for the composition data.
 #' @param ESS If \code{comp_like = "multinomial"}, a numeric vector of length two to cap the maximum effective samples size of the age and length compositions,
@@ -34,6 +34,10 @@
 #' @param control A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to \code{\link[stats]{nlminb}}.
 #' @param ... Other arguments to pass in for starting values of parameters and fixing parameters. See details.
 #' @return An object of class \linkS4class{SRA}, including the updated operating model object.
+#'
+#' @section Vignette:
+#' Two vignettes for the SRA model provide a general \href{../doc/SRA_scope.html}{overview} and more details on
+#' \href{../doc/SRA_scope2.html}{selectivity} settings.
 #'
 #' @section Data:
 #' One of indices, age compositions, or length compositions should be provided in addition to the historical catch or effort. Not all arguments
@@ -71,6 +75,9 @@
 #' \item I_units - Optional, an integer vector to indicate whether indices are biomass based (1) or abundance-based (0). By default, all are biomass-based.
 #' \item age_error - Optional, a square matrix of maxage rows and columns to specify ageing error. The aa-th column assigns a proportion of the true age in the
 #' a-th row to observed age. Thus, all \code{rowSums(age_error)} should be 1. Default is an identity matrix (no ageing error).
+#' \item sel_block - Optional, for time-varying fleet selectivity (in time blocks), a matrix of nyears x nfleet that assigns a selectivity function to a fleet-year combination.
+#' See \href{../doc/SRA_scope2.html}{selectivity} vignette.
+#' \item nsel_block - Optional, the number of selectivity blocks.
 #' }
 #'
 #' Selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
@@ -120,7 +127,7 @@
 #' See section D.5 of \code{DLMtool::userguide()}.
 #'
 #' The easiest way to turn off time-varying growth/M is by setting: \code{OM@@Msd <- OM@@Linfsd <- OM@@Ksd <- c(0, 0)}.
-#'
+#' @return An object of class \linkS4class{SRA} (see link for descriptin of output).
 #' @author Q. Huynh
 #' @seealso \link{plot.SRA} \linkS4class{SRA}
 #' @importFrom dplyr %>%
@@ -931,12 +938,12 @@ SRA_posthoc_adjust <- function(report, data) {
   age_only_model <- data$len_age %>%
     apply(1, function(x) length(x) == data$max_age && max(x) == data$max_age) %>% all()
   if(age_only_model) {
-    report$vul_len <- matrix(NA, length(report$length_bin), data$nsel_block)
-    report$s_vul_len <- matrix(NA, length(report$length_bin), dim(report$s_vul)[3])
+    report$vul_len <- matrix(NA_real_, length(report$length_bin), data$nsel_block)
+    report$s_vul_len <- matrix(NA_real_, length(report$length_bin), dim(report$s_vul)[3])
 
-    report$mlen_pred <- matrix(NA, nrow(report$F), ncol(report$F))
-    report$CALpred <- array(NA, dim(report$CALpred))
-    report$s_CALpred <- array(NA, dim(report$s_CALpred))
+    report$mlen_pred <- matrix(NA_real_, nrow(report$F), ncol(report$F))
+    report$CALpred <- array(NA_real_, dim(report$CALpred))
+    report$s_CALpred <- array(NA_real_, dim(report$s_CALpred))
   } else {
     report$vul_len <- get_vul_len(report, data$vul_type)
     report$s_vul_len <- get_s_vul_len(report, data$I_type, data$s_vul_type)

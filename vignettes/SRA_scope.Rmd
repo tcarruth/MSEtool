@@ -190,22 +190,31 @@ To be added.
 # Mathematical description of the SRA model
 
 ## Selectivity and mortality
-Selectivity $v$ is length-based and modeled as a double-exponential function (using base 2). For fleet $f$ with flat-topped selectivity, two parameters are used, the length of 5% selectivity ($L^5_f$) and the length of full selectivity $L^{\textrm{FS}}_f$. For dome selectivity, a third parameter, the selectivity at $L_{\infty}$, $V^{L_{\infty}}_f$ is also used. Length-based selectivity is converted to age-based selectivity in the age-structured model as:
+For fleets, selectivity is defined by blocks (indexed by $b$) which can then be assigned to any fleet $f$ and year $y$ to allow for time-varying selectivity. By default, each fleet is assigned to its own block for all years (no time-varying selectivity).
 
-$$ v_{y,a,f} = 
+For flat-topped selectivity in block $b$, two parameters are used and expressed in terms of length units: the length of 5% selectivity ($L^5_b$) and the length of full selectivity $L^{\textrm{FS}}_b$. For dome selectivity, a third parameter, the selectivity at $L_{\infty}$, $V^{L_{\infty}}_b$ is also used. Length-based selectivity is converted to age-based selectivity in the age-structured model as:
+
+$$ v_{y,a,b} = 
 \begin{cases}
-2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{asc}}_f)]^2} & \textrm{if } L_{y,a} < L^{\textrm{FS}}_f\\ 
-1 & \textrm{if logistic and } L_{y,a} \ge L^{\textrm{FS}}_f,\\
-2^{-[(L_{y,a} - L^{\textrm{FS}}_f)/(\sigma^{\textrm{des}}_f)]^2} & \textrm{if dome and } L_{y,a} \ge L^{\textrm{FS}}_f
+2^{-[(L_{y,a} - L^{\textrm{FS}}_b)/(\sigma^{\textrm{asc}}_b)]^2} & \textrm{if } L_{y,a} < L^{\textrm{FS}}_b\\ 
+1 & \textrm{if logistic and } L_{y,a} \ge L^{\textrm{FS}}_b,\\
+2^{-[(L_{y,a} - L^{\textrm{FS}}_b)/(\sigma^{\textrm{des}}_b)]^2} & \textrm{if dome and } L_{y,a} \ge L^{\textrm{FS}}_b
 \end{cases}
 $$
 
 
-where $L_{y,a}$ is the mean length-at-age in year $y$, and $\sigma^{\textrm{asc}}_f = (L^5_f - L^{\textrm{FS}}_f)/\sqrt{-\log_2(0.05)}$ and $\sigma^{\textrm{des}}_f = (L_{\infty} - L^{\textrm{FS}}_f)/\sqrt{-\log_2(V^{L_{\infty}})}$ control the shape of the ascending and descending limbs, respectively, of the selectivity function. In this parameterization, length-based selectivity is constant over time. The corresponding age-based selectivity is constant over time if growth is not time-varying.
+where $L_{y,a}$ is the mean length-at-age and $\sigma^{\textrm{asc}}_b = (L^5_b - L^{\textrm{FS}}_b)/\sqrt{-\log_2(0.05)}$ and $\sigma^{\textrm{des}}_b = (L_{\infty} - L^{\textrm{FS}}_b)/\sqrt{-\log_2(V^{L_{\infty}}_b)}$ control the shape of the ascending and descending limbs, respectively, of the selectivity function. In this parameterization, length-based selectivity is constant over time. The corresponding age-based selectivity within each block is constant so long as growth is not time-varying.
+
+Selectivity can also be parameterized where $v_{y,a,b}$ are free independent parameters. In this case, selectivity does not vary among years.
 
 Total mortality $Z$ in year $y$ and for age $a$ is the sum of fishing mortality $F$ from all fleets and natural mortality $M$,
 
-$$ Z_{y,a} = M_{y,a} + \Sigma_f v_{y,a,f} F_{y,f}.$$
+$$ Z_{y,a} = M_{y,a} + \Sigma_f v_{y,a,f} F_{y,f},$$
+
+where $v_{y,a,f}$ is the fleet selectivity after assigning blocks to fleets.
+
+### Survey selectivity
+Survey selectivity is constant over time and is denoted as $v_{a,s}$ with either logistic, dome, or free parameterizations.
 
 ## Initial population distribution
 The population age distribution in the first year of the model $y=1$ is in equilibrium where
@@ -289,6 +298,11 @@ where $q$ is the scaling coefficient and $s$ indexes survey.
 If the survey is abundance-based, then 
 $$ I_{y,s} = q_s \sum_a v_{y,a,s} N_{y,a} . $$
 
+The proportion-at-age vulnerable to the survey is
+$$ p_{y,a,s} = \dfrac{v_{a,s}N_{y,a}}{\sum_a v_{a,s}N_{y,a}}.$$
+
+The proportion-at-length vulnerable to the survey is
+$$ p_{y,\ell,s} = \dfrac{\sum_a v_{a,s} N_{y,a} P(\ell|a)}{\sum_{\ell} \sum_a v_{a,s} N_{y,a} P(\ell|a)}.$$
 
 ## Likelihoods
 
@@ -319,8 +333,16 @@ where $\tau$ is the standard deviation of recruitment deviates.
 The log-likelihood component $\Lambda_7$ of the equilibrium catch is
 $$\Lambda_7 = \sum_f \lambda^{\tilde{C}}_f \left(-\log(0.01) - \dfrac{[\log(\tilde{C}^{\textrm{eq,obs}}_f) - \log(\tilde{C}^{\textrm{eq,pred}}_f)]^2}{2 \times 0.01^2}\right),$$
 
+The log-likelihood component $\Lambda_8$ of the survey proportion-at-age data is
+$$\Lambda_8 = \sum_s \lambda^{IA}_s \left[\sum_y O^{IA}_{y,s} \sum_a p^{\textrm{obs}}_{y,a,s} \log(p^{\textrm{pred}}_{y,a,s})\right],$$
+where $O^{IA}$ is the annual sample sizes for the survey age compositions.
+
+The log-likelihood component $\Lambda_9$ of the surey proportion-at-length data is
+$$\Lambda_9 = \sum_s \lambda^{IL}_s \left[ \sum_y O^{IL}_{y,s} \sum_{\ell} p^{\textrm{obs}}_{y,\ell,s} \log(p^{\textrm{pred}}_{y,\ell,s})\right]$$
+where $O^{IL}$ is the annual sample sizes for the survey length compositions.
+
 The total log-likelihood $\textrm{LL}$ to be maximized is
-$$\textrm{LL} = \sum_{i=1}^7\Lambda_i.$$
+$$\textrm{LL} = \sum_{i=1}^9\Lambda_i.$$
 
 # Estimated parameters
 
@@ -328,15 +350,20 @@ The estimated parameters, denoted in this section as $x$, are unconstrained over
 
 ## Selectivity
 
-For a fleet $f$ or survey $s$ for which selectivity is estimated, then parameters $x^{LFS}_f$ and $x^{L5}_f$ are estimated over all real numbers, where
+For a fleet block $b$ for which selectivity is estimated, then parameters $x^{LFS}_b$ and $x^{L5}_b$ are estimated over all real numbers, where
 
 $$ \begin{align}
-L^{\textrm{FS}}_f &= 0.99 \times L_{\infty} \times \textrm{logit}^{-1}(x^{LFS}_f)\\
-L^5_f &= L^{\textrm{FS}}_f - \exp(x^{L5}_f) 
+L^{\textrm{FS}}_b &= 0.99 \times L_{\infty} \times \textrm{logit}^{-1}(x^{LFS}_b)\\
+L^5_b &= L^{\textrm{FS}}_b - \exp(x^{L5}_b) 
 \end{align}$$
 
-If a third parameter $x^{V}_f$is estimated for dome selectivity, then
-$$ V^{L_{\infty}}_f = \textrm{logit}^{-1}(x^V_f)$$
+If a third parameter $x^{V}_b$is estimated for dome selectivity, then
+$$ V^{L_{\infty}}_b = \textrm{logit}^{-1}(x^V_b)$$
+
+If selectivity is parameterized as free parameters, then
+$$ v_{y,a,f} = \textrm{logit}^{-1}(x^v_{y,a,f}).$$
+
+For surveys, parameterizations are identical except with indexing for survey $s$.
 
 ## Fishing mortality
 
@@ -363,6 +390,10 @@ for an abundance or biomass based index, respectively, where $n_s$ is the number
 ## Other parameters
 
 Unfished recruitment is estimated in log-space, $R_0 = \dfrac{1}{z}\exp(x^{R_0})$ where $z$ is an optional rescaler, e.g. mean historical catch, to reduce the magnitude of the $x^{R_0}$ estimate. Recruitment deviations $\delta_y$ are directly estimated.
+
+# Additional resources
+
+The help file for `SRA_scope` will provide more information on the possible inputs for the model. The help file for the SRA class (obtained by typing `class?SRA` into the R console) describes the outputs from the function. An additional <a href="SRA_scope2.html">vignette</a> is available to describe set up of fleet and survey selectivity in the function call.
 
 # References
 

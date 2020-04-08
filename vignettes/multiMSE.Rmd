@@ -42,8 +42,13 @@ pre { /* Code block */
 }
 </style>
 
+```{r, echo = FALSE, include = FALSE}
+library(MSEtool)
+```
 
-```{r set options, echo = FALSE,message=FALSE}
+
+```{r set options, echo = FALSE, message=FALSE}
+
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 knitr::opts_chunk$set(dpi=85)
 options(width = 650)
@@ -94,13 +99,11 @@ library(DLMextra)   # load all those objects
 library(MSEtool)    # load MSEtool (data rich MPs, MOM object class etc)
 setup()             # set up a cluster for parallel processing
 ```
-```{r, echo = FALSE, eval = TRUE, message = FALSE}
-library(MSEtool)
-```
 ```{r, eval = TRUE}
 slotNames('MOM')    # what slots are there in an MOM object
+```
+```{r, eval = FALSE}
 class?MOM           # check out the help file on MOM objects
-
 ```
 
 The big difference between objects of class `OM` in DLMtool and those of class `MOM` is that instead of including a slot for each parameter of the stock (`Stock`), fleet (`Fleet`), observation (`Obs`) and implementation (`Imp`) models for `OM` objects, `MOM` objects include these in four slots that are lists of entire `Stock`, `Fleet`, `Obs` and `Imp` objects - after all it's multi-fleet and/or multi stock, right?!
@@ -547,10 +550,8 @@ plot(MMSE_BH)
 The MMSE object produced from multiMSE has a number of slots. The easiest way to understand these is to interrogate the help documentation:
 
 
-```{r, eval = TRUE}
-
+```{r, eval = FALSE}
 class?MMSE
-
 ```
 
 
