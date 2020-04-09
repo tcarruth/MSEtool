@@ -174,10 +174,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
 
   # Selectivity
-  if(is.null(data$sel_block)) {
-    data$sel_block <- matrix(1:data$nfleet, nrow = nrow(data$Chist), ncol = data$nfleet, byrow = TRUE)
-    data$nsel_block <- length(unique(data$sel_block))
-  }
+  if(is.null(data$sel_block)) data$sel_block <- matrix(1:data$nfleet, nrow = nrow(data$Chist), ncol = data$nfleet, byrow = TRUE)
+  if(is.null(data$nsel_block)) data$nsel_block <- length(unique(data$sel_block))
   if(length(selectivity) == 1) selectivity <- rep(selectivity, data$nsel_block)
   if(length(selectivity) < data$nsel_block) stop("selectivity vector should be of length ", data$nsel_block, ").", call. = FALSE)
   sel <- int_sel(selectivity)
@@ -656,6 +654,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   if(data$condition == "effort" && !is.null(dots$OMeff) && dots$OMeff) {
     data$Ehist <- matrix(FleetPars$Find[x, ], nyears, nfleet)
   }
+
   if(!is.null(data$Ehist) && any(data$Ehist > 0, na.rm = TRUE)) {
     rescale_effort <- 1/mean(data$Ehist, na.rm = TRUE)
     E_hist <- data$Ehist * rescale_effort

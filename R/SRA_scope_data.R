@@ -312,7 +312,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
     if(is.null(data$I_units)) data$I_units <- rep(1L, data$nsurvey)
     if(length(data$I_units) < data$nsurvey) stop("I_basis should be of length", data$nsurvey, call. = FALSE)
   } else {
-    data$I_basis <- 1L
+    data$I_units <- 1L
   }
 
   # Ageing error
@@ -434,7 +434,7 @@ check_OM_for_sampling <- function(OM, data) {
   OM@EffLower <- OM@EffUpper <- c(0, 1)
 
   ###### Observation Parameters - Iobs
-  if(any(data$Index > 0)) {
+  if(any(data$Index > 0, na.rm = TRUE)) {
     Isd_check <- !is.null(data$I_sd) && any(data$I_sd > 0, na.rm = TRUE)
     if(!Isd_check) {
       Isd_check2 <- length(OM@Iobs) == 2 || !is.null(cpars$Iobs)
