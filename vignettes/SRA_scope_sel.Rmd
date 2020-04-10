@@ -1,5 +1,5 @@
 ---
-title: "2a. Configuring selectivity for the SRA model"
+title: "2b. Configuring selectivity for the SRA model"
 author: "Quang Huynh (<q.huynh@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output:
@@ -7,7 +7,7 @@ output:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{2a. Configuring selectivity for the SRA model}
+  %\VignetteIndexEntry{2b. Configuring selectivity for the SRA model}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -99,7 +99,7 @@ We specify the selectivity as a character vector with each entry corresponding t
 selectivity <- c("logistic", "dome", "free")
 ```
 
-These functions are described in <a href="SRA_scope.html">Vignette #2</a>.
+These functions are described in <a href="SRA_scope_eq.html">Vignette #2a</a>.
 
 ## Starting values of selectivity parameters
 

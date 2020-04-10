@@ -35,8 +35,13 @@
 #' @param ... Other arguments to pass in for starting values of parameters and fixing parameters. See details.
 #'
 #' @section Vignette:
-#' Two vignettes for the SRA model provide a general \href{../doc/SRA_scope.html}{overview} and more details on
-#' \href{../doc/SRA_scope2.html}{selectivity} settings.
+#' Three vignettes are available for the SRA model:
+#'
+#' \itemize{
+#' \item \href{../doc/SRA_scope.html}{General overview of approach}
+#' \item \href{../doc/SRA_scope_eq.html}{Mathematical description}
+#' \item \href{../doc/SRA_scope_sel.html}{Setup of selectivity settings} (useful for more data-rich cases)
+#' }
 #'
 #' @section Data:
 #' One of indices, age compositions, or length compositions should be provided in addition to the historical catch or effort. Not all arguments
@@ -75,7 +80,7 @@
 #' \item age_error - Optional, a square matrix of maxage rows and columns to specify ageing error. The aa-th column assigns a proportion of the true age in the
 #' a-th row to observed age. Thus, all \code{rowSums(age_error)} should be 1. Default is an identity matrix (no ageing error).
 #' \item sel_block - Optional, for time-varying fleet selectivity (in time blocks), a matrix of nyears x nfleet that assigns a selectivity function to a fleet-year combination.
-#' See \href{../doc/SRA_scope2.html}{selectivity} vignette.
+#' See \href{../doc/SRA_scope_sel.html}{selectivity} vignette.
 #' \item nsel_block - Optional, the number of selectivity blocks.
 #' }
 #'
@@ -535,31 +540,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   return(output)
 }
 
-#### Parameters
-# R0
-# sel
-# rec_devs
 
-#### Data list
-# Cat vector by year
-# Index matrix by year and fleet
-# Index_type vector by fleet
-# CAA matrix by year, age
-# CAL matrix by year, length bin
-# mean length vector by year
-
-#### Life history
-# M array by nsim, age, year
-# mat_age array by nsim, age
-# Length at age array by nsim, age
-# Weight at age arraty by nsim, length
-# CV_LAA vector by nsim
-# h steepness
-
-#### Other settings
-# SR type
-# selectivity type
-# maxage integer
 SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_type = c("BH", "Ricker"), LWT = list(),
                           comp_like = c("multinomial", "lognormal"), ESS = c(30, 30),
                           max_F = 3, integrate = FALSE, StockPars, ObsPars, FleetPars, mean_fit = FALSE,
@@ -710,12 +691,12 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
 
   if(is.null(dots$map_vul_par)) {
     map_vul_par <- matrix(0, 3, data$nsel_block)
-    map_vul_par[3, selectivity != 0] <- NA
-    if(!is.null(dots$fix_dome) && dots$fix_dome) map_vul_par[3, selectivity == 0] <- NA
+    map_vul_par[3, selectivity != 0] <- NA # Fix third parameter for logistic sel
+    if(!is.null(dots$fix_dome) && dots$fix_dome) map_vul_par[3, selectivity == 0] <- NA # Fix dome
 
     for(ff in 1:nfleet) {
       if(all(data$CAA[,,ff] <= 0, na.rm = TRUE) && all(data$CAL[,,ff] <= 0, na.rm = TRUE)) {
-        map_vul_par[, unique(data$sel_block[, ff])] <- NA
+        map_vul_par[, unique(data$sel_block[, ff])] <- NA # Fix sel if no comp data
       }
     }
     if(any(!is.na(map_vul_par))) map_vul_par[!is.na(map_vul_par)] <- 1:sum(!is.na(map_vul_par))

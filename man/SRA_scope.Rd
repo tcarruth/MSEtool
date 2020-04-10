@@ -127,8 +127,13 @@ The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <-
 }
 \section{Vignette}{
 
-Two vignettes for the SRA model provide a general \href{../doc/SRA_scope.html}{overview} and more details on
-\href{../doc/SRA_scope2.html}{selectivity} settings.
+Three vignettes are available for the SRA model:
+
+\itemize{
+\item \href{../doc/SRA_scope.html}{General overview of approach}
+\item \href{../doc/SRA_scope_eq.html}{Mathematical description}
+\item \href{../doc/SRA_scope_sel.html}{Setup of selectivity settings} (useful for more data-rich cases)
+}
 }
 
 \section{Data}{
@@ -169,7 +174,7 @@ Zero (default) implies unfished conditions in year one. Otherwise, this is used 
 \item age_error - Optional, a square matrix of maxage rows and columns to specify ageing error. The aa-th column assigns a proportion of the true age in the
 a-th row to observed age. Thus, all \code{rowSums(age_error)} should be 1. Default is an identity matrix (no ageing error).
 \item sel_block - Optional, for time-varying fleet selectivity (in time blocks), a matrix of nyears x nfleet that assigns a selectivity function to a fleet-year combination.
-See \href{../doc/SRA_scope2.html}{selectivity} vignette.
+See \href{../doc/SRA_scope_sel.html}{selectivity} vignette.
 \item nsel_block - Optional, the number of selectivity blocks.
 }
 
