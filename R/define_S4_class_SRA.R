@@ -270,7 +270,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               # Data and fit section
               individual_matrix_fn <- function(i, obs, pred, fig.cap, label) {
                 rmd_assess_fit2("Year", paste0(obs, "[, ", i, "]"), paste0(pred, "[, ", i, "]"),
-                                fig.cap = paste(fig.cap, i), label = eval(parse(text = paste0(label, "[", i, "]"))))
+                                fig.cap = paste(fig.cap, i), label = label[i])
               }
               individual_array_fn <- function(i, obs, pred, comps = c("age", "length"), label) {
                 comps <- match.arg(comps)
@@ -295,7 +295,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
                 if(data_mean_fit$condition == "effort" || ncol(data$Chist) > 1) {
                   C_plots <- lapply(1:nfleet, individual_matrix_fn, obs = "data$Chist", pred = "report$Cpred",
-                                    fig.cap = "catch from fleet", label = "f_name")
+                                    fig.cap = "catch from fleet", label = f_name)
                 } else C_plots <- NULL
               } else C_matplot <- C_plots <- NULL
 
@@ -312,7 +312,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               if(any(data$Index > 0, na.rm = TRUE)) {
                 I_plots <- c("#### Surveys \n",
                              lapply(1:nsurvey, individual_matrix_fn, obs = "data$Index", pred = "report$Ipred",
-                                    fig.cap = "index from survey", label = "s_name"))
+                                    fig.cap = "index from survey", label = s_name))
               } else I_plots <- NULL
 
               if(any(data$CAA > 0, na.rm = TRUE)) {
@@ -326,9 +326,10 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
               } else CAL_plots <- NULL
 
               if(any(data$ML > 0, na.rm = TRUE)) {
+                ML_label <- paste("Mean Length from", f_name)
                 ML_plots <- c("#### Mean lengths \n",
                               lapply(1:nfleet, individual_matrix_fn, obs = "data$ML", pred = "report$mlen_pred",
-                                     fig.cap = "mean lengths from fleet", label = paste("Mean Length from", f_name)))
+                                     fig.cap = "mean lengths from fleet", label = ML_label))
               } else ML_plots <- NULL
 
               if(any(data$s_CAA > 0, na.rm = TRUE)) {
