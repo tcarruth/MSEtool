@@ -33,7 +33,6 @@
 #' @param drop_highF Logical, whether to drop fits of the SRA model where F hits `max_F`. Only applies if `drop_nonconv` is also `TRUE.`
 #' @param control A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to \code{\link[stats]{nlminb}}.
 #' @param ... Other arguments to pass in for starting values of parameters and fixing parameters. See details.
-#' @return An object of class \linkS4class{SRA}, including the updated operating model object.
 #'
 #' @section Vignette:
 #' Two vignettes for the SRA model provide a general \href{../doc/SRA_scope.html}{overview} and more details on
@@ -127,7 +126,7 @@
 #' See section D.5 of \code{DLMtool::userguide()}.
 #'
 #' The easiest way to turn off time-varying growth/M is by setting: \code{OM@@Msd <- OM@@Linfsd <- OM@@Ksd <- c(0, 0)}.
-#' @return An object of class \linkS4class{SRA} (see link for descriptin of output).
+#' @return An object of class \linkS4class{SRA} (see link for description of output).
 #' @author Q. Huynh
 #' @seealso \link{plot.SRA} \linkS4class{SRA}
 #' @importFrom dplyr %>%

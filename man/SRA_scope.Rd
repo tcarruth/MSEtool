@@ -68,9 +68,7 @@ respectively, for the multinomial likelihood function. The effective sample size
 \item{sims}{A logical vector of length \code{OM@nsim} or a numberic vector indicating which simulations to keep.}
 }
 \value{
-An object of class \linkS4class{SRA}, including the updated operating model object.
-
-An object of class \linkS4class{SRA} (see link for descriptin of output).
+An object of class \linkS4class{SRA} (see link for description of output).
 }
 \description{
 Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch or effort, and potentially
