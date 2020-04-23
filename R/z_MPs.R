@@ -127,7 +127,8 @@ Assess_dep <- list(DD_SS = "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, D
                    SP = "Data@Cat, Data@Ind",
                    SP_SS = "Data@Cat, Data@Ind, Data@CV_Ind",
                    cDD = "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge",
-                   cDD_SS = "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge")
+                   cDD_SS = "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge",
+                   SSS = "Data@Cat, Data@steep, Data@Mort, Data@L50, Data@L95, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge")
 
 
 get_dependencies <- function(Assess, arg = list()) {
