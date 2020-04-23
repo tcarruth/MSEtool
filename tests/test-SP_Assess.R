@@ -28,7 +28,7 @@ test_that("SP assess model", {
 
   expect_equivalent(plot(res, save_figure = FALSE), invisible())
 
-  pro <- profile_likelihood(res, UMSY = seq(0.05, 0.5, 0.005),
+  pro <- profile(res, UMSY = seq(0.05, 0.5, 0.005),
                             MSY = seq(0.1, 2, 0.01) * 1e4, figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
@@ -43,7 +43,7 @@ test_that("SP_SS assess model", {
 
   expect_equivalent(plot(res, save_dir = tdir), invisible())
 
-  pro <- profile_likelihood(res, UMSY = seq(0.15, 0.2, 0.005),
+  pro <- profile(res, UMSY = seq(0.15, 0.2, 0.005),
                             MSY = seq(1.4, 1.5, 0.01) * 1e4, save_dir = tdir)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))

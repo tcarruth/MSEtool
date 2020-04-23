@@ -43,7 +43,7 @@ test_that("SCA assess model", {
 
   expect_equivalent(plot(res, save_dir = tdir), invisible())
 
-  pro <- profile_likelihood(res, R0 = seq(600, 700, 10), h = seq(0.7, 0.99, 0.025), save_dir = tdir)
+  pro <- profile(res, R0 = seq(600, 700, 10), h = seq(0.7, 0.99, 0.025), save_dir = tdir)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 
@@ -57,7 +57,7 @@ test_that("SCA assess model fix_h", {
 
   expect_equivalent(plot(res, save_dir = tdir), invisible())
 
-  pro <- profile_likelihood(res, R0 = seq(600, 700, 10), figure = FALSE)
+  pro <- profile(res, R0 = seq(600, 700, 10), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 
@@ -83,7 +83,7 @@ test_that("SCA2 assess model", {
 
   expect_equivalent(plot(res, save_dir = tdir), invisible())
 
-  pro <- profile_likelihood(res, meanR = seq(1.5, 2.5, 0.1), figure = FALSE)
+  pro <- profile(res, meanR = seq(1.5, 2.5, 0.1), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 
@@ -97,7 +97,7 @@ test_that("SCA2 assess model fix_h", {
 
   expect_equivalent(plot(res, save_dir = tdir), invisible())
 
-  pro <- profile_likelihood(res, meanR = seq(1.5, 2.5, 0.1), figure = FALSE)
+  pro <- profile(res, meanR = seq(1.5, 2.5, 0.1), figure = FALSE)
   expect_type(pro, "list")
   expect_true(is.data.frame(pro))
 

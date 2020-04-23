@@ -75,7 +75,7 @@ setGeneric("profile", function(fitted, ...) standardGeneric("profile"))
 #' @param figure Logical, indicates whether a figure will be plotted.
 #' @param ... A sequence of values of the parameter(s) for the profile. See details and example below.
 #' See details for name of arguments to be passed on.
-#' @details As of version 1.2, \code{profile_likelihood} is deprecated in favor of \code{profile}.
+#' @details
 #'
 #' For the following assessment models, possible sequence of values for profiling are:
 #' \itemize{
@@ -85,6 +85,7 @@ setGeneric("profile", function(fitted, ...) standardGeneric("profile"))
 #' \item SCA and SCA_Pope: \code{R0} and \code{h}
 #' \item SCA2: \code{meanR}
 #' \item VPA: \code{F_term}
+#' \item SSS: \code{R0}
 #' }
 #' @author Q. Huynh
 #' @return An object of class \linkS4class{prof} that contains a data frame of negative log-likelihood values from the profile and, optionally,
@@ -101,14 +102,8 @@ setGeneric("profile", function(fitted, ...) standardGeneric("profile"))
 #' @exportMethod profile
 setMethod("profile", signature(fitted = "Assessment"),
           function(fitted, figure = TRUE, ...) {
-            if(figure) {
-              old.warning <- options()$warn
-              options(warn = -1)
-              on.exit(options(warn = old.warning))
-
-              old_par <- par(no.readonly = TRUE)
-              on.exit(par(old_par), add = TRUE)
-            }
+            dots <- list(...)
+            if(length(dots) == 0) stop("No parameters for profile was found. See help.")
 
             f <- get(paste0('profile_likelihood_', fitted@Model))
             res <- f(fitted, ...)
@@ -116,9 +111,4 @@ setMethod("profile", signature(fitted = "Assessment"),
             return(res)
           })
 
-#' @rdname profile
-#' @export
-profile_likelihood <- function(Assessment, figure = TRUE, ...) {
-  .Deprecated("profile", msg = "This function has been deprecated in favor of \"profile\".")
-  profile(Assessment, figure, ...)
-}
+

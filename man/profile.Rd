@@ -3,14 +3,11 @@
 \name{profile}
 \alias{profile}
 \alias{profile,Assessment-method}
-\alias{profile_likelihood}
 \title{Profile likelihood of assessment models}
 \usage{
 profile(fitted, ...)
 
 \S4method{profile}{Assessment}(fitted, figure = TRUE, ...)
-
-profile_likelihood(Assessment, figure = TRUE, ...)
 }
 \arguments{
 \item{fitted, Assessment}{An object of class \linkS4class{Assessment}.}
@@ -28,8 +25,6 @@ a figure of the likelihood surface.
 Profile the likelihood for parameters of assessment models.
 }
 \details{
-As of version 1.2, \code{profile_likelihood} is deprecated in favor of \code{profile}.
-
 For the following assessment models, possible sequence of values for profiling are:
 \itemize{
 \item DD_TMB and DD_SS: \code{R0} and \code{h}
@@ -38,6 +33,7 @@ For the following assessment models, possible sequence of values for profiling a
 \item SCA and SCA_Pope: \code{R0} and \code{h}
 \item SCA2: \code{meanR}
 \item VPA: \code{F_term}
+\item SSS: \code{R0}
 }
 }
 \examples{
