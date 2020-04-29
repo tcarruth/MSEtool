@@ -2,7 +2,7 @@
 #' Simple Stock Synthesis
 #'
 #' A simple age-structured model (\link{SCA_Pope}) fitted to a time series of catch going back to unfished conditions.
-#' current depletion (ratio of current biomass to unfished biomass) is by default fixed to 0.4.
+#' Terminal depletion (ratio of current biomass to unfished biomass) is by default fixed to 0.4.
 #' Selectivity is fixed to the maturity ogive,
 #' although it can be overridden with the start argument. The sole parameter estimated is R0 (unfished recruitment).
 #'
@@ -115,7 +115,7 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
       params$transformed_h <- log(h_start - 0.2)
     }
   }
-  if(is.null(params$vul_par)) params$vul_par <- c(logit(A95/max_age/0.75), log(A95-A50))
+  if(is.null(params$vul_par)) params$vul_par <- c(logit(min(A95, 0.74 * max_age)/max_age/0.75), log(A95-A50))
 
   params$U_equilibrium <- 0
   params$log_sigma <- params$log_tau <- log(0.01)
@@ -136,16 +136,7 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
   # Add starting values for rec-devs and increase R0 start value if U is too high (> 0.975)
   high_U <- try(obj$report(obj$par)$penalty > 0, silent = TRUE)
   if(!is.character(high_U) && high_U) {
-    Recruit <- try(Data@Rec[x, ], silent = TRUE)
-    if(is.numeric(Recruit) && length(Recruit) == n_y && any(!is.na(Recruit))) {
-      log_rec_dev <- log(Recruit/mean(Recruit, na.rm = TRUE))
-      log_rec_dev[is.na(est_rec_dev) | is.na(log_rec_dev) | is.infinite(log_rec_dev)] <- 0
-      info$params$log_rec_dev <- log_rec_dev
-
-      obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
-                       map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
-    }
-    while(obj$par["log_R0"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+    while(obj$par["log_R0"] < 30 && obj$report(obj$par)$penalty > 0) {
       obj$par["log_R0"] <- obj$par["log_R0"] + 1
     }
   }
