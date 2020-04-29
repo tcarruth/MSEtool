@@ -87,29 +87,30 @@ retrospective_spict <- function(Assessment, nyr) {
   Year <- Assessment@B %>% names() %>% as.numeric()
   TS_var <- c("F", "F_FMSY", "B", "B_BMSY", "B_B0")
 
-  spict_ret_txt <- c("spict_retro <- spict::retro(Assessment@info, nyr)$retro",
-                     "lapply_fn <- function(i) {",
-                     "  if(i == 0) {",
-                     "    ret <- Assessment@info",
-                     "  } else {",
-                     "    ret <- spict_retro[[i]]",
-                     "  }",
-                     "  bs <- spict::get.par(\"logB\", ret, exp = TRUE)[ret$inp$indest, 2]",
-                     "  bbs <- spict::get.par(\"logBBmsy\", ret, exp = TRUE)[ret$inp$indest, 2]",
-                     "  fs <- spict::get.par(\"logFnotS\", ret, exp = TRUE)[ret$inp$indest, 2]",
-                     "  ffs <- spict::get.par(\"logFFmsynotS\", ret, exp = TRUE)[ret$inp$indest, 2]",
-                     "",
-                     "  ind <- match(Year, names(bs) %>% as.numeric())",
-                     "  mNA <- matrix(NA_integer_, sum(is.na(ind)), 5)",
-                     "  ind <- ind[!is.na(ind)]",
-                     "",
-                     "  out <- cbind(fs[ind], ffs[ind], bs[ind], bbs[ind], bs[ind]/exp(ret$par.fixed[names(ret$par.fixed) == \"logK\"]))",
-                     "  rbind(out, mNA)",
-                     "}",
-                     "lapply(0:nyr, lapply_fn) %>% unlist() %>% array(c(ny, 5, nyr + 1)) %>% aperm(c(3, 1, 2)) %>%",
-                     "  structure(dimnames = list(Peel = 0:nyr, Year = Year, Var = TS_var))")
+  spict_retro <- parse(text = "spict::retro(Assessment@info, nyr)$retro") %>% eval()
 
-  retro_ts <- parse(text = spict_ret_txt) %>% eval()
+  lapply_fn <- function(i) {
+    if(i == 0) {
+      ret <- Assessment@info
+    } else {
+      ret <- spict_retro[[i]]
+    }
+    bs <- parse(text = "spict::get.par(\"logB\", ret, exp = TRUE)[ret$inp$indest, 2]") %>% eval()
+    bbs <- parse(text = "spict::get.par(\"logBBmsy\", ret, exp = TRUE)[ret$inp$indest, 2]") %>% eval()
+    fs <- parse(text = "spict::get.par(\"logFnotS\", ret, exp = TRUE)[ret$inp$indest, 2]") %>% eval()
+    ffs <- parse(text = "spict::get.par(\"logFFmsynotS\", ret, exp = TRUE)[ret$inp$indest, 2]") %>% eval()
+    K <- parse(text = "exp(ret$par.fixed[names(ret$par.fixed) == \"logK\"])") %>% eval()
+
+    ind <- match(Year, names(bs) %>% as.numeric())
+    mNA <- matrix(NA_integer_, sum(is.na(ind)), 5)
+    ind <- ind[!is.na(ind)]
+
+    out <- cbind(fs[ind], ffs[ind], bs[ind], bbs[ind], bs[ind]/K)
+    rbind(out, mNA)
+  }
+
+  retro_ts <- lapply(0:nyr, lapply_fn) %>% unlist() %>% array(c(ny, 5, nyr + 1)) %>% aperm(c(3, 1, 2)) %>%
+    structure(dimnames = list(Peel = 0:nyr, Year = Year, Var = TS_var))
 
   retro <- new("retro", Model = Assessment@Model, Name = Assessment@Name, TS_var = TS_var, TS = retro_ts)
   attr(retro, "TS_lab") <- c("Fishing mortality", expression(F/F[MSY]), "Biomass", expression(B/B[MSY]), expression(B/B[0]))
