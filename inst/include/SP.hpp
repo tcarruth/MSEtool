@@ -11,6 +11,7 @@ Type SP(objective_function<Type> *obj) {
   using namespace ns_SP;
 
   DATA_VECTOR(C_hist);
+  DATA_SCALAR(rescale);
   DATA_MATRIX(I_hist);
   DATA_MATRIX(I_sd);
   DATA_VECTOR(I_lambda);
@@ -33,7 +34,7 @@ Type SP(objective_function<Type> *obj) {
   PARAMETER_VECTOR(log_B_dev);
 
   Type FMSY = exp(log_FMSY);
-  Type MSY = exp(log_MSY);
+  Type MSY = exp(log_MSY)/rescale;
   Type dep = exp(log_dep);
   Type n = exp(log_n);
 

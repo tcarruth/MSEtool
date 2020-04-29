@@ -143,18 +143,6 @@ retrospective_SCA_Pope <- function(Assessment, nyr) {
                                   vul = report$vul, SR = info$data$SR_type)
 
       report <- c(report, ref_pt)
-      rescale <- info$rescale
-
-      if(info$rescale != 1) {
-        vars_div <- c("R0", "B", "E", "CAApred", "CN", "Cpred", "N", "VB",
-                      "R", "MSY", "VBMSY", "RMSY", "BMSY", "EMSY", "VB0",
-                      "B0", "E0", "N0")
-        vars_mult <- "Brec"
-        var_trans <- c("R0", "q")
-        fun_trans <- c("/", "*")
-        fun_fixed <- c("log", NA)
-        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-      }
 
       U <- c(report$U, rep(NA, i + 1))
       U_UMSY <- U/report$UMSY

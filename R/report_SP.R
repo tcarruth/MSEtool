@@ -117,7 +117,7 @@ profile_likelihood_SP <- function(Assessment, ...) {
 
   profile_fn <- function(i, Assessment, params, map) {
     params$log_FMSY <- log(profile_grid[i, 1])
-    params$log_MSY <- log(profile_grid[i, 2] * Assessment@info$rescale)
+    params$log_MSY <- log(profile_grid[i, 2] * Assessment@obj$env$data$rescale)
 
     if(joint_profile && length(Assessment@obj$par) == 2) {
       nll <- Assessment@obj$fn(x = c(params$log_FMSY, params$log_MSY))
@@ -188,15 +188,6 @@ retrospective_SP <- function(Assessment, nyr, state_space = FALSE) {
 
     if(!is.character(opt2) && !is.character(SD)) {
       report <- obj2$report(obj2$env$last.par.best)
-      rescale <- info$rescale
-      if(rescale != 1) {
-        vars_div <- c("B", "BMSY",  "K", "MSY", "Cpred", "SP")
-        vars_mult <- NULL
-        var_trans <- c("MSY", "K", "q")
-        fun_trans <- c("/", "/", "*")
-        fun_fixed <- c("log", NA, NA)
-        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-      }
 
       FMort <- c(report$F, rep(NA, 1 + i))
       F_FMSY <- FMort/report$FMSY

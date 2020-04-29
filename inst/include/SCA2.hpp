@@ -11,6 +11,7 @@ Type SCA2(objective_function<Type> *obj) {
   using namespace ns_SCA;
 
   DATA_VECTOR(C_hist);    // Total catch
+  DATA_SCALAR(rescale);   // Scalar for R0
   DATA_VECTOR(I_hist);    // Index
   DATA_MATRIX(CAA_hist);  // Catch-at-age proportions
   DATA_VECTOR(CAA_n);     // Annual samples in CAA
@@ -38,7 +39,7 @@ Type SCA2(objective_function<Type> *obj) {
   PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
 
-  Type meanR = exp(log_meanR);
+  Type meanR = exp(log_meanR)/rescale;
 
   Type omega = exp(log_omega);
   Type sigma = exp(log_sigma);

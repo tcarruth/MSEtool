@@ -36,8 +36,8 @@
 #' @useDynLib MSEtool
 #' @export
 SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1",
-                     start = NULL, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
-                     control = list(iter.max = 2e5, eval.max = 4e5), ...) {
+                start = NULL, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                control = list(iter.max = 2e5, eval.max = 4e5), ...) {
 
   dependencies <- "Data@Cat, Data@steep, Data@Mort, Data@L50, Data@L95, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
@@ -76,7 +76,7 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
   LH <- list(LAA = La, WAA = Wa, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "SCA_Pope", C_hist = C_hist * rescale, I_hist = I_hist,
+  data <- list(model = "SCA_Pope", C_hist = C_hist, rescale = rescale, I_hist = I_hist,
                CAA_hist = matrix(0, n_y, max_age), CAA_n = rep(0, n_y), n_y = n_y, max_age = max_age, M = M,
                weight = Wa, mat = mat_age, vul_type = "logistic", I_type = "B",
                SR_type = SR, CAA_dist = "multinomial", est_early_rec_dev = rep(0, max_age - 1),
@@ -122,7 +122,7 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
   params$log_early_rec_dev <- rep(0, max_age - 1)
   params$log_rec_dev <- rep(0, n_y)
 
-  info <- list(Year = Year, data = data, params = params, LH = LH, control = control, rescale = rescale)
+  info <- list(Year = Year, data = data, params = params, LH = LH, control = control)
 
   map <- list()
   map$transformed_h <- map$U_equilibrium <- map$log_sigma <- map$log_tau <- factor(NA)
@@ -145,15 +145,6 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
-
-  if(rescale != 1) {
-    vars_div <- c("B", "E", "CAApred", "CN", "N", "VB", "R", "R_early", "VB0", "R0", "B0", "E0", "N0")
-    vars_mult <- c("Brec", "q")
-    var_trans <- c("R0", "q")
-    fun_trans <- c("/", "*")
-    fun_fixed <- c("log", NA)
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
 
   Yearplusone <- c(Year, max(Year) + 1)
 

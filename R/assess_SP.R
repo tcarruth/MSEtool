@@ -231,7 +231,7 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
 
   if(is.null(LWT)) LWT <- rep(1, nsurvey)
   if(length(LWT) != nsurvey) stop("LWT needs to be a vector of length ", nsurvey)
-  data <- list(model = "SP", C_hist = C_hist * rescale, I_hist = I_hist, I_sd = I_sd, I_lambda = LWT,
+  data <- list(model = "SP", C_hist = C_hist, rescale = rescale, I_hist = I_hist, I_sd = I_sd, I_lambda = LWT,
                fix_sigma = as.integer(fix_sigma), nsurvey = nsurvey, ny = ny,
                est_B_dev = est_B_dev, nstep = n_seas, dt = 1/n_seas, nitF = n_itF)
 
@@ -279,8 +279,7 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
   random <- NULL
   if(integrate) random <- "log_B_dev"
 
-  info <- list(Year = Year, data = data, params = params, rp = rp, rescale = rescale, control = control,
-               inner.control = inner.control)
+  info <- list(Year = Year, data = data, params = params, rp = rp, control = control, inner.control = inner.control)
 
   obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                    map = map, random = random, DLL = "MSEtool", silent = silent)
@@ -288,15 +287,6 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
-
-  if(rescale != 1) {
-    vars_div <- c("B", "BMSY", "K", "MSY", "Cpred", "SP")
-    vars_mult <- "q"
-    var_trans <- c("MSY", "K", "q")
-    fun_trans <- c("/", "/", "*")
-    fun_fixed <- c("log", NA, NA)
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
 
   Yearplusone <- c(Year, max(Year) + 1)
 

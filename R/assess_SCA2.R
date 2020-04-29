@@ -52,7 +52,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   est_early_rec_dev <- rep(1L, max_age - 1)
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "SCA2", C_hist = C_hist * rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
+  data <- list(model = "SCA2", C_hist = C_hist, rescale = rescale, I_hist = I_hist, CAA_hist = t(apply(CAA_hist, 1, function(x) x/sum(x))),
                CAA_n = CAA_n_rescale, n_y = n_y, max_age = max_age, M = M, weight = Wa, mat = mat_age,
                vul_type = vulnerability, I_type = I_type, CAA_dist = CAA_dist, est_early_rec_dev = est_early_rec_dev,
                est_rec_dev = est_rec_dev, yindF = as.integer(0.5 * n_y))
@@ -140,7 +140,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   params$log_rec_dev <- rep(0, n_y)
 
   info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, control = control,
-               inner.control = inner.control, rescale = rescale, fix_h = fix_h)
+               inner.control = inner.control, fix_h = fix_h)
 
   map <- list()
   if(any(info$data$C_hist <= 0)) {
@@ -182,15 +182,6 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   SD <- mod[[2]]
 
   report <- obj$report(obj$env$last.par.best)
-
-  if(rescale != 1) {
-    vars_div <- c("meanR", "B", "E", "CAApred", "Cpred", "CN", "N", "VB", "R", "R_early")
-    vars_mult <- "q"
-    var_trans <- c("meanR", "q")
-    fun_trans <- c("/", "*")
-    fun_fixed <- c("log", NA)
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
 
   Yearplusone <- c(Year, max(Year) + 1)
   YearEarly <- (Year[1] - max_age + 1):(Year[1] - 1)

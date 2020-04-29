@@ -124,7 +124,7 @@ profile_likelihood_SCA <- function(Assessment, ...) {
   joint_profile <- !exists("profile_par")
 
   profile_fn <- function(i, Assessment, params, map) {
-    params$log_R0 <- log(profile_grid[i, 1]  * Assessment@info$rescale)
+    params$log_R0 <- log(profile_grid[i, 1]  * Assessment@obj$env$data$rescale)
     if(Assessment@info$data$SR_type == "BH") {
       params$transformed_h <- logit((profile_grid[i, 2] - 0.2)/0.8)
     } else {
@@ -219,17 +219,6 @@ retrospective_SCA <- function(Assessment, nyr, SCA2 = FALSE) {
       }
 
       report <- c(report, ref_pt)
-      rescale <- info$rescale
-      if(info$rescale != 1) {
-        vars_div <- c(ifelse(SCA2, "meanR", "R0"), "B", "E", "CAApred", "CN", "Cpred", "N", "VB",
-                      "R", "MSY", "VBMSY", "RMSY", "BMSY", "EMSY", "VB0",
-                      "B0", "E0", "N0")
-        vars_mult <- "Brec"
-        var_trans <- c(ifelse(SCA2, "meanR", "R0"), "q")
-        fun_trans <- c("/", "*")
-        fun_fixed <- c("log", NA)
-        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-      }
 
       FMort <- c(report$F, rep(NA, i + 1))
       F_FMSY <- FMort/report$FMSY
@@ -277,7 +266,7 @@ profile_likelihood_SCA2 <- function(Assessment, ...) {
 
   profile_fn <- function(i, Assessment, params, map) {
 
-    params$log_meanR <- log(meanR[i] * Assessment@info$rescale)
+    params$log_meanR <- log(meanR[i] * Assessment@obj$env$data$rescale)
     if(length(Assessment@opt$par) == 1) {
       nll <- Assessment@obj$fn(params$log_meanR)
     } else {
