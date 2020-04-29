@@ -91,14 +91,14 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
 }
 
 
-#' Data-rich management procedures
+#' Model-based management procedures
 #'
-#' A suite of data-rich management procedures (MPs) included in the package. Additional MPs,
+#' A suite of model-based management procedures (MPs) included in the package. Additional MPs,
 #' with specific model configurations (e.g., stock-recruit function or fixing certain parameters) or alternative
 #' ramped harvest control rules can be created with \link{make_MP} and the available Assess and HCR objects.
 #'
-#' @name Data-rich-MP
-#' @aliases MP
+#' @name Model-based-MP
+#' @aliases MP Data-rich-MP
 #' @param x A position in the Data object.
 #' @param Data An object of class Data
 #' @param reps Numeric, the number of stochastic replicates for the management advice.
@@ -109,7 +109,7 @@ make_MP <- function(.Assess, .HCR, diagnostic = c("none", "min", "full"), ...) {
 #' \dontrun{
 #' myMSE <- DLMtool::runMSE(DLMtool::testOM, MPs = c("FMSYref", "SCA_MSY", "SCA_4010"))
 #' }
-#' @return An object of class Rec which contains the management recommendation.
+#' @return An object of class \linkS4class{Rec} which contains the management recommendation.
 NULL
 
 
@@ -154,53 +154,65 @@ dep_args <- list(fix_h = "Data@steep", fix_sigma = "Data@CV_Ind", fix_tau = "Dat
 
 
 
-#' @describeIn Data-rich-MP A statistical catch-at-age model with a TAC recommendation based on fishing at UMSY,
+#' @describeIn Model-based-MP A statistical catch-at-age model with a TAC recommendation based on fishing at FMSY,
 #' and default arguments for configuring \link{SCA}.
 #' @export
 SCA_MSY <- make_MP(SCA, HCR_MSY, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP An SCA with a TAC recommendation based on fishing at 75\% of UMSY.
+#' @describeIn Model-based-MP An SCA with a TAC recommendation based on fishing at 75\% of FMSY.
 #' @export
 SCA_75MSY <- make_MP(SCA, HCR_MSY, MSY_frac = 0.75, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP An SCA with a 40-10 control rule.
+#' @describeIn Model-based-MP An SCA with a 40-10 control rule.
 #' @export
 SCA_4010 <- make_MP(SCA, HCR40_10, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP A state-space delay difference model with a TAC recommendation based on fishing at UMSY,
+#' @describeIn Model-based-MP A state-space delay difference model with a TAC recommendation based on fishing at FMSY,
 #' and default arguments for configuring \link{DD_SS}.
 #' @export
 DDSS_MSY <- make_MP(DD_SS, HCR_MSY, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP A state-space delay difference model with a TAC recommendation based on fishing at 75\% of UMSY.
+#' @describeIn Model-based-MP A state-space delay difference model with a TAC recommendation based on fishing at 75\% of FMSY.
 #' @export
 DDSS_75MSY <- make_MP(DD_SS, HCR_MSY, MSY_frac = 0.75, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP A state-space delay difference model with a 40-10 control rule.
+#' @describeIn Model-based-MP A state-space delay difference model with a 40-10 control rule.
 #' @export
 DDSS_4010 <- make_MP(DD_SS, HCR40_10, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP A surplus production model with a TAC recommendation based on fishing at UMSY,
+#' @describeIn Model-based-MP A surplus production model with a TAC recommendation based on fishing at FMSY,
 #' and default arguments for configuring \link{SP}.
 #' @export
 SP_MSY <- make_MP(SP, HCR_MSY, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP A surplus production model with a TAC recommendation based on fishing at 75\% of UMSY.
+#' @describeIn Model-based-MP A surplus production model with a TAC recommendation based on fishing at 75\% of FMSY.
 #' @export
 SP_75MSY <- make_MP(SP, HCR_MSY, MSY_frac = 0.75, diagnostic = "min")
 
 
-#' @describeIn Data-rich-MP A surplus production model with a 40-10 control rule.
+#' @describeIn Model-based-MP A surplus production model with a 40-10 control rule.
 #' @export
 SP_4010 <- make_MP(SP, HCR40_10, diagnostic = "min")
 
+
+#' @describeIn Model-based-MP Simple stock synthesis (terminal depletion fixed to 0.4 in \link{SSS}) with a TAC recommendation based on fishing at FMSY.
+#' @export
+SSS_MSY <- make_MP(SSS, HCR_MSY, diagnostic = "min")
+
+#' @describeIn Model-based-MP Simple stock synthesis (terminal depletion fixed to 0.4) with with a TAC recommendation based on fishing at 75\% FMSY.
+#' @export
+SSS_75MSY <- make_MP(SSS, HCR_MSY, MSY_frac = 0.75, diagnostic = "min")
+
+#' @describeIn Model-based-MP Simple stock synthesis (terminal depletion fixed to 0.4) with a 40-10 control rule.
+#' @export
+SSS_4010 <- make_MP(SSS, HCR40_10, diagnostic = "min")
 
 
 
