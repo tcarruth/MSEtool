@@ -80,134 +80,10 @@
 cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = TRUE,
                 fix_F_equilibrium = TRUE, n_itF = 5L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 5e3, eval.max = 1e4), ...) {
-  dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
-  dots <- list(...)
-  start <- lapply(start, eval, envir = environment())
-
-  SR <- match.arg(SR)
-  Winf <- Data@wla[x] * Data@vbLinf[x]^Data@wlb[x]
-  age <- 1:Data@MaxAge
-  la <- Data@vbLinf[x] * (1 - exp(-Data@vbK[x] * ((age - Data@vbt0[x]))))
-  wa <- Data@wla[x] * la^Data@wlb[x]
-  a50V <- iVB(Data@vbt0[x], Data@vbK[x], Data@vbLinf[x], Data@L50[x])
-  a50V <- max(a50V, 1)
-  if(any(names(dots) == "yind")) {
-    yind <- eval(dots$yind)
-  } else {
-    ystart <- which(!is.na(Data@Cat[x, ]))[1]
-    yind <- ystart:length(Data@Cat[x, ])
-  }
-  Year <- Data@Year[yind]
-  C_hist <- Data@Cat[x, yind]
-  I_hist <- Data@Ind[x, yind]
-  if(any(is.na(C_hist))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
-  I_hist[I_hist < 0] <- NA
-
-  ny <- length(C_hist)
-  k <- ceiling(a50V)  # get age nearest to 50% vulnerability (ascending limb)
-  k[k > Data@MaxAge/2] <- ceiling(Data@MaxAge/2)  # to stop stupidly high estimates of age at 50% vulnerability
-  wk <- wa[k]
-
-  wt_df <- data.frame(t = age[-c(1:(k-1))], W = wa[-c(1:(k-1))], Winf = Winf)
-  wt_df$W2 <- c(wt_df$W[2:nrow(wt_df)], NA)
-  wt_df <- wt_df[-nrow(wt_df), ]
-
-  mod_formula <- formula(W2 ~ Winf + (W - Winf) * exp(-Kappa))
-  fit_mod <- nls(mod_formula, wt_df, start = list(Kappa = Data@vbK[x]))
-  Kappa <- coef(fit_mod)["Kappa"]
-
-  M <- Data@Mort[x]
-
-  if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "cDD", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist * rescale, I_hist = I_hist,
-               SR_type = SR, nitF = n_itF)
-  LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k, fit_mod = fit_mod)
-
-  params <- list()
-  if(!is.null(start)) {
-    if(!is.null(start$R0) && is.numeric(start$R0)) params$log_R0 <- log(start$R0[1] * rescale)
-    if(!is.null(start$h) && is.numeric(start$h)) {
-      if(SR == "BH") {
-        h_start <- (start$h[1] - 0.2)/0.8
-        params$transformed_h <- logit(h_start)
-      } else {
-        params$transformed_h <- log(start$h[1] - 0.2)
-      }
-    }
-    if(!is.null(start$F_equilibrium) && is.numeric(start$F_equilibrium)) params$F_equilibrium <- start$F_equililbrium
-  }
-  if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
-  }
-  if(is.null(params$transformed_h)) {
-    h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])
-    if(SR == "BH") {
-      h_start <- (h_start - 0.2)/0.8
-      params$transformed_h <- logit(h_start)
-    } else {
-      params$transformed_h <- log(h_start - 0.2)
-    }
-  }
-  if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
-
-  info <- list(Year = Year, data = data, params = params, LH = LH, rescale = rescale, control = control)
-
-  map <- list()
-  if(fix_h) map$transformed_h <- factor(NA)
-  if(fix_F_equilibrium) map$F_equilibrium <- factor(NA)
-
-  obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE, map = map, DLL = "MSEtool", silent = silent)
-
-  mod <- optimize_TMB_model(obj, control, opt_hess, n_restart)
-  opt <- mod[[1]]
-  SD <- mod[[2]]
-  report <- obj$report(obj$env$last.par.best)
-
-  if(rescale != 1) {
-    vars_div <- c("B0", "B", "Cpred", "N0", "N", "R0", "R", "Binf", "Rinf", "Ninf")
-    vars_mult <- c("Brec", "q")
-    var_trans <- c("R0", "q")
-    fun_trans <- c("/", "*")
-    fun_fixed <- c("log")
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
-  Yearplusone <- c(Year, max(Year) + 1)
-  Yearplusk <- c(Year, max(Year) + 1:k)
-
-  nll_report <- ifelse(is.character(opt), report$nll, opt$objective)
-  Assessment <- new("Assessment", Model = "cDD", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
-                    B0 = report$B0, R0 = report$R0, N0 = report$N0,
-                    SSB0 = report$B0, VB0 = report$B0, h = report$h,
-                    FMort = structure(report$F, names = Year),
-                    B = structure(report$B, names = Yearplusone),
-                    B_B0 = structure(report$B/report$B0, names = Yearplusone),
-                    SSB = structure(report$B, names = Yearplusone),
-                    SSB_SSB0 = structure(report$B/report$B0, names = Yearplusone),
-                    VB = structure(report$B, names = Yearplusone),
-                    VB_VB0 = structure(report$B/report$B0, names = Yearplusone),
-                    R = structure(report$R, names = Yearplusk),
-                    N = structure(report$N, names = Yearplusone),
-                    Obs_Catch = structure(C_hist, names = Year),
-                    Obs_Index = structure(I_hist, names = Year),
-                    Catch = structure(report$Cpred, names = Year),
-                    Index = structure(report$Ipred, names = Year),
-                    NLL = structure(c(nll_report, report$nll - report$penalty, report$penalty),
-                                    names = c("Total", "Index", "Penalty")),
-                    info = info, obj = obj, opt = opt,
-                    SD = SD, TMB_report = report, dependencies = dependencies)
-
-  if(Assessment@conv) {
-    ref_pt <- get_MSY_cDD(info$data, report$Arec, report$Brec)
-    report <- c(report, ref_pt)
-
-    Assessment@FMSY <- report$FMSY
-    Assessment@MSY <- report$MSY
-    Assessment@BMSY <- Assessment@SSBMSY <- Assessment@VBMSY <- report$BMSY
-    Assessment@F_FMSY <- structure(report$F/report$FMSY, names = Year)
-    Assessment@B_BMSY <- Assessment@SSB_SSBMSY <- Assessment@VB_VBMSY <- structure(report$B/report$BMSY, names = Yearplusone)
-    Assessment@TMB_report <- report
-  }
-  return(Assessment)
+  cDD_(x = x, Data = Data, state_space = FALSE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
+       fix_F_equilibrium = fix_F_equilibrium, fix_sigma = FALSE, fix_tau = TRUE, n_itF = n_itF,
+       integrate = FALSE, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
+       control = control, inner.control = list(), ...)
 }
 class(cDD) <- "Assess"
 
@@ -221,6 +97,18 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
                    fix_h = TRUE, fix_F_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, n_itF = 5L,
                    integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                    control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
+  cDD_(x = x, Data = Data, state_space = TRUE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
+       fix_F_equilibrium = fix_F_equilibrium, fix_sigma = fix_sigma, fix_tau = fix_tau, n_itF = n_itF,
+       integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
+       control = control, inner.control = list(), ...)
+}
+class(cDD_SS) <- "Assess"
+
+
+cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
+                 fix_h = TRUE, fix_F_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, n_itF = 5L,
+                 integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                 control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
   dots <- list(...)
   start <- lapply(start, eval, envir = environment())
@@ -260,8 +148,8 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   M <- Data@Mort[x]
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "cDD_SS", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist * rescale, I_hist = I_hist,
-               SR_type = SR, nitF = n_itF)
+  data <- list(model = "cDD", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist,
+               rescale = rescale, I_hist = I_hist, SR_type = SR, nitF = n_itF, state_space = as.logical(state_space))
   LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k, fit_mod = fit_mod)
 
   params <- list()
@@ -293,22 +181,27 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   }
   if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
   if(is.null(params$log_sigma)) {
-    sigmaI <- max(0.01, sdconv(1, Data@CV_Ind[x]))
+    if(is.na(Data@CV_Ind[x])) {
+      sigmaI <- 0.1
+    } else {
+      sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
+    }
     params$log_sigma <- log(sigmaI)
   }
   if(is.null(params$log_tau)) {
     tau_start <- ifelse(is.na(Data@sigmaR[x]), 0.6, Data@sigmaR[x])
     params$log_tau <- log(tau_start)
   }
-  params$log_rec_dev = rep(0, ny - k)
+  params$log_rec_dev <- rep(0, ny - k)
 
-  info <- list(Year = Year, data = data, params = params, LH = LH, rescale = rescale, control = control, inner.control = inner.control)
+  info <- list(Year = Year, data = data, params = params, LH = LH, control = control, inner.control = inner.control)
 
   map <- list()
   if(fix_h) map$transformed_h <- factor(NA)
   if(fix_F_equilibrium) map$F_equilibrium <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
+  if(!state_space) map$log_rec_dev <- factor(rep(NA, ny-k))
 
   random <- NULL
   if(integrate) random <- "log_rec_dev"
@@ -321,21 +214,12 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
 
-  if(rescale != 1) {
-    vars_div <- c("B0", "B", "Cpred", "N0", "N", "R0", "R", "Binf", "Rinf", "Ninf")
-    vars_mult <- c("Brec", "q")
-    var_trans <- c("R0", "q")
-    fun_trans <- c("/", "*")
-    fun_fixed <- c("log")
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
-
   Yearplusone <- c(Year, max(Year) + 1)
   Yearplusk <- c(Year, max(Year) + 1:k)
-  YearDev <- seq(Year[1] + k, max(Year))
 
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
-  Assessment <- new("Assessment", Model = "cDD_SS", Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
+  Assessment <- new("Assessment", Model = ifelse(state_space, "cDD_SS", "cDD"),
+                    Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
                     B0 = report$B0, R0 = report$R0, N0 = report$N0,
                     SSB0 = report$B0, VB0 = report$B0, h = report$h,
                     FMort = structure(report$F, names = Year),
@@ -351,34 +235,43 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
                     Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year),
                     Index = structure(report$Ipred, names = Year),
-                    Dev = structure(report$log_rec_dev, names = YearDev),
-                    Dev_type = "log-Recruitment deviations",
                     NLL = structure(c(nll_report, report$nll_comp, report$penalty),
                                     names = c("Total", "Index", "Dev", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 
+  if(state_space) {
+    YearDev <- seq(Year[1] + k, max(Year))
+    Assessment@Dev <- structure(report$log_rec_dev, names = YearDev)
+    Assessment@Dev_type <- "log-Recruitment deviations"
+  }
+
   if(Assessment@conv) {
     ref_pt <- get_MSY_cDD(info$data, report$Arec, report$Brec)
     report <- c(report, ref_pt)
-
-    if(integrate) {
-      SE_Dev <- sqrt(SD$diag.cov.random)
-    } else {
-      SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
-    }
 
     Assessment@FMSY <- report$FMSY
     Assessment@MSY <- report$MSY
     Assessment@BMSY <- Assessment@SSBMSY <- Assessment@VBMSY <- report$BMSY
     Assessment@F_FMSY <- structure(report$F/report$FMSY, names = Year)
     Assessment@B_BMSY <- Assessment@SSB_SSBMSY <- Assessment@VB_VBMSY <- structure(report$B/report$BMSY, names = Yearplusone)
-    Assessment@SE_Dev <- structure(SE_Dev, names = YearDev)
     Assessment@TMB_report <- report
+
+    if(state_space) {
+      if(integrate) {
+        SE_Dev <- sqrt(SD$diag.cov.random)
+      } else {
+        SE_Dev <- sqrt(diag(SD$cov.fixed)[names(SD$par.fixed) == "log_rec_dev"])
+      }
+      Assessment@SE_Dev <- structure(SE_Dev, names = YearDev)
+    }
   }
   return(Assessment)
 }
-class(cDD_SS) <- "Assess"
+
+
+
+
 
 get_MSY_cDD <- function(TMB_data, Arec, Brec) {
   Kappa <- TMB_data$Kappa

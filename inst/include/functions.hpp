@@ -168,7 +168,6 @@ vector<Type> Newton_SRA_F(matrix<Type> C_hist, matrix<Type> N, matrix<Type> M, m
 
 
 #include "cDD.hpp"
-#include "cDD_SS.hpp"
 #include "DD.hpp"
 #include "DD_SS.hpp"
 #include "grav.hpp"

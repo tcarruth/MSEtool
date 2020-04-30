@@ -127,7 +127,7 @@ profile_likelihood_cDD <- function(Assessment, ...) {
   joint_profile <- !exists("profile_par")
 
   profile_fn <- function(i, Assessment, params, map) {
-    params$log_R0 <- log(profile_grid[i, 1] * Assessment@info$rescale)
+    params$log_R0 <- log(profile_grid[i, 1] * Assessment@obj$env$data$rescale)
 
     if(Assessment@info$data$SR_type == "BH") {
       params$transformed_h <- logit((profile_grid[i, 2] - 0.2)/0.8)
@@ -239,16 +239,6 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
       report <- obj2$report(obj2$env$last.par.best)
       ref_pt <- get_MSY_cDD(info$data, report$Arec, report$Brec)
       report <- c(report, ref_pt)
-
-      rescale <- info$rescale
-      if(rescale != 1) {
-        vars_div <- c("B0", "B", "Cpred", "BMSY", "MSY", "N0", "N", "R", "R0")
-        vars_mult <- c("Brec")
-        var_trans <- c("R0")
-        fun_trans <- c("/")
-        fun_fixed <- c("log")
-        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-      }
 
       FMort <- c(report$F, rep(NA, k + i))
       F_FMSY <- FMort/report$FMSY
