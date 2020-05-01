@@ -9,8 +9,6 @@ Type objective_function<Type>::operator() ()
 
   if(model == "DD") {
     return DD(this);
-  } else if(model == "DD_SS") {
-	return DD_SS(this);
   } else if(model =="SP") {
     return SP(this);
   } else if(model == "grav") {

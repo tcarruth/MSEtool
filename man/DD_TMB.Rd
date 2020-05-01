@@ -8,6 +8,7 @@
 DD_TMB(
   x = 1,
   Data,
+  condition = c("catch", "effort"),
   SR = c("BH", "Ricker"),
   rescale = "mean1",
   start = NULL,
@@ -23,12 +24,13 @@ DD_TMB(
 DD_SS(
   x = 1,
   Data,
+  condition = c("catch", "effort"),
   SR = c("BH", "Ricker"),
   rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
   fix_U_equilibrium = TRUE,
-  fix_omega = FALSE,
+  fix_sd = FALSE,
   fix_tau = TRUE,
   integrate = FALSE,
   silent = TRUE,
@@ -44,6 +46,8 @@ DD_SS(
 Otherwise, equals to 1 when running an assessment.}
 
 \item{Data}{An object of class \linkS4class{Data}.}
+
+\item{condition}{A string to indicate whether to condition the model on catch or effort (ratio of catch and index).}
 
 \item{SR}{Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).}
 
@@ -74,8 +78,9 @@ hasn't converged. The optimization continues from the parameters from the previo
 
 \item{...}{Additional arguments (not currently used).}
 
-\item{fix_omega}{Logical, whether the standard deviation of the catch is fixed. If \code{TRUE},
-omega is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@CV_Cat}.}
+\item{fix_sd}{Logical, whether the standard deviation of the data in the likelihood (index for conditioning on catch or
+catch for conditioning on effort). If \code{TRUE}, the SD is fixed to value provided in \code{start} (if provided), otherwise,
+ value based on either \code{Data@CV_Cat} or \code{Data@CV_Ind}.}
 
 \item{fix_tau}{Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.}
@@ -88,14 +93,13 @@ Otherwise, recruitment deviations are penalized parameters.}
 is passed on to \code{\link[TMB]{newton}} via \code{\link[TMB]{MakeADFun}}.}
 }
 \value{
-An object of \code{\linkS4class{Assessment}} containing objects and output
-from TMB.
+An object of \code{\linkS4class{Assessment}} containing objects and output from TMB.
 }
 \description{
 A simple delay-difference assessment model using a
 time-series of catches and a relative abundance index and coded in TMB. The model
-is conditioned on effort and estimates predicted catch. In the state-space version,
-recruitment deviations from the stock-recruit relationship are estimated.
+can be conditioned on either (1) effort and estimates predicted catch or (2) catch and estimates a predicted index.
+In the state-space version, recruitment deviations from the stock-recruit relationship are estimated.
 }
 \details{
 To provide starting values for \code{DD_TMB}, a named list can be provided for \code{R0} (virgin recruitment),
@@ -107,8 +111,6 @@ deviation of the catch and recruitment variability, respectively.
 \section{Functions}{
 \itemize{
 \item \code{DD_TMB}: Observation-error only model
-
-\item \code{DD_SS}: State-Space version of Delay-Difference model
 }}
 
 \note{

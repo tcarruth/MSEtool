@@ -100,7 +100,7 @@ cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start
   cDD_(x = x, Data = Data, state_space = TRUE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
        fix_F_equilibrium = fix_F_equilibrium, fix_sigma = fix_sigma, fix_tau = fix_tau, n_itF = n_itF,
        integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
-       control = control, inner.control = list(), ...)
+       control = control, inner.control = inner.control, ...)
 }
 class(cDD_SS) <- "Assess"
 
@@ -149,7 +149,7 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "cDD", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist,
-               rescale = rescale, I_hist = I_hist, SR_type = SR, nitF = n_itF, state_space = as.logical(state_space))
+               rescale = rescale, I_hist = I_hist, SR_type = SR, nitF = n_itF, state_space = as.integer(state_space))
   LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k, fit_mod = fit_mod)
 
   params <- list()
@@ -181,16 +181,10 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
   }
   if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
   if(is.null(params$log_sigma)) {
-    if(is.na(Data@CV_Ind[x])) {
-      sigmaI <- 0.1
-    } else {
-      sigmaI <- max(0.05, sdconv(1, Data@CV_Ind[x]))
-    }
-    params$log_sigma <- log(sigmaI)
+    params$log_sigma <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE) %>% log()
   }
   if(is.null(params$log_tau)) {
-    tau_start <- ifelse(is.na(Data@sigmaR[x]), 0.6, Data@sigmaR[x])
-    params$log_tau <- log(tau_start)
+    params$log_tau <- ifelse(is.na(Data@sigmaR[x]), 0.6, Data@sigmaR[x]) %>% log()
   }
   params$log_rec_dev <- rep(0, ny - k)
 
