@@ -81,7 +81,8 @@ profile_likelihood_spict <- function(Assessment, ...) {
 
 
 retrospective_spict <- function(Assessment, nyr) {
-  if(!requireNamespace("spict")) stop("The spict package is needed.")
+  spict_test <- parse(text = "if(!requireNamespace(\"spict\")) stop(\"The spict package is needed.\")")
+  eval(spict_test)
 
   ny <- length(Assessment@B)
   Year <- Assessment@B %>% names() %>% as.numeric()
