@@ -156,18 +156,7 @@ retrospective_VPA <- function(Assessment, nyr) {
     SD <- mod[[2]]
 
     if(!is.character(opt2) && !is.character(SD)) {
-      report <- obj2$report(obj2$env$last.par.best)
-      rescale <- info$rescale
-      if(rescale != 1) {
-        vars_div <- c("B", "E", "VB", "N", "CAApred")
-        vars_mult <- NULL
-        var_trans <- "q"
-        fun_trans <- "*"
-        fun_fixed <- NA
-        rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-      }
-
-      report <- projection_VPA(report, info, info$data$n_Rpen)
+      report <- obj2$report(obj2$env$last.par.best) %>% projection_VPA_internal(info, info$data$n_Rpen)
 
       FMort <- c(apply(report$F, 1, max), rep(NA, i + 1))
       Z_mat <- t(report$F) + info$data$M

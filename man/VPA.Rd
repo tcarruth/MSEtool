@@ -11,7 +11,6 @@ VPA(
   SR = c("BH", "Ricker"),
   vulnerability = c("logistic", "dome", "free"),
   I_type = c("B", "VB", "SSB"),
-  rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
   fix_sigma = FALSE,
@@ -42,10 +41,6 @@ See details for parameterization.}
 
 \item{I_type}{Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
 vulnerable biomass (VB), or spawning stock biomass (SSB).}
-
-\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
-can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
-Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.}
 

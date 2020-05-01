@@ -14,9 +14,6 @@
 #' See details for parameterization.
 #' @param I_type Whether the index surveys population biomass (B; this is the default in the DLMtool operating model),
 #' vulnerable biomass (VB), or spawning stock biomass (SSB).
-#' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
-#' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
-#' Output is re-converted back to original units.
 #' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_Fratio Logical, whether the ratio of F of the plus-group to the previous age class is fixed in the model.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep}. This only affects
@@ -66,7 +63,7 @@
 #' Porch, C.E. 2018. VPA-2BOX 4.01 User Guide. NOAA Tech. Memo. NMFS-SEFSC-726. 67 pp.
 #' @export
 VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerability = c("logistic", "dome", "free"),
-                I_type = c("B", "VB", "SSB"), rescale = "mean1", start = NULL, fix_h = TRUE,
+                I_type = c("B", "VB", "SSB"), start = NULL, fix_h = TRUE,
                 fix_sigma = FALSE, fix_Fratio = TRUE, vul_pen = c(3, 0.4), R_pen = c(3, Data@sigmaR[x]), nitF = 5L,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 2e5, eval.max = 4e5), ...) {
@@ -111,10 +108,6 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     if(any(is.na(C_hist) | C_hist < 0)) warning("Error. Catch time series is not complete.")
     expansion_factors <- C_hist/colSums(t(CAA_hist) * Wa)
     CAA_hist <- CAA_hist * expansion_factors
-
-    if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  } else {
-    if(rescale == "mean1") rescale <- 1/mean(rowSums(CAA_hist))
   }
 
   if(any(names(dots) == "ages")) {
@@ -165,7 +158,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
 
   LH <- list(LAA = La2, WAA = Wa2, Linf = Linf, K = K, t0 = t0, a = a, b = b, A50 = A50, A95 = A95)
 
-  data <- list(model = "VPA", I_hist = I_hist, CAA_hist = CAA_hist2 * rescale, n_y = length(Year), max_age = length(ages),
+  data <- list(model = "VPA", I_hist = I_hist, CAA_hist = CAA_hist2, n_y = length(Year), max_age = length(ages),
                M = M[min_age:max_age2], weight = Wa2, mat = mat_age2, vul_type_term = vulnerability,
                I_type = I_type, nitF = as.integer(nitF),
                n_vulpen = vul_pen[1], sigma_vulpen = vul_pen[2], n_Rpen = R_pen[1], sigma_Rpen = R_pen[2])
@@ -234,7 +227,7 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
     params$log_sigma <- log(sigmaI)
   }
 
-  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, ages = ages, control = control, rescale = rescale, fix_h = fix_h)
+  info <- list(Year = Year, data = data, params = params, LH = LH, SR = SR, ages = ages, control = control, fix_h = fix_h)
 
   map <- list()
   if(fix_sigma) map$log_sigma <- factor(NA)
@@ -257,15 +250,6 @@ VPA <- function(x = 1, Data, expanded = FALSE, SR = c("BH", "Ricker"), vulnerabi
   opt <- mod[[1]]
   SD <- mod[[2]]
   report <- obj$report(obj$env$last.par.best)
-
-  if(rescale != 1) {
-    vars_div <- c("B", "E", "VB", "N", "CAApred")
-    vars_mult <- NULL
-    var_trans <- "q"
-    fun_trans <- "*"
-    fun_fixed <- NA
-    rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
-  }
 
   # Terminal-year + 1 abundance
   report <- projection_VPA_internal(report, info, R_pen[1])
