@@ -57,7 +57,7 @@ although it can be overridden with the start argument. The sole parameter estima
 \examples{
 res <- SSS(1, Data = Red_snapper)
 
-SSS_MP <- create_MP(SSS, HCR40_10, dep = 0.3) # Always assume depletion = 0.3
+SSS_MP <- make_MP(SSS, HCR40_10, dep = 0.3) # Always assume depletion = 0.3
 }
 \references{
 Cope, J.M. 2013. Implementing a statistical catch-at-age model (Stock Synthesis) as a tool for

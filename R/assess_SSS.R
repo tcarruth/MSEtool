@@ -32,7 +32,7 @@
 #' @examples
 #' res <- SSS(1, Data = Red_snapper)
 #'
-#' SSS_MP <- create_MP(SSS, HCR40_10, dep = 0.3) # Always assume depletion = 0.3
+#' SSS_MP <- make_MP(SSS, HCR40_10, dep = 0.3) # Always assume depletion = 0.3
 #' @useDynLib MSEtool
 #' @export
 SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1",
