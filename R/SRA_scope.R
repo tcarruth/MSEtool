@@ -291,6 +291,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       report_internal_fn <- function(x, samps, obj) {
         report <- obj$report(samps[x, ])
         report <- SRA_posthoc_adjust(report, obj$env$data)
+        report$conv <- TRUE
         return(report)
       }
 
