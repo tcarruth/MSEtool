@@ -95,6 +95,8 @@ or survey, otherwise estimated.
 \item map_log_rec_dev: A vector of length OM@nyears that indexes which recruitment deviates are fixed (using NA) or estimated (a separate integer).
 \item plusgroup: Logical for whether the maximum age is a plusgroup or not.
 \item fix_dome: Logical for whether the dome selectivity parameter for fleets is fixed. Used primarily for backwards compatibility, this is overridden by map_vul_par.
+\item resample: Logical, whether the OM conditioning parameters (recruitment, fishing mortality, SSB, selectivity, etc.) are obtained by sampling the Hessian matrix from
+a single model fit (by default FALSE). This feature requires identical biological parameters among simulations.
 }
 
 Survey selectivity is estimated only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should

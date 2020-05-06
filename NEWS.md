@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 1.6.1
+- `SRA_scope` allows for OM conditioning by resampling the Hessian matrix from a single model fit.
+
 ## MSEtool 1.6.0
 - Time-varying fleet selectivity in `SRA_scope` can be set up with blocks. Unique blocks are defined and then assigned to fleet and year. New vignettes and updated help files for `SRA_scope` describe the set up in the function call.
 - An implemention of Simple Stock Synthesis (function `SSS`, catch-only method with fixed depletion assumption) is now added to the package.

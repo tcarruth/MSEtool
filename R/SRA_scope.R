@@ -103,6 +103,8 @@
 #' \item map_log_rec_dev: A vector of length OM@@nyears that indexes which recruitment deviates are fixed (using NA) or estimated (a separate integer).
 #' \item plusgroup: Logical for whether the maximum age is a plusgroup or not.
 #' \item fix_dome: Logical for whether the dome selectivity parameter for fleets is fixed. Used primarily for backwards compatibility, this is overridden by map_vul_par.
+#' \item resample: Logical, whether the OM conditioning parameters (recruitment, fishing mortality, SSB, selectivity, etc.) are obtained by sampling the Hessian matrix from
+#' a single model fit (by default FALSE). This feature requires identical biological parameters among simulations.
 #' }
 #'
 #' Survey selectivity is estimated only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should
@@ -280,25 +282,27 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
     if(length(mean_fit_output) > 0 && !mean_fit_output$report$conv) {
       warning("Mean fit model did not appear to converge. Will not be able to sample the covariance matrix.")
-      output <- new("SRA", data = data, mean_fit = mean_fit_output)
-      return(output)
+      message("Model did not converge. Returning the mean-fit model for evaluation.")
+
+      drop_nonconv <- drop_highF <- FALSE
+
+      samps <- mean_fit_output$obj$env$last.par.best %>% matrix(nrow = nsim)
     } else {
       message("Model converged. Sampling covariance matrix for nsim = ", nsim, " replicates...")
       if(!all_identical_sims) message("Note: not all ", nsim, " replicates are identical.")
 
       samps <- mvtnorm::rmvnorm(nsim, mean_fit_output$opt$par, mean_fit_output$SD$cov.fixed)
-
-      report_internal_fn <- function(x, samps, obj) {
-        report <- obj$report(samps[x, ])
-        report <- SRA_posthoc_adjust(report, obj$env$data)
-        report$conv <- TRUE
-        return(report)
-      }
-
-      res <- lapply(1:nsim, report_internal_fn, samps = samps, obj = mean_fit_output$obj)
-      mod <- lapply(res, function(x) list(obj = mean_fit_output$obj, report = x))
-      conv <- keep <- !logical(nsim)
     }
+
+    report_internal_fn <- function(x, samps, obj, conv) {
+      report <- obj$report(samps[x, ]) %>% SRA_posthoc_adjust(obj$env$data)
+      report$conv <- conv
+      return(report)
+    }
+
+    res <- lapply(1:nsim, report_internal_fn, samps = samps, obj = mean_fit_output$obj, conv = mean_fit_output$report$conv)
+    mod <- lapply(res, function(x) list(obj = mean_fit_output$obj, report = x))
+    conv <- keep <- rep(mean_fit_output$report$conv, nsim)
 
   } else {
 
