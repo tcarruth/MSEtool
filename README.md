@@ -26,6 +26,7 @@ The development version may be unstable and it is typically not recommended for 
 Vignettes describing the features of MSEtool can be obtained via:
 
 ```
+devtools::install_github("tcarruth/MSEtool", build_vignettes = TRUE)
 browseVignettes("MSEtool")
 ```
 
