@@ -11,7 +11,7 @@
 #' @author Tom Carruthers \email{t.carruthers@@oceans.ubc.ca}
 #' @author Adrian Hordyk \email{a.hordyk@@oceans.ubc.ca}
 #' @section How to use MSEtool:
-#' The main features of MSEtool are the assessment models and the ability to make management procedures by combining
+#' The main features of MSEtool are the assessment models and the ability to make model-based management procedures by combining
 #' assessment models with harvest control rules. Such MPs can be used and tested in management strategy evaluation
 #' with DLMtool operating models. An overview of these features is available in the \href{../doc/MSEtool.html}{MSEtool vignette}.
 #'
@@ -20,6 +20,7 @@
 #' \item \href{../doc/Surplus_production.html}{Surplus production} (\link{SP}, \link{SP_SS}, \link{SP_Fox}, and \code{spict})
 #' \item \href{../doc/Delay_difference.html}{Delay difference} (\link{DD}, \link{cDD}, \link{DD_SS}, and \link{cDD_SS})
 #' \item \href{../doc/SCA.html}{Statistical catch-at-age} (\link{SCA}, \link{SCA2}, and \link{SCA_Pope})
+#' \item Simple Stock Synthesis (\link{SSS} which implements \link{SCA_Pope} with fixed depletion assumption)
 #' \item \href{../doc/VPA.html}{Virtual population analysis} (\link{VPA})
 #' }
 #'

@@ -1,5 +1,5 @@
 ---
-title: "D. Description of the VPA model"
+title: "1d. Virtual population analysis (VPA)"
 author: "Quang Huynh (<q.huynh@oceans.ubc.ca>)"
 date: "`r Sys.Date()`"
 output:
@@ -7,7 +7,7 @@ output:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{D. Virtual population analysis (VPA) model}
+  %\VignetteIndexEntry{1d. Virtual population analysis (VPA)}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
