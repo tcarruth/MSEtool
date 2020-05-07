@@ -368,7 +368,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
               log_rec_dev <- structure(report$log_rec_dev, names = Year)
               log_rec_dev_SE <- summary(SD)[, 2]
-              log_rec_dev_SE <- c(log_rec_dev_SE[names(log_rec_dev_SE) == "log_rec_dev"], 0)
+              log_rec_dev_SE <- log_rec_dev_SE[names(log_rec_dev_SE) == "log_rec_dev"]
+              log_rec_dev_SE <- ifelse(data_mean_fit$est_rec_dev, log_rec_dev_SE, 0)
 
               N_bubble <- rmd_bubble("c(Year, max(Year)+1)", "N_at_age", fig.cap = "Predicted abundance-at-age.")
 

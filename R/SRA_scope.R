@@ -419,6 +419,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
   ### Rec devs
   OM@cpars$Perr <- StockPars$procsd
+  message("Recruitment standard deviation set in OM@cpars$Perr.")
+
   make_Perr <- function(x) {
     bias_corr <- ifelse(x$obj$env$data$est_rec_dev, exp(-0.5 * x$report$tau^2), 1)
     res <- exp(x$report$log_rec_dev) * bias_corr
@@ -439,6 +441,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   OM@cpars$Perr_y <- StockPars$Perr_y
   OM@cpars$Perr_y[, 1:(OM@maxage - 1)] <- early_Perr
   OM@cpars$Perr_y[, OM@maxage:(OM@maxage + nyears - 1)] <- Perr
+  message("Historical recruitment set in OM@cpars$Perr_y.")
 
   log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
   OM@cpars$AC <- apply(log_rec_dev, 1, function(x) {
@@ -446,6 +449,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     ifelse(is.na(out), 0, out)
     })
   OM@AC <- range(OM@cpars$AC)
+  message("Range of recruitment autocorrelation OM@AC: ", paste(round(range(OM@AC), 2), collapse = " - "))
 
   sample_future_dev <- function() {
     proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
@@ -467,6 +471,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
         }
         log_rec_dev[, yr_hist_sample:nyears] <<- log_rec_dev_u
         OM@cpars$Perr_y[, (OM@maxage + yr_hist_sample - 1):(OM@maxage + nyears - 1)] <<- exp(log_rec_dev_u)
+
+        message("Historical recruitment deviations sampled with autocorrelation starting in year ", yr_hist_sample, " out of OM@nyears = ", nyears)
       }
     }
 
@@ -482,9 +488,6 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
   OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- sample_future_dev()
 
-  message("Recruitment standard deviations set in OM@cpars$Perr.")
-  message("Historical recruitment trends set in OM@cpars$Perr_y.")
-  message("Range of recruitment autocorrelation OM@AC: ", paste(round(range(OM@AC), 2), collapse = " - "))
   message("Future recruitment deviations sampled with autocorrelation (in OM@cpars$Perr_y).\n")
 
   ### Assign OM variables that were used in the SRA to the output
