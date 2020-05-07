@@ -443,13 +443,44 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
   OM@cpars$AC <- apply(log_rec_dev, 1, function(x) {
     out <- acf(x, lag.max = 1, plot = FALSE)$acf[2]
-    ifelse(is.na(out), 0, out)})
+    ifelse(is.na(out), 0, out)
+    })
   OM@AC <- range(OM@cpars$AC)
 
-  proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
-  pro_Perr_y <- rnorm(proyears * nsim, rep(proc_mu, proyears), rep(StockPars$procsd, proyears)) %>% matrix(nsim, proyears)
-  for(y in 2:proyears) pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y - 1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
-  OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- exp(pro_Perr_y)
+  sample_future_dev <- function() {
+    proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
+
+    if(!is.null(dots$map_log_rec_dev) && any(is.na(dots$map_log_rec_dev))) { # Sample historical rec devs for OM for most recent years
+      yr_fixed_rec_dev <- which(is.na(dots$map_log_rec_dev))
+      if(any(yr_fixed_rec_dev > max(dots$map_log_rec_dev, na.rm = TRUE))) {
+        yr_hist_sample <- yr_fixed_rec_dev[yr_fixed_rec_dev > max(dots$map_log_rec_dev, na.rm = TRUE)] %>% min()
+
+        log_rec_dev_u <- rnorm(length(yr_hist_sample:nyears) * nsim, proc_mu, StockPars$procsd) %>%
+          matrix(nsim, length(yr_hist_sample:nyears))
+
+        for(y in 1:ncol(log_rec_dev_u)) {
+          if(y == 1) {
+            log_rec_dev_u[, y] <- OM@cpars$AC * log_rec_dev[, yr_hist_sample - 1] + log_rec_dev_u[, y] * sqrt(1 - OM@cpars$AC^2)
+          } else {
+            log_rec_dev_u[, y] <- OM@cpars$AC * log_rec_dev_u[, y-1] + log_rec_dev_u[, y] * sqrt(1 - OM@cpars$AC^2)
+          }
+        }
+        log_rec_dev[, yr_hist_sample:nyears] <<- log_rec_dev_u
+        OM@cpars$Perr_y[, (OM@maxage + yr_hist_sample - 1):(OM@maxage + nyears - 1)] <<- exp(log_rec_dev_u)
+      }
+    }
+
+    pro_Perr_y <- rnorm(proyears * nsim, proc_mu, StockPars$procsd) %>% matrix(nsim, proyears)
+    for(y in 2:proyears) {
+      if(y == 1) {
+        pro_Perr_y[, y] <- OM@cpars$AC * log_rec_dev[, ncol(log_rec_dev)] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
+      } else {
+        pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y-1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
+      }
+    }
+    return(exp(pro_Perr_y))
+  }
+  OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- sample_future_dev()
 
   message("Recruitment standard deviations set in OM@cpars$Perr.")
   message("Historical recruitment trends set in OM@cpars$Perr_y.")
