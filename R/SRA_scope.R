@@ -284,7 +284,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       warning("Mean fit model did not appear to converge. Will not be able to sample the covariance matrix.")
       message("Model did not converge. Returning the mean-fit model for evaluation.")
 
-      drop_nonconv <- drop_highF <- FALSE
+      drop_nonconv <- TRUE
 
       samps <- mean_fit_output$obj$env$last.par.best %>% matrix(nrow = nsim, ncol = length(mean_fit_output$obj$par), byrow = TRUE)
     } else {
@@ -303,7 +303,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     res <- lapply(1:nsim, report_internal_fn, samps = samps, obj = mean_fit_output$obj, conv = mean_fit_output$report$conv)
     mod <- lapply(res, function(x) list(obj = mean_fit_output$obj, report = x))
     conv <- rep(mean_fit_output$report$conv, nsim)
-    keep <- !logical(nsim)
+    keep <- vapply(1:nsim, function(x, report) all(!is.na(report$F)), logical(1), report = res)
 
   } else {
 
