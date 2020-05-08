@@ -286,7 +286,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
       drop_nonconv <- drop_highF <- FALSE
 
-      samps <- mean_fit_output$obj$env$last.par.best %>% matrix(nrow = nsim)
+      samps <- mean_fit_output$obj$env$last.par.best %>% matrix(nrow = nsim, ncol = length(mean_fit_output$obj$par), byrow = TRUE)
     } else {
       message("Model converged. Sampling covariance matrix for nsim = ", nsim, " replicates...")
       if(!all_identical_sims) message("Note: not all ", nsim, " replicates are identical.")
@@ -302,7 +302,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
     res <- lapply(1:nsim, report_internal_fn, samps = samps, obj = mean_fit_output$obj, conv = mean_fit_output$report$conv)
     mod <- lapply(res, function(x) list(obj = mean_fit_output$obj, report = x))
-    conv <- keep <- rep(mean_fit_output$report$conv, nsim)
+    conv <- rep(mean_fit_output$report$conv, nsim)
+    keep <- !logical(nsim)
 
   } else {
 
@@ -337,10 +338,13 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
                                          SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
                                          max_F = max_F, integrate = integrate, StockPars = StockPars, ObsPars = ObsPars,
                                          FleetPars = FleetPars, mean_fit = TRUE, control = control, dots = dots)
+
+        if(!mean_fit_output$report$conv) warning("Mean fit model did not appear to converge.")
       } else mean_fit_output <- list()
     }
     res <- lapply(mod, getElement, "report")
     conv <- vapply(res, getElement, logical(1), name = "conv")
+
     message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
     if(drop_highF) {
       highF <- vapply(res, function(x) max(getElement(x, name = "F")) >= max_F, logical(1))
@@ -354,7 +358,6 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     } else {
       keep <- !logical(OM@nsim)
     }
-    if(length(mean_fit_output) > 0 && !mean_fit_output$report$conv) warning("Mean fit model did not appear to converge.")
   }
 
   ### R0
