@@ -563,7 +563,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     catch_check_fn <- function(x, report, data) {
       if(report[[x]]$conv) {
         catch_diff <- report[[x]]$Cpred/data$Chist - 1
-        flag <- max(abs(catch_diff)) > 0.01
+        flag <- max(abs(catch_diff), na.rm = TRUE) > 0.01 | any(is.na(report[[x]]$Cpred))
       } else {
         flag <- FALSE
       }
