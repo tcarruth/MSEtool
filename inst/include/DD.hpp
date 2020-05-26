@@ -125,16 +125,19 @@ Type DD(objective_function<Type> *obj) {
   //--ARGUMENTS FOR NLL
   // Objective function
   //creates storage for nll and sets value to 0
-  Type q = calc_q(I_hist, B);
-  for(int tt=0;tt<ny;tt++) Ipred(tt) = q * B(tt);
+  Type q;
+  if(condition == "catch") {
+    q = calc_q(I_hist, B);
+    for(int tt=0;tt<ny;tt++) Ipred(tt) = q * B(tt);
+  }
 
   vector<Type> nll_comp(2);
   nll_comp.setZero();
 
   for(int tt=0; tt<ny; tt++){
-    if(condition == "effort" && C_hist(tt) > 0) {
-      nll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred(tt)), omega, true);
-    } if(I_hist(tt) > 0) {
+    if(condition == "effort") {
+      if(C_hist(tt) > 0) nll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred(tt)), omega, true);
+    } else if(!R_IsNA(asDouble(I_hist(tt))) && I_hist(tt) > 0) {
       nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
     }
     if(state_space && tt + k < ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
