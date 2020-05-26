@@ -41,11 +41,25 @@ compare_models <- function(..., label = NULL, color = NULL) {
   par(mfrow = c(3, 2), mar = c(5, 4, 1, 1), oma = c(2, 0, 0, 0))
 
   # F
-  FM <- do.call(rbind, lapply(dots, slot, name = "FMort"))
+  slot_F <- function(x) {
+    if(length(x@FMort) == 0) {
+      x@U
+    } else {
+      x@FMort
+    }
+  }
+  FM <- do.call(rbind, lapply(dots, slot_F))
   ts_matplot(FM, "Fishing Mortality", color = color)
 
   # F/FMSY
-  F_FMSY <- do.call(rbind, lapply(dots, slot, name = "F_FMSY"))
+  slot_FMSY <- function(x) {
+    if(length(x@F_FMSY) == 0) {
+      x@U_UMSY
+    } else {
+      x@F_FMSY
+    }
+  }
+  F_FMSY <- do.call(rbind, lapply(dots, slot_FMSY))
   ts_matplot(F_FMSY, expression(F/F[MSY]), color = color, dotted_one = TRUE)
 
   # B/BMSY
