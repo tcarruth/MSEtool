@@ -23,7 +23,7 @@ Type DD(objective_function<Type> *obj) {
   DATA_INTEGER(state_space);
   //DATA_VECTOR_INDICATOR(keep, C_hist);
 
-  PARAMETER(log_R0);
+  PARAMETER(R0x);
   PARAMETER(transformed_h);
   PARAMETER(log_q_effort);
   PARAMETER(U_equilibrium);
@@ -37,7 +37,7 @@ Type DD(objective_function<Type> *obj) {
     h = 0.8 * invlogit(transformed_h);
   } else h = exp(transformed_h);
   h += 0.2;
-  Type R0 = exp(log_R0)/rescale;
+  Type R0 = exp(R0x)/rescale;
   Type q_effort = exp(log_q_effort);
   Type omega = exp(log_omega);
   Type sigma = exp(log_sigma);

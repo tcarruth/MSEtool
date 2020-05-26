@@ -117,13 +117,13 @@ profile_likelihood_SP <- function(Assessment, ...) {
 
   profile_fn <- function(i, Assessment, params, map) {
     params$log_FMSY <- log(profile_grid[i, 1])
-    params$log_MSY <- log(profile_grid[i, 2] * Assessment@obj$env$data$rescale)
+    params$MSYx <- log(profile_grid[i, 2] * Assessment@obj$env$data$rescale)
 
     if(joint_profile && length(Assessment@obj$par) == 2) {
-      nll <- Assessment@obj$fn(x = c(params$log_FMSY, params$log_MSY))
+      nll <- Assessment@obj$fn(x = c(params$log_FMSY, params$MSYx))
     } else {
-      if(joint_profile) map$log_MSY <- map$log_FMSY <- factor(NA) else {
-        if(profile_par == "MSY") map$log_MSY <- factor(NA) else map$log_FMSY <- factor(NA)
+      if(joint_profile) map$MSYx <- map$log_FMSY <- factor(NA) else {
+        if(profile_par == "MSY") map$MSYx <- factor(NA) else map$log_FMSY <- factor(NA)
       }
       obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map,
                         random = Assessment@obj$env$random, DLL = "MSEtool", silent = TRUE)

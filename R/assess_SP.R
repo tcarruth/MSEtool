@@ -249,20 +249,14 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
   params <- list()
   if(!is.null(start)) {
     if(!is.null(start$FMSY) && is.numeric(start$FMSY)) params$log_FMSY <- log(start$FMSY[1])
-    if(!is.null(start$MSY) && is.numeric(start$MSY)) params$log_MSY <- log(start$MSY[1])
+    if(!is.null(start$MSY) && is.numeric(start$MSY)) params$MSYx <- log(start$MSY[1])
     if(!is.null(start$dep) && is.numeric(start$dep)) params$log_dep <- log(start$dep[1])
     if(!is.null(start$n) && is.numeric(start$n)) params$log_n <- log(start$n[1])
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma)
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
-  if(is.null(params$log_FMSY)) {
-    FMSY_start <- ifelse(is.na(Data@Mort[x]), 0.2, 0.5 * Data@Mort[x])
-    params$log_FMSY <- log(FMSY_start)
-  }
-  if(is.null(params$log_MSY)) {
-    AvC <- mean(C_hist * rescale)
-    params$log_MSY <- log(3 * AvC)
-  }
+  if(is.null(params$log_FMSY)) params$log_FMSY <- ifelse(is.na(Data@Mort[x]), 0.2, 0.5 * Data@Mort[x]) %>% log()
+  if(is.null(params$MSYx)) params$MSYx <- mean(3 * C_hist * rescale) %>% log()
   if(is.null(params$log_dep)) params$log_dep <- log(1)
   if(is.null(params$log_n)) params$log_n <- log(2)
   if(is.null(params$log_sigma)) params$log_sigma <- rep(log(0.05), nsurvey)

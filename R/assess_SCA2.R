@@ -61,7 +61,7 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
   # Starting values
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$meanR) && is.numeric(start$meanR)) params$log_meanR <- log(start$meanR)
+    if(!is.null(start$meanR) && is.numeric(start$meanR)) params$meanRx <- log(start$meanR)
     if(!is.null(start$F_equilibrium) && is.numeric(start$F_equilibrium)) params$F_equilibrium <- start$F_equilibrium
     if(!is.null(start$vul_par) && is.numeric(start$vul_par)) {
       if(start$vul_par[1] > 0.75 * max_age) stop("start$vul_par[1] needs to be less than 0.75 * Data@MaxAge (see help).")
@@ -96,8 +96,8 @@ SCA2 <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("logisti
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
 
-  if(is.null(params$log_meanR)) {
-    params$log_meanR <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 2, log(1.5 * rescale * Data@OM$R0[x]))
+  if(is.null(params$meanRx)) {
+    params$meanRx <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 2, log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
   if(is.null(params$vul_par)) {

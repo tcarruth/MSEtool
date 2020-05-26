@@ -127,7 +127,7 @@ profile_likelihood_cDD <- function(Assessment, ...) {
   joint_profile <- !exists("profile_par")
 
   profile_fn <- function(i, Assessment, params, map) {
-    params$log_R0 <- log(profile_grid[i, 1] * Assessment@obj$env$data$rescale)
+    params$R0x <- log(profile_grid[i, 1] * Assessment@obj$env$data$rescale)
 
     if(Assessment@info$data$SR_type == "BH") {
       params$transformed_h <- logit((profile_grid[i, 2] - 0.2)/0.8)
@@ -137,14 +137,14 @@ profile_likelihood_cDD <- function(Assessment, ...) {
 
     if(length(Assessment@opt$par) == 1) { # R0 is the only estimated parameter
       if(!joint_profile && profile_par == "R0") {
-        nll <- Assessment@obj$fn(params$log_R0)
+        nll <- Assessment@obj$fn(params$R0x)
       } else {
 
         obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random,
                           DLL = "MSEtool", silent = TRUE)
 
         if(joint_profile) {
-          nll <- obj2$fn(params$log_R0)
+          nll <- obj2$fn(params$R0x)
         } else { # Profile h
           opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
           if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
@@ -152,18 +152,18 @@ profile_likelihood_cDD <- function(Assessment, ...) {
       }
     } else if(length(Assessment@opt$par) == 2) {
 
-      if(all(names(Assessment@opt$par) == c("log_R0", "transformed_h"))) {
+      if(all(names(Assessment@opt$par) == c("R0x", "transformed_h"))) {
         if(joint_profile) {
-          nll <- Assessment@obj$fn(c(params$log_R0, params$transformed_h))
+          nll <- Assessment@obj$fn(c(params$R0x, params$transformed_h))
         } else {
-          if(profile_par == "R0") map$log_R0 <- factor(NA) else map$transformed_h <- factor(NA)
+          if(profile_par == "R0") map$R0x <- factor(NA) else map$transformed_h <- factor(NA)
           obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random,
                             DLL = "MSEtool", silent = TRUE)
           opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
           if(!is.character(opt2)) nll <- opt2$objective else nll <- NA
         }
       } else { # R0, F
-        if(joint_profile || profile_par == "R0") map$log_R0 <- factor(NA)
+        if(joint_profile || profile_par == "R0") map$R0x <- factor(NA)
         obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random,
                           DLL = "MSEtool", silent = TRUE)
         opt2 <- optimize_TMB_model(obj2, Assessment@info$control)[[1]]
@@ -173,10 +173,10 @@ profile_likelihood_cDD <- function(Assessment, ...) {
     } else { # more than 2 parameters
 
       if(joint_profile) {
-        map$log_R0 <- factor(NA)
+        map$R0x <- factor(NA)
         if(!"transformed_h" %in% names(Assessment@opt$par)) map$transformed_h <- factor(NA)
       } else {
-        if(profile_par == "R0") map$log_R0 <- factor(NA) else map$transformed_h <- factor(NA)
+        if(profile_par == "R0") map$R0x <- factor(NA) else map$transformed_h <- factor(NA)
       }
 
       obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random, DLL = "MSEtool", silent = TRUE)

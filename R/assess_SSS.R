@@ -87,7 +87,7 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
   # Starting values
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$R0) && is.numeric(start$R0)) params$log_R0 <- log(start$R0[1] * rescale)
+    if(!is.null(start$R0) && is.numeric(start$R0)) params$R0x <- log(start$R0[1] * rescale)
     if(!is.null(start$h) && is.numeric(start$h)) {
       if(SR == "BH") {
         h_start <- (start$h[1] - 0.2)/0.8
@@ -105,8 +105,8 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
     }
   }
 
-  if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 4, log(1.5 * rescale * Data@OM$R0[x]))
+  if(is.null(params$R0x)) {
+    params$R0x <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 4, log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$transformed_h)) {
     h_start <- Data@steep[x]
@@ -138,8 +138,8 @@ SSS <- function(x = 1, Data, dep = 0.4, SR = c("BH", "Ricker"), rescale = "mean1
   # Add starting values for rec-devs and increase R0 start value if U is too high (> 0.975)
   high_U <- try(obj$report(obj$par)$penalty > 0, silent = TRUE)
   if(!is.character(high_U) && high_U) {
-    while(obj$par["log_R0"] < 30 && obj$report(obj$par)$penalty > 0) {
-      obj$par["log_R0"] <- obj$par["log_R0"] + 1
+    while(obj$par["R0x"] < 30 && obj$report(obj$par)$penalty > 0) {
+      obj$par["R0x"] <- obj$par["R0x"] + 1
     }
   }
 

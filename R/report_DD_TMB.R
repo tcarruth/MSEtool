@@ -155,7 +155,7 @@ profile_likelihood_DD_TMB <- function(Assessment, ...) {
   joint_profile <- !exists("profile_par")
 
   profile_fn <- function(i, Assessment, params, map) {
-    params$log_R0 <- log(profile_grid[i, 1] * Assessment@obj$env$data$rescale)
+    params$R0x <- log(profile_grid[i, 1] * Assessment@obj$env$data$rescale)
     if(Assessment@info$data$SR_type == "BH") {
       params$transformed_h <- logit((profile_grid[i, 2] - 0.2)/0.8)
     } else {
@@ -163,9 +163,9 @@ profile_likelihood_DD_TMB <- function(Assessment, ...) {
     }
 
     if(joint_profile) {
-      map$log_R0 <- map$transformed_h <- factor(NA)
+      map$R0x <- map$transformed_h <- factor(NA)
     } else {
-      if(profile_par == "R0") map$log_R0 <- factor(NA) else map$transformed_h <- factor(NA)
+      if(profile_par == "R0") map$R0x <- factor(NA) else map$transformed_h <- factor(NA)
     }
     obj2 <- MakeADFun(data = Assessment@info$data, parameters = params, map = map, random = Assessment@obj$env$random,
                       DLL = "MSEtool", silent = TRUE)

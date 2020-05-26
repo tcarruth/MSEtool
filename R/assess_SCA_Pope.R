@@ -106,7 +106,7 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
   # Starting values
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$R0) && is.numeric(start$R0)) params$log_R0 <- log(start$R0[1] * rescale)
+    if(!is.null(start$R0) && is.numeric(start$R0)) params$R0x <- log(start$R0[1] * rescale)
     if(!is.null(start$h) && is.numeric(start$h)) {
       if(SR == "BH") {
         h_start <- (start$h[1] - 0.2)/0.8
@@ -140,8 +140,8 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau)
   }
 
-  if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 4, log(1.5 * rescale * Data@OM$R0[x]))
+  if(is.null(params$R0x)) {
+    params$R0x <- ifelse(is.null(Data@OM$R0[x]), log(mean(data$C_hist)) + 4, log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(!fix_h && is.na(Data@steep[x]), 0.9, Data@steep[x])
@@ -214,8 +214,8 @@ SCA_Pope <- function(x = 1, Data, SR = c("BH", "Ricker"), vulnerability = c("log
       obj <- MakeADFun(data = info$data, parameters = info$params, hessian = TRUE,
                        map = map, random = random, DLL = "MSEtool", inner.control = inner.control, silent = silent)
     }
-    while(obj$par["log_R0"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
-      obj$par["log_R0"] <- obj$par["log_R0"] + 1
+    while(obj$par["R0x"] < 30 && obj$report(c(obj$par, obj$env$last.par[obj$env$random]))$penalty > 0) {
+      obj$par["R0x"] <- obj$par["R0x"] + 1
     }
   }
 

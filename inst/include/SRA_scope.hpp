@@ -75,7 +75,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_INTEGER(nit_F);    // When condition = "catch2", the number of iterations for Newton-Raphson method to solve for F
   DATA_INTEGER(plusgroup) // Boolean, whether the maximum age in the plusgroup is modeled.
 
-  PARAMETER(log_R0);                    // Unfished recruitment
+  PARAMETER(R0x);                    // Unfished recruitment
   PARAMETER(transformed_h);             // Steepness
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par 3 rows and nsel_block columns
   PARAMETER_MATRIX(s_vul_par);          // Matrix of selectivity parameters, 3 rows and nsurvey columns
@@ -91,7 +91,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   int nlbin = length_bin.size();
   Type bin_width = length_bin(1) - length_bin(0);
 
-  Type R0 = exp(log_R0)/rescale;
+  Type R0 = exp(R0x)/rescale;
   Type h;
   if(SR_type == "BH") {
     h = 0.8 * invlogit(transformed_h);
@@ -424,7 +424,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   nll += nll_log_rec_dev + nll_Ceq.sum();
   nll += penalty + prior;
 
-  if(CppAD::Variable(log_R0)) ADREPORT(R0);
+  if(CppAD::Variable(R0x)) ADREPORT(R0);
   ADREPORT(h);
   if(CppAD::Variable(log_tau)) ADREPORT(tau);
   if(condition == "effort") ADREPORT(q_effort);
@@ -434,7 +434,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(length_bin);
   REPORT(Linf);
 
-  REPORT(log_R0);
+  REPORT(R0x);
   REPORT(transformed_h);
   REPORT(vul_par);
   REPORT(LFS);

@@ -154,7 +154,7 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
 
   params <- list()
   if(!is.null(start)) {
-    if(!is.null(start$R0) && is.numeric(start$R0)) params$log_R0 <- log(start$R0[1] * rescale)
+    if(!is.null(start$R0) && is.numeric(start$R0)) params$R0x <- log(start$R0[1] * rescale)
     if(!is.null(start$h) && is.numeric(start$h)) {
       if(SR == "BH") {
         h_start <- (start$h[1] - 0.2)/0.8
@@ -167,8 +167,8 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
     if(!is.null(start$sigma) && is.numeric(start$sigma)) params$log_sigma <- log(start$sigma[1])
     if(!is.null(start$tau) && is.numeric(start$tau)) params$log_tau <- log(start$tau[1])
   }
-  if(is.null(params$log_R0)) {
-    params$log_R0 <- ifelse(is.null(Data@OM$R0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
+  if(is.null(params$R0x)) {
+    params$R0x <- ifelse(is.null(Data@OM$R0[x]), log(4 * mean(data$C_hist)), log(1.5 * rescale * Data@OM$R0[x]))
   }
   if(is.null(params$transformed_h)) {
     h_start <- ifelse(is.na(Data@steep[x]), 0.9, Data@steep[x])

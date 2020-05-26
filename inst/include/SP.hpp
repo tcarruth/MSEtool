@@ -26,7 +26,7 @@ Type SP(objective_function<Type> *obj) {
   //DATA_VECTOR_INDICATOR(keep, I_hist);
 
   PARAMETER(log_FMSY);
-  PARAMETER(log_MSY);
+  PARAMETER(MSYx);
   PARAMETER(log_dep);
   PARAMETER(log_n);
   PARAMETER_VECTOR(log_sigma);
@@ -34,7 +34,7 @@ Type SP(objective_function<Type> *obj) {
   PARAMETER_VECTOR(log_B_dev);
 
   Type FMSY = exp(log_FMSY);
-  Type MSY = exp(log_MSY)/rescale;
+  Type MSY = exp(MSYx)/rescale;
   Type dep = exp(log_dep);
   Type n = exp(log_n);
 

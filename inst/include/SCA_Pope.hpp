@@ -27,7 +27,7 @@ Type SCA_Pope(objective_function<Type> *obj) {
   DATA_IVECTOR(est_early_rec_dev);
   DATA_IVECTOR(est_rec_dev); // Indicator of whether rec_dev is estimated in model or fixed at zero
 
-  PARAMETER(log_R0);
+  PARAMETER(R0x);
   PARAMETER(transformed_h);
   PARAMETER(U_equilibrium);
   PARAMETER_VECTOR(vul_par);
@@ -37,7 +37,7 @@ Type SCA_Pope(objective_function<Type> *obj) {
   PARAMETER_VECTOR(log_early_rec_dev);
   PARAMETER_VECTOR(log_rec_dev);
 
-  Type R0 = exp(log_R0)/rescale;
+  Type R0 = exp(R0x)/rescale;
   Type h;
   if(SR_type == "BH") {
     h = 0.8 * invlogit(transformed_h);
