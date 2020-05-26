@@ -123,8 +123,10 @@ rmd_R0 <- function(header = NULL) {
   fig.cap <- "Estimate of R0, distribution based on normal approximation of estimated covariance matrix."
   ans <- c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
            "if(conv) {",
-           "  ind <- names(SD$par.fixed) == \"log_R0\"",
-           "  plot_lognormalvar(SD$par.fixed[ind], sqrt(diag(SD$cov.fixed)[ind]), label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)",
+           "  ind <- names(SD$par.fixed) == \"R0x\"",
+           "  mu <- SD$par.fixed[ind] - log(obj$env$data$rescale)",
+           "  sig <- sqrt(diag(SD$cov.fixed)[ind])",
+           "  plot_lognormalvar(mu, sig, label = expression(Unfished~~recruitment~~(R[0])), logtransform = TRUE)",
            "}",
            "```\n")
   if(!is.null(header)) ans <- c(header, ans)
@@ -155,12 +157,12 @@ rmd_FMSY <- function(header = NULL) {
   return(ans)
 }
 
-rmd_MSY <- function(par = "log_MSY") {
+rmd_MSY <- function(par = "MSYx") {
   fig.cap <- "Estimate of MSY, distribution based on normal approximation of estimated covariance matrix."
   c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
     "if(conv) {",
     paste0("  msy.ind <- names(SD$par.fixed) == \"", par, "\""),
-    "  log.msy <- SD$par.fixed[msy.ind]",
+    "  log.msy <- SD$par.fixed[msy.ind] - log(obj$env$data$rescale)",
     "  log.msy.sd <- sqrt(diag(SD$cov.fixed)[msy.ind])",
     "  plot_lognormalvar(log.msy, log.msy.sd, logtransform = TRUE, label = expression(widehat(MSY)))",
     "}",
