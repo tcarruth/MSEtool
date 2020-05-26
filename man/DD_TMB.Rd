@@ -13,7 +13,7 @@ DD_TMB(
   rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
-  fix_U_equilibrium = TRUE,
+  dep = 1,
   silent = TRUE,
   opt_hess = FALSE,
   n_restart = ifelse(opt_hess, 0, 1),
@@ -29,9 +29,9 @@ DD_SS(
   rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
-  fix_U_equilibrium = TRUE,
   fix_sd = FALSE,
   fix_tau = TRUE,
+  dep = 1,
   integrate = FALSE,
   silent = TRUE,
   opt_hess = FALSE,
@@ -59,9 +59,8 @@ Output is re-converted back to original units.}
 
 \item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the assessment model.}
 
-\item{fix_U_equilibrium}{Logical, whether the equilibrium harvest rate prior to the first year of the model is
-estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
-(assumes virgin conditions).}
+\item{dep}{The initial depletion in the first year of the model. A prior is placed on the model objective function
+to estimate the equilibrium exploitation rate that corresponds to the initial depletion.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}

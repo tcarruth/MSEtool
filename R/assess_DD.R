@@ -15,14 +15,13 @@
 #' Output is re-converted back to original units.
 #' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the assessment model.
-#' @param fix_U_equilibrium Logical, whether the equilibrium harvest rate prior to the first year of the model is
-#' estimated. If TRUE, U_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
-#' (assumes virgin conditions).
 #' @param fix_sd Logical, whether the standard deviation of the data in the likelihood (index for conditioning on catch or
 #' catch for conditioning on effort). If \code{TRUE}, the SD is fixed to value provided in \code{start} (if provided), otherwise,
 #'  value based on either \code{Data@@CV_Cat} or \code{Data@@CV_Ind}.
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
+#' @param dep The initial depletion in the first year of the model. A tight prior is placed on the model objective function
+#' to estimate the equilibrium exploitation rate that corresponds to the initial depletion.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a random effects/state-space variable).
 #' Otherwise, recruitment deviations are penalized parameters.
@@ -89,11 +88,11 @@
 #' @useDynLib MSEtool
 #' @export
 DD_TMB <- function(x = 1, Data, condition = c("catch", "effort"), SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = TRUE,
-                   fix_U_equilibrium = TRUE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                   dep = 1, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                    control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   condition <- match.arg(condition)
   DD_(x = x, Data = Data, state_space = FALSE, condition = condition, SR = SR, rescale = rescale, start = start,
-      fix_h = fix_h, fix_U_equilibrium = fix_U_equilibrium,
+      fix_h = fix_h, dep = dep,
       fix_omega = condition == "catch", fix_sigma = condition == "effort",
       fix_tau = TRUE, integrate = FALSE, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
       control = control, inner.control = list(), ...)
@@ -105,12 +104,12 @@ class(DD_TMB) <- "Assess"
 #' @useDynLib MSEtool
 #' @export
 DD_SS <- function(x = 1, Data, condition = c("catch", "effort"), SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                  fix_h = TRUE, fix_U_equilibrium = TRUE, fix_sd = FALSE, fix_tau = TRUE,
+                  fix_h = TRUE, fix_sd = FALSE, fix_tau = TRUE, dep = 1,
                   integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   condition <- match.arg(condition)
   DD_(x = x, Data = Data, state_space = TRUE, condition = condition, SR = SR, rescale = rescale, start = start,
-      fix_h = fix_h, fix_U_equilibrium = fix_U_equilibrium,
+      fix_h = fix_h, dep = dep,
       fix_omega = condition == "catch" | fix_sd, fix_sigma = condition == "effort" | fix_sd,
       fix_tau = fix_tau, integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
       control = control, inner.control = inner.control, ...)
@@ -118,7 +117,7 @@ DD_SS <- function(x = 1, Data, condition = c("catch", "effort"), SR = c("BH", "R
 class(DD_SS) <- "Assess"
 
 DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort"), SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                fix_h = TRUE, fix_U_equilibrium = TRUE, fix_omega = FALSE, fix_sigma = FALSE, fix_tau = TRUE,
+                fix_h = TRUE, fix_omega = FALSE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1,
                 integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
@@ -162,7 +161,7 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
   data <- list(model = "DD", S0 = S0, Alpha = Alpha, Rho = Rho, ny = ny, k = k,
-               wk = wk, C_hist = C_hist, rescale = rescale, I_hist = I_hist, E_hist = E_hist, SR_type = SR,
+               wk = wk, C_hist = C_hist, dep = dep, rescale = rescale, I_hist = I_hist, E_hist = E_hist, SR_type = SR,
                condition = condition, state_space = as.integer(state_space))
   LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k)
 
@@ -196,7 +195,7 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
     }
   }
   if(is.null(params$log_q_effort)) params$log_q_effort <- log(1)
-  if(is.null(params$U_equilibrium)) params$U_equilibrium <- 0
+  if(is.null(params$U_equilibrium)) params$U_equilibrium <- ifelse(dep < 1, 0.1, 0)
   if(is.null(params$log_omega)) {
     params$log_omega <- max(0.05, sdconv(1, Data@CV_Cat[x]), na.rm = TRUE) %>% log()
   }
@@ -215,7 +214,7 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   map <- list()
   if(condition == "catch") map$log_q_effort <- factor(NA)
   if(fix_h) map$transformed_h <- factor(NA)
-  if(fix_U_equilibrium) map$U_equilibrium <- factor(NA)
+  if(dep == 1) map$U_equilibrium <- factor(NA)
   if(fix_omega) map$log_omega <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
@@ -253,9 +252,9 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
                     Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year),
                     Index = structure(report$Ipred, names = Year),
-                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
+                    NLL = structure(c(nll_report, report$nll_comp, report$prior, report$penalty),
                                     names = c("Total", ifelse(condition == "catch", "Index", "Catch"),
-                                              "Dev", "Penalty")),
+                                              "Dev", "Prior", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 

@@ -15,6 +15,7 @@ Type DD(objective_function<Type> *obj) {
   DATA_INTEGER(k);
   DATA_SCALAR(wk);
   DATA_VECTOR(C_hist);
+  DATA_SCALAR(dep);
   DATA_SCALAR(rescale);
   DATA_VECTOR(I_hist);
   DATA_VECTOR(E_hist);
@@ -94,7 +95,11 @@ Type DD(objective_function<Type> *obj) {
   N(0) = Req/(1 - Seq);
   for(int tt=0;tt<k;tt++) R(tt) = Req;
 
-  Type penalty = 0;
+  Type Ceqpred = B(0) * U_equilibrium;
+
+  Type penalty = 0; // Penalty to likelihood for high U > 0.95
+  Type prior = 0; // Penalty for initial depletion to get the correct U_equilibrium
+  if(dep > 0) prior -= dnorm(log(B(0)/B0), log(dep), Type(0.01), true);
 
   for(int tt=0; tt<ny; tt++){
     if(condition == "catch") {
@@ -163,6 +168,7 @@ Type DD(objective_function<Type> *obj) {
   REPORT(Brec);
   REPORT(Spr0);
   REPORT(Cpred);
+  REPORT(Ceqpred);
   REPORT(Ipred);
   REPORT(q);
   if(condition == "effort") REPORT(q_effort);

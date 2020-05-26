@@ -1,8 +1,16 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
-## MSEtool 1.6.1
-- `SRA_scope` allows for OM conditioning by resampling the Hessian matrix from a single model fit.
-- Minor edit so that projection rec devs are calculated with autocorrelation from the last estimated historical rec dev.
+## MSEtool 1.6.4
+
+### SRA_scope
+- Allow for OM conditioning by resampling the Hessian matrix from a single model fit.
+- Projection period rec devs are calculated with autocorrelation from the last estimated historical rec dev.
+- More error checks if there are issues with the predicted catch in the model.
+- Update `AddInd` calcs for DLMtool 5.4.4.
+
+### Other
+- Rename model parameters that correspond with magnitude and estimated on the log-scale. By default, these estimated parameters are also rescaled internally to be within an order of magnitude of other parameters. As such, they are no longer the log of the corresponding population parameter, e.g., R0. 
+- `DD_TMB` and `DD_SS` accommodates alternative initial depletion values in the first year of the model.
 
 ## MSEtool 1.6.0
 - Time-varying fleet selectivity in `SRA_scope` can be set up with blocks. Unique blocks are defined and then assigned to fleet and year. New vignettes and updated help files for `SRA_scope` describe the set up in the function call.
