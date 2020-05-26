@@ -133,6 +133,21 @@ rmd_R0 <- function(header = NULL) {
   return(ans)
 }
 
+rmd_meanR <- function(header = NULL) {
+  fig.cap <- "Estimate of mean recruitment, distribution based on normal approximation of estimated covariance matrix."
+  ans <- c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),
+           "if(conv) {",
+           "  ind <- names(SD$par.fixed) == \"meanRx\"",
+           "  mu <- SD$par.fixed[ind] - log(obj$env$data$rescale)",
+           "  sig <- sqrt(diag(SD$cov.fixed)[ind])",
+           "  plot_lognormalvar(mu, sig, label = \"Mean recruitment\", logtransform = TRUE)",
+           "}",
+           "```\n")
+  if(!is.null(header)) ans <- c(header, ans)
+  return(ans)
+}
+
+
 rmd_h <- function() {
   fig.cap <- "Estimate of steepness, distribution based on normal approximation of estimated covariance matrix."
   c(paste0("```{r, fig.cap=\"", fig.cap, "\"}"),

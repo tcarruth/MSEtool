@@ -66,7 +66,7 @@ rmd_SCA <- function(Assessment, SCA2 = FALSE, ...) {
   # Assessment
   #### Pars and Fit
   if(SCA2) {
-    lead_par <- "## Assessment {.tabset}\n### Estimates and Model Fit\n"
+    lead_par <- rmd_meanR(header = "## Assessment {.tabset}\n### Estimates and Model Fit\n")
   } else {
     lead_par <- c(rmd_R0(header = "## Assessment {.tabset}\n### Estimates and Model Fit\n"), rmd_h())
   }
