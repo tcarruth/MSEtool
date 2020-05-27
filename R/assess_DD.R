@@ -136,7 +136,7 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   if(any(names(dots) == "yind")) {
     yind <- eval(dots$yind)
   } else {
-    ystart <- which(!is.na(Data@Cat[x, ] + Data@Ind[x,   ]))[1]
+    ystart <- which(!is.na(Data@Cat[x, ]))[1]
     yind <- ystart:length(Data@Cat[x, ])
   }
   Year <- Data@Year[yind]
