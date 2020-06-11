@@ -361,7 +361,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
 
   ### R0
-  OM@cpars$R0 <- vapply(1:length(mod), function(x) ifelse("R0x" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
+  OM@cpars$R0 <- vapply(1:length(mod), function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
@@ -447,51 +447,54 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   message("Historical recruitment set in OM@cpars$Perr_y.")
 
   log_rec_dev <- do.call(rbind, lapply(res, getElement, "log_rec_dev"))
-  OM@cpars$AC <- apply(log_rec_dev, 1, function(x) {
-    out <- acf(x, lag.max = 1, plot = FALSE)$acf[2]
-    ifelse(is.na(out), 0, out)
+
+  if(!all(log_rec_dev == 0)) {
+
+    OM@cpars$AC <- apply(log_rec_dev, 1, function(x) {
+      out <- acf(x, lag.max = 1, plot = FALSE)$acf[2]
+      ifelse(is.na(out), 0, out)
     })
-  OM@AC <- range(OM@cpars$AC)
-  message("Range of recruitment autocorrelation OM@AC: ", paste(round(range(OM@AC), 2), collapse = " - "))
+    OM@AC <- range(OM@cpars$AC)
+    message("Range of recruitment autocorrelation OM@AC: ", paste(round(range(OM@AC), 2), collapse = " - "))
 
-  sample_future_dev <- function() {
-    proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
+    sample_future_dev <- function() {
+      proc_mu <- -0.5 * StockPars$procsd^2 * (1 - OM@cpars$AC)/sqrt(1 - OM@cpars$AC^2) # http://dx.doi.org/10.1139/cjfas-2016-0167
 
-    if(!is.null(dots$map_log_rec_dev) && any(is.na(dots$map_log_rec_dev))) { # Sample historical rec devs for OM for most recent years
-      yr_fixed_rec_dev <- which(is.na(dots$map_log_rec_dev))
-      if(any(yr_fixed_rec_dev > max(dots$map_log_rec_dev, na.rm = TRUE))) {
-        yr_hist_sample <- yr_fixed_rec_dev[yr_fixed_rec_dev > max(dots$map_log_rec_dev, na.rm = TRUE)] %>% min()
+      if(!is.null(dots$map_log_rec_dev) && any(is.na(dots$map_log_rec_dev))) { # Sample historical rec devs for OM for most recent years
+        yr_fixed_rec_dev <- which(is.na(dots$map_log_rec_dev))
+        if(any(yr_fixed_rec_dev > max(dots$map_log_rec_dev, na.rm = TRUE))) {
+          yr_hist_sample <- yr_fixed_rec_dev[yr_fixed_rec_dev > max(dots$map_log_rec_dev, na.rm = TRUE)] %>% min()
 
-        log_rec_dev_u <- rnorm(length(yr_hist_sample:nyears) * nsim, proc_mu, StockPars$procsd) %>%
-          matrix(nsim, length(yr_hist_sample:nyears))
+          log_rec_dev_u <- rnorm(length(yr_hist_sample:nyears) * nsim, proc_mu, StockPars$procsd) %>%
+            matrix(nsim, length(yr_hist_sample:nyears))
 
-        for(y in 1:ncol(log_rec_dev_u)) {
-          if(y == 1) {
-            log_rec_dev_u[, y] <- OM@cpars$AC * log_rec_dev[, yr_hist_sample - 1] + log_rec_dev_u[, y] * sqrt(1 - OM@cpars$AC^2)
-          } else {
-            log_rec_dev_u[, y] <- OM@cpars$AC * log_rec_dev_u[, y-1] + log_rec_dev_u[, y] * sqrt(1 - OM@cpars$AC^2)
+          for(y in 1:ncol(log_rec_dev_u)) {
+            if(y == 1) {
+              log_rec_dev_u[, y] <- OM@cpars$AC * log_rec_dev[, yr_hist_sample - 1] + log_rec_dev_u[, y] * sqrt(1 - OM@cpars$AC^2)
+            } else {
+              log_rec_dev_u[, y] <- OM@cpars$AC * log_rec_dev_u[, y-1] + log_rec_dev_u[, y] * sqrt(1 - OM@cpars$AC^2)
+            }
           }
+          log_rec_dev[, yr_hist_sample:nyears] <<- log_rec_dev_u
+          OM@cpars$Perr_y[, (OM@maxage + yr_hist_sample - 1):(OM@maxage + nyears - 1)] <<- exp(log_rec_dev_u)
+
+          message("Historical recruitment deviations sampled with autocorrelation starting in year ", yr_hist_sample, " out of OM@nyears = ", nyears)
         }
-        log_rec_dev[, yr_hist_sample:nyears] <<- log_rec_dev_u
-        OM@cpars$Perr_y[, (OM@maxage + yr_hist_sample - 1):(OM@maxage + nyears - 1)] <<- exp(log_rec_dev_u)
-
-        message("Historical recruitment deviations sampled with autocorrelation starting in year ", yr_hist_sample, " out of OM@nyears = ", nyears)
       }
-    }
 
-    pro_Perr_y <- rnorm(proyears * nsim, proc_mu, StockPars$procsd) %>% matrix(nsim, proyears)
-    for(y in 2:proyears) {
-      if(y == 1) {
-        pro_Perr_y[, y] <- OM@cpars$AC * log_rec_dev[, ncol(log_rec_dev)] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
-      } else {
-        pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y-1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
+      pro_Perr_y <- rnorm(proyears * nsim, proc_mu, StockPars$procsd) %>% matrix(nsim, proyears)
+      for(y in 2:proyears) {
+        if(y == 1) {
+          pro_Perr_y[, y] <- OM@cpars$AC * log_rec_dev[, ncol(log_rec_dev)] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
+        } else {
+          pro_Perr_y[, y] <- OM@cpars$AC * pro_Perr_y[, y-1] + pro_Perr_y[, y] * sqrt(1 - OM@cpars$AC^2)
+        }
       }
+      return(exp(pro_Perr_y))
     }
-    return(exp(pro_Perr_y))
+    OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- sample_future_dev()
+    message("Future recruitment deviations sampled with autocorrelation (in OM@cpars$Perr_y).\n")
   }
-  OM@cpars$Perr_y[, (OM@maxage+nyears):ncol(OM@cpars$Perr_y)] <- sample_future_dev()
-
-  message("Future recruitment deviations sampled with autocorrelation (in OM@cpars$Perr_y).\n")
 
   ### Assign OM variables that were used in the SRA to the output
   OM@cpars$Len_age <- StockPars$Len_age
@@ -549,6 +552,8 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       real_Data@CV_AddInd <- array(sqrt(exp(output@data$I_sd^2) - 1), c(nyears, nsurvey, output@OM@nsim)) %>%
         aperm(perm = c(3, 2, 1))
 
+      browser()
+
       AddIndV <- lapply(output@Misc, function(x) x$s_vul[nyears, , , drop = FALSE]) %>% unlist() %>% array(dim = c(maxage, nsurvey, OM@nsim))
       real_Data@AddIndV <- aperm(AddIndV, c(3, 2, 1))
 
@@ -561,7 +566,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   # Check whether observed matches predicted
   if(data$condition == "catch" || data$condition == "catch2") {
     catch_check_fn <- function(x, report, data) {
-      if(!is.null(report[[x]]$conv) && report[[x]]$conv) {
+      if(report[[x]]$conv) {
         catch_diff <- report[[x]]$Cpred/data$Chist - 1
         flag <- max(abs(catch_diff), na.rm = TRUE) > 0.01 | any(is.na(report[[x]]$Cpred))
       } else {
@@ -775,7 +780,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   log_F_start <- matrix(0, nyears, nfleet)
   if(data$condition == "catch") log_F_start[TMB_data_all$yind_F + 1, 1:nfleet] <- log(0.5 * mean(TMB_data_all$M[nyears, ]))
 
-  TMB_params <- list(R0x = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
+  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet), log_F = log_F_start,
                      log_F_equilibrium = rep(log(0.05), nfleet),
@@ -783,7 +788,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
   map <- list()
-  if(data$condition == "effort" && !TMB_data_all$nll_C) map$R0x <- factor(NA)
+  if(data$condition == "effort" && !TMB_data_all$nll_C) map$log_R0 <- factor(NA)
   map$transformed_h <- map$log_tau <- factor(NA)
   map$vul_par <- factor(map_vul_par)
   map$s_vul_par <- factor(map_s_vul_par)
@@ -823,7 +828,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     R0_test <- any(is.na(obj$report(obj$par)$F)) || any(is.infinite(obj$report(obj$par)$F))
     if(R0_test) {
       for(i in 1:10) {
-        obj$par["R0x"] <- 0.5 + obj$par["R0x"]
+        obj$par["log_R0"] <- 0.5 + obj$par["log_R0"]
         if(all(!is.na(obj$report(obj$par)$F)) && all(!is.infinite(obj$report(obj$par)$F))) break
       }
     }
@@ -1027,7 +1032,7 @@ SRA_retro <- function(x, nyr = 5) {
       R0_test <- any(is.na(obj2$report(obj2$par)$F)) || any(is.infinite(obj2$report(obj2$par)$F))
       if(R0_test) {
         for(ii in 1:10) {
-          obj2$par["R0x"] <- 0.5 + obj2$par["R0x"]
+          obj2$par["log_R0"] <- 0.5 + obj2$par["log_R0"]
           if(all(!is.na(obj2$report(obj2$par)$F)) && all(!is.infinite(obj2$report(obj2$par)$F))) break
         }
       }
