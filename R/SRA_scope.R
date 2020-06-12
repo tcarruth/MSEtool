@@ -195,8 +195,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       if(length(s_selectivity) < nsurvey) stop("s_selectivity vector should be of length nsurvey (", nsurvey, ").", call. = FALSE)
       s_sel <- int_sel(s_selectivity)
       if(any(s_sel > 0 && I_type2 == 0)) {
-        ind <- which(s_sel > 0 && I_type2 == 0)
-        stop("Selectivity for survey ", paste0(ind, collapse = " "), " is estimated but s_selectivity should be either \"logistic\" or \"dome\".", call. = FALSE)
+        stop("Selectivity for survey ", which(s_sel > 0 && I_type2 == 0) %>% paste0(collapse = " "), " is estimated but s_selectivity should be either \"logistic\" or \"dome\".", call. = FALSE)
       }
     }
 
@@ -361,7 +360,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
 
   ### R0
-  OM@cpars$R0 <- vapply(mod, getElement, numeric(1), "R0")
+  OM@cpars$R0 <- vapply(res, getElement, numeric(1), "R0")
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
@@ -552,12 +551,39 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       real_Data@CV_AddInd <- array(sqrt(exp(output@data$I_sd^2) - 1), c(nyears, nsurvey, output@OM@nsim)) %>%
         aperm(perm = c(3, 2, 1))
 
-      browser()
 
-      AddIndV <- lapply(output@Misc, function(x) x$s_vul[nyears, , , drop = FALSE]) %>% unlist() %>% array(dim = c(maxage, nsurvey, OM@nsim))
-      real_Data@AddIndV <- aperm(AddIndV, c(3, 2, 1))
+      if(.hasSlot(real_Data, "AddIndType") && .hasSlot(real_Data, "AddIunits")) { # Backwards compatibility with DLMtool 5.4.4
 
-      output@OM@cpars$AddIunits <- data$I_units
+        process_AddIndType <- function(sur, I_type) {
+          if(I_type[sur] == -1 || I_type[sur] == 0) { # 0 = est, -1 = B
+            return(1)
+          } else if(I_type[sur] == -2) { # SSB
+            return(2)
+          } else { # Fleet
+            return(ifelse(data$nfleet > 1, 1, 3))
+          }
+        }
+
+        # Still cannot accommodate indices mirrored to fleet when nfleet > 1
+        process_AddIndV <- function(sur, Misc, I_type) { # Return a matrix of nsim x nages
+          if(I_type[sur] < 0 || (I_type[sur] == 1 & data$nfleet == 1)) { # -1 = B, -2 = SSB, single-fleet VB
+            out <- matrix(1, length(Misc), maxage)
+          } else { # 0 = est, or multi-fleet
+            out <- do.call(rbind, lapply(Misc, function(x) x$s_vul[nyears, , sur]))
+          }
+          return(out)
+        }
+
+        real_Data@AddIndType <- vapply(1:nsurvey, process_AddIndType, numeric(1), I_type = I_type2)
+        real_Data@AddIndV <- lapply(1:nsurvey, process_AddIndV, Misc = output@Misc, I_type = I_type2) %>% unlist() %>%
+          array(c(OM@nsim, maxage, nsurvey)) %>% aperm(c(1, 3, 2))
+        real_Data@AddIunits <- data$I_units
+      } else {
+        real_Data@AddIndV <- lapply(output@Misc, function(x) x$s_vul[nyears, , , drop = FALSE]) %>% unlist() %>%
+          array(dim = c(maxage, nsurvey, OM@nsim)) %>% aperm(c(3, 2, 1))
+        output@OM@cpars$AddIunits <- data$I_units
+      }
+
       message("Historical indices added to OM@cpars$Data@AddInd.")
     }
     output@OM@cpars$Data <- real_Data
