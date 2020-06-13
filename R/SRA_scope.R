@@ -361,7 +361,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   }
 
   ### R0
-  OM@cpars$R0 <- vapply(1:length(mod), function(x) ifelse("log_R0" %in% names(mod[[x]]$obj$par), res[[x]]$R0, StockPars$R0[x]), numeric(1))
+  OM@cpars$R0 <- vapply(mod, getElement, numeric(1), "R0")
   message("Range of unfished recruitment (OM@cpars$R0): ", paste(round(range(OM@cpars$R0), 2), collapse = " - "))
 
   ### Depletion and init D
@@ -828,7 +828,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     R0_test <- any(is.na(obj$report(obj$par)$F)) || any(is.infinite(obj$report(obj$par)$F))
     if(R0_test) {
       for(i in 1:10) {
-        obj$par["log_R0"] <- 0.5 + obj$par["log_R0"]
+        obj$par["R0x"] <- 0.5 + obj$par["R0x"]
         if(all(!is.na(obj$report(obj$par)$F)) && all(!is.infinite(obj$report(obj$par)$F))) break
       }
     }
@@ -1032,7 +1032,7 @@ SRA_retro <- function(x, nyr = 5) {
       R0_test <- any(is.na(obj2$report(obj2$par)$F)) || any(is.infinite(obj2$report(obj2$par)$F))
       if(R0_test) {
         for(ii in 1:10) {
-          obj2$par["log_R0"] <- 0.5 + obj2$par["log_R0"]
+          obj2$par["R0x"] <- 0.5 + obj2$par["R0x"]
           if(all(!is.na(obj2$report(obj2$par)$F)) && all(!is.infinite(obj2$report(obj2$par)$F))) break
         }
       }
