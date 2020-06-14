@@ -16,6 +16,7 @@ Type cDD(objective_function<Type> *obj) {
   DATA_INTEGER(k);
   DATA_SCALAR(wk);
   DATA_VECTOR(C_hist);
+  DATA_SCALAR(dep);
   DATA_SCALAR(rescale);
   DATA_VECTOR(I_hist);
   DATA_STRING(SR_type);
@@ -86,7 +87,10 @@ Type cDD(objective_function<Type> *obj) {
   N(0) = Req/(F_equilibrium + M);
   for(int tt=0;tt<k;tt++) R(tt) = Req;
 
-  Type penalty = 0;
+  Type Ceqpred = F_equilibrium * B(0);
+
+  Type penalty = 0; // Pentalty to likelihood for high F > max_F
+  Type prior = -dnorm(log(B(0)/B0), log(dep), Type(0.01), true); // Penalty for initial depletion to get corresponding F
 
   for(int tt=0; tt<ny; tt++) {
     Type F_start = CppAD::CondExpLe(C_hist(tt), Type(1e-8), Type(0), -log(1 - C_hist(tt)/B(tt)));
@@ -125,7 +129,7 @@ Type cDD(objective_function<Type> *obj) {
   }
 
   //Summing individual jnll and penalties
-  Type nll = nll_comp.sum() + penalty;
+  Type nll = nll_comp.sum() + penalty + prior;
 
   //-------REPORTING-------//
   ADREPORT(R0);
@@ -140,6 +144,7 @@ Type cDD(objective_function<Type> *obj) {
   REPORT(Brec);
   REPORT(BPR0);
   REPORT(Cpred);
+  REPORT(Ceqpred);
   REPORT(Ipred);
   REPORT(q);
   REPORT(B);
@@ -158,6 +163,7 @@ Type cDD(objective_function<Type> *obj) {
   REPORT(Rec_dev);
   REPORT(nll_comp);
   REPORT(penalty);
+  REPORT(prior);
 
   return nll;
 }

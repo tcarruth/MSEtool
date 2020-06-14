@@ -14,13 +14,14 @@
 #' Output is re-converted back to original units.
 #' @param start Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.
 #' @param fix_h Logical, whether to fix steepness to value in \code{Data@@steep} in the assessment model.
-#' @param fix_F_equilibrium Logical, whether the equilibrium F prior to the first year of the model is
-#' estimated. If TRUE, F_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
-#' (assumes unfished conditions).
 #' @param fix_sigma Logical, whether the standard deviation of the index is fixed. If \code{TRUE},
 #' sigma is fixed to value provided in \code{start} (if provided), otherwise, value based on \code{Data@@CV_Ind}.
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
+#' @param dep The initial depletion in the first year of the model. A tight prior is placed on the model objective function
+#' to estimate the equilibrium fishing mortality corresponding to the initial depletion. Due to this tight prior, this F
+#' should not be considered to be an independent model parameter. The tight prior is calculated even
+#' when dep = 1 to facilitate likelihood profiling across values of dep.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a state-space variable). Otherwise, recruitment deviations are penalized parameters.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
@@ -78,10 +79,10 @@
 #' @useDynLib MSEtool
 #' @export
 cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = TRUE,
-                fix_F_equilibrium = TRUE, n_itF = 5L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+                dep = 1, n_itF = 5L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   cDD_(x = x, Data = Data, state_space = FALSE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
-       fix_F_equilibrium = fix_F_equilibrium, fix_sigma = FALSE, fix_tau = TRUE, n_itF = n_itF,
+       fix_sigma = FALSE, fix_tau = TRUE, dep = dep, n_itF = n_itF,
        integrate = FALSE, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
        control = control, inner.control = list(), ...)
 }
@@ -94,11 +95,11 @@ class(cDD) <- "Assess"
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
 cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                   fix_h = TRUE, fix_F_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, n_itF = 5L,
+                   fix_h = TRUE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1, n_itF = 5L,
                    integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                    control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   cDD_(x = x, Data = Data, state_space = TRUE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
-       fix_F_equilibrium = fix_F_equilibrium, fix_sigma = fix_sigma, fix_tau = fix_tau, n_itF = n_itF,
+       fix_sigma = fix_sigma, fix_tau = fix_tau, dep = dep, n_itF = n_itF,
        integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
        control = control, inner.control = inner.control, ...)
 }
@@ -106,7 +107,7 @@ class(cDD_SS) <- "Assess"
 
 
 cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                 fix_h = TRUE, fix_F_equilibrium = TRUE, fix_sigma = FALSE, fix_tau = TRUE, n_itF = 5L,
+                 fix_h = TRUE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1, n_itF = 5L,
                  integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                  control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
@@ -148,7 +149,8 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
   M <- Data@Mort[x]
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  data <- list(model = "cDD", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist,
+  if(dep <= 0 || dep > 1) stop("Initial depletion (dep) must be between 0 - 1.")
+  data <- list(model = "cDD", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist, dep = dep,
                rescale = rescale, I_hist = I_hist, SR_type = SR, nitF = n_itF, state_space = as.integer(state_space))
   LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k, fit_mod = fit_mod)
 
@@ -179,7 +181,7 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
       params$transformed_h <- log(h_start - 0.2)
     }
   }
-  if(is.null(params$F_equilibrium)) params$F_equilibrium <- 0
+  if(is.null(params$F_equilibrium)) params$F_equilibrium <- ifelse(dep < 1, 0.1, 0)
   if(is.null(params$log_sigma)) {
     params$log_sigma <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE) %>% log()
   }
@@ -192,7 +194,7 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
 
   map <- list()
   if(fix_h) map$transformed_h <- factor(NA)
-  if(fix_F_equilibrium) map$F_equilibrium <- factor(NA)
+  if(dep == 1) map$F_equilibrium <- factor(NA)
   if(fix_sigma) map$log_sigma <- factor(NA)
   if(fix_tau) map$log_tau <- factor(NA)
   if(!state_space) map$log_rec_dev <- factor(rep(NA, ny-k))
@@ -229,8 +231,8 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
                     Obs_Index = structure(I_hist, names = Year),
                     Catch = structure(report$Cpred, names = Year),
                     Index = structure(report$Ipred, names = Year),
-                    NLL = structure(c(nll_report, report$nll_comp, report$penalty),
-                                    names = c("Total", "Index", "Dev", "Penalty")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$prior, report$penalty),
+                                    names = c("Total", "Index", "Dev", "Prior", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 

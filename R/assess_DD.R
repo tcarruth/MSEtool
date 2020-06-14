@@ -21,7 +21,9 @@
 #' @param fix_tau Logical, the standard deviation of the recruitment deviations is fixed. If \code{TRUE},
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
 #' @param dep The initial depletion in the first year of the model. A tight prior is placed on the model objective function
-#' to estimate the equilibrium exploitation rate that corresponds to the initial depletion.
+#' to estimate the equilibrium exploitation rate that corresponds to the initial depletion. Due to this tight prior, this F
+#' should not be considered to be an independent model parameter. The tight prior is calculated even
+#' when dep = 1 to facilitate likelihood profiling across values of dep.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a random effects/state-space variable).
 #' Otherwise, recruitment deviations are penalized parameters.
@@ -160,6 +162,7 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   wk <- wa[k]
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
+  if(dep <= 0 || dep > 1) stop("Initial depletion (dep) must be between 0 - 1.")
   data <- list(model = "DD", S0 = S0, Alpha = Alpha, Rho = Rho, ny = ny, k = k,
                wk = wk, C_hist = C_hist, dep = dep, rescale = rescale, I_hist = I_hist, E_hist = E_hist, SR_type = SR,
                condition = condition, state_space = as.integer(state_space))

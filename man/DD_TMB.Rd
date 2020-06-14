@@ -59,8 +59,10 @@ Output is re-converted back to original units.}
 
 \item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the assessment model.}
 
-\item{dep}{The initial depletion in the first year of the model. A prior is placed on the model objective function
-to estimate the equilibrium exploitation rate that corresponds to the initial depletion.}
+\item{dep}{The initial depletion in the first year of the model. A tight prior is placed on the model objective function
+to estimate the equilibrium exploitation rate that corresponds to the initial depletion. Due to this tight prior, this F
+should not be considered to be an independent model parameter. The tight prior is calculated even
+when dep = 1 to facilitate likelihood profiling across values of dep.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}

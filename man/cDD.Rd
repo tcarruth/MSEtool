@@ -12,7 +12,7 @@ cDD(
   rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
-  fix_F_equilibrium = TRUE,
+  dep = 1,
   n_itF = 5L,
   silent = TRUE,
   opt_hess = FALSE,
@@ -28,9 +28,9 @@ cDD_SS(
   rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
-  fix_F_equilibrium = TRUE,
   fix_sigma = FALSE,
   fix_tau = TRUE,
+  dep = 1,
   n_itF = 5L,
   integrate = FALSE,
   silent = TRUE,
@@ -57,9 +57,10 @@ Output is re-converted back to original units.}
 
 \item{fix_h}{Logical, whether to fix steepness to value in \code{Data@steep} in the assessment model.}
 
-\item{fix_F_equilibrium}{Logical, whether the equilibrium F prior to the first year of the model is
-estimated. If TRUE, F_equilibruim is fixed to value provided in start (if provided), otherwise, equal to zero
-(assumes unfished conditions).}
+\item{dep}{The initial depletion in the first year of the model. A tight prior is placed on the model objective function
+to estimate the equilibrium fishing mortality corresponding to the initial depletion. Due to this tight prior, this F
+should not be considered to be an independent model parameter. The tight prior is calculated even
+when dep = 1 to facilitate likelihood profiling across values of dep.}
 
 \item{n_itF}{Integer, the number of iterations to solve F conditional on the observed catch.}
 

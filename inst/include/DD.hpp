@@ -98,8 +98,7 @@ Type DD(objective_function<Type> *obj) {
   Type Ceqpred = B(0) * U_equilibrium;
 
   Type penalty = 0; // Penalty to likelihood for high U > 0.95
-  Type prior = 0; // Penalty for initial depletion to get the correct U_equilibrium
-  if(dep > 0) prior -= dnorm(log(B(0)/B0), log(dep), Type(0.01), true);
+  Type prior = -dnorm(log(B(0)/B0), log(dep), Type(0.01), true); // Penalty for initial depletion to get the corresponding U_equilibrium
 
   for(int tt=0; tt<ny; tt++){
     if(condition == "catch") {
@@ -149,7 +148,7 @@ Type DD(objective_function<Type> *obj) {
   }
 
   //Summing individual nll and penalties
-  Type nll = nll_comp.sum() + penalty;
+  Type nll = nll_comp.sum() + penalty + prior;
 
   //-------REPORTING-------//
   ADREPORT(R0);
@@ -183,6 +182,7 @@ Type DD(objective_function<Type> *obj) {
   REPORT(N0);
   REPORT(B0);
   REPORT(penalty);
+  REPORT(prior);
 
   return nll;
 }
