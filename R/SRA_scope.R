@@ -378,7 +378,6 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   if(data$nsel_block > 1 || sel == -2) {
     F_matrix <- lapply(res, getElement, "F_at_age")
     apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
-    Find <- do.call(rbind, apical_F)
 
     V <- Map("/", e1 = F_matrix, e2 = apical_F)
     expand_V_matrix <- function(x) {
@@ -387,7 +386,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     }
     V <- lapply(V, expand_V_matrix)
     OM@cpars$V <- unlist(V) %>% array(c(nyears + proyears, maxage, nsim)) %>% aperm(c(3, 2, 1))
-    OM@cpars$Find <- Find
+    OM@cpars$Find <- do.call(rbind, apical_F)
     message("Historical F and selectivity trends set in OM@cpars$Find and OM@cpars$V, respectively.")
     message("Selectivity during projection period is set to that in most recent historical year.")
 
@@ -412,6 +411,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     message("Historical F set in OM@cpars$Find.")
   }
 
+  if(packageVersion("DLMtool") >= "5.4.4") OM@cpars$qs <- rep(1, nsim)
   Eff <- apply(OM@cpars$Find, 2, range)
   OM@EffLower <- Eff[1, ]
   OM@EffUpper <- Eff[2, ]
@@ -806,7 +806,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   log_F_start <- matrix(0, nyears, nfleet)
   if(data$condition == "catch") log_F_start[TMB_data_all$yind_F + 1, 1:nfleet] <- log(0.5 * mean(TMB_data_all$M[nyears, ]))
 
-  TMB_params <- list(log_R0 = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
+  TMB_params <- list(R0x = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet), log_F = log_F_start,
                      log_F_equilibrium = rep(log(0.05), nfleet),
@@ -814,7 +814,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
   map <- list()
-  if(data$condition == "effort" && !TMB_data_all$nll_C) map$log_R0 <- factor(NA)
+  if(data$condition == "effort" && !TMB_data_all$nll_C) map$R0x <- factor(NA)
   map$transformed_h <- map$log_tau <- factor(NA)
   map$vul_par <- factor(map_vul_par)
   map$s_vul_par <- factor(map_s_vul_par)
