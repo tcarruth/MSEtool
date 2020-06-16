@@ -103,7 +103,7 @@ In addition to the conditioning variable, additional data types can be used:
 
 Multiple surveys and fleets can be accommodated with `SRA_scope`. One of these several data types in addition to catch or effort is generally needed to obtain depletion estimates. Availability of these data can be quite sparse over time, yet still informative. For example, an age composition sample from a single recent year that shows a very truncated age structure can be sufficient to imply a heavily depleted stock.
 
-Here are the required pre-specified OM parameters needed for SRA scoping:
+Here are the required pre-specified OM parameters needed for the SRA model:
 
 - Growth (length-at-age) using slots `OM@Linf, OM@K, OM@t0` (or alternatively, `OM@cpars$Len_age`)
 - Variability in length-at-age `OM@LenCV` only if length data are used
@@ -145,7 +145,7 @@ If the model is conditioned on effort (with no catch data), then unfished recrui
 
 ## Updated parameters and SRA model evaluation
 
-Historical OM parameters that are updated by the SRA scoping function include:
+Historical OM parameters that are updated by the SRA model include:
 
 - Unfished recruitment `OM@R0`, only if catch is provided.
 - Depletion `OM@D`
@@ -185,6 +185,19 @@ OM@Size_area_1 <- OM@Frac_area_1 <- OM@Prob_staying <- c(0.5, 0.5) # A well-mixe
 ```
 
 It may be desirable to compare the SRA to a simple operating model before incorporating more complex dynamics in the operating model.
+
+## Sampling the covariance matrix
+
+The procedure above describes conditioning in which we accommodate life history uncertainty within an OM. Alternatively, we may wish to consider incorporate uncertainty with the SRA model fit conditional on a single set of life history values. To do so, we have an OM in which we ensure that all the necessary SRA input parameters, e.g., growth, maturity, M, steepness, etc., are identical among `nsim` replicates. Then we call `SRA_scope` with the `resample` argument:
+
+```{r, eval = FALSE}
+SRA <- SRA_scope(OM, data, resample = TRUE)
+plot(SRA)
+```
+
+When `resample = TRUE`, the function will generate a single model fit, placed in `SRA@mean_fit`, and then sample the covariance matrix to populate the recruitment, fishing mortality, selectivity slots in the updated OM. If the model has difficulty estimating the stock size, then there should be a high variance in the `R0` estimate. A wide range of historical biomass among simulations should then be seen in the conditioned OM. The markdown report contains separate panels for evaluating the conditioned OM as well as the single model fit.
+
+Uncertainty in life history parameters would be accommodated by generating a set of OMs that vary in parameter values such as M and repeating the sampling step for each OM. 
 
 # Case study
 

@@ -292,7 +292,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     }
 
     report_internal_fn <- function(x, samps, obj, conv) {
-      report <- obj$report(samps[x, ]) %>% SRA_posthoc_adjust(obj)
+      report <- obj$report(samps[x, ]) %>% SRA_posthoc_adjust(obj, par = samps[x, ])
       report$conv <- conv
       return(report)
     }
@@ -978,13 +978,12 @@ all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
 }
 
 
-SRA_dynamic_SSB0 <- function(obj) {
+SRA_dynamic_SSB0 <- function(obj, par = obj$env$last.par.best) {
 
   if(obj$env$data$condition == "catch") {
 
-    par_F0 <- obj$env$last.par.best
-    par_F0[names(par_F0) == "log_F" | names(par_F0) == "log_F_equilibrium"] <- log(1e-8)
-    out <- obj$report(par_F0)$E
+    par[names(par) == "log_F" | names(par) == "log_F_equilibrium"] <- log(1e-8)
+    out <- obj$report(par)$E
 
   } else if(obj$env$data$condition == "catch2") {
 
@@ -993,20 +992,19 @@ SRA_dynamic_SSB0 <- function(obj) {
 
     obj2 <- MakeADFun(data = new_args$data, parameters = new_args$params, map = new_args$map, random = obj$env$random,
                       DLL = "MSEtool", silent = TRUE)
-    out <- obj2$report(obj$env$last.par.best)$E
+    out <- obj2$report(par)$E
 
   } else {
 
-    par_F0 <- obj$env$last.par.best
-    par_F0[names(par_F0) == "log_q_effort"] <- log(1e-8)
-    out <- obj$report(par_F0)$E
+    par[names(par) == "log_q_effort"] <- log(1e-8)
+    out <- obj$report(par)$E
 
   }
 
   return(out)
 }
 
-SRA_posthoc_adjust <- function(report, obj) {
+SRA_posthoc_adjust <- function(report, obj, par = obj$env$last.par.best) {
   data <- obj$env$data
   report$F_at_age <- report$Z - data$M
   report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
@@ -1024,7 +1022,7 @@ SRA_posthoc_adjust <- function(report, obj) {
     report$vul_len <- get_vul_len(report, data$vul_type)
     report$s_vul_len <- get_s_vul_len(report, data$I_type, data$s_vul_type)
   }
-  report$dynamic_SSB0 <- SRA_dynamic_SSB0(obj)
+  report$dynamic_SSB0 <- SRA_dynamic_SSB0(obj, par)
   return(report)
 }
 
