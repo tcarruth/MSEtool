@@ -59,8 +59,7 @@ Output is re-converted back to original units.}
 
 \item{dep}{The initial depletion in the first year of the model. A tight prior is placed on the model objective function
 to estimate the equilibrium fishing mortality corresponding to the initial depletion. Due to this tight prior, this F
-should not be considered to be an independent model parameter. The tight prior is calculated even
-when dep = 1 to facilitate likelihood profiling across values of dep.}
+should not be considered to be an independent model parameter.}
 
 \item{n_itF}{Integer, the number of iterations to solve F conditional on the observed catch.}
 

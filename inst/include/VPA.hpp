@@ -125,10 +125,10 @@ Type VPA(objective_function<Type> *obj) {
     if(!R_IsNA(asDouble(I_hist(y)))) nll_comp(0) -= dnorm(log(I_hist(y)), log(Ipred(y)), sigma, true);
     if(y>n_y-n_vulpen) {
       for(int a=0;a<max_age;a++) {
-        nll_comp(1) -= dnorm(log(vul(y,a)), log(vul(y-1,a)), sigma_vulpen, true);
+        nll_comp(1) -= dnorm_(log(vul(y,a)), log(vul(y-1,a)), sigma_vulpen, true);
       }
     }
-    if(y>n_y-n_Rpen) nll_comp(2) -= dnorm(log(N(y,1)), log(N(y-1,1)), sigma_Rpen, true);
+    if(y>n_y-n_Rpen) nll_comp(2) -= dnorm_(log(N(y,1)), log(N(y-1,1)), sigma_Rpen, true);
   }
 
   Type fn = nll_comp.sum() + penalty + prior;

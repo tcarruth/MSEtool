@@ -22,8 +22,7 @@
 #' tau is fixed to value provided in \code{start} (if provided), otherwise, equal to 1.
 #' @param dep The initial depletion in the first year of the model. A tight prior is placed on the model objective function
 #' to estimate the equilibrium exploitation rate that corresponds to the initial depletion. Due to this tight prior, this F
-#' should not be considered to be an independent model parameter. The tight prior is calculated even
-#' when dep = 1 to facilitate likelihood profiling across values of dep.
+#' should not be considered to be an independent model parameter.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a random effects/state-space variable).
 #' Otherwise, recruitment deviations are penalized parameters.

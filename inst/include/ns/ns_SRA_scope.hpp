@@ -72,8 +72,8 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 
   for(int b=0;b<nsel_block;b++) { // Parameters for sel_block
     if(vul_type(b) <= 0 && vul_type(b) > -2) { // Logistic or dome
-      prior -= dnorm(vul_par(0,b), Type(0), Type(3), true);
-      prior -= dnorm(vul_par(1,b), Type(0), Type(3), true);
+      prior -= dnorm_(vul_par(0,b), Type(0), Type(3), true);
+      prior -= dnorm_(vul_par(1,b), Type(0), Type(3), true);
 
       LFS(b) = invlogit(vul_par(0,b)) * 0.99 * Linf;
       L5(b) = LFS(b) - exp(vul_par(1,b));
@@ -81,7 +81,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
       if(vul_type(b) < 0) { // Logistic
         Vmaxlen(b) = 1;
       } else { // Dome
-        prior -= dnorm(vul_par(2,b), Type(0), Type(3), true);
+        prior -= dnorm_(vul_par(2,b), Type(0), Type(3), true);
         Vmaxlen(b) = invlogit(vul_par(2,b));
         srs(b) = (Linf - LFS(b))/pow(-log2(Vmaxlen(b)), 0.5);
       }
@@ -140,8 +140,8 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
     } else if(I_type(ff) == 0) { // est
 
       if(vul_type(ff) <= 0 && vul_type(ff) >= -1) { // Logistic or dome
-        prior -= dnorm(vul_par(0,ff), Type(0), Type(3), true);
-        prior -= dnorm(vul_par(1,ff), Type(0), Type(3), true);
+        prior -= dnorm_(vul_par(0,ff), Type(0), Type(3), true);
+        prior -= dnorm_(vul_par(1,ff), Type(0), Type(3), true);
 
         LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
         L5(ff) = LFS(ff) - exp(vul_par(1,ff));
@@ -149,7 +149,7 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
         if(vul_type(ff) < 0) { // Logistic
           Vmaxlen(ff) = 1;
         } else { // Dome
-          prior -= dnorm(vul_par(2,ff), Type(0), Type(3), true);
+          prior -= dnorm_(vul_par(2,ff), Type(0), Type(3), true);
           Vmaxlen(ff) = invlogit(vul_par(2,ff));
         }
 
@@ -216,7 +216,7 @@ Type comp_multinom(array<Type> obs, array<Type> pred, matrix<Type> N, matrix<Typ
     p_pred(bb) = pred(y,bb,ff)/N(y,ff);
     N_obs(bb) = obs(y,bb,ff);
   }
-  Type log_like = dmultinom(N_obs, p_pred, true);
+  Type log_like = dmultinom_(N_obs, p_pred, true);
   return log_like;
 }
 
@@ -226,7 +226,7 @@ Type comp_lognorm(array<Type> obs, array<Type> pred, matrix<Type> N, matrix<Type
   for(int bb=0;bb<n_bin;bb++) {
     Type p_pred = pred(y,bb,ff)/N(y,ff);
     Type p_obs = obs(y,bb,ff)/N_samp(y,ff);
-    log_like += dnorm(log(p_obs), log(p_pred), pow(0.02/p_obs, 0.5), true);
+    log_like += dnorm_(log(p_obs), log(p_pred), pow(0.02/p_obs, 0.5), true);
   }
   return log_like;
 }

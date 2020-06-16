@@ -60,7 +60,7 @@ Type SP(objective_function<Type> *obj) {
   Type penalty = 0;
   Type prior = 0;
 
-  if(r_prior(0) > 0) prior -= dnorm(r, r_prior(0), r_prior(1), true) + log_FMSY; // r prior with log-Jacobian transformation, exact with fixed n
+  if(r_prior(0) > 0) prior -= dnorm_(r, r_prior(0), r_prior(1), true) + log_FMSY; // r prior with log-Jacobian transformation, exact with fixed n
 
   B(0) = dep * K;
   for(int y=0;y<ny;y++) {
@@ -79,7 +79,7 @@ Type SP(objective_function<Type> *obj) {
     for(int y=0;y<ny;y++) {
       if(I_lambda(sur) > 0 && !R_IsNA(asDouble(I_hist(y,sur)))) {
         if(fix_sigma) {
-          nll_comp(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), I_sd(y,sur), true);
+          nll_comp(sur) -= dnorm_(log(I_hist(y,sur)), log(Ipred(y,sur)), I_sd(y,sur), true);
         } else {
           nll_comp(sur) -= dnorm(log(I_hist(y,sur)), log(Ipred(y,sur)), sigma(sur), true);
         }

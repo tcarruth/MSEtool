@@ -24,6 +24,25 @@ Type posfun2(Type x, Type eps, Type &penalty) {
   return ans;
 }
 
+// Shortened multinomial density function
+template <class Type>
+Type dmultinom_(vector<Type> x, vector<Type> p, int give_log=0) {
+  Type logres = (x*log(p)).sum();
+  if(give_log) return logres;
+  else return exp(logres);
+}
+
+// Shortened normal density function
+template<class Type>
+Type dnorm_(Type x, Type mean, Type sd, int give_log=0) {
+  Type resid = (x - mean) / sd;
+  Type logans = - Type(.5) * resid * resid;
+  if(give_log) return logans; else return exp(logans);
+}
+VECTORIZE4_ttti(dnorm_)
+
+
+
 
 // Calculates analytical solution of a lognormal variable
 template<class Type>

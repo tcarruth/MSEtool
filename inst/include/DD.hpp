@@ -98,7 +98,7 @@ Type DD(objective_function<Type> *obj) {
   Type Ceqpred = B(0) * U_equilibrium;
 
   Type penalty = 0; // Penalty to likelihood for high U > 0.95
-  Type prior = -dnorm(log(B(0)/B0), log(dep), Type(0.01), true); // Penalty for initial depletion to get the corresponding U_equilibrium
+  Type prior = -dnorm_(log(B(0)/B0), log(dep), Type(0.01), true); // Penalty for initial depletion to get the corresponding U_equilibrium
 
   for(int tt=0; tt<ny; tt++){
     if(condition == "catch") {

@@ -148,7 +148,7 @@ Type SCA2(objective_function<Type> *obj) {
         loglike_CAAobs = CAA_hist.row(y);
         if(CAA_dist == "multinomial") {
           loglike_CAAobs *= CAA_n(y);
-          nll_comp(1) -= dmultinom(loglike_CAAobs, loglike_CAApred, true);
+          nll_comp(1) -= dmultinom_(loglike_CAAobs, loglike_CAApred, true);
         } else {
           nll_comp(1) -= dlnorm_comp(loglike_CAAobs, loglike_CAApred);
         }

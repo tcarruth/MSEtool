@@ -90,7 +90,7 @@ Type cDD(objective_function<Type> *obj) {
   Type Ceqpred = F_equilibrium * B(0);
 
   Type penalty = 0; // Pentalty to likelihood for high F > max_F
-  Type prior = -dnorm(log(B(0)/B0), log(dep), Type(0.01), true); // Penalty for initial depletion to get corresponding F
+  Type prior = -dnorm_(log(B(0)/B0), log(dep), Type(0.01), true); // Penalty for initial depletion to get corresponding F
 
   for(int tt=0; tt<ny; tt++) {
     Type F_start = CppAD::CondExpLe(C_hist(tt), Type(1e-8), Type(0), -log(1 - C_hist(tt)/B(tt)));

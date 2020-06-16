@@ -103,7 +103,7 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
 template<class Type>
 Type dlnorm_comp(vector<Type> obs, vector<Type> pred) {
   Type log_lik = 0.;
-  for(int a=0;a<obs.size();a++) log_lik += dnorm(log(obs(a)), log(pred(a)), 0.1/pow(pred(a), 0.5), true);
+  for(int a=0;a<obs.size();a++) log_lik += dnorm_(log(obs(a)), log(pred(a)), 0.1/pow(pred(a), 0.5), true);
   return log_lik;
 }
 
