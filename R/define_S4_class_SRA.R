@@ -354,6 +354,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                        fig.cap = "Time series of fishing mortality by fleet.")
 
               SSB <- structure(report$E, names = c(Year, max(Year) + 1))
+              dynamic_SSB0 <- structure(report$dynamic_SSB0, names = names(SSB))
               SSB0 <- structure(report$E0, names = Year)
               if(length(unique(SSB0)) > 1) {
                 SSB_plot <- rmd_assess_timeseries("SSB0", "unfished spawning depletion (growth and/or M are time-varying)",
@@ -382,7 +383,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                          fig.cap = "Predicted catch-at-length (summed over all fleets).", bubble_adj = as.character(bubble_adj))
               } else CAL_bubble <- ""
 
-              ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_R(), rmd_SRA_SR(),
+              ts_output <- c(sel_matplot, F_matplot, rmd_SSB(), SSB_plot, rmd_SSB_SSB0(FALSE), rmd_dynamic_SSB0(), rmd_R(), rmd_SRA_SR(),
                              rmd_residual("log_rec_dev", fig.cap = "Time series of recruitment deviations.", label = "log-Recruitment deviations"),
                              rmd_residual("log_rec_dev", "log_rec_dev_SE", fig.cap = "Time series of recruitment deviations with 95% confidence intervals.",
                                           label = "log-Recruitment deviations", conv_check = TRUE),
@@ -853,14 +854,21 @@ rmd_SRA_SSB_output <- function() {
     "E <- do.call(cbind, lapply(report_list, getElement, \"E\"))",
     "matplot(Yearplusone, E, ylim = c(0, 1.1 * max(E)), type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Spawning biomass\")",
     "abline(h = 0, col = \"grey\")",
-	"if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
+    "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
     "```\n",
     "",
     "```{r, fig.cap = \"Estimated spawning depletion among all simulations. Unfished spawning biomass is the value calculated from first year life history parameters.\"}",
     "E_E0 <- do.call(cbind, lapply(report_list, function(x) x$E/x$E0_SR))",
     "matplot(Yearplusone, E_E0, ylim = c(0, 1.1 * max(E_E0)), type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Spawning depletion\")",
     "abline(h = 0, col = \"grey\")",
-	"if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
+    "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
+    "```\n",
+    "",
+    "```{r, fig.cap = \"Dynamic SSB0 among all simulations. Model is re-run assuming no historical catches.\"}",
+    "dyn_SSB0 <- do.call(cbind, lapply(report_list, function(x) x$dynamic_SSB0))",
+    "matplot(Yearplusone, dyn_SSB0, ylim = c(0, 1.1 * max(dyn_SSB0)), type = \"l\", col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = expression(Dynamic~~SSB[0]))",
+    "abline(h = 0, col = \"grey\")",
+    "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty, lwd = scenario$lwd)",
     "```\n")
 }
 

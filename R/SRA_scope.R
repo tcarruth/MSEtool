@@ -16,7 +16,7 @@
 #' @param condition String to indicate whether the SRA model is conditioned on "catch" (where F is estimated), "catch2" (where F is solved internally using Newton's method),
 #' or "effort".
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
-#' If there is time-varying selectivity, this is a characte vector of length nsel_block (see Data section below).
+#' If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below).
 #' @param s_selectivity A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
 #' for an age-specific index. Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.
 #' @param LWT A named list of likelihood weights for the SRA model. See details.
@@ -271,8 +271,6 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   # Fit model
   if(!is.null(dots$resample) && dots$resample) { # Re-sample covariance matrix
 
-    if(is.null(dots$rescale)) dots$rescale <- 1
-
     message("\nResample = TRUE. Running mean fit model first...")
     mean_fit_output <- SRA_scope_est(data = data, I_type = I_type2, selectivity = sel, s_selectivity = s_sel,
                                      SR_type = ifelse(OM@SRrel == 1, "BH", "Ricker"), LWT = LWT, comp_like = comp_like, ESS = ESS,
@@ -294,7 +292,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     }
 
     report_internal_fn <- function(x, samps, obj, conv) {
-      report <- obj$report(samps[x, ]) %>% SRA_posthoc_adjust(obj$env$data)
+      report <- obj$report(samps[x, ]) %>% SRA_posthoc_adjust(obj)
       report$conv <- conv
       return(report)
     }
@@ -806,7 +804,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   log_F_start <- matrix(0, nyears, nfleet)
   if(data$condition == "catch") log_F_start[TMB_data_all$yind_F + 1, 1:nfleet] <- log(0.5 * mean(TMB_data_all$M[nyears, ]))
 
-  TMB_params <- list(R0x = ifelse(TMB_data_all$nll_C || data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
+  TMB_params <- list(R0x = ifelse(TMB_data_all$nll_C | data$condition == "catch2", log(StockPars$R0[x] * rescale), 0),
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet), log_F = log_F_start,
                      log_F_equilibrium = rep(log(0.05), nfleet),
@@ -863,7 +861,7 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
   mod <- optimize_TMB_model(obj, control, restart = 0)
   opt <- mod[[1]]
   SD <- mod[[2]]
-  report <- obj$report(obj$env$last.par.best)
+  report <- obj$report(obj$env$last.par.best) %>% SRA_posthoc_adjust(obj)
 
   if(data$condition == "effort" && any(data$Chist > 0, na.rm = TRUE)) {
     vars_div <- c("B", "E", "C_eq_pred", "CAApred", "CALpred", "s_CAApred", "s_CALpred", "CN", "Cpred", "N", "VB",
@@ -875,8 +873,6 @@ SRA_scope_est <- function(x = 1, data, I_type, selectivity, s_selectivity, SR_ty
     fun_fixed <- c(NA, NA)
     rescale_report(vars_div, vars_mult, var_trans, fun_trans, fun_fixed)
   }
-
-  report <- SRA_posthoc_adjust(report, obj$env$data)
 
   return(list(obj = obj, opt = opt, SD = SD, report = c(report, list(conv = !is.character(opt) && SD$pdHess))))
 }
@@ -982,10 +978,38 @@ all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
 }
 
 
-SRA_posthoc_adjust <- function(report, data) {
+SRA_dynamic_SSB0 <- function(obj) {
+
+  if(obj$env$data$condition == "catch") {
+
+    par_F0 <- obj$env$last.par.best
+    par_F0[names(par_F0) == "log_F" | names(par_F0) == "log_F_equilibrium"] <- log(1e-8)
+    out <- obj$report(par_F0)$E
+
+  } else if(obj$env$data$condition == "catch2") {
+
+    new_args <- SRA_retro_subset(obj$env$data$n_y, data = obj$env$data, params = obj$env$parameters, map = obj$env$map)
+    new_args$data$C_hist <- matrix(1e-8, new_args$data$n_y, new_args$data$nfleet)
+
+    obj2 <- MakeADFun(data = new_args$data, parameters = new_args$params, map = new_args$map, random = obj$env$random,
+                      DLL = "MSEtool", silent = TRUE)
+    out <- obj2$report(obj$env$last.par.best)$E
+
+  } else {
+
+    par_F0 <- obj$env$last.par.best
+    par_F0[names(par_F0) == "log_q_effort"] <- log(1e-8)
+    out <- obj$report(par_F0)$E
+
+  }
+
+  return(out)
+}
+
+SRA_posthoc_adjust <- function(report, obj) {
+  data <- obj$env$data
   report$F_at_age <- report$Z - data$M
   report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
-  report$rescale <- data$rescale
 
   age_only_model <- data$len_age %>%
     apply(1, function(x) length(x) == data$max_age && max(x) == data$max_age) %>% all()
@@ -1000,6 +1024,7 @@ SRA_posthoc_adjust <- function(report, data) {
     report$vul_len <- get_vul_len(report, data$vul_type)
     report$s_vul_len <- get_s_vul_len(report, data$I_type, data$s_vul_type)
   }
+  report$dynamic_SSB0 <- SRA_dynamic_SSB0(obj)
   return(report)
 }
 

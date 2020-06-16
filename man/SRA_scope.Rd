@@ -36,7 +36,7 @@ steepness, maturity parameters (L50 and L50_95), standard deviation of recruitme
 or "effort".}
 
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"} or \code{"dome"} selectivity for each fleet in \code{Chist}.
-If there is time-varying selectivity, this is a characte vector of length nsel_block (see Data section below).}
+If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below).}
 
 \item{s_selectivity}{A vector of length nsurvey to indicate \code{"logistic"} or \code{"dome"} selectivity for each survey in \code{Index}. Use a number
 for an age-specific index. Only used if any of the corresponding entries of \code{data$I_type = "est"} or if a number is specified here.}
