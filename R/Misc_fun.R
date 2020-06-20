@@ -205,3 +205,36 @@ sample_steepness3 <- function(n, mu, cv, SR_type = c("BH", "Ricker")) {
     return(h)
   }
 }
+
+Assess_I_hist <- function(xx, Data, x, yind) {
+  if(xx == 0 || xx == "B") {
+
+    I_hist <- Data@Ind[x, yind]
+    I_sd <- sdconv(1, Data@CV_Ind[x, yind])
+
+  } else if(xx == "SSB" && .hasSlot(Data, "SpInd")) {
+
+    I_hist <- Data@SpInd[x, yind]
+    I_sd <- sdconv(1, Data@CV_SpInd[x, yind])
+
+  } else if(xx == "VB" && .hasSlot(Data, "VInd")) {
+
+    I_hist <- Data@VInd[x, yind]
+    I_sd <- sdconv(1, Data@CV_VInd[x, yind])
+
+  } else if(xx > 0 && .hasSlot(Data, "AddInd") && xx <= dim(Data@AddInd)[2]) {
+
+    I_hist <- Data@AddInd[x, xx, yind]
+    I_sd <- sdconv(1, Data@CV_AddInd[x, xx, yind])
+
+  }
+
+  if(exists("I_hist", inherits = FALSE)) {
+    I_hist[I_hist <= 0] <- NA
+
+  } else {
+    I_hist <- I_sd <- NULL
+  }
+  return(list(I_hist = I_hist, I_sd = I_sd))
+}
+
