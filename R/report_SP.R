@@ -69,8 +69,8 @@ rmd_SP <- function(Assessment, state_space = FALSE, ...) {
   } else ss <- rmd_summary("Surplus Production")
 
   # Data section
-  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"), rmd_data_timeseries("Index", is_matrix = is.matrix(Assessment@Obs_Index),
-                                                                                            nsets = ncol(Assessment@Obs_Index)))
+  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"),
+                    rmd_data_timeseries("Index", is_matrix = is.matrix(Assessment@Obs_Index), nsets = ncol(Assessment@Obs_Index)))
 
   # Assessment
   #### Pars and Fit

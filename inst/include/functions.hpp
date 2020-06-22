@@ -91,6 +91,40 @@ Type calc_q(vector<Type> I_y, vector<Type> B_y) {
 
 
 
+template<class Type>
+vector<Type> calc_q(matrix<Type> I_y, vector<Type> B_y, matrix<Type> &Ipred, int nsurvey) {
+  vector<Type> q(nsurvey);
+
+  for(int sur=0;sur<nsurvey;sur++) {
+    vector<Type> I_vec = I_y.col(sur);
+    q(sur) = calc_q(I_vec, B_y);
+    for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q(sur) * B_y(y);
+  }
+  return q;
+}
+
+template<class Type>
+vector<Type> calc_q(matrix<Type> I_y, vector<Type> B_y, vector<Type> N_y, matrix<Type> &Ipred, int nsurvey,
+                    vector<int> I_units) {
+  vector<Type> q(nsurvey);
+  for(int sur=0;sur<nsurvey;sur++) {
+    vector<Type> I_vec = I_y.col(sur);
+    if(I_units(sur)) {
+      q(sur) = calc_q(I_vec, B_y);
+    } else {
+      q(sur) = calc_q(I_vec, N_y);
+    }
+    for(int y=0;y<I_y.rows();y++) {
+      if(I_units(sur)) {
+        Ipred(y,sur) = q(sur) * B_y(y);
+      } else {
+        Ipred(y,sur) = q(sur) * N_y(y);
+      }
+    }
+  }
+  return q;
+}
+
 
 //////////// Functions for cDD.h, DD.h, SCA.h
 template<class Type>

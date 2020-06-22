@@ -37,27 +37,6 @@ Type SP_F(Type U_start, Type C_hist, Type MSY, Type K, Type n, Type nterm, Type 
   return F;
 }
 
-template<class Type>
-vector<Type> calc_q(matrix<Type> I_y, vector<Type> B_y, matrix<Type> &Ipred, int nsurvey) {
-  vector<Type> num(nsurvey);
-  vector<Type> n_y(nsurvey);
-  num.setZero();
-  n_y.setZero();
-
-  vector<Type> q(nsurvey);
-
-  for(int sur=0;sur<nsurvey;sur++) {
-    for(int y=0;y<I_y.rows();y++) {
-      if(!R_IsNA(asDouble(I_y(y,sur))) && I_y(y,sur)>0) {
-        num(sur) += log(I_y(y,sur)/B_y(y));
-        n_y(sur) += 1.;
-      }
-    }
-    q(sur) = exp(num(sur)/n_y(sur));
-    for(int y=0;y<I_y.rows();y++) Ipred(y,sur) = q(sur) * B_y(y);
-  }
-  return q;
-}
 
 
 }

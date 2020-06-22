@@ -139,7 +139,7 @@
 #' res_prior2 <- SP(Data = SimulatedData, use_r_prior = TRUE, start = list(r_prior = c(0.35, 0.10)))
 #' @seealso \link{SP_production} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @export
-SP <- function(x = 1, Data, rescale = "mean1", AddInd = "B", start = NULL, fix_dep = TRUE, fix_n = TRUE, LWT = NULL,
+SP <- function(x = 1, Data, AddInd = "B", rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, LWT = NULL,
                n_seas = 4L, n_itF = 3L, use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"),
                silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                control = list(iter.max = 5e3, eval.max = 1e4), ...) {
@@ -179,7 +179,7 @@ class(SP_Fox) <- "Assess"
 #' @importFrom TMB MakeADFun
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
+SP_ <- function(x = 1, Data, AddInd = "B", state_space = FALSE, rescale = "mean1", start = NULL, fix_dep = TRUE, fix_n = TRUE, fix_sigma = TRUE,
                 fix_tau = TRUE, early_dev = c("all", "index"), LWT = NULL, n_seas = 4L, n_itF = 3L,
                 use_r_prior = FALSE, r_reps = 1e2, SR_type = c("BH", "Ricker"), integrate = FALSE,
                 silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
@@ -292,8 +292,8 @@ SP_ <- function(x = 1, Data, AddInd = 0L, state_space = FALSE, rescale = "mean1"
                     SSB_SSB0 = structure(report$B/report$K, names = Yearplusone),
                     Obs_Catch = structure(C_hist, names = Year), Obs_Index = structure(I_hist, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
                     Catch = structure(report$Cpred, names = Year), Index = structure(report$Ipred, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
-                    NLL = structure(c(nll_report, sum(report$nll_comp[1:nsurvey]), report$nll_comp[nsurvey+1], report$penalty, report$prior),
-                                    names = c("Total", "Index", "Dev", "Penalty", "Prior")),
+                    NLL = structure(c(nll_report, report$nll_comp, report$penalty, report$prior),
+                                    names = c("Total", paste0("Index_", 1:nsurvey), "Dev", "Penalty", "Prior")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 

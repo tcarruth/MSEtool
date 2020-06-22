@@ -9,8 +9,8 @@
 SP(
   x = 1,
   Data,
-  rescale = "mean1",
   AddInd = "B",
+  rescale = "mean1",
   start = NULL,
   fix_dep = TRUE,
   fix_n = TRUE,
@@ -61,13 +61,13 @@ Otherwise, equals to 1 When running an assessment interactively.}
 
 \item{Data}{An object of class Data.}
 
-\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
-can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
-Output is re-converted back to original units.}
-
 \item{AddInd}{A vector of integers or character strings indicating the indices to be used in the model. Integers assign the index to
 the corresponding index in Data@AddInd, "B" (or 0) represents total biomass in Data@Ind, "VB" represents vulnerable biomass in
 Data@VInd, and "SSB" represents spawning stock biomass in Data@SpInd.}
+
+\item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
+can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
+Output is re-converted back to original units.}
 
 \item{start}{Optional list of starting values. Entries can be expressions that are evaluated in the function. See details.}
 

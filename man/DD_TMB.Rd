@@ -9,11 +9,13 @@ DD_TMB(
   x = 1,
   Data,
   condition = c("catch", "effort"),
+  AddInd = "B",
   SR = c("BH", "Ricker"),
   rescale = "mean1",
   start = NULL,
   fix_h = TRUE,
   dep = 1,
+  LWT = NULL,
   silent = TRUE,
   opt_hess = FALSE,
   n_restart = ifelse(opt_hess, 0, 1),
@@ -25,6 +27,7 @@ DD_SS(
   x = 1,
   Data,
   condition = c("catch", "effort"),
+  AddInd = "B",
   SR = c("BH", "Ricker"),
   rescale = "mean1",
   start = NULL,
@@ -32,6 +35,7 @@ DD_SS(
   fix_sd = FALSE,
   fix_tau = TRUE,
   dep = 1,
+  LWT = NULL,
   integrate = FALSE,
   silent = TRUE,
   opt_hess = FALSE,
@@ -49,6 +53,10 @@ Otherwise, equals to 1 when running an assessment.}
 
 \item{condition}{A string to indicate whether to condition the model on catch or effort (ratio of catch and index).}
 
+\item{AddInd}{A vector of integers or character strings indicating the indices to be used in the model. Integers assign the index to
+the corresponding index in Data@AddInd, "B" (or 0) represents total biomass in Data@Ind, "VB" represents vulnerable biomass in
+Data@VInd, and "SSB" represents spawning stock biomass in Data@SpInd.}
+
 \item{SR}{Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).}
 
 \item{rescale}{A multiplicative factor that rescales the catch in the assessment model, which
@@ -62,6 +70,8 @@ Output is re-converted back to original units.}
 \item{dep}{The initial depletion in the first year of the model. A tight prior is placed on the model objective function
 to estimate the equilibrium exploitation rate that corresponds to the initial depletion. Due to this tight prior, this F
 should not be considered to be an independent model parameter.}
+
+\item{LWT}{A vector of likelihood weights for each survey.}
 
 \item{silent}{Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 will print trace information during optimization. Used for dignostics for model convergence.}

@@ -9,6 +9,9 @@
 #' Otherwise, equals to 1 when running an assessment.
 #' @param Data An object of class \linkS4class{Data}.
 #' @param condition A string to indicate whether to condition the model on catch or effort (ratio of catch and index).
+#' @param AddInd A vector of integers or character strings indicating the indices to be used in the model. Integers assign the index to
+#' the corresponding index in Data@@AddInd, "B" (or 0) represents total biomass in Data@@Ind, "VB" represents vulnerable biomass in
+#' Data@@VInd, and "SSB" represents spawning stock biomass in Data@@SpInd.
 #' @param SR Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
@@ -88,13 +91,12 @@
 #' @seealso \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
-DD_TMB <- function(x = 1, Data, condition = c("catch", "effort"), SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = TRUE,
-                   dep = 1, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+DD_TMB <- function(x = 1, Data, condition = c("catch", "effort"), AddInd = "B", SR = c("BH", "Ricker"), rescale = "mean1",
+                   start = NULL, fix_h = TRUE, dep = 1, LWT = NULL, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                    control = list(iter.max = 5e3, eval.max = 1e4), ...) {
   condition <- match.arg(condition)
-  DD_(x = x, Data = Data, state_space = FALSE, condition = condition, SR = SR, rescale = rescale, start = start,
-      fix_h = fix_h, dep = dep,
-      fix_omega = condition == "catch", fix_sigma = condition == "effort",
+  DD_(x = x, Data = Data, state_space = FALSE, condition = condition, AddInd = AddInd, SR = SR, rescale = rescale, start = start,
+      fix_h = fix_h, dep = dep, LWT = LWT, fix_sd = FALSE,
       fix_tau = TRUE, integrate = FALSE, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
       control = control, inner.control = list(), ...)
 }
@@ -104,21 +106,20 @@ class(DD_TMB) <- "Assess"
 #' @rdname DD_TMB
 #' @useDynLib MSEtool
 #' @export
-DD_SS <- function(x = 1, Data, condition = c("catch", "effort"), SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                  fix_h = TRUE, fix_sd = FALSE, fix_tau = TRUE, dep = 1,
+DD_SS <- function(x = 1, Data, condition = c("catch", "effort"), AddInd = "B", SR = c("BH", "Ricker"), rescale = "mean1",
+                  start = NULL, fix_h = TRUE, fix_sd = FALSE, fix_tau = TRUE, dep = 1, LWT = NULL,
                   integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                   control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   condition <- match.arg(condition)
-  DD_(x = x, Data = Data, state_space = TRUE, condition = condition, SR = SR, rescale = rescale, start = start,
-      fix_h = fix_h, dep = dep,
-      fix_omega = condition == "catch" | fix_sd, fix_sigma = condition == "effort" | fix_sd,
+  DD_(x = x, Data = Data, state_space = TRUE, condition = condition, AddInd = AddInd, SR = SR, rescale = rescale, start = start,
+      fix_h = fix_h, dep = dep, LWT = LWT, fix_sd = fix_sd,
       fix_tau = fix_tau, integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
       control = control, inner.control = inner.control, ...)
 }
 class(DD_SS) <- "Assess"
 
-DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort"), SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                fix_h = TRUE, fix_omega = FALSE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1,
+DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort"), AddInd = "B", SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
+                fix_h = TRUE, fix_sd = TRUE, fix_tau = TRUE, dep = 1, LWT = NULL,
                 integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
@@ -141,10 +142,18 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
-  I_hist <- Data@Ind[x, yind]
+
+  Ind <- lapply(AddInd, Assess_I_hist, Data = Data, x = x, yind = yind)
+  I_hist <- do.call(cbind, lapply(Ind, getElement, "I_hist"))
+  I_sd <- do.call(cbind, lapply(Ind, getElement, "I_sd"))
+  I_units <- do.call(cbind, lapply(Ind, getElement, "I_units"))
+
+  if(is.null(I_hist)) stop("No indices found.", call. = FALSE)
+  nsurvey <- ncol(I_hist)
 
   if(condition == "effort") {
-    E_hist <- C_hist/I_hist
+    if(nsurvey > 1) stop("Only one index time series can be used when conditioning on effort.", call. = FALSE)
+    E_hist <- C_hist/I_hist[, 1]
     if(any(is.na(E_hist))) stop("Missing values in catch and index in Data object.")
     E_rescale <- 1/mean(E_hist)
     E_hist <- E_hist * E_rescale
@@ -161,10 +170,16 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   wk <- wa[k]
 
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  if(dep <= 0 || dep > 1) stop("Initial depletion (dep) must be between 0 - 1.")
+  if(dep <= 0 || dep > 1) stop("Initial depletion (dep) must be between > 0 and <= 1.")
+  if(is.null(LWT)) LWT <- rep(1, nsurvey)
+  if(length(LWT) != nsurvey) stop("LWT needs to be a vector of length ", nsurvey)
+
+  fix_sigma <- condition == "effort" | nsurvey > 1 | fix_sd
+  fix_omega <- condition == "catch" | fix_sd
   data <- list(model = "DD", S0 = S0, Alpha = Alpha, Rho = Rho, ny = ny, k = k,
-               wk = wk, C_hist = C_hist, dep = dep, rescale = rescale, I_hist = I_hist, E_hist = E_hist, SR_type = SR,
-               condition = condition, state_space = as.integer(state_space))
+               wk = wk, C_hist = C_hist, dep = dep, rescale = rescale, I_hist = I_hist, I_units = I_units, I_sd = I_sd,
+               E_hist = E_hist, SR_type = SR, condition = condition, I_lambda = LWT,
+               nsurvey = nsurvey, fix_sigma = as.integer(fix_sigma), state_space = as.integer(state_space))
   LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k)
 
   params <- list()
@@ -201,9 +216,7 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   if(is.null(params$log_omega)) {
     params$log_omega <- max(0.05, sdconv(1, Data@CV_Cat[x]), na.rm = TRUE) %>% log()
   }
-  if(is.null(params$log_sigma)) {
-    params$log_sigma <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE) %>% log()
-  }
+  if(is.null(params$log_sigma)) params$log_sigma <- max(0.05, sdconv(1, Data@CV_Ind[x]), na.rm = TRUE) %>% log()
   if(is.null(params$log_tau)) {
     params$log_tau <- ifelse(is.na(Data@sigmaR[x]), 0.6, Data@sigmaR[x]) %>% log()
   }
@@ -236,6 +249,11 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
   Yearplusone <- c(Year, max(Year) + 1)
   Yearplusk <- c(Year, max(Year) + 1:k)
 
+  if(condition == "catch") {
+    NLL_name <- paste0("Index_", 1:nsurvey)
+  } else {
+    NLL_name <- "Catch"
+  }
   nll_report <- ifelse(is.character(opt), ifelse(integrate, NA, report$nll), opt$objective)
   Assessment <- new("Assessment", Model = ifelse(state_space, "DD_SS", "DD_TMB"),
                     Name = Data@Name, conv = !is.character(SD) && SD$pdHess,
@@ -251,12 +269,11 @@ DD_ <- function(x = 1, Data, state_space = FALSE, condition = c("catch", "effort
                     R = structure(report$R, names = Yearplusk),
                     N = structure(report$N, names = Yearplusone),
                     Obs_Catch = structure(C_hist, names = Year),
-                    Obs_Index = structure(I_hist, names = Year),
+                    Obs_Index = structure(I_hist, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
                     Catch = structure(report$Cpred, names = Year),
-                    Index = structure(report$Ipred, names = Year),
+                    Index = structure(report$Ipred, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
                     NLL = structure(c(nll_report, report$nll_comp, report$prior, report$penalty),
-                                    names = c("Total", ifelse(condition == "catch", "Index", "Catch"),
-                                              "Dev", "Prior", "Penalty")),
+                                    names = c("Total", NLL_name, "Dev", "Prior", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 

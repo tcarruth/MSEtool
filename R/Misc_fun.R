@@ -211,30 +211,35 @@ Assess_I_hist <- function(xx, Data, x, yind) {
 
     I_hist <- Data@Ind[x, yind]
     I_sd <- sdconv(1, Data@CV_Ind[x, yind])
+    I_units <- 1L
 
   } else if(xx == "SSB" && .hasSlot(Data, "SpInd")) {
 
     I_hist <- Data@SpInd[x, yind]
     I_sd <- sdconv(1, Data@CV_SpInd[x, yind])
+    I_units <- 1L
 
   } else if(xx == "VB" && .hasSlot(Data, "VInd")) {
 
     I_hist <- Data@VInd[x, yind]
     I_sd <- sdconv(1, Data@CV_VInd[x, yind])
+    I_units <- 1L
 
-  } else if(xx > 0 && .hasSlot(Data, "AddInd") && xx <= dim(Data@AddInd)[2]) {
+  } else if(is.numeric(xx) && xx > 0 && .hasSlot(Data, "AddInd") && xx <= dim(Data@AddInd)[2]) {
 
     I_hist <- Data@AddInd[x, xx, yind]
     I_sd <- sdconv(1, Data@CV_AddInd[x, xx, yind])
+    if(.hasSlot(Data, "AddIunits") && !is.na(Data@AddIunits[xx])) {
+      I_units <- Data@AddIunits[xx]
+    } else I_units <- 1L
 
   }
 
   if(exists("I_hist", inherits = FALSE)) {
     I_hist[I_hist <= 0] <- NA
-
   } else {
-    I_hist <- I_sd <- NULL
+    I_hist <- I_sd <- I_units <- NULL
   }
-  return(list(I_hist = I_hist, I_sd = I_sd))
+  return(list(I_hist = I_hist, I_sd = I_sd, I_units = I_units))
 }
 

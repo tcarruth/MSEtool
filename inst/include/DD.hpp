@@ -17,12 +17,16 @@ Type DD(objective_function<Type> *obj) {
   DATA_VECTOR(C_hist);
   DATA_SCALAR(dep);
   DATA_SCALAR(rescale);
-  DATA_VECTOR(I_hist);
+  DATA_MATRIX(I_hist);
+  DATA_IVECTOR(I_units);
+  DATA_MATRIX(I_sd);
   DATA_VECTOR(E_hist);
   DATA_STRING(SR_type);
   DATA_STRING(condition);
+  DATA_VECTOR(I_lambda);
+  DATA_INTEGER(nsurvey);
+  DATA_INTEGER(fix_sigma);
   DATA_INTEGER(state_space);
-  //DATA_VECTOR_INDICATOR(keep, C_hist);
 
   PARAMETER(R0x);
   PARAMETER(transformed_h);
@@ -43,6 +47,7 @@ Type DD(objective_function<Type> *obj) {
   Type omega = exp(log_omega);
   Type sigma = exp(log_sigma);
   Type tau = exp(log_tau);
+
 
   //--DECLARING DERIVED VALUES
   Type Spr0 = (S0 * Alpha/(1 - S0) + wk)/(1 - Rho * S0);
@@ -76,7 +81,7 @@ Type DD(objective_function<Type> *obj) {
 
   vector<Type> Surv(ny);
   vector<Type> Cpred(ny);
-  vector<Type> Ipred(ny);
+  matrix<Type> Ipred(ny,nsurvey);
   vector<Type> Sp(ny);
   vector<Type> U(ny);
 
@@ -129,22 +134,31 @@ Type DD(objective_function<Type> *obj) {
   //--ARGUMENTS FOR NLL
   // Objective function
   //creates storage for nll and sets value to 0
-  Type q;
-  if(condition == "catch") {
-    q = calc_q(I_hist, B);
-    for(int tt=0;tt<ny;tt++) Ipred(tt) = q * B(tt);
-  }
+  vector<Type> q(nsurvey);
+  if(condition == "catch") q = calc_q(I_hist, B, N, Ipred, nsurvey, I_units);
 
-  vector<Type> nll_comp(2);
+  vector<Type> nll_comp(nsurvey + 1);
   nll_comp.setZero();
 
   for(int tt=0; tt<ny; tt++){
     if(condition == "effort") {
       if(C_hist(tt) > 0) nll_comp(0) -= dnorm(log(C_hist(tt)), log(Cpred(tt)), omega, true);
-    } else if(!R_IsNA(asDouble(I_hist(tt))) && I_hist(tt) > 0) {
-      nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
+    } else {
+      for(int sur=0;sur<nsurvey;sur++) {
+        for(int tt=0;tt<ny;tt++) {
+          if(I_lambda(sur) > 0 && !R_IsNA(asDouble(I_hist(tt,sur)))) {
+            if(fix_sigma) {
+              nll_comp(sur) -= dnorm_(log(I_hist(tt,sur)), log(Ipred(tt,sur)), I_sd(tt,sur), true);
+            } else {
+              nll_comp(sur) -= dnorm(log(I_hist(tt,sur)), log(Ipred(tt,sur)), sigma, true);
+            }
+          }
+        }
+        nll_comp(sur) *= I_lambda(sur);
+      }
+
     }
-    if(state_space && tt + k < ny) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
+    if(state_space && tt + k < ny) nll_comp(nsurvey) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
   }
 
   //Summing individual nll and penalties
@@ -159,7 +173,7 @@ Type DD(objective_function<Type> *obj) {
   if(CppAD::Variable(log_sigma)) ADREPORT(sigma);
   if(CppAD::Variable(log_tau)) ADREPORT(tau);
   if(condition == "effort") REPORT(omega);
-  if(condition == "catch") REPORT(sigma);
+  if(!fix_sigma) REPORT(sigma);
   if(state_space) REPORT(tau);
   REPORT(nll_comp);
   REPORT(nll);
