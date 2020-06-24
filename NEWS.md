@@ -1,6 +1,6 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
-## MSEtool 1.6.5
+## MSEtool 1.7.0
 
 ### SRA_scope
 - Allow for OM conditioning by resampling the Hessian matrix from a single model fit.

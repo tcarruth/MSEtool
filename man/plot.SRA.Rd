@@ -84,7 +84,7 @@ Returns invisibly the output from \link[rmarkdown]{render}.
 Produces HTML file (via markdown) figures of parameter estimates and output from an \linkS4class{Assessment} object.
 Plots histograms of operating model parameters that are updated by the SRA scoping function, as well as diagnostic plots
 for the fits to the SRA for each simulation. \code{compare_SRA} plots a short report that compares output from multiple SRA objects,
-assuming the same model structure but different data weightings, data omissions, etc.
+assuming the same model structure, i.e., identical matrix and array dimensions among models, but different data weightings, data omissions, etc.
 }
 \seealso{
 \linkS4class{SRA} \link{SRA_scope}
