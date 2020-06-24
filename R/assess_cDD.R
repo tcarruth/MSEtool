@@ -8,6 +8,9 @@
 #' @param x An index for the objects in \code{Data} when running in closed loop simulation.
 #' Otherwise, equals to 1 when running an assessment.
 #' @param Data An object of class \linkS4class{Data}.
+#' @param AddInd A vector of integers or character strings indicating the indices to be used in the model. Integers assign the index to
+#' the corresponding index in Data@@AddInd, "B" (or 0) represents total biomass in Data@@Ind, "VB" represents vulnerable biomass in
+#' Data@@VInd, and "SSB" represents spawning stock biomass in Data@@SpInd.
 #' @param SR Stock-recruit function (either \code{"BH"} for Beverton-Holt or \code{"Ricker"}).
 #' @param rescale A multiplicative factor that rescales the catch in the assessment model, which
 #' can improve convergence. By default, \code{"mean1"} scales the catch so that time series mean is 1, otherwise a numeric.
@@ -23,6 +26,7 @@
 #' should not be considered to be an independent model parameter.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a state-space variable). Otherwise, recruitment deviations are penalized parameters.
+#' @param LWT A vector of likelihood weights for each survey.
 #' @param silent Logical, passed to \code{\link[TMB]{MakeADFun}}, whether TMB
 #' will print trace information during optimization. Used for dignostics for model convergence.
 #' @param n_itF Integer, the number of iterations to solve F conditional on the observed catch.
@@ -77,11 +81,11 @@
 #' @seealso \link{DD_TMB} \link{plot.Assessment} \link{summary.Assessment} \link{retrospective} \link{profile} \link{make_MP}
 #' @useDynLib MSEtool
 #' @export
-cDD <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = TRUE,
-                dep = 1, n_itF = 5L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
+cDD <- function(x = 1, Data, AddInd = "B", SR = c("BH", "Ricker"), rescale = "mean1", start = NULL, fix_h = TRUE,
+                dep = 1, LWT = NULL, n_itF = 5L, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                 control = list(iter.max = 5e3, eval.max = 1e4), ...) {
-  cDD_(x = x, Data = Data, state_space = FALSE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
-       fix_sigma = FALSE, fix_tau = TRUE, dep = dep, n_itF = n_itF,
+  cDD_(x = x, Data = Data, AddInd = AddInd, state_space = FALSE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
+       fix_sigma = FALSE, fix_tau = TRUE, dep = dep, LWT = LWT, n_itF = n_itF,
        integrate = FALSE, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
        control = control, inner.control = list(), ...)
 }
@@ -93,20 +97,20 @@ class(cDD) <- "Assess"
 #' @importFrom TMB MakeADFun
 #' @importFrom stats nlminb
 #' @useDynLib MSEtool
-cDD_SS <- function(x = 1, Data, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                   fix_h = TRUE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1, n_itF = 5L,
+cDD_SS <- function(x = 1, Data, AddInd = "B", SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
+                   fix_h = TRUE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1, LWT = NULL, n_itF = 5L,
                    integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                    control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
-  cDD_(x = x, Data = Data, state_space = TRUE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
-       fix_sigma = fix_sigma, fix_tau = fix_tau, dep = dep, n_itF = n_itF,
+  cDD_(x = x, Data = Data, AddInd = AddInd, state_space = TRUE, SR = SR, rescale = rescale, start = start, fix_h = fix_h,
+       fix_sigma = fix_sigma, fix_tau = fix_tau, dep = dep, LWT = LWT, n_itF = n_itF,
        integrate = integrate, silent = silent, opt_hess = opt_hess, n_restart = n_restart,
        control = control, inner.control = inner.control, ...)
 }
 class(cDD_SS) <- "Assess"
 
 
-cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
-                 fix_h = TRUE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1, n_itF = 5L,
+cDD_ <- function(x = 1, Data, AddInd = "B", state_space = FALSE, SR = c("BH", "Ricker"), rescale = "mean1", start = NULL,
+                 fix_h = TRUE, fix_sigma = FALSE, fix_tau = TRUE, dep = 1, LWT = NULL, n_itF = 5L,
                  integrate = FALSE, silent = TRUE, opt_hess = FALSE, n_restart = ifelse(opt_hess, 0, 1),
                  control = list(iter.max = 5e3, eval.max = 1e4), inner.control = list(), ...) {
   dependencies <- "Data@Cat, Data@Ind, Data@Mort, Data@L50, Data@vbK, Data@vbLinf, Data@vbt0, Data@wla, Data@wlb, Data@MaxAge"
@@ -128,9 +132,14 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
   }
   Year <- Data@Year[yind]
   C_hist <- Data@Cat[x, yind]
-  I_hist <- Data@Ind[x, yind]
   if(any(is.na(C_hist))) stop('Model is conditioned on complete catch time series, but there is missing catch.')
-  I_hist[I_hist < 0] <- NA
+
+  Ind <- lapply(AddInd, Assess_I_hist, Data = Data, x = x, yind = yind)
+  I_hist <- do.call(cbind, lapply(Ind, getElement, "I_hist"))
+  I_sd <- do.call(cbind, lapply(Ind, getElement, "I_sd"))
+  I_units <- do.call(cbind, lapply(Ind, getElement, "I_units"))
+  if(is.null(I_hist)) stop("No indices found.", call. = FALSE)
+  nsurvey <- ncol(I_hist)
 
   ny <- length(C_hist)
   k <- ceiling(a50V)  # get age nearest to 50% vulnerability (ascending limb)
@@ -147,10 +156,16 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
 
   M <- Data@Mort[x]
 
+  if(!state_space && (nsurvey == 1 & AddInd == "B")) fix_sigma <- FALSE # Override: estimate sigma if there's a single survey
   if(rescale == "mean1") rescale <- 1/mean(C_hist)
-  if(dep <= 0 || dep > 1) stop("Initial depletion (dep) must be between 0 - 1.")
+  if(dep <= 0 || dep > 1) stop("Initial depletion (dep) must be > 0 and <= 1.")
+  if(is.null(LWT)) LWT <- rep(1, nsurvey)
+  if(length(LWT) != nsurvey) stop("LWT needs to be a vector of length ", nsurvey)
+
   data <- list(model = "cDD", M = M, Winf = Winf, Kappa = Kappa, ny = ny, k = k, wk = wk, C_hist = C_hist, dep = dep,
-               rescale = rescale, I_hist = I_hist, SR_type = SR, nitF = n_itF, state_space = as.integer(state_space))
+               rescale = rescale, I_hist = I_hist, I_units = I_units, I_sd = I_sd,
+               SR_type = SR, nitF = n_itF, I_lambda = LWT, nsurvey = nsurvey,
+               fix_sigma = as.integer(fix_sigma), state_space = as.integer(state_space))
   LH <- list(LAA = la, WAA = wa, maxage = Data@MaxAge, A50 = k, fit_mod = fit_mod)
 
   params <- list()
@@ -227,11 +242,11 @@ cDD_ <- function(x = 1, Data, state_space = FALSE, SR = c("BH", "Ricker"), resca
                     R = structure(report$R, names = Yearplusk),
                     N = structure(report$N, names = Yearplusone),
                     Obs_Catch = structure(C_hist, names = Year),
-                    Obs_Index = structure(I_hist, names = Year),
+                    Obs_Index = structure(I_hist, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
                     Catch = structure(report$Cpred, names = Year),
-                    Index = structure(report$Ipred, names = Year),
+                    Index = structure(report$Ipred, dimnames = list(Year, paste0("Index_", 1:nsurvey))),
                     NLL = structure(c(nll_report, report$nll_comp, report$prior, report$penalty),
-                                    names = c("Total", "Index", "Dev", "Prior", "Penalty")),
+                                    names = c("Total", paste0("Index_", 1:nsurvey), "Dev", "Prior", "Penalty")),
                     info = info, obj = obj, opt = opt, SD = SD, TMB_report = report,
                     dependencies = dependencies)
 

@@ -18,10 +18,14 @@ Type cDD(objective_function<Type> *obj) {
   DATA_VECTOR(C_hist);
   DATA_SCALAR(dep);
   DATA_SCALAR(rescale);
-  DATA_VECTOR(I_hist);
+  DATA_MATRIX(I_hist);
+  DATA_IVECTOR(I_units);
+  DATA_MATRIX(I_sd);
   DATA_STRING(SR_type);
   DATA_INTEGER(nitF);
-
+  DATA_VECTOR(I_lambda);
+  DATA_INTEGER(nsurvey);
+  DATA_INTEGER(fix_sigma);
   DATA_INTEGER(state_space);
 
   PARAMETER(R0x);
@@ -72,7 +76,7 @@ Type cDD(objective_function<Type> *obj) {
   vector<Type> F(ny);
   vector<Type> Z(ny);
   vector<Type> Cpred(ny);
-  vector<Type> Ipred(ny);
+  matrix<Type> Ipred(ny,nsurvey);
 
   vector<Type> BPRinf(ny);
   vector<Type> Rec_dev(ny-k);
@@ -115,17 +119,27 @@ Type cDD(objective_function<Type> *obj) {
   }
 
   //--ARGUMENTS FOR NLL
-  Type q = calc_q(I_hist, B);
-  for(int tt=0;tt<ny;tt++) Ipred(tt) = q * B(tt);
+  vector<Type> q = calc_q(I_hist, B, N, Ipred, nsurvey, I_units);
 
   // Objective function
   //creates storage for jnll and sets value to 0
-  vector<Type> nll_comp(2);
+  vector<Type> nll_comp(nsurvey+1);
   nll_comp.setZero();
 
-  for(int tt=0;tt<ny;tt++) if(!R_IsNA(asDouble(I_hist(tt)))) nll_comp(0) -= dnorm(log(I_hist(tt)), log(Ipred(tt)), sigma, true);
+  for(int sur=0;sur<nsurvey;sur++) {
+    for(int tt=0;tt<ny;tt++) {
+      if(I_lambda(sur) > 0 && !R_IsNA(asDouble(I_hist(tt,sur)))) {
+        if(fix_sigma) {
+          nll_comp(sur) -= dnorm_(log(I_hist(tt,sur)), log(Ipred(tt,sur)), I_sd(tt,sur), true);
+        } else {
+          nll_comp(sur) -= dnorm(log(I_hist(tt,sur)), log(Ipred(tt,sur)), sigma, true);
+        }
+      }
+    }
+    nll_comp(sur) *= I_lambda(sur);
+  }
   if(state_space) {
-    for(int tt=0;tt<log_rec_dev.size();tt++) nll_comp(1) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
+    for(int tt=0;tt<log_rec_dev.size();tt++) nll_comp(nsurvey) -= dnorm(log_rec_dev(tt), Type(0), tau, true);
   }
 
   //Summing individual jnll and penalties
@@ -137,7 +151,7 @@ Type cDD(objective_function<Type> *obj) {
   ADREPORT(q);
   if(CppAD::Variable(log_sigma)) ADREPORT(sigma);
   if(CppAD::Variable(log_tau)) ADREPORT(tau);
-  REPORT(sigma);
+  if(!fix_sigma) REPORT(sigma);
   if(state_space) REPORT(tau);
   REPORT(nll);
   REPORT(Arec);

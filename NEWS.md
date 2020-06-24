@@ -11,7 +11,7 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 
 ### Other
 - Rename model parameters that correspond with magnitude and estimated on the log-scale. By default, these estimated parameters are also rescaled internally to be within an order of magnitude of other parameters. As such, they are no longer the log of the corresponding population parameter, e.g., R0. 
-- Delay-difference and delay-differential models accommodate alternative initial depletion values in the first year of the model instead of the default unfished assumption.
+- Delay-difference and delay-differential models accommodate alternative initial depletion values in the first year of the model instead of the default unfished assumption. Along with the surplus production model, these models also accommodate multiple indices in the Data object.
 
 ## MSEtool 1.6.0
 - Time-varying fleet selectivity in `SRA_scope` can be set up with blocks. Unique blocks are defined and then assigned to fleet and year. New vignettes and updated help files for `SRA_scope` describe the set up in the function call.

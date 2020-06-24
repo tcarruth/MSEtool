@@ -65,14 +65,14 @@ rmd_cDD <- function(Assessment, state_space = FALSE, ...) {
                   rmd_mat(age, mat, fig.cap = "Assumed knife-edge maturity at age corresponding to length of 50% maturity."))
 
   # Data section
-  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"), rmd_data_timeseries("Index"))
+  data_section <- c(rmd_data_timeseries("Catch", header = "## Data\n"),
+                    rmd_data_timeseries("Index", is_matrix = is.matrix(Assessment@Obs_Index), nsets = ncol(Assessment@Obs_Index)))
 
   # Assessment
   #### Pars and Fit
   assess_fit <- c(rmd_R0(header = "## Assessment {.tabset}\n### Estimates and Model Fit\n"), rmd_h(),
                   rmd_sel(age, mat, fig.cap = "Knife-edge selectivity set to the age corresponding to the length of 50% maturity."),
-                  rmd_assess_fit("Index", "index"), rmd_assess_resid("Index"), rmd_assess_qq("Index", "index"),
-                  rmd_assess_fit("Catch", "catch", match = TRUE))
+                  rmd_assess_fit_series(nsets = ncol(Assessment@Index)), rmd_assess_fit("Catch", "catch", match = TRUE))
 
   if(state_space) {
     assess_fit2 <- c(rmd_residual("Dev", fig.cap = "Time series of recruitment deviations.", label = Assessment@Dev_type),
@@ -225,7 +225,8 @@ retrospective_cDD <- function(Assessment, nyr, state_space = FALSE) {
     ny_ret <- info$data$ny - i
     info$data$ny <- ny_ret
     info$data$C_hist <- info$data$C_hist[1:ny_ret]
-    info$data$I_hist <- info$data$I_hist[1:ny_ret]
+    info$data$I_hist <- info$data$I_hist[1:ny_ret, , drop = FALSE]
+    info$data$I_sd <- info$data$I_sd[1:ny_ret, , drop = FALSE]
 
     if(state_space) info$params$log_rec_dev <- rep(0, ny_ret - k)
 

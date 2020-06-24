@@ -26,6 +26,7 @@
 #' @param dep The initial depletion in the first year of the model. A tight prior is placed on the model objective function
 #' to estimate the equilibrium exploitation rate that corresponds to the initial depletion. Due to this tight prior, this F
 #' should not be considered to be an independent model parameter.
+#' @param LWT A vector of likelihood weights for each survey.
 #' @param integrate Logical, whether the likelihood of the model integrates over the likelihood
 #' of the recruitment deviations (thus, treating it as a random effects/state-space variable).
 #' Otherwise, recruitment deviations are penalized parameters.
