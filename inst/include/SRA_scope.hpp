@@ -52,9 +52,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_MATRIX(wt);        // Weight-at-age
   DATA_MATRIX(mat);       // Maturity-at-age at the beginning of the year
 
-  DATA_IVECTOR(vul_type); // Integer vector indicating whether logistic (-1) or dome vul (0), or age-specific (1 - maxage) is used
-  DATA_IVECTOR(s_vul_type); // Same but for surveys
-  DATA_IVECTOR(I_type);   // Integer vector indicating the basis of the indices for fleet (1-nfleet) or surveys B (-1) or SSB (-2) or estimated (0)
+  DATA_IVECTOR(vul_type); // Integer vector indicating whether free (-2), logistic (-1), or dome vul (0) is used
+  DATA_IVECTOR(s_vul_type); // Same but for surveys, but can mirror to B (-4), SSB (-3), or fleet (>0)
   DATA_IVECTOR(abs_I);    // Boolean, whether index is an absolute (fix q = 1) or relative terms (estimate q)
   DATA_IVECTOR(I_units);  // Boolean, whether index is biomass based (= 1) or abundance-based (0)
 
@@ -309,7 +308,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   s_CN.setZero();
   s_BN.setZero();
 
-  array<Type> s_vul = calc_vul_sur(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf, mat, I_type, vul, prior);
+  array<Type> s_vul = calc_vul_sur(s_vul_par, s_vul_type, len_age, s_LFS, s_L5, s_Vmaxlen, Linf, mat, vul, prior);
   vector<Type> q(nsurvey);
   for(int sur=0;sur<nsurvey;sur++) {
     for(int y=0;y<n_y;y++) {

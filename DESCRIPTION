@@ -1,12 +1,12 @@
 Package: MSEtool
 Type: Package
 Title: Management Strategy Evaluation Toolkit
-Version: 1.7.0
+Version: 2.0.0
 Authors@R: c(person("Quang", "Huynh", email = "q.huynh@oceans.ubc.ca", role = "aut"), 
   person("Tom", "Carruthers", email = "t.carruthers@oceans.ubc.ca", role = c("aut", "cre")),
   person("Adrian", "Hordyk", email = "a.hordyk@oceans.ubc.ca", role = "aut"),
   person("Chris", "Grandin", rol = "ctb", comment = "iSCAM functions"))
-Date: 2020-06-24
+Date: 2020-06-29
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
 Description: Simulation tools for management strategy evaluation are provided for the 'DLMtool' operating model to inform data-rich fisheries. 
   'MSEtool' provides complementary assessment models of varying complexity with standardized reporting, diagnostic tools for evaluating 

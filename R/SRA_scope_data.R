@@ -33,6 +33,101 @@ SRA_tiny_comp <- function(x) {
   return(x)
 }
 
+int_s_sel <- function(s_selectivity, nfleet = 1) {
+  s_sel <- suppressWarnings(as.numeric(s_selectivity)) # Numbers match fleets, otherwise see next lines
+  s_sel[s_selectivity == "B"] <- -4
+  s_sel[s_selectivity == "SSB"] <- -3
+  s_sel[s_selectivity == "free"] <- -2
+  s_sel[s_selectivity == "logistic"] <- -1
+  s_sel[s_selectivity == "dome"] <- 0
+
+  if(any(s_sel > nfleet, na.rm = TRUE)) {
+    stop(paste("There are undefined fishing fleets in s_selectivity (for surveys). There are only", nfleet, "fleets."),
+         call. = FALSE)
+  }
+
+  if(any(is.na(s_sel))) {
+    stop("Character entries for s_selectivity (for surveys) must be either: \"B\", \"SSB\", \"logistic\", \"dome\", or \"free\"", call. = FALSE)
+  }
+
+  return(s_sel)
+}
+
+int_sel <- function(selectivity) {
+  sel <- suppressWarnings(as.numeric(selectivity))
+  sel[selectivity == "free"] <- -2
+  sel[selectivity == "logistic"] <- -1
+  sel[selectivity == "dome"] <- 0
+
+  if(any(is.na(sel))) {
+    stop("Character entries for s_selectivity (for fleets) must be either: \"logistic\", \"dome\", or \"free\"", call. = FALSE)
+  }
+
+  return(sel)
+}
+
+make_LWT <- function(LWT, nfleet, nsurvey) {
+
+  if(is.null(LWT$Chist)) {
+    LWT$Chist <- rep(1, nfleet)
+  } else if(length(LWT$Chist) == 1 && nfleet > 1) {
+    LWT$Chist <- rep(LWT$Chist, nfleet)
+  }
+  if(length(LWT$Chist) != nfleet) stop("LWT$Chist should be a vector of length ", nfleet, ".")
+
+  if(is.null(LWT$Index)) {
+    LWT$Index <- rep(1, max(1, nsurvey))
+  } else if(length(LWT$Index) == 1 && nsurvey > 1) {
+    LWT$Index <- rep(LWT$Index, nsurvey)
+  }
+  if(length(LWT$Index) != max(1, nsurvey)) stop("LWT$Index should be a vector of length ", data$nsurvey, ".")
+
+  if(is.null(LWT$CAA)) {
+    LWT$CAA <- rep(1, nfleet)
+  } else if(length(LWT$CAA) == 1 && nfleet > 1) {
+    LWT$CAA <- rep(LWT$CAA, nfleet)
+  }
+  if(length(LWT$CAA) != nfleet) stop("LWT$CAA should be a vector of length ", nfleet, ".")
+
+  if(is.null(LWT$CAL)) {
+    LWT$CAL <- rep(1, nfleet)
+  } else if(length(LWT$CAL) == 1 && nfleet > 1) {
+    LWT$CAL <- rep(LWT$CAL, nfleet)
+  }
+  if(length(LWT$CAL) != nfleet) stop("LWT$CAL should be a vector of length ", nfleet, ".")
+
+  if(is.null(LWT$ML)) {
+    LWT$ML <- rep(1, nfleet)
+  } else if(length(LWT$ML) == 1 && nfleet > 1) {
+    LWT$ML <- rep(LWT$ML, nfleet)
+  }
+  if(length(LWT$ML) != nfleet) stop("LWT$ML should be a vector of length ", nfleet, ".")
+
+  if(is.null(LWT$C_eq)) {
+    LWT$C_eq <- rep(1, max(1, nfleet))
+  } else if(length(LWT$C_eq) == 1 && nfleet > 1) {
+    LWT$C_eq <- rep(LWT$C_eq, nfleet)
+  }
+  if(length(LWT$C_eq) != nfleet) stop("LWT$C_eq should be a vector of length ", nfleet, ".")
+
+  if(is.null(LWT$s_CAA)) {
+    LWT$s_CAA <- rep(1, max(1, nsurvey))
+  } else if(length(LWT$s_CAA) == 1 && nsurvey > 1) {
+    LWT$s_CAA <- rep(LWT$s_CAA, nsurvey)
+  }
+  if(length(LWT$s_CAA) != max(1, nsurvey)) stop("LWT$s_CAA should be a vector of length ", nsurvey, ".")
+
+  if(is.null(LWT$s_CAL)) {
+    LWT$s_CAL <- rep(1, max(1, nsurvey))
+  } else if(length(LWT$s_CAL) == 1 && nsurvey > 1) {
+    LWT$s_CAL <- rep(LWT$s_CAL, nsurvey)
+  }
+  if(length(LWT$s_CAL) != max(1, nsurvey)) stop("LWT$s_CAL should be a vector of length ", nsurvey, ".")
+
+  return(LWT)
+}
+
+
 update_SRA_data <- function(data, OM, condition, dots) {
 
   message("\nChecking OM and data...\n")
@@ -128,19 +223,9 @@ update_SRA_data <- function(data, OM, condition, dots) {
     } else stop("Index is neither a vector nor a matrix.", call. = FALSE)
 
     data$nsurvey <- ncol(data$Index)
-
-    # Match index to I_type
-    if(is.null(data$I_type)) data$I_type <- rep("B", data$nsurvey)
-    if(length(data$I_type) != ncol(data$Index)) {
-      stop("Length of I_type needs to be ", data$nsurvey, call. = FALSE)
-    }
-
-    I_type_check <- match(data$I_type, c("B", "SSB", "est", 1:data$nfleet))
-    if(any(is.na(I_type_check))) stop("I_type vector needs to be entries of either: \"est\", \"SSB\", \"B\", or 1 - ", data$nfleet, ".", call. = FALSE)
   } else {
     data$nsurvey <- 0
     data$Index <- matrix(NA, ncol = 1, nrow = data$nyears)
-    data$I_type <- "B"
   }
 
   if(!is.null(data$I_sd)) {
@@ -152,7 +237,6 @@ update_SRA_data <- function(data, OM, condition, dots) {
       if(ncol(data$I_sd) != data$nsurvey) stop("Number of columns of I_sd matrix does not equal nsurvey (", data$nsurvey, ").", call. = FALSE)
     }
   }
-
   message(data$nsurvey, " survey(s) detected.")
 
   # Process age comps
@@ -319,8 +403,20 @@ update_SRA_data <- function(data, OM, condition, dots) {
   if(is.null(data$age_error)) data$age_error <- diag(OM@maxage)
   if(any(dim(data$age_error) != OM@maxage)) stop("data$age_error should be a square matrix of OM@maxage rows and columns", call. = FALSE)
 
-  return(list(data = data, OM = OM, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars))
+  # Sel_block dummy fleets
+  if(is.null(data$sel_block)) {
+    data$sel_block <- matrix(1:data$nfleet, nrow = data$nyears, ncol = data$nfleet, byrow = TRUE)
+  } else {
+    if(nrow(data$sel_block) != data$nyears) {
+      stop(paste("data$sel_block should be a matrix of", data$nyears, "rows."), call. = FALSE)
+    }
+    if(ncol(data$sel_block) != data$nfleet) {
+      stop(paste("data$sel_block should be a matrix of", data$nfleet, "columns."), call. = FALSE)
+    }
+  }
+  data$nsel_block <- length(unique(data$sel_block))
 
+  return(list(data = data, OM = OM, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars))
 }
 
 check_OM_for_sampling <- function(OM, data) {

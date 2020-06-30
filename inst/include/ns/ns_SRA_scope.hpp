@@ -118,66 +118,55 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 
 template<class Type>
 array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Len_age, vector<Type> &LFS, vector<Type> &L5,
-                         vector<Type> &Vmaxlen, Type Linf, matrix<Type> mat, vector<int> I_type, array<Type> fleet_var,
-                         Type &prior) {
+                         vector<Type> &Vmaxlen, Type Linf, matrix<Type> mat, array<Type> fleet_var, Type &prior) {
   array<Type> vul(Len_age.rows(), Len_age.cols(), vul_type.size());
   vul.setZero();
 
   for(int ff=0;ff<vul_type.size();ff++) {
 
-    if(I_type(ff) == -2) { // SSB
-
-      for(int y=0;y<Len_age.rows();y++) {
-        for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = mat(y,a);
-      }
-
-    } else if(I_type(ff) == -1) { // B
-
+    if(vul_type(ff) == -4) { // B
       for(int y=0;y<Len_age.rows();y++) {
         for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = 1;
       }
-
-    } else if(I_type(ff) == 0) { // est
-
-      if(vul_type(ff) <= 0 && vul_type(ff) >= -1) { // Logistic or dome
-        prior -= dnorm_(vul_par(0,ff), Type(0), Type(3), true);
-        prior -= dnorm_(vul_par(1,ff), Type(0), Type(3), true);
-
-        LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
-        L5(ff) = LFS(ff) - exp(vul_par(1,ff));
-        Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
-        if(vul_type(ff) < 0) { // Logistic
-          Vmaxlen(ff) = 1;
-        } else { // Dome
-          prior -= dnorm_(vul_par(2,ff), Type(0), Type(3), true);
-          Vmaxlen(ff) = invlogit(vul_par(2,ff));
-        }
-
-        for(int y=0;y<Len_age.rows();y++) {
-          for(int a=0;a<Len_age.cols();a++) {
-            Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
-            Type hi;
-
-            if(vul_type(ff) < 0) { // Logistic
-              hi = 1;
-            } else { // Dome
-              Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
-              hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
-            }
-            vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
-          }
-        }
-      } else if(vul_type(ff) == -2) { // Free parameters
-        for(int y=0;y<Len_age.rows();y++) {
+    } else if(vul_type(ff) == -3) { // SSB      
+      for(int y=0;y<Len_age.rows();y++) {
+        for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = mat(y,a);
+      }
+    } else if(vul_type(ff) == 0) { // free parameters
+      for(int y=0;y<Len_age.rows();y++) {
           for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = invlogit(vul_par(a,ff));
-        }
-      } else { // Age-specific index
-        for(int y=0;y<Len_age.rows();y++) vul(y,vul_type(ff)-1,ff) = 1;
+      }
+    } else if(vul_type(ff) > 0) { // Index mirrored to fleet
+      vul.col(ff) = fleet_var.col(vul_type(ff) - 1);
+    } else { // Logistic or dome
+      prior -= dnorm_(vul_par(0,ff), Type(0), Type(3), true);
+      prior -= dnorm_(vul_par(1,ff), Type(0), Type(3), true);
+
+      LFS(ff) = invlogit(vul_par(0,ff)) * 0.99 * Linf;
+      L5(ff) = LFS(ff) - exp(vul_par(1,ff));
+      Type sls = (LFS(ff) - L5(ff))/pow(-log2(0.05), 0.5);
+      if(vul_type(ff) == -1) { // Logistic
+        Vmaxlen(ff) = 1;
+      } else { // Dome
+        prior -= dnorm_(vul_par(2,ff), Type(0), Type(3), true);
+        Vmaxlen(ff) = invlogit(vul_par(2,ff));
       }
 
-    } else { // Mirrored index to fleet
-      vul.col(ff) = fleet_var.col(I_type(ff) - 1);
-    }
+      for(int y=0;y<Len_age.rows();y++) {
+        for(int a=0;a<Len_age.cols();a++) {
+          Type lo = pow(2, -((Len_age(y,a) - LFS(ff))/sls * (Len_age(y,a) - LFS(ff))/sls));
+          Type hi;
+
+          if(vul_type(ff) == -1) { // Logistic
+            hi = 1;
+          } else { // Dome
+            Type srs = (Linf - LFS(ff))/pow(-log2(Vmaxlen(ff)), 0.5);
+            hi = pow(2, -((Len_age(y,a) - LFS(ff))/srs * (Len_age(y,a) - LFS(ff))/srs));
+          }
+          vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
+        }
+      }
+    } 
   }
   return vul;
 }

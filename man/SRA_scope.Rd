@@ -39,10 +39,12 @@ or "effort".}
 If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below). "free" indicates independent selectivity parameters for each age,
 and additional modifications for fixing selectivity parameters will likely be needed (see details).}
 
-\item{s_selectivity}{Only used if any of the corresponding entries of \code{data$I_type = "est"}. A vector of length nsurvey to indicate \code{"logistic"}, \code{"dome"}, or \code{"free"} selectivity for each survey
-corresponding to the columns in \code{data$Index}.}
+\item{s_selectivity}{A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Either \code{"B"} for
+total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet and so on).
+Finally, if the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
+See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.}
 
-\item{LWT}{A named list of likelihood weights for the SRA model. See details.}
+\item{LWT}{A named list of likelihood weights for the SRA model. See below.}
 
 \item{comp_like}{A string indicating either \code{"multinomial"} (default) or \code{"lognormal"} distributions for the composition data.}
 
@@ -84,18 +86,20 @@ Either a full catch (conditioned on catch) or effort (conditioned on effort) tim
 Fleet selectivity is fixed to values sampled from \code{OM} if no age or length compositions are provided.
 
 Survey selectivity is estimable only if \code{s_CAA} or \code{s_CAL} is provided. Otherwise, the selectivity should
-be mirrored to a fleet (vulnerable biomass selectivity) or indexed to total or spawning biomass (see \code{I_type}).
+be mirrored to a fleet (vulnerable biomass selectivity) or indexed to total or spawning biomass (see \code{s_selectivity}).
 
-Parameters that were used in the fitting model are placed in objects in \code{OM@cpars}.
+Parameters that were used in the fitting model are placed in the \code{SRA@OM@cpars} list.
+If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
+Time-varying life history parameters can create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
+See section D.5 of \code{DLMtool::userguide()}.
+
+The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <- OM@Linfsd <- OM@Ksd <- c(0, 0)}.
 
 \code{Sub_cpars} is a convenient function to subset simulations
 for the operating model, for example, to remove simulations from unconverged model fits or outlier simulations.
 
-If the operating model \code{OM} uses time-varying growth or M, then those trends will be used in the SRA as well.
-Time-varying life history parameters create ambiguity in the calculation and interpretation of depletion and reference points in \link[DLMtool]{runMSE}.
-See section D.5 of \code{DLMtool::userguide()}.
-
-The easiest way to turn off time-varying growth/M is by setting: \code{OM@Msd <- OM@Linfsd <- OM@Ksd <- c(0, 0)}.
+To play with alternative fits by excluding indices, for example, or other optional data, set the corresponding likelihood weight to zero. The model will still generate the inferred
+index but the data won't enter the likelihood. See section on likelihood weights.
 }
 \section{Vignette}{
 
@@ -123,9 +127,7 @@ Ideally, the first year of the catch series represents unfished conditions (see 
 indexing years and columns indexing surveys. Age-specific indices should be numbers-specific while all others are weight-based.
 \item I_sd - A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
 If not provided, this function will use values from \code{OM@Iobs}.
-\item I_type - A character vector of length nsurvey to indicate the type of biomass for which each index follows. Either \code{"B"} for
-total biomass, or \code{"SSB"} for spawning biomass. If not provided, "B" is used. Use numbers if the index corresponds to a fleet in \code{Chist}.
-Use \code{"est"} to set survey selectivity to be an independent component of the model, i.e., as an age-specific index or estimated separately.
+\item I_type - Obsolete. See \code{s_selectivity} argument.
 Note, this generally requires age \code{s_CAA} or length \code{s_CAL} compositions.
 \item CAA - Fishery age composition matrix with nyears rows and OM@maxage columns. If multiple fleets: an array with dimension: nyears, OM@maxage, and nfleets.
 \item CAL - Fishery Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
@@ -146,9 +148,8 @@ Zero (default) implies unfished conditions in year one. Otherwise, this is used 
 \item I_units - Optional, an integer vector to indicate whether indices are biomass based (1) or abundance-based (0). By default, all are biomass-based.
 \item age_error - Optional, a square matrix of maxage rows and columns to specify ageing error. The aa-th column assigns a proportion of the true age in the
 a-th row to observed age. Thus, all rows should sum to 1. Default is an identity matrix (no ageing error).
-\item sel_block - Optional, for time-varying fleet selectivity (in time blocks), a matrix of nyears x nfleet that assigns a selectivity function to a fleet-year combination.
+\item sel_block - Optional, for time-varying fleet selectivity (in time blocks), a integer matrix of nyears rows and nfleet columns to assigns a selectivity function to a fleet for certain years.
 See the \href{../doc/SRA_scope_sel.html}{selectivity} vignette for more details.
-\item nsel_block - Optional, the number of selectivity blocks.
 }
 }
 
@@ -193,9 +194,6 @@ By default, all likelihood weights are equal to one if not specified by the user
 multinomial sample size. For \code{CAA}, \code{CAL}, \code{s_CAA}, and \code{s_CAL}, the arrays should be set up so that
 the annual number of observations (summed over columns) should be equal to the presumed effective sample size. Argument \code{ESS} provides a shortcut
 to cap the the effective sample size.
-
-To play with alternative fits by excluding indices, for example, set the corresponding likelihood weight to zero. The model will still
-generate the inferred index but the data won't enter the likelihood.
 }
 
 \seealso{

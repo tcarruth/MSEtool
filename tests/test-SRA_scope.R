@@ -36,7 +36,7 @@ lapply_fn <- function(i, data_master, OM, Hist) {
     args$data$Index <- Hist@Data@Ind[1, ]
     args$data$Index[c(1:40)] <- NA
     args$data$I_sd <- c(rep(NA, 40), rep(0.3, 10))
-    args$data$I_type <- "B"
+    args$s_selectivity <- "B"
   }
 
   if(data_master$ML[i]) { # Only recent mean length
