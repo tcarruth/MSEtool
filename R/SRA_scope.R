@@ -215,7 +215,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   message(ifelse(OM@SRrel == 1, "Beverton-Holt", "Ricker"), " stock-recruitment relationship used.")
 
   # Test for identical sims
-  all_identical_sims <- all_identical_sims_fn(StockPars, FleetPars, ObsPars, data, dots)
+  par_identical_sims <- par_identical_sims_fn(StockPars, FleetPars, ObsPars, data, dots)
 
   # Fit model
   if(!is.null(dots$resample) && dots$resample) { # Re-sample covariance matrix
@@ -235,7 +235,11 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
       samps <- mean_fit_output$obj$env$last.par.best %>% matrix(nrow = nsim, ncol = length(mean_fit_output$obj$par), byrow = TRUE)
     } else {
       message("Model converged. Sampling covariance matrix for nsim = ", nsim, " replicates...")
-      if(!all_identical_sims) message("Note: not all ", nsim, " replicates are identical.")
+      if(!all(par_identical_sims)) {
+        message("Note: not all ", nsim, " replicates are identical.")
+        message("These parameters should be identical among simulations: ",
+                which(!par_identical_sims) %>% names() %>% paste0(collapse = " "))
+      }
 
       samps <- mvtnorm::rmvnorm(nsim, mean_fit_output$opt$par, mean_fit_output$SD$cov.fixed)
     }
@@ -253,7 +257,7 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
   } else {
 
-    if(all_identical_sims) { # All identical sims detected
+    if(all(par_identical_sims)) { # All identical sims detected
       message("\nAll ", nsim, " replicates are identical. Fitting once and replicating single fit...")
 
       mean_fit_output <- SRA_scope_est(data = data, selectivity = sel, s_selectivity = s_sel,
@@ -859,7 +863,7 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
   return(OM)
 }
 
-all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
+par_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
   vector_fn <- function(x) sum(mean(x) - x) == 0
   array_fn <- function(x) {
     x_mean <- apply(x, 2:length(dim(x)), mean)
@@ -877,21 +881,22 @@ all_identical_sims_fn <- function(StockPars, FleetPars, ObsPars, data, dots) {
     FleetPars_subset <- FleetPars[c("L5", "LFS", "Vmaxlen")]
     FleetPars_subset <- lapply(FleetPars_subset, function(x) x[data$nyears, ])
     F_test_sel <- vapply(FleetPars_subset, run_test, logical(1))
-  } else F_test_sel <- TRUE
+  } else F_test_sel <- NULL
 
   if(data$condition == "effort" && !is.null(dots$OMeff) && dots$OMeff) {
-    F_test_Find <- run_test(FleetPars$Find)
-  } else F_test_Find <- TRUE
+    F_test_Find <- run_test(FleetPars$Find) %>% structure(names = "Find")
+  } else F_test_Find <- NULL
 
   F_test <- c(F_test_sel, F_test_Find)
 
   if(data$nsurvey > 0 && !any(data$I_sd > 0, na.rm = TRUE)) {
-    O_test <- run_test(ObsPars$Isd)
+    O_test <- run_test(ObsPars$Isd) %>% structure(names = "Isd")
   } else {
-    O_test <- TRUE
+    O_test <- NULL
   }
 
-  return(all(c(S_test, F_test, O_test)))
+  test_all <- c(S_test, F_test, O_test)
+  return(test_all)
 }
 
 
