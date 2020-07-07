@@ -19,9 +19,9 @@
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"}, \code{"dome"}, or \code{"free"} selectivity for each fleet in \code{Chist}.
 #' If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below). "free" indicates independent selectivity parameters for each age,
 #' and additional modifications for fixing selectivity parameters will likely be needed (see details).
-#' @param s_selectivity A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Either \code{"B"} for
+#' @param s_selectivity A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Use \code{"B"} for
 #' total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet and so on).
-#' Finally, if the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
+#' If the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
 #' See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.
 #' @param LWT A named list of likelihood weights for the SRA model. See below.
 #' @param comp_like A string indicating either \code{"multinomial"} (default) or \code{"lognormal"} distributions for the composition data.
@@ -84,14 +84,14 @@
 #' \item I_sd - A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
 #' If not provided, this function will use values from \code{OM@@Iobs}.
 #' \item I_type - Obsolete. See \code{s_selectivity} argument.
-#' Note, this generally requires age \code{s_CAA} or length \code{s_CAL} compositions.
 #' \item CAA - Fishery age composition matrix with nyears rows and OM@@maxage columns. If multiple fleets: an array with dimension: nyears, OM@@maxage, and nfleets.
-#' \item CAL - Fishery Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
+#' \item CAL - Fishery length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 #' length bins, and nfleets.
-#' \item ML - A vector of fishery mean length observations (length OM@@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets. Generally, should not
-#' be used if \code{CAL} is also provided, unless mean length and length comps are independently sampled.
-#' \item ML_sd - The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
-#' If not provided, default value is \code{0.1 * mean(ML)}.
+#' \item MS - A vector of fishery mean size (MS, either mean length or mean weight) observations (length OM@@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets.
+#' Generally, mean lengths should not be used if \code{CAL} is also provided, unless mean length and length comps are independently sampled.
+#' \item MS_type - A character (either \code{"length"} (default) or \code{"weight"}) to denote the type of mean size data.
+#' \item MS_cv - The coefficient of variation of the observed mean size. If there are multiple fleets, a vector of length nfleet.
+#' Default is 0.2.
 #' \item s_CAA - Survey age composition data, an array of dimension nyears, maxage, nsurvey.
 #' \item s_CAL - Survey length composition data, an array of dimension nyears, length(length_bin), nsurvey.
 #' \item length_bin - A vector for the midpoints of the length bins for \code{CAL} and \code{s_CAL}. All bin widths should be equal in size.
@@ -119,8 +119,8 @@
 #' the row specifies the selectivity at age. See the \href{../doc/SRA_scope_sel.html}{selectivity} vignette for more information.
 #' \item s_vul_par: A matrix of 3 rows and nsurvey columns for starting values for fleet selectivity. Same setup as vul_par. These values are only
 #' used if \code{s_selectivity = "est"} for the corresponding fleet. Otherwise, placeholders should be used to complete the matrix.
-#' \item map_vul_par: The map argument for vul_par in TMB, see \link[TMB]{MakeADFun}, which indicates whether selectivity parameters are fixed
-#' or estimated. A matrix of the same dimension as vul_par. If an entry is \code{NA}, the corresponding parameter is fixed in the model to the starting
+#' \item map_vul_par: An integer matrix of the same dimension as vul_par. This is the 'map' argument for vul_par in TMB, see \link[TMB]{MakeADFun}, which indicates whether selectivity parameters are fixed
+#' or estimated. If an entry is \code{NA}, the corresponding parameter is fixed in the model to the starting
 #' value. Otherwise, an integer for each independent parameter. By default, selectivity is fixed if there are no age or length composition for that fleet
 #' or survey, otherwise estimated. Unused cells in the vul_par matrix should be given NA in the map matrix.
 #' \item map_s_vul_par: The map argument for the survey selectivity parameters (same dimension as s_vul_par). Placeholder parameters should have a map value of NA.
@@ -137,17 +137,15 @@
 #' @section Likelihood weights:
 #' \code{LWT} is an optional named list containing the likelihood weights (values >= 0) with the possible options:
 #' \itemize{
-#' \item Chist: A vector of length nfleet.
-#' \item Index: A vector of length nsurvey.
-#' \item CAA, CAL, ML, C_eq: A vector of length nfleet for each.
-#' \item s_CAA, s_CAL: A vector of length nsurvey for each.
+#' \item Chist, CAA, CAL, MS, C_eq: A vector of length nfleet for each.
+#' \item Index, s_CAA, s_CAL: A vector of length nsurvey for each.
 #' }
 #'
-#' By default, all likelihood weights are equal to one if not specified by the user. Weighting for CAA and CAL can also be adjusted by changing the
-#' multinomial sample size. For \code{CAA}, \code{CAL}, \code{s_CAA}, and \code{s_CAL}, the arrays should be set up so that
-#' the annual number of observations (summed over columns) should be equal to the presumed effective sample size. Argument \code{ESS} provides a shortcut
-#' to cap the the effective sample size.
+#' By default, all likelihood weights are equal to one if not specified by the user.
 #'
+#' Weighting for CAA and CAL can also be adjusted by changing the multinomial sample size. For \code{CAA}, \code{CAL}, \code{s_CAA}, and \code{s_CAL}, the arrays should be set up so that
+#' the annual number of observations will be equal to the presumed multinomial sample size. Argument \code{ESS} provides a shortcut
+#' to cap the multinomial sample size for age and length comps.
 #'
 #' @author Q. Huynh
 #' @seealso \link{plot.SRA} \linkS4class{SRA}
@@ -199,6 +197,16 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
   # Survey selectivity
   if(!is.null(data$I_type)) {
     message("\n\n*** WARNING: data$I_type is now obsolete. Use s_selectivity argument instead. *** \n\n")
+    if(all(data$I_type != "est") && is.null(s_selectivity)) {
+      message("*** For this model, data$I_type should still be compatible and moved over to s_selectivity. Attempting to run model...\n\n")
+      s_selectivity <- data$I_type
+      data$I_type <- NULL
+    } else if(any(data$I_type == "est") && length(s_selectivity) == nsurvey) {
+      s_selectivity[data$I_type != "est"] <- data$I_type[data$I_type != "est"]
+      message("*** Attempting to update s_selectivity from data$I_type. Argument s_selectivity updated to:")
+      message("c(", paste(s_selectivity, collapse = ", "), ")")
+      message("\n\n")
+    }
   }
   if(nsurvey > 0) {
     if(is.null(s_selectivity)) s_selectivity <- rep("B", nsurvey)
@@ -587,7 +595,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
     s_CAL_n <- pmin(s_CAL_n, ESS[2])
   }
 
-  LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML, LWT$C_eq), nrow = nfleet, ncol = 5)
+  LWT_C <- matrix(c(LWT$Chist, LWT$CAA, LWT$CAL, LWT$MS, LWT$C_eq), nrow = nfleet, ncol = 5)
   LWT_Index <- cbind(LWT$Index, LWT$s_CAA, LWT$s_CAL)
 
   if(mean_fit) {
@@ -657,7 +665,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
                        nll_C = as.integer((data$condition == "effort" & nfleet > 1) || data$condition == "catch"),
                        I_hist = data$Index, sigma_I = data$I_sd, CAA_hist = data$CAA, CAA_n = pmin(CAA_n, ESS[1]),
                        CAL_hist = data$CAL, CAL_n = pmin(CAL_n, ESS[2]), s_CAA_hist = data$s_CAA, s_CAA_n = s_CAA_n,
-                       s_CAL_hist = data$s_CAL, s_CAL_n = s_CAL_n, length_bin = data$length_bin, mlen = data$ML,
+                       s_CAL_hist = data$s_CAL, s_CAL_n = s_CAL_n, length_bin = data$length_bin, msize = data$MS, msize_type = data$MS_type,
                        sel_block = rbind(data$sel_block, data$sel_block[nyears, ]), nsel_block = data$nsel_block,
                        n_y = nyears, max_age = max_age, nfleet = nfleet, nsurvey = nsurvey,
                        M = t(StockPars$M_ageArray[x, , 1:nyears]), len_age = t(StockPars$Len_age[x, , 1:(nyears+1)]),
@@ -745,7 +753,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
                      transformed_h = transformed_h, vul_par = vul_par, s_vul_par = s_vul_par,
                      log_q_effort = rep(log(0.1), nfleet), log_F = log_F_start,
                      log_F_equilibrium = rep(log(0.05), nfleet),
-                     log_sigma_mlen = log(data$ML_sd), log_tau = log(StockPars$procsd[x]),
+                     log_CV_msize = log(data$MS_cv), log_tau = log(StockPars$procsd[x]),
                      log_early_rec_dev = rep(0, max_age - 1), log_rec_dev = rep(0, nyears))
 
   map <- list()
@@ -764,7 +772,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
     map$log_F_equilibrium <- factor(rep(NA, nfleet))
   }
   if(data$condition != "catch") map$log_F <- factor(matrix(NA, nyears, nfleet))
-  map$log_sigma_mlen <- factor(rep(NA, nfleet))
+  map$log_CV_msize <- factor(rep(NA, nfleet))
 
   if(is.null(dots$map_log_early_rec_dev)) {
     map$log_early_rec_dev <- factor(rep(NA, max_age - 1))
@@ -937,7 +945,7 @@ SRA_posthoc_adjust <- function(report, obj, par = obj$env$last.par.best) {
     report$vul_len <- matrix(NA_real_, length(report$length_bin), data$nsel_block)
     report$s_vul_len <- matrix(NA_real_, length(report$length_bin), dim(report$s_vul)[3])
 
-    report$mlen_pred <- matrix(NA_real_, nrow(report$F), ncol(report$F))
+    report$MLpred <- matrix(NA_real_, nrow(report$F), ncol(report$F))
     report$CALpred <- array(NA_real_, dim(report$CALpred))
     report$s_CALpred <- array(NA_real_, dim(report$s_CALpred))
   } else {
@@ -1071,7 +1079,7 @@ SRA_retro_subset <- function(yr, data, params, map) {
   ##### Data object
   data_out <- structure(data, check.passed = NULL)
 
-  mat <- c("C_hist", "E_hist", "I_hist", "sigma_I", "CAA_n", "CAL_n", "s_CAA_n", "s_CAL_n", "mlen", "M")
+  mat <- c("C_hist", "E_hist", "I_hist", "sigma_I", "CAA_n", "CAL_n", "s_CAA_n", "s_CAL_n", "msize", "M")
   mat_ind <- match(mat, names(data_out))
   data_out[mat_ind] <- lapply(data_out[mat_ind], function(x) x[1:yr, , drop = FALSE])
 

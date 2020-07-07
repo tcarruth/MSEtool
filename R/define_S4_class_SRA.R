@@ -37,7 +37,8 @@
 #' \item vul - fleet selectivity at age - array of dim nyears+1, maxage, nfleet (or nsel_block)
 #' \item vul_len - corresponding fleet selectivity at length - matrix of nbins x nfleet (or nsel_block)
 #' \item s_CALpred - predicted survey catch at length - array of dim nyears, nbins, nsurvey
-#' \item mlen_pred - predicted mean lengths - matrix of nyears x nfleet
+#' \item MLpred - predicted mean length - matrix of nyears x nfleet
+#' \item MWpred - predicted mean weight - matrix of nyears x nfleet
 #' \item CAApred - predicted catch at age - array of nyears, maxage, nfleet
 #' \item CALpred - predicted catch at length - array of nyears, nbins, nfleet
 #' \item Cpred - predicted catch in weight - matrix of nyears x nfleet
@@ -325,12 +326,17 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                lapply(1:nfleet, individual_array_fn, obs = "data$CAL", pred = "report$CALpred", comps = "length", label = f_name))
               } else CAL_plots <- NULL
 
-              if(any(data$ML > 0, na.rm = TRUE)) {
-                ML_label <- paste("Mean Length from", f_name)
-                ML_plots <- c("#### Mean lengths \n",
-                              lapply(1:nfleet, individual_matrix_fn, obs = "data$ML", pred = "report$mlen_pred",
-                                     fig.cap = "mean lengths from fleet", label = ML_label))
-              } else ML_plots <- NULL
+              if(any(data$MS > 0, na.rm = TRUE)) {
+                if(data$MS_type == "length") {
+                  MS_label <- paste("Mean Length from", f_name)
+                } else {
+                  MS_label <- paste("Mean Weight from", f_name)
+                }
+                MS_plots <- c(paste0("#### Mean ", data$MS_type, "\n"),
+                              lapply(1:nfleet, individual_matrix_fn, obs = "data$MS",
+                                     pred = ifelse(data$MS_type == "length", "report$MLpred", "report$MWpred"),
+                                     fig.cap = paste("mean", data$MS_type, "from fleet"), label = MS_label))
+              } else MS_plots <- NULL
 
               if(any(data$s_CAA > 0, na.rm = TRUE)) {
                 s_CAA_plots <- c("#### Survey age comps \n",
@@ -342,7 +348,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                  lapply(1:nsurvey, individual_array_fn, obs = "data$s_CAL", pred = "report$s_CALpred", comps = "length", label = s_name))
               } else s_CAL_plots <- NULL
 
-              data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, ML_plots, s_CAA_plots, s_CAL_plots)
+              data_section <- c(C_matplot, E_matplot, C_plots, I_plots, CAA_plots, CAL_plots, MS_plots, s_CAA_plots, s_CAL_plots)
 
               # Model output
               sel_matplot <- rmd_matplot(x = "matrix(age, max_age, nfleet)", y = "matrix(report$vul[nyears, , ], max_age, nfleet)", col = "rich.colors(nfleet)",
@@ -744,14 +750,27 @@ rmd_SRA_fleet_output <- function(ff, f_name) {
            "```\n",
            "",
            paste0("```{r, fig.cap = \"Observed (black) and predicted (red) mean lengths from ", f_name[ff], ".\"}"),
-           paste0("MLpred <- do.call(cbind, lapply(report_list, function(x) x$mlen_pred[, ", ff, "]))"),
+           paste0("MLpred <- do.call(cbind, lapply(report_list, function(x) x$MLpred[, ", ff, "]))"),
            paste0("if(any(data$CAL[, , ", ff, "] > 0, na.rm = TRUE)) {"),
            paste0("  MLobs <- (data$CAL[, , ", ff, "] %*% length_bin)/rowSums(data$CAL[, , ", ff, "], na.rm = TRUE)"),
-           paste0("} else if(any(data$ML[, ", ff, "] > 0, na.rm = TRUE)) MLobs <- data$ML[, ", ff, "] else MLobs <- NA"),
+           paste0("} else if(data$MS_type == \"length\" && any(data$MS[, ", ff, "] > 0, na.rm = TRUE)) MLobs <- data$MS[, ", ff, "] else MLobs <- NA"),
            "if(!all(is.na(MLpred))) {",
            "  ylim <- c(0.9, 1.1) * range(c(MLpred, MLobs), na.rm = TRUE)",
            "  matplot(Year, MLpred, type = \"l\", col = scenario$col, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Mean length\", ylim = ylim)",
            "  if(!all(is.na(MLobs))) lines(Year, MLobs, col = \"black\", typ = \"o\")",
+           "  if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd)",
+           "}",
+           "```\n",
+           "",
+           paste0("```{r, fig.cap = \"Observed (black) and predicted (red) mean weights from ", f_name[ff], ".\"}"),
+           paste0("if(data$MS_type == \"weight\" && any(data$MS[, ", ff, "] > 0, na.rm = TRUE)) {"),
+           paste0("  MWobs <- data$MS[, ", ff, "]"),
+           paste0("} else MWobs <- NA"),
+           "if(!all(is.na(MWobs))) {",
+           paste0("  MWpred <- do.call(cbind, lapply(report_list, function(x) x$MWpred[, ", ff, "]))"),
+           "  ylim <- c(0.9, 1.1) * range(c(MWpred, MWobs), na.rm = TRUE)",
+           "  matplot(Year, MWpred, type = \"l\", col = scenario$col, lty = scenario$lty, lwd = scenario$lwd, xlab = \"Year\", ylab = \"Mean weight\", ylim = ylim)",
+           "  lines(Year, MWobs, col = \"black\", typ = \"o\")",
            "  if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col, lty = scenario$lty, lwd = scenario$lwd)",
            "}",
            "```\n",
@@ -968,14 +987,14 @@ plot_composition_SRA <- function(Year, SRA, dat = NULL, CAL_bins = NULL, ages = 
 }
 
 SRA_get_likelihoods <- function(x, LWT, f_name, s_name) {
-  f_nll <- rbind(x$nll_Catch + x$nll_Ceq, x$nll_CAA, x$nll_CAL, x$nll_ML)
+  f_nll <- rbind(x$nll_Catch + x$nll_Ceq, x$nll_CAA, x$nll_CAL, x$nll_MS)
   f_nll[is.na(f_nll)] <- 0
   f_nll <- cbind(f_nll, rowSums(f_nll))
   f_nll <- rbind(f_nll, colSums(f_nll))
   colnames(f_nll) <- c(f_name, "Sum")
-  rownames(f_nll) <- c("Catch", "CAA", "CAL", "ML", "Sum")
+  rownames(f_nll) <- c("Catch", "CAA", "CAL", "Mean Size", "Sum")
 
-  f_wt <- structure(rbind(LWT$Chist, LWT$CAA, LWT$CAL, LWT$ML), dimnames = list(rownames(f_nll)[1:4], f_name))
+  f_wt <- structure(rbind(LWT$Chist, LWT$CAA, LWT$CAL, LWT$MS), dimnames = list(rownames(f_nll)[1:4], f_name))
 
   s_nll <- rbind(x$nll_Index, x$nll_s_CAA, x$nll_s_CAL)
   s_nll[is.na(s_nll)] <- 0

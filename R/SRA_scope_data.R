@@ -96,12 +96,12 @@ make_LWT <- function(LWT, nfleet, nsurvey) {
   }
   if(length(LWT$CAL) != nfleet) stop("LWT$CAL should be a vector of length ", nfleet, ".")
 
-  if(is.null(LWT$ML)) {
-    LWT$ML <- rep(1, nfleet)
-  } else if(length(LWT$ML) == 1 && nfleet > 1) {
-    LWT$ML <- rep(LWT$ML, nfleet)
+  if(is.null(LWT$MS)) {
+    LWT$MS <- rep(1, nfleet)
+  } else if(length(LWT$MS) == 1 && nfleet > 1) {
+    LWT$MS <- rep(LWT$MS, nfleet)
   }
-  if(length(LWT$ML) != nfleet) stop("LWT$ML should be a vector of length ", nfleet, ".")
+  if(length(LWT$MS) != nfleet) stop("LWT$MS should be a vector of length ", nfleet, ".")
 
   if(is.null(LWT$C_eq)) {
     LWT$C_eq <- rep(1, max(1, nfleet))
@@ -300,22 +300,38 @@ update_SRA_data <- function(data, OM, condition, dots) {
     data$length_bin <- StockPars$CAL_binsmid
   }
 
-  # Process mean lengths
-  if(!is.null(data$ML)) {
-    if(is.vector(data$ML)) {
-      if(length(data$ML) != data$nyears) stop("Mean length vector (ML) must be of length ", data$nyears, ".", call. = FALSE)
-      data$ML <- matrix(data$ML, ncol = 1)
+  # Process mean size (either lengths or weights)
+  if(!is.null(data$ML) && is.null(data$MS)) { # Backwards compatibility
+    message("\n\n ** data$ML is no longer used. Use data$MS (mean size) instead. ** \n\n")
+    data$MS <- data$ML
+  }
+  if(!is.null(data$MS)) {
+    if(is.null(data$MS_type)) {
+      message("Mean size (data$MS) found, but not type (data$MS_type). Assuming it's mean length.")
+      data$MS_type <- "length"
+    } else {
+      data$MS_type <- match.arg(data$MS_type, choices = c("length", "weight"))
+      message("Mean ", data$MS_type, " data found.")
     }
-    if(nrow(data$ML) != data$nyears) stop("Number of ML rows (", nrow(data$ML), ") does not equal nyears (", data$nyears, "). NAs are acceptable.", call. = FALSE)
-    if(ncol(data$ML) != data$nfleet) stop("Number of ML columns (", ncol(data$ML), ") does not equal nfleet (", data$nfleet, "). NAs are acceptable.", call. = FALSE)
+    if(is.vector(data$MS)) {
+      if(length(data$MS) != data$nyears) stop("Mean size vector (MS) must be of length ", data$nyears, ".", call. = FALSE)
+      data$MS <- matrix(data$MS, ncol = 1)
+    }
+    if(nrow(data$MS) != data$nyears) stop("Number of MS rows (", nrow(data$ML), ") does not equal nyears (", data$nyears, "). NAs are acceptable.", call. = FALSE)
+    if(ncol(data$MS) != data$nfleet) stop("Number of MS columns (", ncol(data$ML), ") does not equal nfleet (", data$nfleet, "). NAs are acceptable.", call. = FALSE)
 
-    if(is.null(data$ML_sd)) {
-      data$ML_sd <- apply(data$ML, 2, mean, na.rm = TRUE)
-    } else if(length(data$ML_sd) == 1) data$ML_sd <- rep(data$ML_sd, data$nfleet)
-    if(length(data$ML_sd) != data$nfleet) stop("Mean length SD vector (ML_sd) must be of length ", data$nfleet, ".", call. = FALSE)
+    if(!is.null(data$ML_sd) && is.null(data$MS_cv)) { # Backwards compatibility
+      message("\n\n ** data$ML_sd is no longer used. Use data$MS_cv instead. ** \n\n")
+      data$MS_cv <- data$ML_sd/apply(data$MS, 2, mean, na.rm = TRUE)
+      message("data$MS_cv = ", paste(data$MS_cv, collapse = ", "))
+    }
+    if(is.null(data$MS_cv)) {
+      data$MS_cv <- rep(0.2, data$nfleet)
+    } else if(length(data$MS_cv) == 1) data$MS_cv <- rep(data$MS_cv, data$nfleet)
+    if(length(data$MS_cv) != data$nfleet) stop("Mean size CV vector (MS_cv) must be of length ", data$nfleet, ".", call. = FALSE)
   } else {
-    data$ML <- matrix(NA, nrow = data$nyears, ncol = data$nfleet)
-    data$ML_sd <- rep(0.1, data$nfleet)
+    data$MS <- matrix(NA, nrow = data$nyears, ncol = data$nfleet)
+    data$MS_cv <- rep(0.2, data$nfleet)
   }
 
   # Process equilibrium catch/effort - Ceq

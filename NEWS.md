@@ -1,5 +1,11 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 2.0.0 (in progress)
+
+### SRA_scope
+- `data$I_type` is now obsolete to remove redundancy with argument `s_selectivity`. Use `s_selectivity` to specify the selectivity of surveys. If `data$I_type` is detected, the code will attempt to update `s_selectivity`.
+- `data$MS` (mean size) is now used instead of `data$ML` (fishery mean lengths). `data$MS` can also be mean weights, specify with `data$MS_type` to be either "length" or "weight". The likelihood of `data$MS` uses a normal distribution with constant CV specified in `data$MS_cv` (default = 0.2).
+
 ## MSEtool 1.7.0
 
 ### SRA_scope

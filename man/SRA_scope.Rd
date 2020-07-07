@@ -39,9 +39,9 @@ or "effort".}
 If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below). "free" indicates independent selectivity parameters for each age,
 and additional modifications for fixing selectivity parameters will likely be needed (see details).}
 
-\item{s_selectivity}{A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Either \code{"B"} for
+\item{s_selectivity}{A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Use \code{"B"} for
 total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet and so on).
-Finally, if the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
+If the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
 See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.}
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See below.}
@@ -128,14 +128,14 @@ indexing years and columns indexing surveys. Age-specific indices should be numb
 \item I_sd - A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
 If not provided, this function will use values from \code{OM@Iobs}.
 \item I_type - Obsolete. See \code{s_selectivity} argument.
-Note, this generally requires age \code{s_CAA} or length \code{s_CAL} compositions.
 \item CAA - Fishery age composition matrix with nyears rows and OM@maxage columns. If multiple fleets: an array with dimension: nyears, OM@maxage, and nfleets.
-\item CAL - Fishery Length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
+\item CAL - Fishery length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 length bins, and nfleets.
-\item ML - A vector of fishery mean length observations (length OM@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets. Generally, should not
-be used if \code{CAL} is also provided, unless mean length and length comps are independently sampled.
-\item ML_sd - The standard deviation (normal distribution) of the observed mean lengths. If there are multiple fleets, a vector of length nfleet.
-If not provided, default value is \code{0.1 * mean(ML)}.
+\item MS - A vector of fishery mean size (MS, either mean length or mean weight) observations (length OM@nyears), or if multiple fleets: matrix of dimension: nyears and nfleets.
+Generally, mean lengths should not be used if \code{CAL} is also provided, unless mean length and length comps are independently sampled.
+\item MS_type - A character (either \code{"length"} (default) or \code{"weight"}) to denote the type of mean size data.
+\item MS_cv - The coefficient of variation of the observed mean size. If there are multiple fleets, a vector of length nfleet.
+Default is 0.2.
 \item s_CAA - Survey age composition data, an array of dimension nyears, maxage, nsurvey.
 \item s_CAL - Survey length composition data, an array of dimension nyears, length(length_bin), nsurvey.
 \item length_bin - A vector for the midpoints of the length bins for \code{CAL} and \code{s_CAL}. All bin widths should be equal in size.
@@ -164,8 +164,8 @@ the starting values are values from the OM object. If any selectivity = "free", 
 the row specifies the selectivity at age. See the \href{../doc/SRA_scope_sel.html}{selectivity} vignette for more information.
 \item s_vul_par: A matrix of 3 rows and nsurvey columns for starting values for fleet selectivity. Same setup as vul_par. These values are only
 used if \code{s_selectivity = "est"} for the corresponding fleet. Otherwise, placeholders should be used to complete the matrix.
-\item map_vul_par: The map argument for vul_par in TMB, see \link[TMB]{MakeADFun}, which indicates whether selectivity parameters are fixed
-or estimated. A matrix of the same dimension as vul_par. If an entry is \code{NA}, the corresponding parameter is fixed in the model to the starting
+\item map_vul_par: An integer matrix of the same dimension as vul_par. This is the 'map' argument for vul_par in TMB, see \link[TMB]{MakeADFun}, which indicates whether selectivity parameters are fixed
+or estimated. If an entry is \code{NA}, the corresponding parameter is fixed in the model to the starting
 value. Otherwise, an integer for each independent parameter. By default, selectivity is fixed if there are no age or length composition for that fleet
 or survey, otherwise estimated. Unused cells in the vul_par matrix should be given NA in the map matrix.
 \item map_s_vul_par: The map argument for the survey selectivity parameters (same dimension as s_vul_par). Placeholder parameters should have a map value of NA.
@@ -184,16 +184,15 @@ a single model fit. By default FALSE. This feature requires identical biological
 
 \code{LWT} is an optional named list containing the likelihood weights (values >= 0) with the possible options:
 \itemize{
-\item Chist: A vector of length nfleet.
-\item Index: A vector of length nsurvey.
-\item CAA, CAL, ML, C_eq: A vector of length nfleet for each.
-\item s_CAA, s_CAL: A vector of length nsurvey for each.
+\item Chist, CAA, CAL, MS, C_eq: A vector of length nfleet for each.
+\item Index, s_CAA, s_CAL: A vector of length nsurvey for each.
 }
 
-By default, all likelihood weights are equal to one if not specified by the user. Weighting for CAA and CAL can also be adjusted by changing the
-multinomial sample size. For \code{CAA}, \code{CAL}, \code{s_CAA}, and \code{s_CAL}, the arrays should be set up so that
-the annual number of observations (summed over columns) should be equal to the presumed effective sample size. Argument \code{ESS} provides a shortcut
-to cap the the effective sample size.
+By default, all likelihood weights are equal to one if not specified by the user.
+
+Weighting for CAA and CAL can also be adjusted by changing the multinomial sample size. For \code{CAA}, \code{CAL}, \code{s_CAA}, and \code{s_CAL}, the arrays should be set up so that
+the annual number of observations will be equal to the presumed multinomial sample size. Argument \code{ESS} provides a shortcut
+to cap the multinomial sample size for age and length comps.
 }
 
 \seealso{

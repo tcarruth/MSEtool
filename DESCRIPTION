@@ -6,7 +6,7 @@ Authors@R: c(person("Quang", "Huynh", email = "q.huynh@oceans.ubc.ca", role = "a
   person("Tom", "Carruthers", email = "t.carruthers@oceans.ubc.ca", role = c("aut", "cre")),
   person("Adrian", "Hordyk", email = "a.hordyk@oceans.ubc.ca", role = "aut"),
   person("Chris", "Grandin", rol = "ctb", comment = "iSCAM functions"))
-Date: 2020-06-29
+Date: 2020-07-07
 Maintainer: Tom Carruthers <t.carruthers@oceans.ubc.ca>
 Description: Simulation tools for management strategy evaluation are provided for the 'DLMtool' operating model to inform data-rich fisheries. 
   'MSEtool' provides complementary assessment models of varying complexity with standardized reporting, diagnostic tools for evaluating 

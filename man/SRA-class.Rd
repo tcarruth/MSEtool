@@ -48,7 +48,8 @@ An S4 class for the output from \link{SRA_scope}.
 \item vul - fleet selectivity at age - array of dim nyears+1, maxage, nfleet (or nsel_block)
 \item vul_len - corresponding fleet selectivity at length - matrix of nbins x nfleet (or nsel_block)
 \item s_CALpred - predicted survey catch at length - array of dim nyears, nbins, nsurvey
-\item mlen_pred - predicted mean lengths - matrix of nyears x nfleet
+\item MLpred - predicted mean length - matrix of nyears x nfleet
+\item MWpred - predicted mean weight - matrix of nyears x nfleet
 \item CAApred - predicted catch at age - array of nyears, maxage, nfleet
 \item CALpred - predicted catch at length - array of nyears, nbins, nfleet
 \item Cpred - predicted catch in weight - matrix of nyears x nfleet

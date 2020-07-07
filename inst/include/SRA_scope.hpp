@@ -28,14 +28,15 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_ARRAY(CAL_hist);   // Catch-at-length re-weighted by year, length_bin, fleet
   DATA_MATRIX(CAL_n);     // Annual samples in CAL by year and fleet
 
-  DATA_ARRAY(s_CAA_hist);   // Catch-at-age re-weighted by year, age, survey
-  DATA_MATRIX(s_CAA_n);     // Annual samples in CAA by year and survey
+  DATA_ARRAY(s_CAA_hist);  // Catch-at-age re-weighted by year, age, survey
+  DATA_MATRIX(s_CAA_n);    // Annual samples in CAA by year and survey
 
-  DATA_ARRAY(s_CAL_hist);   // Catch-at-length re-weighted by year, length_bin, survey
-  DATA_MATRIX(s_CAL_n);     // Annual samples in CAL by year and survey
+  DATA_ARRAY(s_CAL_hist);  // Catch-at-length re-weighted by year, length_bin, survey
+  DATA_MATRIX(s_CAL_n);    // Annual samples in CAL by year and survey
 
-  DATA_VECTOR(length_bin);// Vector of length bins
-  DATA_MATRIX(mlen);      // Vector of annual mean lengths by year and fleet
+  DATA_VECTOR(length_bin); // Vector of length bins
+  DATA_MATRIX(msize);      // Vector of annual mean size by year and fleet
+  DATA_STRING(msize_type); // Whether the mean size is length or weight
 
   DATA_IMATRIX(sel_block); // Assigns selectivity by year and fleet
   DATA_INTEGER(nsel_block); // The number of selectivity "blocks"
@@ -60,7 +61,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_MATRIX(age_error); // Ageing error matrix
 
   DATA_STRING(SR_type);   // String indicating whether Beverton-Holt or Ricker stock-recruit is used
-  DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, ML, C_eq
+  DATA_MATRIX(LWT_C);     // LIkelihood weights for catch, CAA, CAL, MS, C_eq
   DATA_MATRIX(LWT_Index); // Likelihood weights for the index
   DATA_STRING(comp_like); // Whether to use "multinomial" or "lognormal" distribution for age/lengthc comps
 
@@ -74,7 +75,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   DATA_INTEGER(nit_F);    // When condition = "catch2", the number of iterations for Newton-Raphson method to solve for F
   DATA_INTEGER(plusgroup) // Boolean, whether the maximum age in the plusgroup is modeled.
 
-  PARAMETER(R0x);                    // Unfished recruitment
+  PARAMETER(R0x);                       // Unfished recruitment
   PARAMETER(transformed_h);             // Steepness
   PARAMETER_MATRIX(vul_par);            // Matrix of vul_par 3 rows and nsel_block columns
   PARAMETER_MATRIX(s_vul_par);          // Matrix of selectivity parameters, 3 rows and nsurvey columns
@@ -82,7 +83,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   PARAMETER_MATRIX(log_F);              // log_F_deviations when condition = "catch"
   PARAMETER_VECTOR(log_F_equilibrium);  // Equilibrium F by fleet when condition != "effort"
 
-  PARAMETER_VECTOR(log_sigma_mlen);     // Std. dev. of mean lengths
+  PARAMETER_VECTOR(log_CV_msize);       // CV of mean size
   PARAMETER(log_tau);                   // Std. dev. of rec devs
   PARAMETER_VECTOR(log_early_rec_dev);  // Rec devs for first year abundance
   PARAMETER_VECTOR(log_rec_dev);        // Rec devs for all other years in the model
@@ -110,7 +111,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   array<Type> vul = calc_vul(vul_par, vul_type, len_age, LFS, L5, Vmaxlen, Linf, nfleet, sel_block, nsel_block, prior);
 
   vector<Type> q_effort(nfleet);
-  vector<Type> sigma_mlen(nfleet);
+  vector<Type> CV_msize(nfleet);
   vector<Type> F_equilibrium(nfleet);
   F_equilibrium.setZero();
 
@@ -118,7 +119,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   matrix<Type> Z = M;
 
   for(int ff=0;ff<nfleet;ff++) {
-    sigma_mlen(ff) = exp(log_sigma_mlen(ff));
+    CV_msize(ff) = exp(log_CV_msize(ff));
     q_effort(ff) = exp(log_q_effort(ff));
     if(condition != "effort" && C_eq(ff)>0) F_equilibrium(ff) = exp(log_F_equilibrium(ff));
     if(condition == "effort" && E_eq(ff)>0) F_equilibrium(ff) = q_effort(ff) * E_eq(ff);
@@ -171,7 +172,8 @@ Type SRA_scope(objective_function<Type> *obj) {
   array<Type> CAAtrue(n_y, max_age, nfleet);   // Catch (in numbers) at year and age at the mid-point of the season
   array<Type> CAApred(n_y, max_age, nfleet);   // Catch (in numbers) at year and age at the mid-point of the season
   array<Type> CALpred(n_y, nlbin, nfleet);
-  matrix<Type> mlen_pred(n_y, nfleet);
+  matrix<Type> MLpred(n_y, nfleet);
+  matrix<Type> MWpred(n_y, nfleet);
   matrix<Type> CN(n_y, nfleet);             // Catch in numbers
 
   matrix<Type> Cpred(n_y, nfleet);
@@ -186,7 +188,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   C_eq_pred.setZero();
   CAApred.setZero();
   CALpred.setZero();
-  mlen_pred.setZero();
+  MLpred.setZero();
   CN.setZero();
 
   Cpred.setZero();
@@ -276,19 +278,18 @@ Type SRA_scope(objective_function<Type> *obj) {
         if(Type(max_age) != Linf) {
           for(int len=0;len<nlbin;len++) {
             CALpred(y,len,ff) += CAAtrue(y,a,ff) * ALK(y)(a,len);
-            mlen_pred(y,ff) += CAAtrue(y,a,ff) * ALK(y)(a,len) * length_bin(len);
+            MLpred(y,ff) += CAAtrue(y,a,ff) * ALK(y)(a,len) * length_bin(len);
           }
         }
-
         for(int aa=0;aa<max_age;aa++) CAApred(y,aa,ff) += CAAtrue(y,a,ff) * age_error(a,aa); // a = true, aa = observed ages
-
         VB(y+1,ff) += vul(y+1,a,ff) * N(y+1,a) * wt(y+1,a);
       }
 
       B(y+1) += N(y+1,a) * wt(y+1,a);
       E(y+1) += N(y+1,a) * wt(y+1,a) * mat(y+1,a);
     }
-    if(Type(max_age) != Linf) for(int ff=0;ff<nfleet;ff++) mlen_pred(y,ff) /= CN(y,ff);
+    if(Type(max_age) != Linf) for(int ff=0;ff<nfleet;ff++) MLpred(y,ff) /= CN(y,ff);
+    if(msize_type == "weight") for(int ff=0;ff<nfleet;ff++) MWpred(y,ff) = Cpred(y,ff)/CN(y,ff);
   }
 
   // Calculate nuisance parameters and likelihood
@@ -334,7 +335,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   vector<Type> nll_s_CAL(nsurvey);
   vector<Type> nll_CAA(nfleet);
   vector<Type> nll_CAL(nfleet);
-  vector<Type> nll_ML(nfleet);
+  vector<Type> nll_MS(nfleet);
   Type nll_log_rec_dev = 0;
   vector<Type> nll_Ceq(nfleet);
 
@@ -344,7 +345,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   nll_CAL.setZero();
   nll_s_CAA.setZero();
   nll_s_CAL.setZero();
-  nll_ML.setZero();
+  nll_MS.setZero();
   nll_Ceq.setZero();
 
   for(int sur=0;sur<nsurvey;sur++) {
@@ -394,8 +395,12 @@ Type SRA_scope(objective_function<Type> *obj) {
         }
 
         if(nll_C && LWT_C(ff,0) > 0) nll_Catch(ff) -= dnorm_(log(C_hist(y,ff)), log(Cpred(y,ff)), Type(0.01), true);
-        if(LWT_C(ff,3) > 0 && !R_IsNA(asDouble(mlen(y,ff))) && mlen(y,ff) > 0) {
-          nll_ML(ff) -= dnorm_(mlen(y,ff), mlen_pred(y,ff), sigma_mlen(ff), true);
+        if(LWT_C(ff,3) > 0 && !R_IsNA(asDouble(msize(y,ff))) && msize(y,ff) > 0) {
+          if(msize_type == "length") {
+            nll_MS(ff) -= dnorm_(msize(y,ff), MLpred(y,ff), CV_msize(ff) * msize(y,ff), true);
+          } else {
+            nll_MS(ff) -= dnorm_(msize(y,ff), MWpred(y,ff), CV_msize(ff) * msize(y,ff), true);
+          }
         }
       }
     }
@@ -403,7 +408,7 @@ Type SRA_scope(objective_function<Type> *obj) {
     nll_Catch(ff) *= LWT_C(ff,0);
     nll_CAA(ff) *= LWT_C(ff,1);
     nll_CAL(ff) *= LWT_C(ff,2);
-    nll_ML(ff) *= LWT_C(ff,3);
+    nll_MS(ff) *= LWT_C(ff,3);
 
     if(LWT_C(ff,4) > 0 && C_eq(ff) > 0 && condition != "effort") {
       nll_Ceq(ff) = -1 * LWT_C(ff,4) * dnorm_(log(C_eq(ff)), log(C_eq_pred(ff)), Type(0.01), true);
@@ -419,7 +424,7 @@ Type SRA_scope(objective_function<Type> *obj) {
 
   Type nll = nll_Catch.sum() + nll_Index.sum();
   nll += nll_s_CAA.sum() + nll_s_CAL.sum();
-  nll += nll_CAA.sum() + nll_CAL.sum() + nll_ML.sum();
+  nll += nll_CAA.sum() + nll_CAL.sum() + nll_MS.sum();
   nll += nll_log_rec_dev + nll_Ceq.sum();
   nll += penalty + prior;
 
@@ -442,7 +447,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(log_q_effort);
   REPORT(log_F_equilibrium);
 
-  if(nll_ML.sum() != 0) REPORT(log_sigma_mlen);
+  if(nll_MS.sum() != 0) REPORT(log_CV_msize);
   REPORT(log_tau);
   REPORT(log_early_rec_dev);
   REPORT(log_rec_dev);
@@ -450,7 +455,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(R0);
   REPORT(h);
   REPORT(tau);
-  if(nll_ML.sum() != 0) REPORT(sigma_mlen);
+  if(nll_MS.sum() != 0) REPORT(CV_msize);
   if(condition == "catch") REPORT(log_F);
   REPORT(F_equilibrium);
   REPORT(vul);
@@ -468,11 +473,12 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(E0_SR);
   REPORT(EPR0_SR);
 
-  if(nll_CAL.sum() != 0 || nll_s_CAL.sum() != 0 || nll_ML.sum() != 0) REPORT(ALK);
+  if(nll_CAL.sum() != 0 || nll_s_CAL.sum() != 0 || (nll_MS.sum() != 0 & msize_type == "length")) REPORT(ALK);
   REPORT(N);
   REPORT(CAApred);
   REPORT(CALpred);
-  REPORT(mlen_pred);
+  REPORT(MLpred);
+  if(msize_type == "weight") REPORT(MWpred);
   REPORT(CN);
   REPORT(Cpred);
   REPORT(Ipred);
@@ -495,7 +501,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(nll_s_CAL);
   REPORT(nll_CAA);
   REPORT(nll_CAL);
-  REPORT(nll_ML);
+  REPORT(nll_MS);
   REPORT(nll_Ceq);
   REPORT(nll_log_rec_dev);
 
