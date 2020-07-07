@@ -332,6 +332,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
   } else {
     data$MS <- matrix(NA, nrow = data$nyears, ncol = data$nfleet)
     data$MS_cv <- rep(0.2, data$nfleet)
+    data$MS_type <- "length"
   }
 
   # Process equilibrium catch/effort - Ceq
