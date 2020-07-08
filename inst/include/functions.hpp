@@ -32,6 +32,15 @@ Type dmultinom_(vector<Type> x, vector<Type> p, int give_log=0) {
   else return exp(logres);
 }
 
+// Shortened beta density function
+template<class Type>
+Type dbeta_(Type x, Type shape1, Type shape2, int give_log) {
+  Type logres = log(x) * (shape1-1) + log(1-x) * (shape2-1);
+  if(give_log) return logres;
+  else return exp(logres);
+}
+VECTORIZE4_ttti(dbeta_)
+
 // Shortened normal density function
 template<class Type>
 Type dnorm_(Type x, Type mean, Type sd, int give_log=0) {
@@ -40,8 +49,6 @@ Type dnorm_(Type x, Type mean, Type sd, int give_log=0) {
   if(give_log) return logans; else return exp(logans);
 }
 VECTORIZE4_ttti(dnorm_)
-
-
 
 
 // Calculates analytical solution of a lognormal variable

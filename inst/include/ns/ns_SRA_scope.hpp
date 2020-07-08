@@ -128,13 +128,14 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
       for(int y=0;y<Len_age.rows();y++) {
         for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = 1;
       }
-    } else if(vul_type(ff) == -3) { // SSB      
+    } else if(vul_type(ff) == -3) { // SSB
       for(int y=0;y<Len_age.rows();y++) {
         for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = mat(y,a);
       }
-    } else if(vul_type(ff) == 0) { // free parameters
-      for(int y=0;y<Len_age.rows();y++) {
-          for(int a=0;a<Len_age.cols();a++) vul(y,a,ff) = invlogit(vul_par(a,ff));
+    } else if(vul_type(ff) == -2) { // free parameters
+      for(int a=0;a<Len_age.cols();a++) {
+        prior -= dbeta_(invlogit(vul_par(a,ff)), Type(1.01), Type(1.01), true);
+        for(int y=0;y<Len_age.rows();y++) vul(y,a,ff) = invlogit(vul_par(a,ff));
       }
     } else if(vul_type(ff) > 0) { // Index mirrored to fleet
       vul.col(ff) = fleet_var.col(vul_type(ff) - 1);
@@ -166,7 +167,7 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
           vul(y,a,ff) = CppAD::CondExpLt(Len_age(y,a), LFS(ff), lo, hi);
         }
       }
-    } 
+    }
   }
   return vul;
 }
