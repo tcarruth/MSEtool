@@ -275,9 +275,12 @@ update_SRA_data <- function(data, OM, condition, dots) {
   on.exit(options(warn = old_warning))
 
   set.seed(OM@seed)
-  StockPars <- SampleStockPars(OM_samp, msg = FALSE)
-  ObsPars <- SampleObsPars(OM_samp)
-  FleetPars <- SampleFleetPars(OM_samp, msg = FALSE)
+  message("Getting biological parameters from OM...")
+  suppressMessages({
+    StockPars <- SampleStockPars(OM_samp, msg = FALSE)
+    ObsPars <- SampleObsPars(OM_samp)
+    FleetPars <- SampleFleetPars(OM_samp, msg = FALSE)
+  })
 
   # Process length comps
   if(!is.null(data$CAL)) {
@@ -431,7 +434,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
       stop(paste("data$sel_block should be a matrix of", data$nfleet, "columns."), call. = FALSE)
     }
   }
-  data$nsel_block <- length(unique(data$sel_block))
+  data$nsel_block <- as.numeric(data$sel_block) %>% unique() %>% length()
 
   return(list(data = data, OM = OM, StockPars = StockPars, ObsPars = ObsPars, FleetPars = FleetPars))
 }

@@ -434,10 +434,6 @@ Type SRA_scope(objective_function<Type> *obj) {
   if(condition == "effort") ADREPORT(q_effort);
   if(nll_Index.sum() != 0) ADREPORT(q);
 
-  REPORT(M);
-  REPORT(length_bin);
-  REPORT(Linf);
-
   REPORT(R0x);
   REPORT(transformed_h);
   REPORT(vul_par);
@@ -473,7 +469,7 @@ Type SRA_scope(objective_function<Type> *obj) {
   REPORT(E0_SR);
   REPORT(EPR0_SR);
 
-  if(nll_CAL.sum() != 0 || nll_s_CAL.sum() != 0 || (nll_MS.sum() != 0 & msize_type == "length")) REPORT(ALK);
+  if(nll_CAL.sum() != 0 || nll_s_CAL.sum() != 0 || ((nll_MS.sum() != 0) & (msize_type == "length"))) REPORT(ALK);
   REPORT(N);
   REPORT(CAApred);
   REPORT(CALpred);

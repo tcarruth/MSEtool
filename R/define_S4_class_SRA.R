@@ -220,8 +220,8 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
             if(length(x@mean_fit) > 0) {
               SD <- x@mean_fit$SD
               report <- x@mean_fit$report
-              length_bin <- x@mean_fit$report$length_bin
               data_mean_fit <- x@mean_fit$obj$env$data
+              length_bin <- data_mean_fit$length_bin
 
               # Backwards compatibility
               if(is.null(data_mean_fit$nsel_block)) {

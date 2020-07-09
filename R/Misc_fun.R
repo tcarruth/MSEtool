@@ -57,8 +57,10 @@ userguide <- function() {
 # Internal DLMtool functions that are also needed for MSEtool
 iVB <- function(t0, K, Linf, L) max(1, ((-log(1 - L/Linf))/K + t0))
 mconv <- function (m, sd) log(m) - 0.5 * log(1 + ((sd^2)/(m^2)))
+squeeze <- function(x) (1 - .Machine$double.eps) * (x - 0.5) + 0.5
 
-logit <- function(p, soft_bounds = FALSE, minp = 0.0001, maxp = 0.9999) {
+logit <- function(p, soft_bounds = TRUE, minp = 0.01, maxp = 0.99) {
+  p <- squeeze(p)
   if(soft_bounds) {
     p <- pmax(minp, p)
     p <- pmin(maxp, p)

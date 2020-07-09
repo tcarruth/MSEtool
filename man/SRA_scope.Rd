@@ -30,19 +30,19 @@ Sub_cpars(OM, sims = 1:OM@nsim)
 \item{OM}{An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
 steepness, maturity parameters (L50 and L50_95), standard deviation of recruitment variability (Perr), as well as index uncertainty (Iobs).}
 
-\item{data}{A list of data inputs. See Data section below.}
+\item{data}{A named list of data inputs. See Data section below.}
 
 \item{condition}{String to indicate whether the SRA model is conditioned on "catch" (where F are estimated parameters), "catch2" (where F is solved internally using Newton's method),
 or "effort".}
 
 \item{selectivity}{A character vector of length nfleet to indicate \code{"logistic"}, \code{"dome"}, or \code{"free"} selectivity for each fleet in \code{Chist}.
 If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below). "free" indicates independent selectivity parameters for each age,
-and additional modifications for fixing selectivity parameters will likely be needed (see details).}
+and additional modifications for fixing selectivity parameters will likely be needed. See Additional arguments section.}
 
 \item{s_selectivity}{A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Use \code{"B"} for
-total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet and so on).
-If the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
-See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.}
+total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet/column and so on).
+If the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity, and
+see Additional arguments section for setup of survey selectivity parameters. See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.}
 
 \item{LWT}{A named list of likelihood weights for the SRA model. See below.}
 
@@ -74,12 +74,11 @@ respectively, for the multinomial likelihood function. The effective sample size
 An object of class \linkS4class{SRA} (see link for description of output).
 }
 \description{
-Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch or effort, and potentially
-age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
+Intended for conditioning operating models for DLMtool. For data-limited stocks, this function can generate a range of potential depletion scenarios inferred from sparse data.
+From a historical time series of total catch or effort, and potentially age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
 unfished recruitment (R0), historical fishing effort, and recruitment deviations for the operating model. This is done by sampling life history parameters
-provided by the user and fitting to the data in a statistical catch-at-age model (with the predicted catch equal to the observed catch).
+provided by the user and fitting a statistical catch-at-age model (with the predicted catch equal to the observed catch).
 Alternatively one can do a single model fit and sample the covariance matrix to generate an operating model with uncertainty based on the model fit.
-This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data.
 Either a full catch (conditioned on catch) or effort (conditioned on effort) time series is needed but missing data (as NAs) are allowed for all other data types.
 }
 \details{
@@ -127,7 +126,7 @@ Ideally, the first year of the catch series represents unfished conditions (see 
 indexing years and columns indexing surveys. Age-specific indices should be numbers-specific while all others are weight-based.
 \item I_sd - A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
 If not provided, this function will use values from \code{OM@Iobs}.
-\item I_type - Obsolete. See \code{s_selectivity} argument.
+\item I_type - Obsolete as of version 2.0. See \code{s_selectivity} argument.
 \item CAA - Fishery age composition matrix with nyears rows and OM@maxage columns. If multiple fleets: an array with dimension: nyears, OM@maxage, and nfleets.
 \item CAL - Fishery length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 length bins, and nfleets.

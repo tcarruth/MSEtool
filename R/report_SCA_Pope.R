@@ -2,10 +2,10 @@
 summary_SCA_Pope <- function(Assessment) {
   assign_Assessment_slots(Assessment)
 
-  if(conv) current_status <- c(U_UMSY[length(U_UMSY)], B_BMSY[length(B_BMSY)], B_B0[length(B_B0)])
-  else current_status <- c(NA, NA, B_B0[length(B_B0)])
+  if(conv) current_status <- c(U_UMSY[length(U_UMSY)], SSB_SSBMSY[length(SSB_SSBMSY)], SSB_SSB0[length(SSB_SSB0)])
+  else current_status <- c(NA, NA, SSB_SSB0[length(SSB_SSB0)])
   current_status <- data.frame(Value = current_status)
-  rownames(current_status) <- c("U/UMSY", "B/BMSY", "B/B0")
+  rownames(current_status) <- c("U/UMSY", "SSB/SSBMSY", "SSB/SSB0")
 
   Value <- c(h, info$data$M[1], info$data$max_age, info$LH$Linf, info$LH$K, info$LH$t0,
              info$LH$a * info$LH$Linf ^ info$LH$b, info$LH$A50, info$LH$A95)

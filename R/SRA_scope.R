@@ -3,26 +3,25 @@
 
 #' Stock-reduction analysis (SRA) for conditioning operating models
 #'
-#' Intended for conditioning operating models for data-limited stocks. From a historical time series of total catch or effort, and potentially
-#' age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
+#' Intended for conditioning operating models for DLMtool. For data-limited stocks, this function can generate a range of potential depletion scenarios inferred from sparse data.
+#' From a historical time series of total catch or effort, and potentially age/length compositions and multiple indices of abundance, the SRA returns a range of values for depletion, selectivity,
 #' unfished recruitment (R0), historical fishing effort, and recruitment deviations for the operating model. This is done by sampling life history parameters
-#' provided by the user and fitting to the data in a statistical catch-at-age model (with the predicted catch equal to the observed catch).
+#' provided by the user and fitting a statistical catch-at-age model (with the predicted catch equal to the observed catch).
 #' Alternatively one can do a single model fit and sample the covariance matrix to generate an operating model with uncertainty based on the model fit.
-#' This function is intended to generate a range of potential depletion scenarios that could be supported from sparse data.
 #' Either a full catch (conditioned on catch) or effort (conditioned on effort) time series is needed but missing data (as NAs) are allowed for all other data types.
 #'
 #' @param OM An object of class \linkS4class{OM} that specifies natural mortality (M), growth (Linf, K, t0, a, b), stock-recruitment relationship,
 #' steepness, maturity parameters (L50 and L50_95), standard deviation of recruitment variability (Perr), as well as index uncertainty (Iobs).
-#' @param data A list of data inputs. See Data section below.
+#' @param data A named list of data inputs. See Data section below.
 #' @param condition String to indicate whether the SRA model is conditioned on "catch" (where F are estimated parameters), "catch2" (where F is solved internally using Newton's method),
 #' or "effort".
 #' @param selectivity A character vector of length nfleet to indicate \code{"logistic"}, \code{"dome"}, or \code{"free"} selectivity for each fleet in \code{Chist}.
 #' If there is time-varying selectivity, this is a character vector of length nsel_block (see Data section below). "free" indicates independent selectivity parameters for each age,
-#' and additional modifications for fixing selectivity parameters will likely be needed (see details).
+#' and additional modifications for fixing selectivity parameters will likely be needed. See Additional arguments section.
 #' @param s_selectivity A vector of length nsurvey to indicate the selectivity of the corresponding columns in \code{data$Index}. Use \code{"B"} for
-#' total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet and so on).
-#' If the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity.
-#' See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.
+#' total biomass, or \code{"SSB"} for spawning biomass (by default, "B" is used). Use numbers if the survey selectivity follows a fleet (corresponding to the columns in data$Chist, e.g., 1 = first fleet/column and so on).
+#' If the survey selectivity is otherwise independent of anything else in the model, use \code{"logistic"}, \code{"dome"}, or \code{"free"} to specify the functional form of selectivity, and
+#' see Additional arguments section for setup of survey selectivity parameters. See \href{../doc/SRA_scope_sel.html}{selectivity vignette} for more information.
 #' @param LWT A named list of likelihood weights for the SRA model. See below.
 #' @param comp_like A string indicating either \code{"multinomial"} (default) or \code{"lognormal"} distributions for the composition data.
 #' @param ESS If \code{comp_like = "multinomial"}, a numeric vector of length two to cap the maximum effective samples size of the age and length compositions,
@@ -83,7 +82,7 @@
 #' indexing years and columns indexing surveys. Age-specific indices should be numbers-specific while all others are weight-based.
 #' \item I_sd - A vector or matrix of standard deviations (lognormal distribution) for the indices corresponding to the entries in \code{Index}.
 #' If not provided, this function will use values from \code{OM@@Iobs}.
-#' \item I_type - Obsolete. See \code{s_selectivity} argument.
+#' \item I_type - Obsolete as of version 2.0. See \code{s_selectivity} argument.
 #' \item CAA - Fishery age composition matrix with nyears rows and OM@@maxage columns. If multiple fleets: an array with dimension: nyears, OM@@maxage, and nfleets.
 #' \item CAL - Fishery length composition matrix with nyears rows and columns indexing the length bin. If multiple fleets: an array with dimension: nyears,
 #' length bins, and nfleets.
@@ -338,12 +337,11 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     F_matrix <- lapply(res, getElement, "F_at_age")
     apical_F <- lapply(F_matrix, function(x) apply(x, 1, max))
 
-    V <- Map("/", e1 = F_matrix, e2 = apical_F)
     expand_V_matrix <- function(x) {
       y <- matrix(x[nyears, ], proyears, maxage, byrow = TRUE)
       rbind(x, y)
     }
-    V <- lapply(V, expand_V_matrix)
+    V <- Map("/", e1 = F_matrix, e2 = apical_F) %>% lapply(expand_V_matrix)
     OM@cpars$V <- unlist(V) %>% array(c(nyears + proyears, maxage, nsim)) %>% aperm(c(3, 2, 1))
     OM@cpars$Find <- do.call(rbind, apical_F)
     message("Historical F and selectivity trends set in OM@cpars$Find and OM@cpars$V, respectively.")
@@ -472,16 +470,16 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
 
   OM@cpars$h <- StockPars$hs
 
-  if(any(data$CAL > 0, na.rm = TRUE) || any(data$ML > 0, na.rm = TRUE) || any(data$s_CAL > 0, na.rm = TRUE)) {
+  if(any(data$CAL > 0, na.rm = TRUE) || (any(data$MS > 0, na.rm = TRUE) & data$MS_type == "length") ||
+     any(data$s_CAL > 0, na.rm = TRUE)) {
     bw <- data$length_bin[2] - data$length_bin[1]
     OM@cpars$binWidth <- bw
     OM@cpars$CAL_binsmid <- data$length_bin
     OM@cpars$CAL_bins <- c(data$length_bin - 0.5 * bw, max(data$length_bin) + 0.5 * bw)
+    message("SRA length bins will be added to OM.")
   }
 
-  if(is.null(dots$plusgroup) || dots$plusgroup) {
-    OM@cpars$plusgroup <- rep(1L, nsim)
-  }
+  if(is.null(dots$plusgroup) || dots$plusgroup) OM@cpars$plusgroup <- rep(1L, nsim)
   if(is.null(data$I_sd) || !any(data$I_sd > 0, na.rm = TRUE)) OM@cpars$Iobs <- ObsPars$Iobs
   message("Growth, maturity, natural mortality, and steepness values from SRA are set in OM@cpars.\n")
 
@@ -693,6 +691,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
   Vmaxlen <- FleetPars$Vmaxlen[nyears, x]
 
   if(is.null(dots$vul_par)) {
+    if(any(selectivity == -2)) stop("Some (fleet) selectivity specified to be free parameters. Provide vul_par matrix to SRA_scope.")
     vul_par <- matrix(c(LFS, L5, Vmaxlen), 3, data$nsel_block)
   } else {
     vul_par <- dots$vul_par
@@ -705,8 +704,9 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
   if(any(selectivity == -2)) vul_par[, selectivity == -2] <- logit(vul_par[, selectivity == -2], soft_bounds = TRUE)
 
   if(is.null(dots$map_vul_par)) {
+    if(any(selectivity == -2)) stop("Some (fleet) selectivity specified to be free parameters. Provide map_vul_par matrix to SRA_scope.")
     map_vul_par <- matrix(0, 3, data$nsel_block)
-    map_vul_par[3, selectivity != 0] <- NA # Fix third parameter for logistic sel
+    map_vul_par[3, selectivity == -1] <- NA # Fix third parameter for logistic sel
     if(!is.null(dots$fix_dome) && dots$fix_dome) map_vul_par[3, selectivity == 0] <- NA # Fix dome
 
     for(ff in 1:nfleet) {
@@ -721,6 +721,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
 
   # s_vul_par, and map
   if(is.null(dots$s_vul_par)) {
+    if(any(s_selectivity == -2)) stop("Some s_selectivity specified to be free parameters. Provide s_vul_par matrix to SRA_scope.")
     s_vul_par <- matrix(c(LFS, L5, Vmaxlen), 3, nsurvey)
   } else {
     s_vul_par <- dots$s_vul_par
@@ -728,11 +729,12 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
 
   parametric_sel <- s_selectivity == -1 | s_selectivity == 0
   s_vul_par[2, parametric_sel] <- log(s_vul_par[1, parametric_sel] - s_vul_par[2, parametric_sel])
-  s_vul_par[1, parametric_sel] <- logit(pmin(s_vul_par[1, parametric_sel]/TMB_data_all$Linf/0.99, 0.99))
-  s_vul_par[3, parametric_sel] <- logit(pmin(s_vul_par[3, parametric_sel], 0.99))
+  s_vul_par[1, parametric_sel] <- logit(s_vul_par[1, parametric_sel]/TMB_data_all$Linf/0.99)
+  s_vul_par[3, parametric_sel] <- logit(s_vul_par[3, parametric_sel])
   if(any(s_selectivity == -2)) s_vul_par[, s_selectivity == -2] <- logit(s_vul_par[, s_selectivity == -2], soft_bounds = TRUE)
 
   if(is.null(dots$map_s_vul_par)) {
+    if(any(s_selectivity == -2)) stop("Some s_selectivity specified to be free parameters. Provide map_s_vul_par matrix to SRA_scope.")
     map_s_vul_par <- matrix(0, 3, nsurvey)
     map_s_vul_par[3, s_selectivity < 0] <- NA # if logistic
     for(sur in 1:nsurvey) {
@@ -794,8 +796,7 @@ SRA_scope_est <- function(x = 1, data, selectivity, s_selectivity, SR_type = c("
                    inner.control = inner.control, DLL = "MSEtool", silent = TRUE)
 
   if(data$condition == "catch2") {
-    R0_test <- any(is.na(obj$report(obj$par)$F)) || any(is.infinite(obj$report(obj$par)$F))
-    if(R0_test) {
+    if(any(is.na(obj$report(obj$par)$F)) || any(is.infinite(obj$report(obj$par)$F))) {
       for(i in 1:10) {
         obj$par["R0x"] <- 0.5 + obj$par["R0x"]
         if(all(!is.na(obj$report(obj$par)$F)) && all(!is.infinite(obj$report(obj$par)$F))) break
@@ -860,9 +861,7 @@ Sub_cpars <- function(OM, sims = 1:OM@nsim) {
         return(x[sims])
       } else return(x)
     }
-
-    cpars2 <- lapply(cpars, subset_function, sims = sims2)
-    OM@cpars <- cpars2
+    OM@cpars <- lapply(cpars, subset_function, sims = sims2)
     OM@nsim <- sum(sims2)
 
     message("Set OM@nsim = ", OM@nsim)
@@ -938,52 +937,53 @@ SRA_posthoc_adjust <- function(report, obj, par = obj$env$last.par.best) {
   data <- obj$env$data
   report$F_at_age <- report$Z - data$M
   report$NPR_unfished <- do.call(rbind, report$NPR_unfished)
+  length_bin <- obj$env$data$length_bin
 
   age_only_model <- data$len_age %>%
     apply(1, function(x) length(x) == data$max_age && max(x) == data$max_age) %>% all()
   if(age_only_model) {
-    report$vul_len <- matrix(NA_real_, length(report$length_bin), data$nsel_block)
-    report$s_vul_len <- matrix(NA_real_, length(report$length_bin), dim(report$s_vul)[3])
+    report$vul_len <- matrix(NA_real_, length(length_bin), data$nsel_block)
+    report$s_vul_len <- matrix(NA_real_, length(length_bin), dim(report$s_vul)[3])
 
     report$MLpred <- matrix(NA_real_, nrow(report$F), ncol(report$F))
     report$CALpred <- array(NA_real_, dim(report$CALpred))
     report$s_CALpred <- array(NA_real_, dim(report$s_CALpred))
   } else {
-    report$vul_len <- get_vul_len(report, data$vul_type)
-    report$s_vul_len <- get_s_vul_len(report, data$s_vul_type)
+    report$vul_len <- get_vul_len(report, data$vul_type, length_bin, data$Linf)
+    report$s_vul_len <- get_s_vul_len(report, data$s_vul_type, length_bin, data$Linf)
   }
   report$dynamic_SSB0 <- SRA_dynamic_SSB0(obj, par)
   return(report)
 }
 
-get_vul_len <- function(report, selectivity) {
-  vul <- matrix(NA, length(report$length_bin), length(selectivity))
+get_vul_len <- function(report, selectivity, length_bin, Linf) {
+  vul <- matrix(NA, length(length_bin), length(selectivity))
   sel_ind  <- selectivity == 0 | selectivity == -1
   LFS <- report$LFS[sel_ind]
   L5 <- report$L5[sel_ind]
   Vmaxlen <- report$Vmaxlen[sel_ind]
 
   sls <- (LFS - L5)/sqrt(-log(0.05, 2))
-  srs <- (report$Linf - LFS)/sqrt(-log(Vmaxlen, 2))
-  asc <- Map(function(x, y) 2^-((report$length_bin - y)/x * (report$length_bin - y)/x), x = sls, y = LFS)
-  dsc <- Map(function(x, y, z) ifelse(z > rep(0.99, length(report$length_bin)), 1, 2^-((report$length_bin - y)/x * (report$length_bin - y)/x)),
+  srs <- (Linf - LFS)/sqrt(-log(Vmaxlen, 2))
+  asc <- Map(function(x, y) 2^-((length_bin - y)/x * (length_bin - y)/x), x = sls, y = LFS)
+  dsc <- Map(function(x, y, z) ifelse(z > rep(0.99, length(length_bin)), 1, 2^-((length_bin - y)/x * (length_bin - y)/x)),
              x = srs, y = LFS, z = Vmaxlen)
-  vul_out <- Map(function(x, y, z) ifelse(report$length_bin > x, y, z), x = LFS, y = dsc, z = asc)
+  vul_out <- Map(function(x, y, z) ifelse(length_bin > x, y, z), x = LFS, y = dsc, z = asc)
   vul[, sel_ind] <- do.call(cbind, vul_out)
   return(vul)
 }
 
-get_s_vul_len <- function(report, s_selectivity) {
-  s_vul_len <- matrix(NA, length(report$length_bin), length(s_selectivity)) # length-based: matrix of dimension nlbin, nsurvey
+get_s_vul_len <- function(report, s_selectivity, length_bin, Linf) {
+  s_vul_len <- matrix(NA, length(length_bin), length(s_selectivity)) # length-based: matrix of dimension nlbin, nsurvey
   for(i in 1:ncol(s_vul_len)) {
     if(s_selectivity[i] == -1 || s_selectivity[i] == 0) {
       sls <- (report$s_LFS[i] - report$s_L5[i])/sqrt(-log(0.05, 2))
-      srs <- (report$Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
+      srs <- (Linf - report$s_LFS[i])/sqrt(-log(report$s_Vmaxlen[i], 2))
 
-      asc <- 2^-((report$length_bin - report$s_LFS[i])/sls * (report$length_bin - report$s_LFS[i])/sls)
-      dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(report$length_bin)), 1,
-                    2^-((report$length_bin - report$s_LFS[i])/srs * (report$length_bin - report$s_LFS[i])/srs))
-      s_vul_len[, i] <- ifelse(report$length_bin > report$s_LFS[i], dsc, asc)
+      asc <- 2^-((length_bin - report$s_LFS[i])/sls * (length_bin - report$s_LFS[i])/sls)
+      dsc <- ifelse(report$s_Vmaxlen[i] > rep(0.99, length(length_bin)), 1,
+                    2^-((length_bin - report$s_LFS[i])/srs * (length_bin - report$s_LFS[i])/srs))
+      s_vul_len[, i] <- ifelse(length_bin > report$s_LFS[i], dsc, asc)
     } else if(s_selectivity[i] > 0) {
       s_vul_len[, i] <- report$vul_len[, s_selectivity[i]]
     }
@@ -1026,8 +1026,7 @@ SRA_retro <- function(x, nyr = 5) {
     obj2 <- MakeADFun(data = new_args[[i+1]]$data, parameters = new_args[[i+1]]$params, map = new_args[[i+1]]$map,
                       random = x@mean_fit$obj$env$random, DLL = "MSEtool", silent = TRUE)
     if(new_args[[i+1]]$data$condition == "catch2") {
-      R0_test <- any(is.na(obj2$report(obj2$par)$F)) || any(is.infinite(obj2$report(obj2$par)$F))
-      if(R0_test) {
+      if(any(is.na(obj2$report(obj2$par)$F)) || any(is.infinite(obj2$report(obj2$par)$F))) {
         for(ii in 1:10) {
           obj2$par["R0x"] <- 0.5 + obj2$par["R0x"]
           if(all(!is.na(obj2$report(obj2$par)$F)) && all(!is.infinite(obj2$report(obj2$par)$F))) break
