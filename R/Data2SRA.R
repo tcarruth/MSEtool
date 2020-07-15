@@ -61,11 +61,9 @@ Process_Indices<-function(dat,OM){
     s_vul_par<-cbind(s_vul_par,temp)
     
     sel_block<-cbind(sel_block,rep(fleetno,ny))
-    if(all(PanelState[[1]][[10]]==c(T,F,F,F))){
-      s_selectivity<-c(s_selectivity,"log")
-    }else{
-      s_selectivity<-c(s_selectivity,"dome")
-    }
+    
+    s_selectivity<-c(s_selectivity,"dome")
+    
   }
   
   # Total spawning biomass index ---
@@ -130,14 +128,14 @@ Process_Indices<-function(dat,OM){
     if(is.na(temp))temp<-rep(3,nadd) # default to 3 (vulnerable index type)
     for(i in 1:length(temp)){
       #fleetno<-fleetno+1
-      #s_selectivity<-c(s_selectivity,"free")
+      s_selectivity<-c(s_selectivity,"free")
       #sel_block<-cbind(sel_block,rep(fleetno,ny))
       if(temp[i]==1){
         Itype<-c(Itype,"B")
       }else if(temp[i]==2){
         Itype<-c(Itype,"SSB")
       }else{
-        Itype<-c(Itype,fleetno)
+        Itype<-c(Itype,'est')
       }
     } 
   }
