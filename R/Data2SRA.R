@@ -148,13 +148,13 @@ Process_Indices<-function(dat,OM){
   if(!is.null(s_vul_par))s_map_vul_par=array(NA,dim(s_vul_par))
   if(!is.null(vul_par))map_vul_par=array(NA,dim(vul_par))
   
-  if(all(PanelState[[1]][[10]]==c(T,F,F,F))){
-    selectivity='logistic'
-    AM("Conditioning operating model estimating logistic ('flat-topped') selectivity based on Fishery Question 11")
-  }else{  
-    selectivity='dome'
-    AM("Conditioning operating model allowing for the estimation of dome shaped selectivity based on Fishery Question 11")
-  }  
+  #if(all(PanelState[[1]][[10]]==c(T,F,F,F))){
+  #  selectivity='logistic'
+  #  AM("Conditioning operating model estimating logistic ('flat-topped') selectivity based on Fishery Question 11")
+  #}else{  
+  #  selectivity='dome'
+  #  AM("Conditioning operating model allowing for the estimation of dome shaped selectivity based on Fishery Question 11")
+  #}  
   
   list(Index=t(Index), I_sd=t(I_sd), I_type=Itype, 
        s_vul_par=s_vul_par, s_map_vul_par=s_map_vul_par,
