@@ -72,8 +72,7 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
 
   for(int b=0;b<nsel_block;b++) { // Parameters for sel_block
     if(vul_type(b) <= 0 && vul_type(b) > -2) { // Logistic or dome
-      prior -= dnorm_(vul_par(0,b), Type(0), Type(3), true);
-      prior -= dnorm_(vul_par(1,b), Type(0), Type(3), true);
+      prior -= dnorm_(vul_par(0,b), Type(0), Type(3), true) + dnorm_(vul_par(1,b), Type(0), Type(3), true);
 
       LFS(b) = invlogit(vul_par(0,b)) * 0.99 * Linf;
       L5(b) = LFS(b) - exp(vul_par(1,b));
@@ -81,9 +80,10 @@ array<Type> calc_vul(matrix<Type> vul_par, vector<int> vul_type, matrix<Type> Le
       if(vul_type(b) < 0) { // Logistic
         Vmaxlen(b) = 1;
       } else { // Dome
-        prior -= dnorm_(vul_par(2,b), Type(0), Type(3), true);
         Vmaxlen(b) = invlogit(vul_par(2,b));
         srs(b) = (Linf - LFS(b))/pow(-log2(Vmaxlen(b)), 0.5);
+
+        prior -= dbeta_(Vmaxlen(b), Type(1.01), Type(1.01), true);
       }
     }
   }
@@ -149,8 +149,8 @@ array<Type> calc_vul_sur(matrix<Type> vul_par, vector<int> vul_type, matrix<Type
       if(vul_type(ff) == -1) { // Logistic
         Vmaxlen(ff) = 1;
       } else { // Dome
-        prior -= dnorm_(vul_par(2,ff), Type(0), Type(3), true);
         Vmaxlen(ff) = invlogit(vul_par(2,ff));
+        prior -= dbeta_(Vmaxlen(ff), Type(1.01), Type(1.01), true);
       }
 
       for(int y=0;y<Len_age.rows();y++) {

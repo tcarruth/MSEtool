@@ -48,6 +48,8 @@ vector<Type> calc_logistic_vul(vector<Type> vul_par, int max_age, Type &prior) {
   Type a_95 = invlogit(vul_par(0)) * 0.75 * maxage;
   Type a_50 = a_95 - exp(vul_par(1));
 
+  prior -= dnorm_(vul_par(0), Type(0), Type(3), true) + dnorm_(vul_par(1), Type(0), Type(3), true);
+
   for(int a=0;a<max_age;a++) {
     Type aa = a;
     aa += 1;
@@ -77,6 +79,9 @@ vector<Type> calc_dome_vul(vector<Type> vul_par, int max_age, Type &prior) {
   a_full2 *= maxage - a_full;
   a_full2 += a_full;
   Type vul_max = invlogit(vul_par(3));
+
+  prior -= dnorm_(vul_par(0), Type(0), Type(3), true) + dnorm_(vul_par(1), Type(0), Type(3), true);
+  prior -= dbeta_(vul_max, Type(1.01), Type(1.01), true);
 
   Type var_asc =(a_50 - a_full) * (a_50 - a_full);
   var_asc /= log(Type(4));

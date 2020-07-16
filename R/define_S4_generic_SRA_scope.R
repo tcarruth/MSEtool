@@ -225,7 +225,7 @@ setMethod("SRA_scope", signature(OM = "OM", data = "Data"),
             }
 
             # Index
-            Ind <- pull_Index(Data, OM@maxage)
+            Ind <- pull_Index(data, OM@maxage)
             if(!is.null(Ind$Index)) {
               data_list$Index <- Ind$Index
               data_list$I_sd <- Ind$I_sd
