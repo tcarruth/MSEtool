@@ -1,28 +1,113 @@
 
 
-SRA_scope_data <- function (OM, Data, ...) {
+vec_slot_fn <- function(x, Data, err = FALSE) {
+  res <- slot(Data, x)
+  if(!all(is.na(res))) {
+    return(res[1, ])
+  } else {
+    if(err) stop(paste0("Nothing found in Data@", x), call. = FALSE)
+    return(NULL)
+  }
+}
 
-  # < code for making Chist, Index, ML, CAA, CAL, I_sd matrices out of list of Data objects >
-  nyears<-OM@nyears
-  CYcond<-length(Data@Cat[1,]) != nyears
-  if(CYcond) message(paste0("Catch data for a different duration than operating model. Data@Cat[1,] is of length ",length(Data@Cat[1,]),", but OM@nyears is ",nyears))
-  if(CYcond)stop("OM, Data, incompatibility")
+matrix_slot_fn <- function(x, Data) {
+  res <- slot(Data, x)
+  if(!all(is.na(res))) return(res[1, , ]) else return(NULL)
+}
 
-  Chist<-Data@Cat[1, ]
-  Index<-Data@Ind[1, ]
-  I_sd<-Data@CV_Ind[1, ]
-  CAA<-Data@CAA[1, , ]
-  CAA<-NULL
-  CAL<-Data@CAL[1, , ]
-  CAL<-NULL
-  ML<-Data@ML[1, ]
-  ML<-NULL
-  length_bin<-Data@CAL_mids
+pull_Ind <- function(Data, maxage) {
+  Ind_name <- c("Ind", "SpInd", "VInd")
+  s_sel_Ind <- c("B", "SSB", 1)
+  s_sel_AddIndType <- 1:3
+  lapply_fn <- function(x) {
+    Index <- vec_slot_fn(x = x, Data = Data)
+    if(!is.null(Index)) {
+      I_sd <- vec_slot_fn(paste0("CV_", x), Data)
+      if(is.null(SD)) {
+        I_sd <- rep(NA_real_, length(Index))
+      } else {
+        if(sum(!is.na(I_sd)) == 1) I_sd <- rep(I_sd[1], length(Index))
+        I_sd <- sdconv(1, SD)
+      }
+      s_sel <- s_sel_Ind[match(x, Ind_name)]
+      slotname <- x
+    } else {
+      I_sd <- s_sel <- slotname <- NULL
+    }
+    return(list(Index = Index, I_sd = I_sd, s_sel = s_sel, slotname = slotname))
+  }
 
-  out<-SRA_scope(OM, Chist=Chist, Index = Index, I_sd = I_sd, CAA = CAA, CAL = CAL,
-                            ML = ML, length_bin = length_bin, ...)
+  get_Ind <- lapply(Ind_name, lapply_fn)
+  out <- list(Index = do.call(cbind, lapply(get_Ind, getElement, "Index")),
+              I_sd = do.call(cbind, lapply(get_Ind, getElement, "I_sd")),
+              s_sel = do.call(c, lapply(get_Ind, getElement, "s_sel")),
+              slotname = do.call(c, lapply(get_Ind, getElement, "slotname")))
+  out$V <- matrix(NA_real_, maxage, ncol(out$Index))
+  out$I_units <- rep(1, ncol(out$Index))
   return(out)
 }
+
+pull_AddInd <- function(Data, maxage) {
+  Ind_name <- c("Ind", "SpInd", "VInd")
+  s_sel_Ind <- c("B", "SSB", 1)
+  s_sel_AddIndType <- 1:3
+  if(!all(is.na(Data@AddInd))) {
+    nindex <- dim(Data@AddInd)[2]
+    nyears <- dim(Data@AddInd)[3]
+    Index <- Data@AddInd[1, , ] %>% matrix(nyears, nindex, byrow = TRUE)
+    if(!all(is.na(Data@CV_AddInd[1, , ]))) {
+      I_sd <- sdconv(1, Data@CV_AddInd[1, , ]) %>% matrix(nyears, nindex, byrow = TRUE)
+    } else {
+      I_sd <- array(NA_real_, dim(Index))
+    }
+
+    V <- matrix(NA_real_, maxage, nindex)
+    s_sel <- rep(NA_character_, nindex)
+    for(i in 1:nindex) {
+      if(!all(is.na(Data@AddIndV[1, i, ]))) {
+        V[, i] <- Data@AddIndV[1, i, ]
+        s_sel[i] <- "free"
+      } else if(!is.na(Data@AddIndType[i])) {
+        sel_arg <- match(Data@AddIndType[i], s_sel_AddIndType)
+        if(is.na(sel_arg)) {
+          message("Data@AddIndType[", i, "] is undefined.")
+          s_sel[i] <- 1
+          message("Selectivity for survey number ", i, " assumed to be a vulnerable biomass survey.")
+        } else {
+          s_sel[i] <- s_sel_Ind[sel_arg]
+        }
+      } else {
+        s_sel[i] <- 1
+        message("Selectivity for survey number ", i, " in Data@AddInd is undefined. Assuming to be a vulnerable biomass survey.")
+      }
+    }
+    if(all(!is.na(Data@AddIunits)) && length(Data@AddIunits) == nindex) {
+      I_units <- Data@AddIunits
+    } else {
+      I_units <- rep(1, nindex)
+    }
+    return(list(Index = Index, I_sd = I_sd, s_sel = s_sel, slotname = rep("AddInd", ncol(Index)), V = V,
+                I_units = I_units))
+  } else {
+    return(list(Index = NULL, I_sd = NULL, s_sel = NULL, slotname = NULL, V = NULL, I_units = NULL))
+  }
+}
+
+
+pull_Index <- function(Data, maxage) {
+  Ind <- pull_Ind(Data, maxage)
+  AddInd <- pull_AddInd(Data, maxage)
+
+  if(all(is.na(Ind$I_sd)) && all(is.na(AddInd$I_sd))) {
+    I_sd <- NULL
+  } else {
+    I_sd <- cbind(Ind$I_sd, AddInd$I_sd)
+  }
+  return(list(Index = cbind(Ind$Index, AddInd$Index), I_sd = I_sd, s_selectivity = c(Ind$s_sel, AddInd$s_sel),
+              slotname = c(Ind$slotname, AddInd$slotname), V = cbind(Ind$V, AddInd$V),
+              I_units = c(Ind$I_units, AddInd$I_units)))
+}
+
 
 SRA_tiny_comp <- function(x) {
   all_zero <- all(is.na(x)) | sum(x, na.rm = TRUE) == 0
