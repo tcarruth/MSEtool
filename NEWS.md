@@ -7,6 +7,9 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 - `data$MS` (mean size) is now used instead of `data$ML` (fishery mean lengths). `data$MS` can also be mean weights, specify with `data$MS_type` to be either "length" or "weight". The likelihood of `data$MS` uses a normal distribution with constant CV specified in `data$MS_cv` (default = 0.2).
 - A DLMtool Data S4 object can be used instead of a data list.
 
+### SS2Data
+- Function imports all indices into `Data@AddInd`. Update function to fill in new Data slots: `CAL_mids` and `Vmaxlen`.
+
 ## MSEtool 1.7.0
 
 ### SRA_scope
