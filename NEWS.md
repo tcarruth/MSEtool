@@ -8,7 +8,8 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 - A DLMtool Data S4 object can be used instead of a data list.
 
 ### SS2Data
-- Function imports all indices into `Data@AddInd`. Update function to fill in new Data slots: `CAL_mids` and `Vmaxlen`.
+- Update function to fill in new Data slots: `CAL_mids` and `Vmaxlen`.
+- Both SS2Data and SS2OM imports all indices into `Data@AddInd`. 
 
 ## MSEtool 1.7.0
 

@@ -86,7 +86,7 @@ does detect time-varying growth in the assessment and uses annual length/weight-
 Selectivity is derived from the F-at-age matrix.
 }
 \note{
-Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
+Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-38).
 }
 \seealso{
 \link{SS2Data}

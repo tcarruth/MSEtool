@@ -39,7 +39,7 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
   dots <- list(dir = SSdir, ...)
   if(is.null(dots$covar)) dots$covar <- FALSE
   if(is.null(dots$forecast)) dots$forecast <- FALSE
-  if(is.null(dots$ncols)) dots$ncols <- 1e3
+  #if(is.null(dots$ncols)) dots$ncols <- 1e3
   if(is.null(dots$printstats)) dots$printstats <- FALSE
   if(is.null(dots$verbose)) dots$verbose <- FALSE
   if(is.null(dots$warn)) dots$warn <- FALSE
@@ -81,7 +81,10 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
     nyears <- ceiling(length(mainyrs)/nseas)
     Data@Year <- 1:nyears
 
-    seas1_yind_full <- expand.grid(nseas = 1:nseas, nyears = 1:nyears)
+    seas1_yind_full <- expand.grid(nseas = 1:nseas, true_year = 1:nyears) # Group assessment years to true years
+    seas1_yind_full$assess_year <- mainyrs
+
+    #seas1_yind_full <- expand.grid(nseas = 1:nseas, nyears = 1:nyears)
     seas1_yind <- which(seas1_yind_full$nseas == 1)
   } else {
     nyears <- length(mainyrs)
@@ -253,7 +256,7 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
   tc_ind <- match(total_catch$Yr, mainyrs)
   total_catch_vec <- total_catch$x[tc_ind]
   if(season_as_years) {
-    total_catch2 <- aggregate(total_catch_vec, list(Yr = seas1_yind_full$nyears), sum, na.rm = TRUE)
+    total_catch2 <- aggregate(total_catch_vec, list(Yr = seas1_yind_full$true_year), sum, na.rm = TRUE)
     total_catch_vec <- total_catch2$x
     message("Summing catch across seasons.")
   }
@@ -314,7 +317,7 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
   rec <- replist$recruit$pred_recr[rec_ind]
 
   if(season_as_years) {
-    rec2 <- aggregate(rec, by = list(Yr = seas1_yind_full$nyears), mean, na.rm = TRUE)$x
+    rec2 <- aggregate(rec, by = list(Yr = seas1_yind_full$true_year), mean, na.rm = TRUE)$x
     rec <- rec2
     message("Summing recruitment across seasons.")
   }
@@ -558,12 +561,12 @@ SS2Data_get_comps <- function(replist, mainyrs, maxage, season_as_years = FALSE,
   comp_res <- aggregate(comp_all, list(Yr = rep(1:length(mainyrs), length(comp_fleet))), sum, na.rm = TRUE) # Sum across fleets
 
   if(season_as_years) {
+    seas1_yind_full <- get("seas1_yind_full", envir = parent.frame(), inherits = FALSE)
     if(is.numeric(comp_season) && comp_season <= nseas) {
-      seas1_yind_full <- get("seas1_yind_full", envir = parent.frame(), inherits = FALSE)
       comp_res <- comp_res[seas1_yind_full$nseas == comp_season, ]
       message("For ", type, " comps, using season ", comp_season)
     } else if(is.character(comp_season) && comp_season == "sum") {
-      comp_res_list <- split(comp_res, seas1_yind_full$nyears)
+      comp_res_list <- split(comp_res, seas1_yind_full$true_year)
       comp_res_list <- lapply(comp_res_list, colSums, na.rm = TRUE)
       comp_res <- do.call(rbind, comp_res_list)
       message(type, "comps summed across seasons.")
@@ -580,7 +583,18 @@ SS2Data_get_index <- function(replist, mainyrs, season_as_years = FALSE, nseas =
 
   if(nrow(replist$cpue) == 0) return(NULL)
 
-  if(!season_as_years && nseas > 1) {
+  if(season_as_years) {
+
+    seas1_yind_full <- get("seas1_yind_full", envir = parent.frame(), inherits = FALSE)
+
+    cpue_split <- lapply(cpue_split, function(x, y) left_join(x, y, by = c("Yr" = "assess_year")), y = seas1_yind_full[, -1])
+    cpue_split <- lapply(cpue_split, function(x) cbind(x$Obs, x$SE) %>% aggregate(by = list(Yr = x$true_year), mean, na.rm = TRUE) %>%
+                           structure(names = c("Yr", "Obs", "SE")))
+
+    message("For indices of abundance, taking mean across seasons.")
+    mainyrs <- unique(seas1_yind_full$true_year)
+
+  } else if(nseas > 1) {
     if(is.numeric(index_season) && index_season <= nseas) {
       cpue_split <- lapply(cpue_split, function(x) x[x$Seas == index_season, ])
       message("For indices of abundance, using season ", index_season)

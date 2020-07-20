@@ -28,7 +28,7 @@
 #' @param dir If \code{report = TRUE}, the directory in which the markdown and HTML files will be saved.
 #' @param open_file If \code{report = TRUE}, whether the HTML document is opened after it is rendered.
 #' @param ... Arguments to pass to \link[r4ss]{SS_output}.
-#' @note Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-35). Function may be incompatible with other versions of r4ss.
+#' @note Currently supports versions of r4ss on CRAN (v.1.24) and Github (v.1.34-38).
 #' @details The function generally uses values from the terminal year of the assessment for most life history parameters (maturity, M, etc). This function
 #' does detect time-varying growth in the assessment and uses annual length/weight-at-age for historical years.
 #' Selectivity is derived from the F-at-age matrix.
@@ -38,7 +38,7 @@
 #' @seealso \link{SS2Data}
 #' @importFrom stats acf
 #' @importFrom reshape2 melt
-#' @importFrom dplyr summarise group_by pull
+#' @importFrom dplyr summarise group_by pull left_join
 SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1, interval = 1,
                   Obs = DLMtool::Generic_Obs, Imp = DLMtool::Perfect_Imp,
                   import_mov = TRUE, gender = 1:2, age_rec = 1, silent = FALSE,
@@ -46,9 +46,6 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
                   report = FALSE, filename = "SS2OM", dir = tempdir(), open_file = TRUE, ...) {
   if(!requireNamespace("r4ss", quietly = TRUE)) {
     stop("Download the r4ss package to use this function. It is recommended to install the Github version with: devtools::install_github(\"r4ss/r4ss\")", call. = FALSE)
-  }
-  if(utils::packageVersion("r4ss") < 1.34 && utils::packageVersion("r4ss") != 1.24) {
-    warning(paste0("r4ss version ", utils::packageVersion("r4ss"), " was detected. This function is only tested on versions 1.24 and 1.34-35."), call. = FALSE)
   }
 
   dots <- list(dir = SSdir, ...)
@@ -531,14 +528,44 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
   }
 
   # Index observations -------------------------------------------------------
-  cpue <- data.frame(Fleet = replist$cpue$Fleet, SE = replist$cpue$SE)
-  fleet_means <- aggregate(cpue, list(cpue$Fleet), mean, na.rm = TRUE)
-  OM@Iobs <- range(sqrt(exp(fleet_means$SE^2) - 1), na.rm = TRUE)
+  Ind <- SS2Data_get_index(replist, mainyrs, season_as_years, nseas, index_season = "mean")
 
-  if(!silent) {
-    message("Range of error in index (OM@Iobs) based on range of index standard deviation means for each fleet or survey: ",
-            paste(round(fleet_means$SE, 2), collapse = " "))
-    message("\nImport successful. Use plot OM function to view imported operating model parameters.")
+  if(is.null(Ind)) {
+    message("No indices found.")
+    if(packageVersion("DLMtool") >= 5.4) {
+      Data@AddInd <- Data@CV_AddInd <- Data@AddIndV <- array(NA, c(1, 1, 1))
+    }
+  } else {
+    Data <- new("Data")
+    message(length(Ind$Iname), " indices of abundance found:")
+    message(paste(Ind$Iname, collapse = "\n"))
+
+    if(packageVersion("DLMtool") >= "5.4.4") {
+
+      Data@AddInd <- Ind$AddInd
+      Data@CV_AddInd <- sqrt(exp(Ind$SE_AddInd^2) - 1)
+
+      Data@AddIunits <- Ind$AddIunits
+      Data@AddIndType <- Ind$AddIndType
+
+      if(season_as_years) {
+        AddIndV <- apply(Ind$AddIndV, 1, function(x) {
+          xx <- data.frame(assess_age = as.numeric(names(x)), sel = x) %>% left_join(seas1_aind_full[, -1], by = "assess_age")
+          xx_agg <- aggregate(xx$sel, by = list(age = xx$true_age), mean, na.rm = TRUE)
+          xx_agg$x[xx_agg$age >= age_rec]
+        }) %>% t()
+      } else {
+        AddIndV <- Ind$AddIndV
+      }
+
+      Data@AddIndV <- array(AddIndV, c(1, dim(AddIndV)))
+
+      OM@cpars$Data <- Data
+
+      message("Updated Data@AddInd, Data@CV_AddInd, Data@AddIndV.")
+    } else {
+      message("\n\n *** Update DLMtool to latest version (5.4.4+) in order to add indices to OM (via OM@cpars$Data). *** \n\n")
+    }
   }
 
   if(report) {
