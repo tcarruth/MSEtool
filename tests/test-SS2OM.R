@@ -60,6 +60,8 @@ test_that("GOM red snapper", {
   expect_true(all(res@cpars$Find >= 0))
 
   expect_equal(DLMtool::cparscheck(res@cpars), res@nsim)
+
+  expect_s4_class(runMSE(res, Hist = TRUE, silent = TRUE), "Hist")
 })
 
 
@@ -93,6 +95,8 @@ test_that("Indian Ocean yellowfin tuna", {
   expect_true(all(res@cpars$Find >= 0))
 
   expect_equal(DLMtool::cparscheck(res@cpars), res@nsim)
+
+  expect_s4_class(runMSE(res, Hist = TRUE, silent = TRUE), "Hist")
 })
 
 
@@ -127,7 +131,7 @@ test_that("GOM vermilion snapper", {
 
   expect_equal(DLMtool::cparscheck(res@cpars), res@nsim)
 
-
+  expect_s4_class(runMSE(res, Hist = TRUE, silent = TRUE), "Hist")
 })
 
 
@@ -163,5 +167,5 @@ test_that("ICCAT yellowfin tuna", {
 
   expect_equal(DLMtool::cparscheck(res@cpars), res@nsim)
 
-
+  expect_s4_class(runMSE(res, Hist = TRUE, silent = TRUE), "Hist")
 })

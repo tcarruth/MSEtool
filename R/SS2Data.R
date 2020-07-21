@@ -83,9 +83,8 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
 
     seas1_yind_full <- expand.grid(nseas = 1:nseas, true_year = 1:nyears) # Group assessment years to true years
     seas1_yind_full$assess_year <- mainyrs
-
-    #seas1_yind_full <- expand.grid(nseas = 1:nseas, nyears = 1:nyears)
     seas1_yind <- which(seas1_yind_full$nseas == 1)
+
   } else {
     nyears <- length(mainyrs)
     Data@Year <- mainyrs
@@ -99,11 +98,21 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
   if(replist$nsexes == 1) gender <- 1
   growdat <- getGpars(replist)[[gender]]      # Age-specific parameters in endyr
 
-  # Max age
-  Data@MaxAge <- maxage <- ceiling(nrow(growdat)/ifelse(season_as_years, nseas, 1))
+  if("int_Age" %in% names(growdat)) {
+    ages <- unique(growdat$int_Age)
+  } else {
+    ages <- unique(growdat$Age)
+  }
 
-  seas1_aind_full <- expand.grid(nseas = 1:nseas, age = 1:maxage)
-  seas1_aind <- which(seas1_aind_full$nseas == 1)
+  # Max age
+  Data@MaxAge <- maxage <- floor(max(ages)/ifelse(season_as_years, nseas, 1))
+
+  seas1_aind_full <- expand.grid(nseas = 1:nseas, true_age = 0:maxage)[1:length(ages), ] # Group assessment ages to true ages
+  seas1_aind_full$assess_age <- ages
+  seas1_aind <- which(seas1_aind_full$nseas == 1) # Age indices that correspond to season 1
+
+  #seas1_aind_full <- expand.grid(nseas = 1:nseas, age = 1:maxage)
+  #seas1_aind <- which(seas1_aind_full$nseas == 1)
 
   GP <- replist$Growth_Parameters   # Some growth parameters (presumably in endyr)
   if(nrow(GP)>1) {
@@ -147,7 +156,7 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
   } else {                                          # Use age-based maturity
     Mat <- growdat$Age_Mat/max(growdat$Age_Mat)
   }
-  if(season_as_years) Mat <- Mat[seas1_aind]
+  #if(season_as_years) Mat <- Mat[seas1_aind]
 
   # Currently using linear interpolation of mat vs len, is robust and very close to true logistic model predictions
   Data@L50 <- LinInterp(Mat, Len_age, 0.5+1e-6)
@@ -179,7 +188,7 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
     CAA <- SS2Data_get_comps(replist, mainyrs, maxage, season_as_years, nseas, comp_gender, comp_fleet, comp_partition, comp_season,
                              type = "age") %>% as.matrix()
     if(!is.null(CAA)) {
-      Data@CAA <- array(CAA, c(1, maxage, ncol(CAA)))
+      Data@CAA <- array(CAA, c(1, nyears, ncol(CAA)))
       message("Collected age comps.")
     } else {
       message("Could not find age comps that matched these filtering criteria.")
@@ -300,7 +309,17 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
       Data@CV_AddInd <- sqrt(exp(Ind$SE_AddInd^2) - 1)
       Data@AddIunits <- Ind$AddIunits
       Data@AddIndType <- Ind$AddIndType
-      Data@AddIndV <- array(Ind$AddIndV, c(1, dim(Ind$AddIndV)))
+
+      if(season_as_years) {
+        AddIndV <- apply(Ind$AddIndV, 1, function(x) {
+          xx <- data.frame(assess_age = as.numeric(names(x)), sel = x) %>% left_join(seas1_aind_full[, -1], by = "assess_age")
+          xx_agg <- aggregate(xx$sel, by = list(age = xx$true_age), mean, na.rm = TRUE)
+          xx_agg$x[xx_agg$age >= 1]
+        }) %>% t()
+      } else {
+        AddIndV <- Ind$AddIndV[ , -1]
+      }
+      Data@AddIndV <- array(AddIndV, c(1, dim(AddIndV)))
 
       message("Updated Data@AddInd, Data@CV_AddInd, Data@AddIndV.")
     } else {
@@ -448,9 +467,6 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
 
   #### Selectivity
   # Get F-at-age in terminal year, then obtain LFC and LFS
-  ages <- growdat$Age
-  if(is.null(ages) && packageVersion("r4ss") >= 1.35) ages <- growdat$int_Age
-
   cols <- match(ages, names(replist$Z_at_age))
   rows <- match(mainyrs, replist$Z_at_age$Year)
   if(all(is.na(rows)) && packageVersion("r4ss") >= 1.35) rows <- match(mainyrs, replist$Z_at_age$Yr)
@@ -474,20 +490,10 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
 
   F_at_age[F_at_age < 1e-8] <- 1e-8
 
-  if(season_as_years) {
-    Ftab <- expand.grid(Age = 1:dim(F_at_age)[1], Yr = 1:dim(F_at_age)[2])
-    Ftab$F_at_age <- as.vector(F_at_age)
-
-    # Mean F across aggregated age (groups of nseas), then sum F across aggregated years (groups of nseas)
-    sumF <- aggregate(Ftab[, 3], list(Age = seas1_aind_full[1:nrow(F_at_age), 2][Ftab[, 1]], Yr = Ftab[, 2]), mean, na.rm = TRUE)
-    sumF <- aggregate(sumF[, 3], list(Age = sumF[, 1], Yr = rep(seas1_yind_full[1:ncol(F_at_age), 2], each = maxage)), sum, na.rm = TRUE)
-
-    F_at_age <- matrix(sumF[, 3], nrow = maxage)
-  }
-
   V_terminal <- F_at_age[, ncol(F_at_age)]/max(F_at_age[, ncol(F_at_age)])
   Data@LFC <- LinInterp(V_terminal, Len_age, 0.05, ascending = TRUE, zeroint = TRUE) %>% round(2)
   Data@LFS <- Len_age[which.min((exp(V_terminal)-exp(1.05))^2 * 1:length(V_terminal))] %>% round(2)
+  if(Data@LFS > Data@vbLinf) warning("Data@LFS > Data@vbLinf")
   Data@Vmaxlen <- V_terminal[length(V_terminal)] %>% round(2)
   message(paste0("\nData@LFC = ", Data@LFC, ", Data@LFS = ", Data@LFS, ", Data@Vmaxlen = ", Data@Vmaxlen))
   if("sigma_R_in" %in% names(replist)) {
@@ -550,11 +556,13 @@ SS2Data_get_comps <- function(replist, mainyrs, maxage, season_as_years = FALSE,
     }
     if(type == "age") {
       res <- matrix(NA, length(mainyrs), maxage)
-      bin_match <- 1:ncol(x)
+      bin_match <- 1:(ncol(x) - 1)
+      x <- x[, -1]
     }
     res[yr_match, bin_match] <- x
     return(res)
   }
+
   comp_mat2 <- lapply(comp_mat, expand_matrix) # Expand matrices to full years (by mainyrs)
   comp_all <- do.call(rbind, comp_mat2)
 
@@ -579,7 +587,10 @@ SS2Data_get_comps <- function(replist, mainyrs, maxage, season_as_years = FALSE,
 SS2Data_get_index <- function(replist, mainyrs, season_as_years = FALSE, nseas = 1, index_season = "mean") {
 
   cpue_split <- split(replist$cpue, replist$cpue$Fleet)
-  cpue_name <- vapply(cpue_split, function(x) unique(x$Fleet_name), character(1))
+  cpue_name <- vapply(cpue_split, function(x) {
+    out <- unique(x$Fleet_name)
+    ifelse(length(out) == 1, out, NA_character_)
+  }, character(1))
 
   if(nrow(replist$cpue) == 0) return(NULL)
 

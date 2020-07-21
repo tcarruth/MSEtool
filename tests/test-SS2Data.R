@@ -21,7 +21,25 @@ for(i in 1:length(dir_vec)) {
     expect_message(plot(res))
 
     expect_true(dim(res@Cat)[2] == nyears)
-    expect_true(dim(res@Ind)[2] == nyears)
+
+    nindex <- length(res@AddIndType)
+    expect_true(all(dim(res@AddInd[1, , ]) == c(nindex, nyears)))
+    expect_true(all(dim(res@CV_AddInd[1, , ]) == c(nindex, nyears)))
+    expect_true(all(dim(res@AddIndV[1, , ]) == c(nindex, res@MaxAge)))
+    expect_true(length(res@AddIunits) == nindex)
+
+    if(!all(is.na(res@CAL))) {
+      nbins <- length(res@CAL_mids)
+      expect_true(!all(is.na(res@CAL_mids)))
+      expect_true(!all(is.na(res@CAL_bins)))
+
+      expect_true(length(res@CAL_mids) == nbins)
+      expect_true(length(res@CAL_bins) == nbins + 1)
+      expect_true(all(dim(res@CAL[1, , ]) == c(nyears, nbins)))
+    }
+
+    if(!all(is.na(res@CAA))) expect_true(all(dim(res@CAA[1, , ]) == c(nyears, res@MaxAge)))
+
     expect_true(dim(res@Rec)[2] == nyears)
     expect_true(res@t == nyears)
 
