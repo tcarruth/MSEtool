@@ -152,11 +152,11 @@ report <- function(Assessment, retro = NULL, filename = paste0("report_", Assess
   render_args$quiet <- quiet
 
   message("Rendering markdown file...")
-  output <- do.call(rmarkdown::render, render_args)
-  message("Rendering complete.")
+  output_filename <- do.call(rmarkdown::render, render_args)
+  message("Rendered file: ", output_filename)
 
-  if(open_file) browseURL(output)
-  invisible(output)
+  if(open_file) browseURL(output_filename)
+  invisible(output_filename)
 }
 
 

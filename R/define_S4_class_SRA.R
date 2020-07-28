@@ -1028,7 +1028,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   scenario$col2 <- scenario$col
 
   if(is.null(scenario$lwd)) scenario$lwd <- 1
-  if(is.null(scenario$lty)) scenario$lty <- 1:5
+  if(is.null(scenario$lty)) scenario$lty <- 1
 
   ####### Function arguments for rmarkdown::render
   filename_rmd <- paste0(filename, ".Rmd")
@@ -1049,7 +1049,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
 
   ####### Assign variables
   x <- dots[[1]] # Dummy variable
-  report_list <- lapply(dots, function(x) if(length(x@mean_fit) > 0) return(x@mean_fit$report) else stop("Error in SRA objects."))
+  report_list <- lapply(dots, function(xx) if(length(xx@mean_fit) > 0) return(xx@mean_fit$report) else stop("Error in SRA objects."))
 
   nsim <- length(report_list)
   data <- dots[[1]]@data
@@ -1060,8 +1060,8 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   if(is.null(Year)) Year <- (dots[[1]]@OM@CurrentYr - nyears + 1):dots[[1]]@OM@CurrentYr
   Yearplusone <- c(Year, max(Year) + 1)
 
-  nfleet <- vapply(dots, function(x) x@data$nfleet, numeric(1)) %>% unique()
-  nsurvey <- vapply(dots, function(x) x@data$nsurvey, numeric(1)) %>% unique()
+  nfleet <- vapply(dots, function(xx) xx@data$nfleet, numeric(1)) %>% unique()
+  nsurvey <- vapply(dots, function(xx) xx@data$nsurvey, numeric(1)) %>% unique()
   length_bin <- dots[[1]]@data$length_bin
 
   # Backwards compatibility
@@ -1103,14 +1103,11 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   #### MSY comparisons
   if(compare) {
     message("Running runMSE() to get MSY reference points...")
-    Hist <- lapply(dots, function(x) {
-      if(identical(x@Misc[[1]], x@mean_fit$report)) {
-        Hist <- runMSE(x@OM, Hist = TRUE, silent = TRUE)
-      } else {
-        stop("Don't have OM for Hist object. Set argument compare = FALSE")
-      }
-      return(Hist)
-    })
+    if(snowfall::sfIsRunning()) {
+      Hist <- sfClusterApplyLB(dots, function(xx) runMSE(xx@OM, Hist = TRUE, silent = TRUE))
+    } else {
+      Hist <- lapply(dots, function(xx) runMSE(xx@OM, Hist = TRUE, silent = TRUE))
+    }
 
     SSB_MSY <- c("```{r, fig.cap = \"Spawning biomass (SSB) relative to MSY from the operating model.\"}",
                  "SSB <- do.call(rbind, lapply(report_list, function(x) x$E[1:nyears]))",
@@ -1122,7 +1119,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
                  "if(!is.null(scenario$names)) legend(\"topleft\", scenario$names, col = scenario$col2, lty = scenario$lty)",
                  "```\n")
 
-    ref_pt_fn <- function(x) c(x@Ref$FMSY[1], x@Ref$MSY[1], x@Ref$SSBMSY_SSB0[1])
+    ref_pt_fn <- function(xx) c(mean(xx@Ref$FMSY), mean(xx@Ref$MSY), mean(xx@Ref$SSBMSY_SSB0))
     ref_pt <- do.call(cbind, lapply(Hist, ref_pt_fn)) %>%
       structure(dimnames = list(c("FMSY", "MSY", "Spawning depletion at MSY"), scenario$names)) %>% as.data.frame()
 
@@ -1142,10 +1139,10 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
                        rmd_SRA_initD(), rmd_SRA_R_output(), rmd_SRA_SSB_output(), SSB_MSY, rmd_log_rec_dev())
 
   #### Likelihoods
-  nll <- Map(SRA_get_likelihoods, x = report_list, LWT = lapply(dots, function(x) x@data$LWT),
+  nll <- Map(SRA_get_likelihoods, x = report_list, LWT = lapply(dots, function(xx) xx@data$LWT),
              MoreArgs = list(f_name = f_name, s_name = s_name))
 
-  summary_nll <- vapply(nll, function(x) x[[1]] %>% as.matrix(), numeric(4)) %>%
+  summary_nll <- vapply(nll, function(xx) xx[[1]] %>% as.matrix(), numeric(4)) %>%
     structure(dimnames = list(rownames(nll[[1]][[1]]), scenario$names)) %>% as.data.frame()
 
   if(render_args$output_format == "html_document") {
