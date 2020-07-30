@@ -431,7 +431,7 @@ update_SRA_data <- function(data, OM, condition, dots) {
   }
 
   if(data$condition == "catch2" && any(data$C_eq > 0)) {
-    message("Equilibrium catch was detected. Model conditioning will be switched to: \"catch\" (estimated F's)")
+    message("Equilibrium catch was detected. The corresponding equilibrium F will be estimated.")
   }
 
   if(is.null(data$E_eq)) data$E_eq <- rep(0, data$nfleet)

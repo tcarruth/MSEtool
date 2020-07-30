@@ -320,7 +320,7 @@ Type SRA_scope(objective_function<Type> *obj) {
         for(int aa=0;aa<max_age;aa++) s_CAApred(y,aa,sur) += s_CAAtrue(y,a,sur) * age_error(a,aa);
 
         if(I_units(sur)) s_BN(y,sur) += s_CAAtrue(y,a,sur) * wt(y,a); // Biomass vulnerable to survey
-        if(Type(max_age) != Linf && !R_IsNA(asDouble(s_CAL_n(y,sur))) && s_CAL_n(y,sur) > 0) {
+        if(Type(max_age) != Linf && s_CAL_n.col(sur).sum() > 0) {
           for(int len=0;len<nlbin;len++) s_CALpred(y,len,sur) += s_CAAtrue(y,a,sur) * ALK(y)(a,len);
         }
       }
