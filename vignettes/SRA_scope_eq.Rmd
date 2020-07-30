@@ -126,6 +126,9 @@ $$ C^N_{y,a,f} = \dfrac{v_{y,a,f} F_{y,f}}{Z_{y,a}} N_{y,a} (1 - \exp[-Z_{y,a}])
 If the model is conditioned on catch, then $F_{y,f}$ can be estimated as parameters or solved iteratively to match the observed catch. If the model is conditioned on effort, then
 $$ F_{y,f} = q_f E_{y,f},$$ where $E_{y,f}$ is the observed effort and $q_f$ is the scaling coefficient.
 
+The proportion of the catch-at-age is
+$$ p_{y,a,f} = \dfrac{C^N_{y,a,f}}{\sum_a C^N_{y,a,f}}.$$
+
 # Catch-at-length 
 The catch at length is calculated assuming a normally distributed length-at-age $P(\ell,a)$, where
 $$ C^N_{y,\ell,f} = \sum_a C^N_{y,a,f} P(\ell|a) $$
@@ -140,18 +143,20 @@ $$ P(\ell|a) =
 $$
 with $L'_{\ell}$ as the length at the lower boundary of length bin $\ell$ and $\phi(L'_{\ell})$ as the cumulative distribution function of a normal variable with mean $\tilde{L}_{y,a}$ (the expected mean length at age $a$) and standard deviation $\tilde{L}_{y,a} \times CV^L$ ($CV^L$ is the coefficient of variation in mean length at age). 
 
+The proportion of the catch-at-length is
+$$ p_{y,\ell,f} = \dfrac{C^N_{y,\ell,f}}{\sum_{\ell}C^N_{y,\ell,f}}.$$
+
+# Catch in weight
 The catch in weight $\tilde{C}$ is
 $$ \tilde{C}_{y,f} = \sum_a C^N_{y,a,f} w_{y,a}.$$
 
+# Mean size
 The mean length of the catch $\bar{L}_{y,f}$ is
 $$ \bar{L}_{y,f} = \dfrac{\sum_{\ell} L_{\ell} C^N_{y,\ell,f}}{\sum_{\ell} C^N_{y,\ell,f}},$$
 where $L_\ell$ is the midpoint of the length bin $\ell$.
 
-The proportion of the catch-at-age is
-$$ p_{y,a,f} = \dfrac{C^N_{y,a,f}}{\sum_a C^N_{y,a,f}}.$$
-
-The proportion of the catch-at-length is
-$$ p_{y,\ell,f} = \dfrac{C^N_{y,\ell,f}}{\sum_{\ell}C^N_{y,\ell,f}}.$$
+The mean weight of the catch $\bar{w}_{y,f}$ is
+$$ \bar{w}_{y,f} = \dfrac{\sum_a C^N_{y,a,f}w_{y,a}}{\sum_a C^N_{y,a,f}},$$
 
 # Survey 
 If the $s^{\textrm{th}}$ survey is biomass-based, then the survey value $I_{y,s}$ is calculated as
@@ -185,9 +190,13 @@ The log-likelihood component $\Lambda_4$ of catch-at-length data is
 $$\Lambda_4 = \sum_f \lambda^L_f \left[ \sum_y O^L_{y,f} \sum_{\ell} p^{\textrm{obs}}_{y,\ell,f} \log(p^{\textrm{pred}}_{y,\ell,f})\right]$$
 where $O^L$ is the annual sample sizes for the length compositions.
 
-The log-likelihood component $\Lambda_5$ of observed mean lengths in the catch is
-$$\Lambda_5 = \sum_f \lambda^{\bar{L}}_f\left[ \sum_y \left(-\log(\omega_f) - \dfrac{[\bar{L}^{\textrm{obs}}_{y,f} - \bar{L}^{\textrm{pred}}_{y,f}]^2}{2 \omega^2_f}\right)\right],$$
-where $\omega_f$ is the standard deviation of mean lengths.
+The log-likelihood component $\Lambda_5$ for the observed mean size in this catch is:
+
+$$\Lambda_5 = \sum_f \lambda^{\bar{L}}_f\left[ \sum_y \left(-\log(\omega_{y,f}) - \dfrac{[\bar{L}^{\textrm{obs}}_{y,f} - \bar{L}^{\textrm{pred}}_{y,f}]^2}{2 \omega^2_{y,f}}\right)\right],$$
+for mean lengths, or
+
+$$\Lambda_5 = \sum_f \lambda^{\bar{w}}_f\left[ \sum_y \left(-\log(\omega_{y,f}) - \dfrac{[\bar{w}^{\textrm{obs}}_{y,f} - \bar{w}^{\textrm{pred}}_{y,f}]^2}{2 \omega^2_{y,f}}\right)\right],$$
+for mean weights, where $\omega_{y,f}$ is the standard deviation of mean size. With constant cofficient of variation (CV), $\omega_{y,f} = \bar{w}^{\textrm{obs}}_{y,f} CV^{\omega}_f$.
 
 The log-likelihood component $\Lambda_6$ of annual estimated recruitment deviates $\delta_y$ in log space is
 $$\Lambda_6 = \Sigma_y\left(-\log(\tau) - \dfrac{\delta_y^2}{2 \tau^2}\right),$$
@@ -200,7 +209,7 @@ The log-likelihood component $\Lambda_8$ of the survey proportion-at-age data is
 $$\Lambda_8 = \sum_s \lambda^{IA}_s \left[\sum_y O^{IA}_{y,s} \sum_a p^{\textrm{obs}}_{y,a,s} \log(p^{\textrm{pred}}_{y,a,s})\right],$$
 where $O^{IA}$ is the annual sample sizes for the survey age compositions.
 
-The log-likelihood component $\Lambda_9$ of the surey proportion-at-length data is
+The log-likelihood component $\Lambda_9$ of the survey proportion-at-length data is
 $$\Lambda_9 = \sum_s \lambda^{IL}_s \left[ \sum_y O^{IL}_{y,s} \sum_{\ell} p^{\textrm{obs}}_{y,\ell,s} \log(p^{\textrm{pred}}_{y,\ell,s})\right]$$
 where $O^{IL}$ is the annual sample sizes for the survey length compositions.
 
