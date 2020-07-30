@@ -109,7 +109,40 @@ get_sdreport <- function(obj, opt) {
     if(is.null(h)) h <- optimHess(opt$par, obj$fn, obj$gr)
     if(!is.character(try(chol(h), silent = TRUE))) res$cov.fixed <- chol2inv(chol(h))
   }
+
+  if(inherits(res, "sdreport") && !is.null(par.fixed)) {
+    obj2 <- MakeADFun(obj$env$data, obj$env$parameters, type = "ADFun",
+                      ADreport = TRUE, DLL = obj$env$DLL, silent = obj$env$silent)
+    inv_gr <- obj2$gr(obj$env$last.par.best) %>% pseudoinverse(tol = 1e-4)
+    if(!is.null(obj$env$random)) inv_gr <- inv_gr[-obj$env$random, , drop = FALSE]
+    res$env$gradient.AD <- colSums(inv_gr * as.vector(res$gradient.fixed))
+  }
   return(res)
+}
+
+sdreport_int <- function(object, select = c("all", "fixed", "random", "report"), p.value = FALSE, ...) {
+  if(is.character(object)) return(object)
+  select <- match.arg(select, several.ok = TRUE)
+  if("report" %in% select) {
+    gradient.AD <- object$env$gradient.AD %>% as.vector()
+    if(is.null(gradient.AD)) gradient.AD <- rep(NA_real_, length(object$value))
+
+    AD <- TMB::summary.sdreport(object, "report", p.value = p.value) %>% cbind("Gradient" = gradient.AD)
+  } else AD <- NULL
+
+  if("fixed" %in% select) {
+    fix <- TMB::summary.sdreport(object, "fixed", p.value = p.value) %>% cbind("Gradient" = as.vector(object$gradient.fixed))
+  } else fix <- NULL
+
+  if(!is.null(object$par.random) && "random" %in% select) {
+    random <- TMB::summary.sdreport(object, "random", p.value = p.value) %>% cbind("Gradient" = rep(NA_real_, length(object$par.random)))
+  } else {
+    random <- NULL
+  }
+
+  out <- rbind(AD, fix, random)
+  out <- cbind(out, "CV" = ifelse(abs(out[, "Estimate"]) > 0, out[, "Std. Error"]/abs(out[, "Estimate"]), NA_real_))
+  return(out)
 }
 
 # Call from inside generate_plots() and summary.Assessment

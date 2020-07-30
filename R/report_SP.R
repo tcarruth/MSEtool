@@ -34,25 +34,10 @@ summary_SP <- function(Assessment, state_space = FALSE) {
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("r", "K", "BMSY", "BMSY/B0")
 
-  if(!is.character(SD)) {
-    if(state_space) {
-      if(is.null(obj$env$random)) {
-        model_estimates <- summary(SD)[rownames(summary(SD)) != "log_B_dev", ]
-        dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_B_dev", ]
-      } else {
-        model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
-        dev_estimates <- summary(SD, "random")
-      }
-      rownames(dev_estimates) <- paste0("log_B_dev_", names(Dev)[Dev != 0])
-      model_estimates <- model_estimates[is.na(model_estimates[, 2]) || model_estimates[, 2] > 0, ]
-      model_estimates <- rbind(model_estimates, dev_estimates)
-
-    } else model_estimates <- summary(SD)
-    model_estimates <- model_estimates[!is.na(model_estimates[, 2]) && model_estimates[, 2] > 0, ]
-  } else {
-    model_estimates <- SD
+  model_estimates <- sdreport_int(SD)
+  if(!is.character(model_estimates)) {
+    rownames(model_estimates)[rownames(model_estimates) == "log_B_dev"] <- paste0("log_B_dev_", names(FMort)[as.logical(obj$env$data$est_B_dev)])
   }
-  model_estimates <- model_estimates[model_estimates[, 2] > 0, ]
 
   model_name <- "Surplus Production"
   if(state_space) model_name <- paste(model_name, "(State-Space)")

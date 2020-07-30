@@ -30,17 +30,10 @@ summary_SCA <- function(Assessment, SCA2 = FALSE) {
     rownames(derived)[8] <- "h"
   }
 
-  if(!is.character(SD)) {
-    model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev" & rownames(summary(SD)) != "log_early_rec_dev" &
-                                     rownames(summary(SD)) != "logF", ]
-    model_estimates <- model_estimates[!is.na(model_estimates[, 2]) && model_estimates[, 2] > 0, ]
-    if(length(SE_Dev) == 0) SE_Dev <- rep(NA, length(Dev))
-    dev_estimates <- cbind(Dev, SE_Dev)
-    rownames(dev_estimates) <- paste0("log_rec_dev_", names(Dev))
-
-    model_estimates <- rbind(model_estimates, dev_estimates)
-  } else {
-    model_estimates <- SD
+  model_estimates <- sdreport_int(SD)
+  if(!is.character(model_estimates)) {
+    rownames(model_estimates)[rownames(model_estimates) == "logF"] <- paste0("logF_", names(FMort))
+    rownames(model_estimates)[rownames(model_estimates) == "log_rec_dev"] <- paste0("log_rec_dev_", names(FMort)[as.logical(obj$env$data$est_rec_dev)])
   }
 
   output <- list(model = paste("Statistical Catch-at-Age", ifelse(SCA2, "(SCA2)", "(SCA)")),

@@ -18,12 +18,13 @@ summary_spict <- function(Assessment) {
                           stringsAsFactors = FALSE)
     rownames(derived) <- c("r", "K", "BMSY", "alpha", "beta", "BMSY/B0")
 
-    model_estimates <- summary(SD, "fixed")
-    SD_exp <- model_estimates
-    SD_exp[, 1] <- exp(SD_exp[, 1])
-    SD_exp[, 2] <- SD_exp[, 1] * SD_exp[, 2]
-    rownames(SD_exp) <- c("MSY", "K", "q", "n", "sd_b", "sd_f", "sd_i", "sd_c")
-    model_estimates <- rbind(model_estimates, SD_exp)
+    model_estimates <- sdreport_int(SD, "fixed")
+    SD_exp <- cbind("Estimate" = exp(model_estimates[, "Estimate"]),
+                    "Std. Error" = model_estimates[, "Estimate"] * model_estimates[, "Std. Error"])
+    SD_exp <- cbind(SD_exp, "Gradient" = model_estimates[, "Gradient"]/SD_exp[, "Estimate"],
+                    "CV" = SD_exp[, "Std. Error"]/SD_exp[, "Estimate"])
+    rownames(SD_exp) <- vapply(rownames(model_estimates), function(x) substr(x, 4, nchar(x)), character(1))
+    model_estimates <- rbind(SD_exp, model_estimates)
   } else {
     current_status <- derived <- model_estimates <- data.frame()
   }

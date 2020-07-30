@@ -231,7 +231,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
 
               conv <- report$conv
 
-              SD2 <- rbind(summary(SD, "report"), summary(SD, "fixed")) %>% as.data.frame()
+              SD2 <- sdreport_int(SD) %>% signif(4) %>% format() %>% as.data.frame()
               if(render_args$output_format == "html_document") {
                 sumry <- c("## Fit to mean parameters of the OM {.tabset}\n",
                            "### SRA Model Estimates\n",

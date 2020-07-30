@@ -39,22 +39,9 @@ summary_DD_TMB <- function(Assessment, state_space = FALSE) {
                         stringsAsFactors = FALSE)
   rownames(derived) <- c("B0", "N0", "MSY", "UMSY", "BMSY", "BMSY/B0")
 
-  if(!is.character(SD)) {
-    if(state_space) {
-      if(is.null(obj$env$random)) {
-        model_estimates <- summary(SD)[rownames(summary(SD)) != "log_rec_dev", ]
-        dev_estimates <- summary(SD)[rownames(summary(SD)) == "log_rec_dev", ]
-      } else {
-        model_estimates <- rbind(summary(SD, "fixed"), summary(SD, "report"))
-        dev_estimates <- summary(SD, "random")
-      }
-      rownames(dev_estimates) <- paste0(rownames(dev_estimates), "_", names(Dev))
-      model_estimates <- rbind(model_estimates, dev_estimates)
-      model_estimates <- model_estimates[!is.na(model_estimates[, 2]) && model_estimates[, 2] > 0, ]
-    } else model_estimates <- summary(SD)
-
-  } else {
-    model_estimates <- SD
+  model_estimates <- sdreport_int(SD)
+  if(!is.character(model_estimates)) {
+    rownames(model_estimates)[rownames(model_estimates) == "log_rec_dev"] <- paste0("log_rec_dev_", names(Dev))
   }
 
   model_name <- "Delay-Difference"

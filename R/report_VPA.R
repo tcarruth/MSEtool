@@ -25,10 +25,7 @@ summary_VPA <- function(Assessment) {
   derived <- data.frame(Value = Value, Description = Description, stringsAsFactors = FALSE)
   rownames(derived) <- c("VB0", "SSB0", "MSY", "UMSY", "VBMSY", "SSBMSY", "SSBMSY/SSB0")
 
-  if(!is.character(SD)) {
-    model_estimates <- summary(SD)
-    model_estimates <- model_estimates[!is.na(model_estimates[, 2]) && model_estimates[, 2] > 0, ]
-  } else model_estimates <- SD
+  model_estimates <- sdreport_int(SD)
 
   output <- list(model = "Virtual Population Analysis (VPA)",
                  current_status = current_status, input_parameters = input_parameters,

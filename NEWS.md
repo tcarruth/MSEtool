@@ -1,5 +1,8 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
+## MSEtool 2.0.1
+- Markdown reports gradients and CVs of parameter estimates.
+
 ## MSEtool 2.0.0
 
 ### SRA_scope
