@@ -1104,7 +1104,7 @@ compare_SRA <- function(..., compare = TRUE, filename = "compare_SRA", dir = tem
   if(compare) {
     message("Running runMSE() to get MSY reference points...")
     if(snowfall::sfIsRunning()) {
-      Hist <- sfClusterApplyLB(dots, function(xx) runMSE(xx@OM, Hist = TRUE, silent = TRUE))
+      Hist <- snowfall::sfClusterApplyLB(dots, function(xx) runMSE(xx@OM, Hist = TRUE, silent = TRUE))
     } else {
       Hist <- lapply(dots, function(xx) runMSE(xx@OM, Hist = TRUE, silent = TRUE))
     }

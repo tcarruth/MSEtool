@@ -210,8 +210,8 @@ setMethod("SRA_scope", signature(OM = "OM", data = "Data"),
               if(all(is.na(data@Effort))) {
                 stop("Conditioning on effort but no effort series found", call. = FALSE)
               } else {
-                data_list$Ehist <- data@Eff[1, ]
-                if(nrow(data@Eff) == OM@nsim) { # Add sketched effort matrix to OM
+                data_list$Ehist <- data@Effort[1, ]
+                if(nrow(data@Effort) == OM@nsim) { # Add sketched effort matrix to OM
                   OM@cpars$Find <- data@Effort
                   extra_args$OMeff <- TRUE
                 }
@@ -247,7 +247,7 @@ setMethod("SRA_scope", signature(OM = "OM", data = "Data"),
             }
 
             # Mean length
-            data_list$MS <- data_list$ML # By default, MS_type = "length" and CV = 0.2
+            data_list$MS <- data_vec$ML # By default, MS_type = "length" and CV = 0.2
 
             # Equilibrium catches and/or effort - nothing happens if NULL
             data_list$C_eq <- extra_args$C_eq
@@ -263,7 +263,7 @@ setMethod("SRA_scope", signature(OM = "OM", data = "Data"),
             ####### Re-assign index slots from AddInd to their original places
             if(any(Ind$slotname != "AddInd")) {
               Data_out <- output@OM@cpars$Data
-              for(i in 1:Ind$slotname) {
+              for(i in 1:length(Ind$slotname)) {
                 if(Ind$slotname[i] != "AddInd") {
                   slot(Data_out, Ind$slotname[i]) <- Data_out@AddInd[, i, ]
                   slot(Data_out, paste0("CV_", Ind$slotname[i])) <- Data_out@CV_AddInd[, i, ]
@@ -272,7 +272,7 @@ setMethod("SRA_scope", signature(OM = "OM", data = "Data"),
 
               ind <- Ind$slotname == "AddInd"
               if(all(!ind)) {
-                Data_out@AddInd <- Data_out@CV_AddInd <- Data_out@AddIndV <- matrix(NA, 1, 1)
+                Data_out@AddInd <- Data_out@CV_AddInd <- Data_out@AddIndV <- array(NA, c(1, 1, 1))
                 Data_out@AddIndType <- NA
               } else {
                 Data_out@AddInd <- Data_out@AddInd[, ind, , drop = FALSE]

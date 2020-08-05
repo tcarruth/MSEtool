@@ -22,12 +22,12 @@ pull_Ind <- function(Data, maxage) {
   lapply_fn <- function(x) {
     Index <- vec_slot_fn(x = x, Data = Data)
     if(!is.null(Index)) {
-      I_sd <- vec_slot_fn(paste0("CV_", x), Data)
-      if(is.null(SD)) {
+      ICV <- vec_slot_fn(paste0("CV_", x), Data)
+      if(is.null(ICV)) {
         I_sd <- rep(NA_real_, length(Index))
       } else {
-        if(sum(!is.na(I_sd)) == 1) I_sd <- rep(I_sd[1], length(Index))
-        I_sd <- sdconv(1, SD)
+        if(sum(!is.na(ICV)) == 1) I_sd <- rep(ICV[1], length(Index))
+        I_sd <- sdconv(1, ICV)
       }
       s_sel <- s_sel_Ind[match(x, Ind_name)]
       slotname <- x
@@ -42,8 +42,12 @@ pull_Ind <- function(Data, maxage) {
               I_sd = do.call(cbind, lapply(get_Ind, getElement, "I_sd")),
               s_sel = do.call(c, lapply(get_Ind, getElement, "s_sel")),
               slotname = do.call(c, lapply(get_Ind, getElement, "slotname")))
-  out$V <- matrix(NA_real_, maxage, ncol(out$Index))
-  out$I_units <- rep(1, ncol(out$Index))
+  if(!is.null(out$Index)) {
+    out$V <- matrix(NA_real_, maxage, ncol(out$Index))
+    out$I_units <- rep(1, ncol(out$Index))
+  } else {
+    out$V <- out$I_units <- NULL
+  }
   return(out)
 }
 
