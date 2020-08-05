@@ -433,7 +433,7 @@ setMethod("plot", signature(x = "SRA", y = "missing"),
                                      "No model found. Re-run `SRA_scope()` with `mean_fit = TRUE`.\n\n")
 
             if(compare) {
-              Hist <- runMSE(OM, Hist = TRUE, parallel = OM@nsim >= 48 & snowfall::sfIsRunning())
+              Hist <- runMSE(OM, Hist = TRUE, silent = TRUE, parallel = OM@nsim >= 48 & snowfall::sfIsRunning())
 
               compare_rmd <- c("## Updated OM {.tabset}\n",
                                "### OM historical period\n\n",

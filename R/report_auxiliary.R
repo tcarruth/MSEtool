@@ -719,7 +719,7 @@ plot_composition <- function(Year = 1:nrow(obs), obs, fit = NULL, plot_type = c(
     obs_prob <- obs/rowSums(obs, na.rm = TRUE)
     fit_prob <- fit/rowSums(fit, na.rm = TRUE)
 
-    resid <- N * (obs_prob - fit_prob) / sqrt(N * fit_prob)
+    resid <- N * (obs_prob - fit_prob) / sqrt(N * fit_prob * (1 - fit_prob))
     diameter_max <- bubble_adj / pmin(10, max(abs(resid), na.rm = TRUE))
     plot(NULL, NULL, typ = 'n', xlim = range(Year), xlab = "Year", ylim = range(data_val), ylab = data_lab)
 
