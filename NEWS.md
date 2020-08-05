@@ -1,15 +1,18 @@
 The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-project.org/package=MSEtool).
 
-## MSEtool 2.0.0 (in progress)
+## MSEtool 2.0.0
 
 ### SRA_scope
 - `data$I_type` is now obsolete to remove redundancy with argument `s_selectivity`. Use `s_selectivity` to specify the selectivity of surveys. If `data$I_type` is detected, the code will attempt to update `s_selectivity`.
 - `data$MS` (mean size) is now used instead of `data$ML` (fishery mean lengths). `data$MS` can also be mean weights, specify with `data$MS_type` to be either "length" or "weight". The likelihood of `data$MS` uses a normal distribution with constant CV specified in `data$MS_cv` (default = 0.2).
-- A DLMtool Data S4 object can be used instead of a data list.
+- The function is now a generic. The `data` argument can now be either a list (preferred) or a DLMtool Data S4 object.
 
 ### SS2Data
 - Update function to fill in new Data slots: `CAL_mids` and `Vmaxlen`.
 - Both SS2Data and SS2OM imports all indices into `Data@AddInd`. 
+
+### Other
+- Update calculation of Pearson residual of age/length comps in bubble residual plots.
 
 ## MSEtool 1.7.0
 

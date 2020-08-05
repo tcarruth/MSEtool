@@ -11,13 +11,14 @@ OM@Msd <- OM@Ksd <- OM@Linfsd <- c(0, 0)
 Hist = runMSE(OM, Hist = TRUE)
 
 bool <- c(TRUE, FALSE)
+
+#### Function to run SRA_scope in parallel (with list)
 data_master <- expand.grid(cond = c("catch", "effort"), Catch_with_effort = bool,
                            Index = bool, ML = bool, MW = bool, CAL = bool, CAA = bool)
 
 data_master$MW[data_master$ML] <- NA
 data_master$CAA[data_master$ML | data_master$MW] <- data_master$CAL[data_master$ML | data_master$MW] <- NA
 
-#### Function to run SRA_scope in parallel
 lapply_fn <- function(i, data_master, OM, Hist) {
   args <- list(OM = OM)
   args$data <- list()
@@ -72,16 +73,63 @@ lapply_fn <- function(i, data_master, OM, Hist) {
 }
 
 
-DLMtool::setup(6)
+#### Function to run SRA_scope in parallel (with Data object)
+data_master <- expand.grid(cond = c("catch", "effort"), Catch_with_effort = bool,
+                           Index = bool, ML = bool, CAL = bool, CAA = bool)
+
+data_master$CAA[data_master$ML] <- data_master$CAL[data_master$ML] <- NA
+
+lapply_fn <- function(i, data_master, OM, Hist) {
+  args <- list(OM = OM)
+  args$data <- new("Data")
+
+  if(data_master$cond[i] == "catch") { # Condition on catch
+    args$condition <- "catch2"
+    args$data@Cat <- Hist@Data@Cat[1, , drop = FALSE]
+  } else {
+    if(data_master$Catch_with_effort[i]) { # Conditioned on effort, but may include some catches
+      args$data@Cat <- Hist@Data@Cat[1, , drop = FALSE]
+      args$data@Cat[1, 1:40] <- NA
+    }
+    args$condition <- "effort"
+    args$data@Effort <- Hist@TSdata$Find[1, , drop = FALSE]
+  }
+
+  if(data_master$Index[i]) { # Only recent ten years index
+    args$data@Ind <- Hist@Data@Ind[1, , drop = FALSE]
+    args$data@Ind[1, 1:20] <- NA
+    args$data@CV_Ind <- c(rep(NA, 20), rep(0.3, 30)) %>% matrix(nrow = 1)
+    args$s_selectivity <- "B"
+  }
+
+  if(data_master$ML[i]) { # Only recent mean length
+    args$data@ML <- Hist@Data@ML[1, , drop = FALSE]
+    args$data@ML[1, 1:40] <- NA
+  } else if(data_master$CAA[i]) {
+    args$data@CAA <- Hist@Data@CAA[1, , , drop = FALSE]
+    args$data@CAA[, 1:35, ] <- NA
+  } else if(data_master$CAL[i]) {
+
+    args$data@CAL <- Hist@Data@CAL[1, , , drop = FALSE]
+    args$data@CAL[, 1:35, ] <- NA
+
+    args$data@CAL_mids <- Hist@Data@CAL_mids
+  }
+  args$mean_fit <- TRUE
+  SRA <- do.call(SRA_scope, args)
+
+  return(SRA)
+}
+
+DLMtool::setup(4)
 sfExportAll()
-
-
-
+sfLibrary(dplyr)
 
 
 
 #### Run SRA
 res <- sfClusterApplyLB(1:nrow(data_master), lapply_fn, data_master = data_master, Hist = Hist, OM = OM)
+res <- lapply(5, lapply_fn, data_master = data_master, Hist = Hist, OM = OM)
 
 # Test MW
 res <- lapply_fn(9, data_master = data_master, Hist = Hist, OM = OM)
