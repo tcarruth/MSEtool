@@ -32,23 +32,8 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
                     min_age_M = 1, gender = 1,
                     comp_fleet = "all", comp_season = "sum", comp_partition = "all", comp_gender = "all",
                     index_fleet = "SSB", index_season = "mean", ...) {
-  if(!requireNamespace("r4ss", quietly = TRUE)) {
-    stop("Download the r4ss package to use this function. It is recommended to install the Github version with: devtools::install_github(\"r4ss/r4ss\")", call. = FALSE)
-  }
 
-  dots <- list(dir = SSdir, ...)
-  if(is.null(dots$covar)) dots$covar <- FALSE
-  if(is.null(dots$forecast)) dots$forecast <- FALSE
-  #if(is.null(dots$ncols)) dots$ncols <- 1e3
-  if(is.null(dots$printstats)) dots$printstats <- FALSE
-  if(is.null(dots$verbose)) dots$verbose <- FALSE
-  if(is.null(dots$warn)) dots$warn <- FALSE
-
-  message(paste("-- Using function SS_output of package r4ss version", packageVersion("r4ss"), "to extract data from SS file structure --"))
-  message(paste("Reading directory:", SSdir))
-  replist <- try(do.call(r4ss::SS_output, dots), silent = TRUE)
-  if(is.character(replist)) stop("r4ss::SS_output function returned an error -\n", replist, call. = FALSE)
-  message("-- End of r4ss operations --\n")
+  replist <- SS_import(SSdir, silent, ...)
 
   season_as_years <- FALSE
   if(replist$nseasons == 1 && replist$seasduration < 1) {
