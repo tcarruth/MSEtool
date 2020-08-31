@@ -563,7 +563,7 @@ SS2MOM_fleet <- function(ff, i, replist, Stock, mainyrs, nyears, MOM) {
   cpars_fleet$Fdisc <- rep(mean(disc_mort), MOM@nsim)
   cpars_fleet$V <- V2 %>% array(c(Stock@maxage, allyears, MOM@nsim)) %>% aperm(c(3, 1, 2))
   cpars_fleet$retA <- ret %>% array(c(Stock@maxage, allyears, MOM@nsim)) %>% aperm(c(3, 1, 2))
-  cpars_fleet$DR <- rep(1, MOM@nsim)
+  cpars_fleet$DR <- rep(0, MOM@nsim)
   cpars_fleet$Find <- Find %>% matrix(MOM@nsim, length(mainyrs), byrow = TRUE)
   cpars_fleet$Data <- new("Data")
   cpars_fleet$Data@Cat <- matrix(Cat, nrow = 1)
