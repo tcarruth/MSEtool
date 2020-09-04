@@ -12,6 +12,7 @@ SS2MOM(
   maxF = 3,
   seed = 1,
   interval = 1,
+  pstar = 0.5,
   Obs = DLMtool::Generic_Obs,
   Imp = DLMtool::Perfect_Imp,
   silent = FALSE,
@@ -34,6 +35,8 @@ SS2MOM(
 \item{seed}{The random seed for the operating model.}
 
 \item{interval}{The interval at which management procedures will update the management advice in \link{multiMSE}, e.g., 1 = annual updates.}
+
+\item{pstar}{The percentile of the sample of the management recommendation for the MP/MMP.}
 
 \item{Obs}{The observation model (class Obs).}
 
