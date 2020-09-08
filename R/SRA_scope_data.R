@@ -325,6 +325,12 @@ update_SRA_data <- function(data, OM, condition, dots) {
       if(nrow(data$I_sd) != data$nyears) stop("Number of rows of I_sd matrix does not equal nyears (", data$nyears, "). NAs are acceptable.", call. = FALSE)
       if(ncol(data$I_sd) != data$nsurvey) stop("Number of columns of I_sd matrix does not equal nsurvey (", data$nsurvey, ").", call. = FALSE)
     }
+
+    SD_NA <- is.na(data$I_sd)
+    if(sum(SD_NA)) {
+      SD_out <- !is.na(data$Index[SD_NA])
+      if(any(SD_out)) stop("There are NA's in data$I_sd for years associated with survey values in data$Index.", call. = FALSE)
+    }
   }
   message(data$nsurvey, " survey(s) detected.")
 
