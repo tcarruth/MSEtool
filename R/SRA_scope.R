@@ -314,8 +314,6 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     res <- lapply(1:nsim, report_internal_fn, samps = samps, obj = mean_fit_output$obj, conv = mean_fit_output$report$conv)
     mod <- lapply(res, function(x) list(obj = mean_fit_output$obj, report = x))
     conv <- rep(mean_fit_output$report$conv, nsim)
-    keep <- vapply(1:nsim, function(x, report) all(!is.na(report$F)), logical(1), report = res)
-
   } else {
 
     if(all_identical_sims) { # All identical sims detected
@@ -355,20 +353,27 @@ SRA_scope <- function(OM, data = list(), condition = c("catch", "catch2", "effor
     }
     res <- lapply(mod, getElement, "report")
     conv <- vapply(res, getElement, logical(1), name = "conv")
-
     message(sum(conv), " out of ", nsim , " model fits converged (", 100*sum(conv)/nsim, "%).\n")
-    if(drop_highF) {
-      highF <- vapply(res, function(x) max(getElement(x, name = "F")) >= max_F, logical(1))
-      message(sum(highF), " out of ", nsim , " model fits had F on the upper boundary (F = ", max_F, "; ", 100*sum(highF)/nsim, "% of simulations).\n")
-      conv <- conv & !highF
-    }
-    if(sum(conv) < nsim) message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
-    if(sum(conv) < nsim && drop_nonconv) {
-      message("Non-converged iterations will be removed.\n")
-      keep <- conv
-    } else {
-      keep <- !logical(OM@nsim)
-    }
+  }
+
+  if(drop_highF) {
+    highF <- vapply(res, function(x) getElement(x, "F") %>% max(na.rm = TRUE) >= max_F, logical(1))
+    if(sum(highF)) message(sum(highF), " out of ", nsim , " model fits had F on the upper boundary (F = ", max_F, "; ", round(100*sum(highF)/nsim, 2), "% of simulations).\n")
+
+    conv <- conv & !highF
+  }
+  if(drop_nonconv) {
+    NaF <- vapply(res, function(x) getElement(x, "F") %>% is.na() %>% any(), logical(1))
+    if(sum(NaF)) message(sum(NaF), " out of ", nsim , " iterations had F with NA's")
+
+    conv <- conv & !NaF
+  }
+  if(sum(conv) < nsim) message("Non-converged iteration(s): ", paste(which(!conv), collapse = " "), "\n")
+  if(sum(conv) < nsim && (drop_nonconv | drop_highF)) {
+    message("Non-converged and/or highF iterations will be removed.\n")
+    keep <- conv
+  } else {
+    keep <- !logical(OM@nsim)
   }
 
   ### R0
