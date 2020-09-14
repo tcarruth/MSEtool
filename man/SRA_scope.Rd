@@ -87,9 +87,9 @@ respectively, for the multinomial likelihood function. The effective sample size
 
 \item{mean_fit}{Logical, whether to run an additional with mean values of life history parameters from the OM.}
 
-\item{drop_nonconv}{Logical, whether to drop non-converged fits of the SRA model.}
+\item{drop_nonconv}{Logical, whether to drop non-converged fits of the SRA model, including fits where F = NA.}
 
-\item{drop_highF}{Logical, whether to drop fits of the SRA model where F hits \code{max_F}. Only applies if \code{drop_nonconv = TRUE}.}
+\item{drop_highF}{Logical, whether to drop fits of the SRA model where F = \code{max_F}.}
 
 \item{control}{A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to the control argument of \code{\link[stats]{nlminb}}.}
 }

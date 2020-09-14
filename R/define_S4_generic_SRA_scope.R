@@ -33,8 +33,8 @@
 #' @param integrate Logical, whether to treat recruitment deviations as penalized parameters in the likelihood (FALSE) or random effects to be marginalized out of the likelihood (TRUE).
 #' @param mean_fit Logical, whether to run an additional with mean values of life history parameters from the OM.
 #' @param sims A logical vector of length \code{OM@@nsim} or a numeric vector indicating which simulations to keep.
-#' @param drop_nonconv Logical, whether to drop non-converged fits of the SRA model.
-#' @param drop_highF Logical, whether to drop fits of the SRA model where F hits \code{max_F}. Only applies if \code{drop_nonconv = TRUE}.
+#' @param drop_nonconv Logical, whether to drop non-converged fits of the SRA model, including fits where F = NA.
+#' @param drop_highF Logical, whether to drop fits of the SRA model where F = \code{max_F}.
 #' @param control A named list of arguments (e.g, max. iterations, etc.) for optimization, to be passed to the control argument of \code{\link[stats]{nlminb}}.
 #' @param ... Other arguments to pass in for starting values of parameters and fixing parameters. See details.
 #'
