@@ -33,7 +33,7 @@ SS2Data <- function(SSdir, Name = "Imported by SS2Data", Common_Name = "", Speci
                     comp_fleet = "all", comp_season = "sum", comp_partition = "all", comp_gender = "all",
                     index_fleet = "SSB", index_season = "mean", ...) {
 
-  replist <- SS_import(SSdir, silent, ...)
+  replist <- SS_import(SSdir, ...)
 
   season_as_years <- FALSE
   if(replist$nseasons == 1 && replist$seasduration < 1) {

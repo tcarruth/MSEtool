@@ -21,11 +21,11 @@ VPA2OM(
   nyr_par_mu = 3,
   LowerTri = 1,
   recind = 2,
-  plusgroup = T,
+  plusgroup = TRUE,
   altinit = 0,
-  fixq1 = T,
-  report = F,
-  silent = F
+  fixq1 = TRUE,
+  report = FALSE,
+  silent = FALSE
 )
 }
 \arguments{
@@ -72,11 +72,11 @@ VPA2OM(
 \item{silent}{Whether to silence messages to the console.}
 }
 \value{
-An object of class OM.
+An object of class \linkS4class{OM}.
 }
 \description{
 A function that uses a set of VPA bootstrap estimates of numbers-at-age, fishing mortality rate-at-age, M-at-age,
-weight-at-age, length-at-age and Maturity-at-age to define a fully described DLMtool / MSEtool operating model. Tthe user still 
+weight-at-age, length-at-age and Maturity-at-age to define a fully described DLMtool / MSEtool operating model. The user still
 needs to parameterize most of the observation and implementation portions of the operating model.
 }
 \seealso{
