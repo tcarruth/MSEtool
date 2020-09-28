@@ -3,7 +3,7 @@
 
 MSEtool is an extension of the DLMtool R package and provides simulation tools for management strategy evaluation informing data-rich fisheries. 
 
-Find more information about DLMtool and MSEtool at [https://datalimitedtoolkit.org/](https://datalimitedtoolkit.org/).
+Find more information about DLMtool and MSEtool at [https://www.datalimitedtoolkit.org/](https://www.datalimitedtoolkit.org/).
 
 ## Installation
 
@@ -35,6 +35,6 @@ The vignettes can also be viewed on the MSEtool page on [CRAN](https://cran.r-pr
 A User Guide for the DLMtool package also available at [https://dlmtool.github.io/DLMtool/userguide/introduction.html](https://dlmtool.github.io/DLMtool/userguide/introduction.html). 
 
 ## Bugs and Issues
-Please report any bugs or issues through [GitHub](https://github.com/tcarruth/MSEtool/issues) or the [DLMtool website](https://www.datalimitedtoolkit.org).
+Please report any bugs or issues through [GitHub](https://github.com/tcarruth/MSEtool/issues) or the [DLMtool website](https://www.datalimitedtoolkit.org/).
   
 
