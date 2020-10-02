@@ -113,9 +113,14 @@ get_sdreport <- function(obj, opt) {
   if(inherits(res, "sdreport") && !is.null(par.fixed)) {
     obj2 <- MakeADFun(obj$env$data, obj$env$parameters, type = "ADFun",
                       ADreport = TRUE, DLL = obj$env$DLL, silent = obj$env$silent)
-    inv_gr <- obj2$gr(obj$env$last.par.best) %>% pseudoinverse(tol = 1e-4)
-    if(!is.null(obj$env$random)) inv_gr <- inv_gr[-obj$env$random, , drop = FALSE]
-    res$env$gradient.AD <- colSums(inv_gr * as.vector(res$gradient.fixed))
+    gr <- obj2$gr(obj$env$last.par.best)
+    if(any(is.na(gr))) {
+      res$env$gradient.AD <- rep(NA_real_, nrow(gr))
+    } else {
+      inv_gr <- gr %>% pseudoinverse(tol = 1e-4)
+      if(!is.null(obj$env$random)) inv_gr <- inv_gr[-obj$env$random, , drop = FALSE]
+      res$env$gradient.AD <- colSums(inv_gr * as.vector(res$gradient.fixed))
+    }
   }
   return(res)
 }

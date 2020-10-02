@@ -2,6 +2,8 @@ The latest release of the MSEtool package is available on [CRAN](https://CRAN.R-
 
 ## MSEtool 2.0.1
 - Markdown reports gradients and CVs of parameter estimates.
+- SS2MOM function imports SS assessments and builds a multi-sex, multi-fleet MOM.
+- VPA2OM function helps build on OM from arrays of F-at-age, Abundance-at-age, and Catch-at-age
 
 ## MSEtool 2.0.0
 

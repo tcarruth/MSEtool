@@ -23,7 +23,7 @@ SS_import <- function(SSdir, silent = FALSE, ...) {
   return(replist)
 }
 
-SS_steepness <- function(replist, mainyrs) {
+SS_steepness <- function(replist, mainyrs, season_as_years = FALSE, nseas = 1) {
 
   ###### Steepness
   if(replist$SRRtype == 3 || replist$SRRtype == 6) { # Beverton-Holt SR
@@ -33,7 +33,7 @@ SS_steepness <- function(replist, mainyrs) {
     SRrel <- 2L
     h <- replist$parameters[grepl("SR_Ricker", rownames(replist$parameters)), ]$Value
   } else if(replist$SRRtype == 7) {
-    OM@SRrel <- 1L
+    SRrel <- 1L
 
     s_frac <- replist$parameters$Value[replist$parameters$Label == "SR_surv_Sfrac"]
     Beta <- replist$parameters$Value[replist$parameters$Label == "SR_surv_Beta"]
@@ -59,7 +59,7 @@ SS_steepness <- function(replist, mainyrs) {
     rec <- replist$recruit$pred_recr[SR_ind] # recruits to age 0
     SpR0 <- SSB0/(R0 * ifelse(season_as_years, nseas, 1))
 
-    h <- SRopt(1, SSB, rec, SpR0, plot = FALSE, type = ifelse(SR == 1, "BH", "Ricker"))
+    h <- SRopt(1, SSB, rec, SpR0, plot = FALSE, type = ifelse(SRrel == 1, "BH", "Ricker"))
   }
   return(list(SRrel = SRrel, h = h))
 }
@@ -434,7 +434,7 @@ SS2MOM_stock <- function(i, replist, mainyrs, nyears, MOM) {
   Stock@M <- Stock@M2 <- endgrowth$M[-1]
 
   # Steepness
-  SR_par <- SS_steepness(replist, mainyrs)
+  SR_par <- SS_steepness(replist, mainyrs, season_as_years = FALSE)
   Stock@SRrel <- SR_par[[1]]
   Stock@h <- rep(SR_par[[2]], 2)
 

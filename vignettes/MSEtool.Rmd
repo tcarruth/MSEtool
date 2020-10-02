@@ -9,7 +9,7 @@ output:
     toc: true
     number_sections: true 
 vignette: >
-  %\VignetteIndexEntry{1. User guide to MSEtool}
+  %\VignetteIndexEntry{1. User guide to MSEtool and model-based MPs}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -249,6 +249,6 @@ _Figure 8. Stochastic TAC recommendations from the Delay-Difference model with t
 
 MSEtool development is funded by the Canadian Department of Fisheries and Oceans and benefits from ongoing collaborations with the Natural Resources Defense Council and number of Canadian government scientists including Robyn Forrest, Sean Anderson and Daniel Duplisea. 
 
-The [DLMtool](http://www.datalimitedtoolkit.org) package was developed at the University of British Columbia in collaboration with the Natural Resources Defense Council. DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
+The [DLMtool](https://www.datalimitedtoolkit.org/) package was developed at the University of British Columbia in collaboration with the Natural Resources Defense Council. DLMtool development has been funded by the Gordon and Betty Moore Foundation, the Packard Foundation, U.S. National Oceanic and Atmospheric Administration, Fisheries and Oceans Canada, the Walton Foundation, Resources Legacy Fund, the Natural Resources Defense Council, the United Nations Food and Agricultural Organization and the California Department of Fish and Wildlife. 
 
-<a href="http://www.datalimitedtoolkit.org"><img src="DLMtool_logo.png" width=250></a>
+<a href="https://www.datalimitedtoolkit.org/"><img src="DLMtool_logo.png" width=250></a>

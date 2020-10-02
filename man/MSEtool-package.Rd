@@ -42,7 +42,7 @@ MSEtool webpage on \href{https://cran.r-project.org/package=MSEtool}{CRAN}.
 See the \href{https://dlmtool.github.io/DLMtool/userguide/introduction.html}{DLMtool User Guide} for
 a detailed description of how to use the DLMtool package.
 
-See the \href{http://www.datalimitedtoolkit.org/}{Data-Limited Toolkit Website} for more information on DLMtool,
+See the \href{https://www.datalimitedtoolkit.org/}{Data-Limited Toolkit Website} for more information on DLMtool,
 including an interactive demo of the main features of the toolkit, information on case studies where the toolkit has
 been applied, and more about the history and development of the DLMtool.
 }

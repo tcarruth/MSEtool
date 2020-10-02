@@ -55,8 +55,8 @@ SS2MOM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1
   MOM@cpars <- lapply(output, getElement, "cpars")
 
   # Sample future recruitment
-  Perr_proj <- sample_recruitment(log(MOM@cpars[[1]][[1]]$Perr_y), proyears, replist$sigma_R_in, MOM@Stocks[[1]]@AC[1], seed) %>% exp()
-  MOM@cpars <- lapply(MOM@cpars, function(x) lapply(x, function(xx) {xx$Perr_y <- cbind(xx$Perr_y, Perr_proj); return(xx)}))
+  Perr_proj <- sample_recruitment(log(MOM@cpars[[1]][[1]]$Perr_y), proyears, replist$sigma_R_in, MOM@Stocks[[1]]@AC[1], seed)
+  MOM@cpars <- lapply(MOM@cpars, function(x) lapply(x, function(xx) {xx$Perr_y <- cbind(xx$Perr_y, exp(Perr_proj)); return(xx)}))
 
   MOM@Obs <- lapply(seq_len(replist$nsexes), function(x) lapply(1:length(MOM@Fleets[[1]]), function(xx) return(Obs)))
   MOM@Imps <- lapply(seq_len(replist$nsexes), function(x) lapply(1:length(MOM@Fleets[[1]]), function(xx) return(Imp)))
