@@ -40,20 +40,6 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   OM@nsim<-nsim
   OM@proyears<-proyears
   set.seed(OM@seed)
-  # The trouble is that DLMtool is an annual model so if the SS model is seasonal we need to aggregate overseasons
-  # The reason for the code immediately below (and length_timestep) is that some SS models just assume quarterly timesteps with no way of knowing this (other than maxage and M possibly)!
-  #if(is.na(length_timestep)){
-
-   # if((replist$endyr-replist$startyr+1)>100){
-    #  nseas<-1/replist$seasduration[1] # too many  years for industrial fishing so assumes a quarterly model
-    #}else{
-    #  nseas=1
-    #}
-
-  #}else{
-   # nseas<-1/length_timestep
-  #}
-  nseas<-1/length_timestep
 
   if(is.null(Name)){
     OM@Name=iSCAMdir
@@ -67,20 +53,16 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
 
   # === Stock parameters =========================================================================================================
 
-
   OM@maxage<-maxage<-replist$dat$end.age
-
   aind<-rep(1:OM@maxage,each=nseas)[1:maxage]
-
   muLinf=replist$dat$linf[1]
   cvLinf=0.025
   muK=replist$dat$k[1]
   mut0<-replist$dat$to[1]
-  out<-negcorlogspace(muLinf,muK,cvLinf,nsim) # K and Linf negatively correlated 90% with identifcal CV to Linf
-  Linf<-out[,1]
-  K<-out[,2]
-  OM@K<-quantile(K,c(0.025,0.975))
-  OM@Linf<-quantile(Linf,c(0.025,0.975))
+  Linf<-rep(muLinf,nsim)
+  K<-rep(muK,nsim)
+  OM@K<-rep(muK,2)
+  OM@Linf<-rep(Linf,2)
 
   OM@t0=rep(replist$dat$to,2) # t0 is not
   OM@Msd<-OM@Ksd<-OM@Linfsd<-OM@Mgrad<-OM@Kgrad<-OM@Linfgrad<-c(0,0)
@@ -88,24 +70,17 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   OM@a=replist$dat$lw.alpha
   OM@b=replist$dat$lw.beta
 
-
-
-   #SSB0<-replist$mpd$sbo*1000
+  #SSB0<-replist$mpd$sbo*1000
   R0<-replist$mpd$ro*1E6
-  surv<-exp(cumsum(c(0,rep(-replist$mpd$m,maxage-1))))
-
+  agesind<-ncol(replist$mpd$d3_wt_mat)
+  surv<-exp(cumsum(c(rep(-replist$mpd$m,maxage))))[maxage-((agesind-1):0)]
   SSBpR<-sum(replist$mpd$d3_wt_mat[1,]*surv)/1000 # in kg per recruit
   SSB0<-SSBpR*R0
 
   rbar<-replist$mpd$rbar #mean recruitment
   RD<-replist$mpd$delta
-
   ageM<-replist$dat$age.at.50.mat
   ageMsd<-replist$dat$sd.at.50.mat
-
-
-
-  #OM@R0<-rep(replist$mpd$rho,2)
 
   ageArray<-array(rep(1:maxage,each=nsim),c(nsim,maxage))
   Len_age<-Linf*(1-exp(-K*(ageArray-mut0)))
@@ -116,11 +91,10 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
   OM@M<-rep(replist$mpd$m,2)
   OM@R0<-rep(R0,2)
 
-
   rec<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
   SSB<-(replist$mpd$sbt*1000)[1:length(rec)]
 
-  hs<-SRopt(nsim,SSB,rec,SSBpR,plot=FALSE,type="BH")
+  #hs<-SRopt(nsim,SSB,rec,SSBpR,plot=FALSE,type="BH")
   OM@h<-quantile(hs,c(0.025,0.975))
   OM@SRrel<-replist$mpd$rectype # This is the default
 
@@ -281,7 +255,7 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
 
     message("Attempting to read mcmc file to assign posterior samples to custom parameters")
 
-    model.dir=paste0(iSCAMdir,"/mcmc")
+    model.dir=iSCAMdir
 
     if(!file.exists(model.dir))stop(paste("Could not find the mcmc subfolder:",model.dir))
 
@@ -329,7 +303,6 @@ iSCAM2OM<-function(iSCAMdir,nsim=48,proyears=50,mcmc=F,Name=NULL,Source="No sour
     FM<-tmp$ft[[1]][[1]][samp,1:nyears]
     for(ff in 2:nfleet)FM<-FM+tmp$ft[[1]][[ff]][samp,1:nyears]
     Find<-as.matrix(FM/apply(FM,1,mean))
-
 
     OM@cpars<-list(V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find,D=D,M=M,R0=R0,AC=AC)
 
@@ -385,15 +358,16 @@ load.iscam.files <- function(model.dir,
   inp.files <- fetch.file.names(model.dir, starter.file.name)
   model$dat.file <- inp.files[[1]]
   model$ctl.file <- inp.files[[2]]
-  model$proj.file <- inp.files[[3]]
+  #model$proj.file <- inp.files[[3]]
 
   ## Load the input files
   model$dat <- read.data.file(model$dat.file)
   model$ctl <- read.control.file(model$ctl.file,
                                  model$dat$num.gears,
                                  model$dat$num.age.gears)
-  model$proj <- read.projection.file(model$proj.file)
-  model$par <- read.par.file(file.path(model.dir, par.file))
+  #model$proj <- read.projection.file(model$proj.file)
+
+  model$par <- read.par.file(file=file.path(model.dir, par.file))
   ## Load MPD results
   model$mpd <- read.report.file(file.path(model.dir, rep.file))
   model.dir.listing <- dir(model.dir)
@@ -559,27 +533,6 @@ read.data.file <- function(file = NULL,
     tmp$has.gear.names <- TRUE
   }
 
-  ## Get the element number for the "IndexGears" names if present
-  ## dat <- grep("^#.*IndexGears:.+",data)
-  ## tmp$hasIndexGearNames <- FALSE
-  ## if(length(dat >0)){
-  ##   # The gear names were in the file
-  ##   indexGearNamesStr <- gsub("^#.*IndexGears:(.+)","\\1",data[dat])
-  ##   indexGearNames <- strsplit(indexGearNamesStr,",")[[1]]
-  ##   tmp$indexGearNames <- gsub("^[[:blank:]]+","",indexGearNames)
-  ##   tmp$hasIndexGearNames <- TRUE
-  ## }
-
-  ## # Get the element number for the "AgeGears" names if present (gears with age comp data)
-  ## dat <- grep("^#.*AgeGears:.+",data)
-  ## tmp$hasAgeGearNames <- FALSE
-  ## if(length(dat >0)){
-  ##   # The gear names were in the file
-  ##   ageGearNamesStr <- gsub("^#.*AgeGears:(.+)","\\1",data[dat])
-  ##   ageGearNames <- strsplit(ageGearNamesStr,",")[[1]]
-  ##   tmp$ageGearNames <- gsub("^[[:blank:]]+","",ageGearNames)
-  ##   tmp$hasAgeGearNames <- TRUE
-  ## }
 
   ## Get the element number for the "CatchUnits" if present
   dat <- grep("^#.*CatchUnits:.+", data)
@@ -652,7 +605,7 @@ read.data.file <- function(file = NULL,
   tmp$age.at.50.mat <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   tmp$sd.at.50.mat  <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
   tmp$use.mat   <- as.numeric(dat[ind <- ind + 1])
-  tmp$mat.vec   <- as.numeric(strsplit(dat[ind <- ind + 1],"[[:blank:]]+")[[1]])
+  tmp$mat.vec   <- as.numeric(strsplit(dat[ind <- ind + 1],", ")[[1]])
 
   ## Delay-difference options
   tmp$dd.k.age   <- as.numeric(dat[ind <- ind + 1])
@@ -1111,7 +1064,7 @@ read.par.file <- function(file = NULL,
   names(tmp) <- names
   tmp$num.params <- num.params
   tmp$obj.fun.val <- as.numeric(obj.fun.val)
-  tmp$max.gradient <- as.numeric(max.gradient)
+  #tmp$max.gradient <- as.numeric(max.gradient)
   tmp
 }
 
