@@ -406,7 +406,7 @@ load.iscam.files <- function(model.dir,
   model$mcmcpath <- file.path(model.dir, "mcmc")
 
   ## If it has an 'mcmc' sub-directory, load it
-  #if(dir.exists(model$mcmcpath)){
+  if(dir.exists(model$mcmcpath)){
 
    # model$mcmc <- read.mcmc(model$mcmcpath)
     model$mcmc <- read.mcmc(model.dir)
@@ -416,7 +416,7 @@ load.iscam.files <- function(model.dir,
                                  thin,
                                  lower = 0.025,
                                  upper = 0.975)
-  #}
+  }
   model
 }
 
