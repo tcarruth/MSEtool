@@ -91,20 +91,23 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
   Wt_age<-array(OM@a*Len_age^OM@b, dim = c(nsim, maxage, nyears)) /1000 #in kg
 
   # SO FAR: Wt_age K Linf
-
+  M<-rep(replist$mpd$m,nsim)
   OM@M<-rep(replist$mpd$m,2)
   OM@R0<-rep(R0,2)
 
   rec<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
   SSB<-(replist$mpd$sbt*1000)[1:length(rec)]
 
+  hs<-rep(replist$mpd$steepness,nsim)
   OM@h<-rep(replist$mpd$steepness,2) #quantile(hs,c(0.025,0.975))
   OM@SRrel<-replist$mpd$rectype # This is the default
 
   # SO FAR OM:     Name, nsim, proyears, nyears, maxage, R0, M, Msd, Mgrad, h, SRrel, Linf, K, t0, Ksd, Kgrad, Linfsd, Linfgrad, recgrad, a, b,
   # SO FAR cpars:  Wt_age, K Linf hs
 
-  OM@D<-rep(replist$mpd$sbt[length(replist$mpd$sbt)]/replist$mpd$sbo,2)
+  Ds<-replist$mpd$sbt[length(replist$mpd$sbt)]/replist$mpd$sbo
+  D<-rep(Ds,nsim)
+  OM@D<-rep(Ds,2)
 
   # Movement modelling ----------------------------
   nASSareas<-replist$dat$num.areas
@@ -146,12 +149,19 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
   yavinds<-Fposyrs[order(Fposyrs,decreasing=T)][1:Fsmth]
   V <- array(NA, dim = c(nsim, maxage, nyears + proyears))
   V[,,1:nyears]<-array(rep(FM,each=nsim),c(nsim,maxage,nyears))
-  Vm<-apply(V[,,yavinds],1:2,mean)
-  V[,,nyears+(1:proyears)]<-array(Vm,c(nsim,maxage,proyears))
-  tofill<-apply(V,c(1,3),function(x)all(is.na(x)))
-  #you were here
+
   Vmax<-array(apply(V,c(1,3),max),c(nsim,nyears+proyears,maxage))
   Find<-Vmax[,1:nyears,1]
+
+
+  Vm<-apply(V[,,yavinds],1:2,mean)
+  V[,,nyears+(1:proyears)]<-array(Vm,c(nsim,maxage,proyears))
+  tofill=apply(V,3,function(x)(all(is.na(x)))|all(x==0)) # these are the years where you must fill something to avoid errors in BMSY calcs
+  tofilla<-array(rep(tofill,each=nsim*maxage),c(nsim,maxage,nyears+proyears))
+  V[tofilla]<-array(Vm,c(nsim,maxage,sum(tofill)))
+
+  #you were here
+  Vmax<-array(apply(V,c(1,3),max),c(nsim,nyears+proyears,maxage))
   V<-V/aperm(Vmax,c(1,3,2)) # normalize to max 1
 
   # guess at length parameters # this is over ridden anyway
@@ -166,6 +176,7 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
   # -- Recruitment -----------------------------------------------
 
   recs<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
+
   nrecs<-length(recs)
   recdevs<-replist$mpd$delta# last year is mean recruitment
   OM@AC<-rep(acf(recdevs)$acf[2,1,1],2)
@@ -176,18 +187,19 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
   nps<-nsim*(maxage+nyears+proyears-1)
   Perr<-matrix(rnorm(nps,rep(procmu,nps),rep(procsd,nps)),nrow=nsim)
   reclength<-length(recdevs)
-  Perr[,(maxage-1)+(1:reclength)]<-rep(recdevs,each=nsim) # generate a bunch of simulations with uncertainty
+  offset<-nyears-reclength
+  Perr[,offset+(maxage-1)+(1:reclength)]<-rep(recdevs,each=nsim) # generate a bunch of simulations with uncertainty
 
   OM@Perr<-rep(procsd,2) # uniform range is a point estimate from assessment MLE
   AC<-rep(mean(OM@AC),nsim)
   for (y in nyears:(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
   Perr<-exp(Perr)
 
-  N0vec<-R0*surv
+  N0vec<-R0[1]*surv
   N0pred<-rep(NA,length(N0vec))
   N0pred<-replist$mpd$N[1,]*1E6
   RecDev0<-log(N0pred/N0vec)
-  Perr[,1:length(N0vec)]<-rep(RecDev0[length(RecDev0):1],each=nsim)
+  Perr[,offset+(1:length(N0vec))]<-exp(rep(RecDev0[length(RecDev0):1],each=nsim))
 
   # --- Fishing mortality rate index ---------------------------
 
@@ -236,31 +248,42 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
 
 
   if(report){ # Produce a quick diagnostic plot of OM vs VPA numbers at age
+    recs<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
+    naa<-t(replist$mpd$N*1E6)[,((offset+1):nyears)]
+    plot(naa[1,])
+    points(recs,col='red')
+    abline(v=1:70,col='#99999930')
 
     if(!silent) message("\nRunning historical simulations to compare VPA output and OM conditioning...\n")
-    OM@cpars<-list(V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find,D=D,M=M,R0=R0,AC=AC)
+    #
+    OM@cpars<-list(V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find,D=D,M=M,R0=R0,AC=AC,qs=rep(1,nsim))
+    OM@cpars$R0<-OM@cpars$R0*(exp(-M))
     Hist <- runMSE(OM, Hist = TRUE)
+    #testOM@cpars$Find <-array(1,c(nsim,testOM@nyears))
+    #testOM@cpars$Find[,30]<-0
+
+    #naa<-rbind(rep(0,nyears),t(replist$mpd$N*1E6)[,1:nyears])
 
     nc<-ceiling(maxage/3)
     nr<-ceiling(maxage/nc)
     par(mfrow=c(nr,nc),mai=c(0.4,0.4,0.3,0.05),omi=c(0.25,0.25,0.01,0.01))
 
-    yrs<-CurrentYr-((nyears-1):0)
+    yrs<-1:(nyears-2)
 
     cols<-rep('black',nyears)
     pch<-rep(1,nyears)
-    cols[nyears-(0:LowerTri)]<-"blue";pch[nyears-(0:LowerTri)]<-4
+   # cols[nyears-(0:LowerTri)]<-"blue";pch[nyears-(0:LowerTri)]<-4
 
-    for(a in 1:maxage){
-      ylim=c(0,max(naa[1,a,],Hist@AtAge$Nage[1,a,])*1.05)
-      if(a==1)plot(yrs,naa[1,a,],xlab="",ylab="",col=cols,pch=pch,ylim=ylim,yaxs='i')
-      if(a>1)plot(yrs,naa[1,a,],xlab="",ylab="",ylim=ylim,yaxs='i')
-      lines(yrs,Hist@AtAge$Nage[1,a,],col='green')
+    for(a in 1:(maxage-1)){
+      ylim=c(0,max(naa[a,],Hist@AtAge$Nage[1,a,])*1.05)
+      if(a==1)plot(yrs,naa[a,],xlab="",ylab="",col=cols,pch=pch,ylim=ylim,yaxs='i')
+      if(a>1)plot(yrs,naa[a,],xlab="",ylab="",ylim=ylim,yaxs='i')
+      lines(yrs,Hist@AtAge$Nage[1,a,yrs],col='green')
       mtext(paste("Age ",a),3,line=0.5,cex=0.9)
-      if(a==1)legend('top',legend=c("VPA","OM","Recr. ignored (LowerTri)"),text.col=c('black','green','blue'),bty='n')
-      res<-Hist@AtAge$Nage[1,a,]-naa[1,a,]
-      plotres<-abs(res)>(mean(naa[1,a,]*0.025))
-      if(any(plotres))for(y in 1:nyears)if(plotres[y])lines(rep(yrs[y],2),c(naa[1,a,y],Hist@AtAge$Nage[1,a,y]),col='red')
+      if(a==1)legend('top',legend=c("iSCAM","OM","Recr. ignored (LowerTri)"),text.col=c('black','green','blue'),bty='n')
+      #res<-Hist@AtAge$Nage[1,a,]-naa[a,]
+      #plotres<-abs(res)>(mean(naa[a,]*0.025))
+      #if(any(plotres))for(y in 1:nyears)if(plotres[y])lines(rep(yrs[y],2),c(naa[a,y],Hist@AtAge$Nage[1,a,y]),col='red')
     } #plot(Hist)
 
     mtext("Year",1,line=0.3,outer=T)
