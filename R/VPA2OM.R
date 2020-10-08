@@ -5,8 +5,6 @@
 # T. Carruthers
 # A function for converting stochastic (bootstrap VPA) outputs to a DLMtool / MSEtool operating model
 
-
-
 #' Reads bootstrap estimates from a VPA stock assessment into an operating model.
 #'
 #'
@@ -242,7 +240,7 @@ VPA2OM<-function(Name="A fishery made by VPA2OM",
       if(a>1)plot(yrs,naa[1,a,],xlab="",ylab="",ylim=ylim,yaxs='i')
       lines(yrs,Hist@AtAge$Nage[1,a,],col='green')
       mtext(paste("Age ",a),3,line=0.5,cex=0.9)
-      if(a==1)legend('top',legend=c("VPA","OM","Recr. ignored (LowerTri)"),text.col=c('black','green','blue'),bty='n')
+      if(a==1)legend('top',legend=c("Assessment","OM","Recr. ignored (LowerTri)"),text.col=c('black','green','blue'),bty='n')
       res<-Hist@AtAge$Nage[1,a,]-naa[1,a,]
       plotres<-abs(res)>(mean(naa[1,a,]*0.025))
       if(any(plotres))for(y in 1:nyears)if(plotres[y])lines(rep(yrs[y],2),c(naa[1,a,y],Hist@AtAge$Nage[1,a,y]),col='red')

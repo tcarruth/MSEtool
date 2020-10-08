@@ -16,8 +16,8 @@
 #' @param Source Reference to assessment documentation e.g. a url
 #' @param length_timestep How long is a model time step in years
 #' (e.g. a quarterly model is 0.25, a monthly model 1/12)
-#' @param Fsmth integer, the number of recent years to estimate vulnerability over for future projections
-#' @param Ibeta logical should hyperstability in indices be estimated
+#' @param nyr_par_mu integer, the number of recent years to estimate vulnerability over for future projections
+#' @param LowerTri Integer. The number of recent years for which model estimates of recruitment are ignored (not reliably estimated by the assessment)
 #' @param Author Who did the assessment
 #' @param report logical should a numbers at age reconstruction plot be produced?
 #' @param silent logical should progress reporting be printed to the console?
@@ -28,7 +28,7 @@
 #' @importFrom stats acf aggregate qnorm window
 #' @export iSCAM2OM
 iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No source provided",
-                 length_timestep=1, Fsmth=2, Ibeta=F, Author="No author provided", report=F, silent=F){
+                 length_timestep=1, nyr_par_mu=2,  Author="No author provided", report=F, silent=F){
 
   nseas<-1/length_timestep # defaults to an annual model
   message("-- Using function of Chris Grandin (DFO PBS) to extract data from iSCAM file structure --")
@@ -37,262 +37,75 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
 
   message("-- End of iSCAM extraction operations --")
 
-  if(replist$dat$num.sex>1)message("More than one sex was modelled with iSCAM, DLMtool currently does not include sex specific-parameters and will use growth etc from the first sex specified by iSCAM")
-
-  OM<-new('OM',DLMtool::Albacore, DLMtool::Generic_Fleet, DLMtool::Generic_Obs, DLMtool::Perfect_Imp)
-  OM@nsim<-nsim
-  OM@proyears<-proyears
-  set.seed(OM@seed)
-
-  if(is.null(Name)){
-    OM@Name=iSCAMdir
-  }else{
-    OM@Name=Name
-  }
-
-  OM@nyears<-nyears<-(replist$dat$end.yr-replist$dat$start.yr+1)/nseas
-  yind<-(1:nyears)*nseas
-  yind2<-rep(1:nyears,each=nseas)
-
-  # === Stock parameters =========================================================================================================
-
-  OM@maxage<-maxage<-replist$dat$end.age
+  # get dimensions
+  nyears<-(replist$dat$end.yr-replist$dat$start.yr+1)
+  maxage<-replist$dat$end.age
   sage<-replist$dat$start.age
-  aind<-rep(1:OM@maxage,each=nseas)[1:maxage]
-  muLinf=replist$dat$linf[1]
-  cvLinf=0.025
-  muK=replist$dat$k[1]
-  mut0<-replist$dat$to[1]
-  Linf<-rep(muLinf,nsim)
-  K<-rep(muK,nsim)
-  OM@K<-rep(muK,2)
-  OM@Linf<-rep(Linf,2)
 
-  OM@t0=rep(replist$dat$to,2) # t0 is not
-  OM@Msd<-OM@Ksd<-OM@Linfsd<-OM@Mgrad<-OM@Kgrad<-OM@Linfgrad<-c(0,0)
-  L50=Linf*(1-exp(-K*(replist$dat$age.at.50.mat-mean(OM@t0))))
-  OM@a=replist$dat$lw.alpha
-  OM@b=replist$dat$lw.beta
+  # filling dimensions
+  aind<-sage:maxage # for filling all quantities (that do not include age zero)
+  nafill<-length(aind)
+  #fyind<-1:(nyears-1) # for filling F and M
+  nffill<-length(fyind)
+  ageArray<-array(rep(1:maxage,each=nsim),c(nsim,maxage,nyears))
 
-  #SSB0<-replist$mpd$sbo*1000
-  R0<-rep(replist$mpd$ro*1E6,nsim)
-  agesind<-ncol(replist$mpd$d3_wt_mat)
-  surv<-exp(cumsum(c(rep(-replist$mpd$m,maxage))))[maxage-((agesind-1):0)]
-  SSBpR<-sum(replist$mpd$d3_wt_mat[1,]*surv)/1000 # in kg per recruit
-  SSB0<-SSBpR*R0
+  # make matrices
+  naa<-Mataa<-laa<-array(NA,c(nsim,maxage,nyears))
+  faa<-Maa<-waa<-array(0,c(nsim,maxage,nyears))
 
-  rbar<-replist$mpd$rbar #mean recruitment
-  RD<-replist$mpd$delta
-  ageM<-replist$dat$age.at.50.mat
-  ageMsd<-replist$dat$sd.at.50.mat
+  # growth parameters
+  Linf=replist$dat$linf[1]
+  K=replist$dat$k[1]
+  t0<-replist$dat$to[1]
 
-  ageArray<-array(rep(1:maxage,each=nsim),c(nsim,maxage))
-  Len_age<-Linf*(1-exp(-K*(ageArray-mut0)))
-  Wt_age<-array(OM@a*Len_age^OM@b, dim = c(nsim, maxage, nyears)) /1000 #in kg
+  #ageM<-replist$dat$age.at.50.mat
+  #ageMsd<-replist$dat$sd.at.50.mat
 
-  # SO FAR: Wt_age K Linf
-  M<-rep(replist$mpd$m,nsim)
-  OM@M<-rep(replist$mpd$m,2)
-  OM@R0<-rep(R0,2)
+  # rip F, N and wt matrices
+  faat<-t(replist$mpd$F) # maxage-1 x nyears-1
+  naat<-t(replist$mpd$N) # maxage-1 x nyears
+  naat<-rbind(c(naat[1,2:(nyears+1)],NA)*exp(replist$mpd$m),naat)
+  naat<-naat[,1:nyears]
+  waat<-t(replist$mpd$d3_wt_mat)[,1:nyears] # maxage-1 x nyears
 
-  rec<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
-  SSB<-(replist$mpd$sbt*1000)[1:length(rec)]
+  # Numbers
+  naa<-array(rep(naat,each=nsim),c(nsim,maxage,nyears)) # !
 
-  hs<-rep(replist$mpd$steepness,nsim)
-  OM@h<-rep(replist$mpd$steepness,2) #quantile(hs,c(0.025,0.975))
-  OM@SRrel<-replist$mpd$rectype # This is the default
+  # Mat at age
+  Maa[,aind,]<-rep(t(replist$mpd$M),each=nsim)   # !
 
-  # SO FAR OM:     Name, nsim, proyears, nyears, maxage, R0, M, Msd, Mgrad, h, SRrel, Linf, K, t0, Ksd, Kgrad, Linfsd, Linfgrad, recgrad, a, b,
-  # SO FAR cpars:  Wt_age, K Linf hs
+  # Weight at age
+  waa[,aind,]<-array(rep(waat,each=nsim),c(nsim,nafill,nyears)) # !
 
-  Ds<-replist$mpd$sbt[length(replist$mpd$sbt)]/replist$mpd$sbo
-  D<-rep(Ds,nsim)
-  OM@D<-rep(Ds,2)
+  # Fishing mortality rate  for F = 0 years
+  Vtemp<-apply(faat,1,mean)
+  Vtemp<-Vtemp/max(Vtemp)*1E-5 #fill with a very low typical vulnerability
+  tofill<-apply(faat,2,function(x)all(x==0))
+  faat[,tofill]<-rep(Vtemp,sum(tofill))
 
-  # Movement modelling ----------------------------
-  nASSareas<-replist$dat$num.areas
-  if(nASSareas==1){ # mixed stock
-    OM@Frac_area_1<-OM@Size_area_1<-rep(0.5,2)
-    OM@Prob_staying<-rep(0.5,2)
-  }else{
-    message("More than one iSCAM area found, a stock mixed throughout 2 areas is currently assumed")
-    OM@Frac_area_1<-OM@Size_area_1<-rep(0.5,2)
-    OM@Prob_staying<-rep(0.5,2)
-  }
+  faa[,aind,]<-array(rep(faat,each=nsim),c(nsim,nafill,nyears))
+  #faa[,aind,1]<-rep(Vtemp,each=nsim)
 
-  OM@Source<-paste0(Source,". Author: ",Author,".")
+  #Mataa<- 1/(1 + exp((ageM - ageArray)/ageMsd))
+  Mataat<-c(0,replist$mpd$ma)
+  Mataa[]<-rep(Mataat,each=nsim)
+  laa<-Linf*(1-exp(-K*(ageArray-t0)))
+  h<-rep(replist$mpd$steepness,nsim)
 
-  # Maturity --------------------------------------
-
-  Mat_age<- 1/(1 + exp((ageM - (1:maxage))/ageMsd))
-
-  muLen_age<-muLinf*(1-exp(-muK*((1:maxage)-mut0)))
-
-  # Currently using linear interpolation of mat vs len, is robust and very close to true logistic model predictions
-
-  L50<-LinInterp(Mat_age,muLen_age,0.5)
-  OM@L50<-rep(L50,2)
-
-  L95<-LinInterp(Mat_age,muLen_age,0.95)
-  OM@L50_95<-rep(L95-L50,2)
-
-
-  # Fleet parameters ============================================================================================================
-
-  # Vulnerability --------------------------------------------
-
-  F_at_age<-t(replist$mpd$F)
-  FM<-array(0,c(maxage,nyears))
-  FM[sage:maxage,]<-F_at_age
-
-  Fposyrs<-(1:nyears)[apply(FM,2,sum)!=0]
-  yavinds<-Fposyrs[order(Fposyrs,decreasing=T)][1:Fsmth]
-  V <- array(NA, dim = c(nsim, maxage, nyears + proyears))
-  V[,,1:nyears]<-array(rep(FM,each=nsim),c(nsim,maxage,nyears))
-
-  Vmax<-array(apply(V,c(1,3),max),c(nsim,nyears+proyears,maxage))
-  Find<-Vmax[,1:nyears,1]
-
-
-  Vm<-apply(V[,,yavinds],1:2,mean)
-  V[,,nyears+(1:proyears)]<-array(Vm,c(nsim,maxage,proyears))
-  tofill=apply(V,3,function(x)(all(is.na(x)))|all(x==0)) # these are the years where you must fill something to avoid errors in BMSY calcs
-  tofilla<-array(rep(tofill,each=nsim*maxage),c(nsim,maxage,nyears+proyears))
-  V[tofilla]<-array(Vm,c(nsim,maxage,sum(tofill)))
-
-  #you were here
-  Vmax<-array(apply(V,c(1,3),max),c(nsim,nyears+proyears,maxage))
-  V<-V/aperm(Vmax,c(1,3,2)) # normalize to max 1
-
-  # guess at length parameters # this is over ridden anyway
-
-  muFage<-as.vector(apply(F_at_age[,ceiling(ncol(F_at_age)*0.75):ncol(F_at_age)],1,mean))
-  Vuln<-muFage/max(muFage,na.rm=T)
-  OM@L5<-rep(LinInterp(Vuln,muLen_age,0.05,ascending=T,zeroint=T),2)                            # not used if V is in cpars
-  OM@LFS<-rep(muLen_age[which.min((exp(Vuln)-exp(1.05))^2 * 1:length(Vuln))],2)  # not used if V is in cpars
-  OM@Vmaxlen<-rep(mean(Vuln[(length(Vuln)-(nseas+1)):length(Vuln)],na.rm=T),2)  # not used if V is in cpars
-  OM@isRel="FALSE" # these are real lengths not relative to length at 50% maturity
-
-  # -- Recruitment -----------------------------------------------
-
-  recs<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
-
-  nrecs<-length(recs)
-  recdevs<-replist$mpd$delta# last year is mean recruitment
-  OM@AC<-rep(acf(recdevs)$acf[2,1,1],2)
-  procsd<-sd(recdevs)
-  procmu <- -0.5 * (procsd)^2
-
-  Perr<-array(NA,c(nsim,nyears+proyears+maxage-1))
-  nps<-nsim*(maxage+nyears+proyears-1)
-  Perr<-matrix(rnorm(nps,rep(procmu,nps),rep(procsd,nps)),nrow=nsim)
-  reclength<-length(recdevs)
-  offset<-nyears-reclength
-  Perr[,offset+(maxage-1)+(1:reclength)]<-rep(recdevs,each=nsim) # generate a bunch of simulations with uncertainty
-
-  OM@Perr<-rep(procsd,2) # uniform range is a point estimate from assessment MLE
-  AC<-rep(mean(OM@AC),nsim)
-  for (y in nyears:(nyears + proyears)) Perr[, y] <- AC * Perr[, y - 1] +   Perr[, y] * (1 - AC * AC)^0.5
-  Perr<-exp(Perr)
-
-  N0vec<-R0[1]*surv
-  N0pred<-rep(NA,length(N0vec))
-  N0pred<-replist$mpd$N[1,]*1E6
-  RecDev0<-log(N0pred/N0vec)
-  Perr[,offset+(1:length(N0vec))]<-exp(rep(RecDev0[length(RecDev0):1],each=nsim))
-
-  # --- Fishing mortality rate index ---------------------------
-
-  # SO FAR OM:     Name, nsim, proyears, nyears, maxage, R0, M, Msd, Mgrad, h, SRrel, Linf, K, t0, Ksd, Kgrad, Linfsd, Linfgrad, recgrad, a, b,
-  #                Size_area_1, Frac_area_1, Prob_Staying, Source, L50, L50_95, SelYears, AbsSelYears, L5, LFS, Vmaxlen, L5Lower, L5Upper,
-  #                LFSLower, LFSUpper, VmaxLower, VmaxUpper, isRel,
-  # SO FAR cpars:  Wt_age, K Linf hs, Perr, Find
-
-  # plot(replist$cpue$Obs,replist$cpue$Exp)
-
-  OM@Spat_targ<-rep(1,2)
-  OM@Esd<-rep(sd(Find[1,]),2)
-
-  OM@Period<-rep(NaN,2)
-  OM@Amplitude<-rep(NaN,2)
-  OM@EffYears<-1:nyears
-  OM@EffLower<-Find[1,]
-  OM@EffUpper<-Find[1,]
-  OM@qinc<-c(0,0)
-  OM@qcv<-c(0,0)
+  # make the OM
+  OM<-VPA2OM(Name="A fishery made by VPA2OM",
+             proyears=50, interval=2, CurrentYr=2019,
+             h=h,
+             Obs = DLMtool::Imprecise_Unbiased, Imp=DLMtool::Perfect_Imp,
+             naa, faa, waa, Mataa, Maa, laa,
+             nyr_par_mu = nyr_par_mu, LowerTri=1,
+             recind=2, plusgroup=TRUE, altinit=2, fixq1=TRUE,
+             report=report, silent=FALSE)
 
   # Observation model parameters ==============================================================================
 
-  # Index observations -------------------------------------------------------
-  sizeinds<-lapply(replist$dat$indices,nrow)
 
-  Io<-replist$dat$indices[[which.max(sizeinds)]]
-  Ip<-replist$mpd$sbt[1:nyears][Io[,1]-replist$dat$start.yr+1]
-  Io<-Io[,2]/mean(Io[,2])
-  Ip<-Ip/mean(Ip)
-
-  OM@Iobs<-rep(sd(Io-Ip),2)
-
-  getbeta<-function(beta,x,y){
-    x<-x^beta
-    x<-x/mean(x)
-    sum((y-x)^2)
-  }
-
-  OM@beta<-rep(1,2)
-  if(Ibeta)OM@beta<-rep(optimize(getbeta,x=Ip,y=Io,interval=c(0.1,10))$minimum,2)
-
-  Wt_age2<-array(NA, dim = c(nsim, maxage, nyears+proyears))
-  Wt_age2[,,1:nyears]<-Wt_age
-  Wt_age2[,,nyears+1:proyears]<-rep(Wt_age[,,nyears],proyears)
-
-
-  if(report){ # Produce a quick diagnostic plot of OM vs VPA numbers at age
-    recs<-replist$mpd$rbar *exp(replist$mpd$delta)*1E6
-    naa<-t(replist$mpd$N*1E6)[,((offset+1):nyears)]
-    plot(naa[1,])
-    points(recs,col='red')
-    abline(v=1:70,col='#99999930')
-
-    if(!silent) message("\nRunning historical simulations to compare VPA output and OM conditioning...\n")
-    #
-    OM@cpars<-list(V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find,D=D,M=M,R0=R0,AC=AC,qs=rep(1,nsim))
-    OM@cpars$R0<-OM@cpars$R0*(exp(-M))
-    Hist <- runMSE(OM, Hist = TRUE)
-    #testOM@cpars$Find <-array(1,c(nsim,testOM@nyears))
-    #testOM@cpars$Find[,30]<-0
-
-    #naa<-rbind(rep(0,nyears),t(replist$mpd$N*1E6)[,1:nyears])
-
-    nc<-ceiling(maxage/3)
-    nr<-ceiling(maxage/nc)
-    par(mfrow=c(nr,nc),mai=c(0.4,0.4,0.3,0.05),omi=c(0.25,0.25,0.01,0.01))
-
-    yrs<-1:(nyears-2)
-
-    cols<-rep('black',nyears)
-    pch<-rep(1,nyears)
-   # cols[nyears-(0:LowerTri)]<-"blue";pch[nyears-(0:LowerTri)]<-4
-
-    for(a in 1:(maxage-1)){
-      ylim=c(0,max(naa[a,],Hist@AtAge$Nage[1,a,])*1.05)
-      if(a==1)plot(yrs,naa[a,],xlab="",ylab="",col=cols,pch=pch,ylim=ylim,yaxs='i')
-      if(a>1)plot(yrs,naa[a,],xlab="",ylab="",ylim=ylim,yaxs='i')
-      lines(yrs,Hist@AtAge$Nage[1,a,yrs],col='green')
-      mtext(paste("Age ",a),3,line=0.5,cex=0.9)
-      if(a==1)legend('top',legend=c("iSCAM","OM","Recr. ignored (LowerTri)"),text.col=c('black','green','blue'),bty='n')
-      #res<-Hist@AtAge$Nage[1,a,]-naa[a,]
-      #plotres<-abs(res)>(mean(naa[a,]*0.025))
-      #if(any(plotres))for(y in 1:nyears)if(plotres[y])lines(rep(yrs[y],2),c(naa[a,y],Hist@AtAge$Nage[1,a,y]),col='red')
-    } #plot(Hist)
-
-    mtext("Year",1,line=0.3,outer=T)
-    mtext("Numbers",2,line=0.4,outer=T)
-
-  }
-
-
-
+  dat<-iSCAM2Data
 
   # --- mcmc functionality ------------------------------------
 
@@ -315,27 +128,27 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
     }
 
     #@nyears<-nyears<-ncol(tmp$sbt[[1]])
-    M<-tmp$params$m_gs1[samp]
-    OM@M<-quantile(M,c(0.05,0.95))
+    #M<-tmp$params$m_gs1[samp]
+    #OM@M<-quantile(M,c(0.05,0.95))
     hs<-tmp$params$h_gr1[samp]
-    OM@h<-quantile(hs,c(0.05,0.95))
+    #OM@h<-quantile(hs,c(0.05,0.95))
     R0<-(1E6)*tmp$params$ro_gr1[samp]
-    OM@R0<-quantile(R0, c(0.05,0.95))
+    #OM@R0<-quantile(R0, c(0.05,0.95))
 
-    ssb_r <-tmp$params$sbo[samp]/R0
+    #ssb_r <-tmp$params$sbo[samp]/R0
     D<-tmp$sbt[[1]][samp,nyears]/tmp$params$sbo[samp]#*ssb_r
-    OM@D<-quantile(D,c(0.05,0.95))
+    #OM@D<-quantile(D,c(0.05,0.95))
 
-    recdevs<-tmp$rdev[[1]][samp,]
+    #recdevs<-tmp$rdev[[1]][samp,]
 
-    procsd<-apply(recdevs,1,sd)
-    OM@Perr<-quantile(procsd,c(0.05,0.95))
+    #procsd<-apply(recdevs,1,sd)
+    #OM@Perr<-quantile(procsd,c(0.05,0.95))
 
-    nrecs<-ncol(recdevs)
-    AC<-apply(recdevs,1,function(x)acf(x)$acf[2,1,1])
-    OM@AC<-quantile(AC,c(0.05,0.95))
+    #nrecs<-ncol(recdevs)
+    #AC<-apply(recdevs,1,function(x)acf(x)$acf[2,1,1])
+    #OM@AC<-quantile(AC,c(0.05,0.95))
 
-    procmu <- -0.5 * (procsd)^2  # adjusted log normal mean
+    #procmu <- -0.5 * (procsd)^2  # adjusted log normal mean
 
     Perr<-matrix(rnorm(nsim*(maxage+nyears+proyears-1),rep(procmu,maxage+nyears+proyears-1),rep(procsd,maxage+nyears+proyears-1)),nrow=nsim)
     Perr[,(maxage-1)+(1:nrecs)]<-as.matrix(recdevs) # generate a bunch of simulations with uncertainty
@@ -360,10 +173,6 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
     Find<-as.matrix(FM/apply(FM,1,mean))
 
     OM@cpars<-list(V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find,D=D,M=M,R0=R0,AC=AC)
-
-  }else{
-
-    OM@cpars<-list(R0=rep(R0,nsim),V=V,Perr=Perr,Wt_age=Wt_age2,K=K,Linf=Linf,hs=hs,Find=Find)
 
   }
 
