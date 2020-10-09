@@ -320,7 +320,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
       M_ageArray <- reshape2::acast(M_at_age, list("true_Age", "true_Year"), value.var = "M")
     } else {
-      M_at_age <- summarise(group_by(M_at_age, Year, Age), M = mean(M))
+      M_at_age <- summarise(group_by(M_at_age, Year, Age), M = mean(as.numeric(M), na.rm = TRUE))
       M_ageArray <- reshape2::acast(M_at_age, list("Age", "Year"), value.var = "M")
     }
 
@@ -332,7 +332,7 @@ SS2OM <- function(SSdir, nsim = 48, proyears = 50, reps = 1, maxF = 3, seed = 1,
 
     M_at_age <- M_at_age[as.numeric(M_at_age$Age)-1 >= age_rec * ifelse(season_as_years, nseas, 1), ]  # Subset by age >= age_rec
 
-    M_at_age <- summarise(group_by(M_at_age, Yr, Age), M = mean(M))
+    M_at_age <- summarise(group_by(M_at_age, Yr, Age), M = mean(as.numeric(M), na.rm = TRUE))
     M_ageArray <- reshape2::acast(M_at_age, list("Age", "Yr"), value.var = "M")
   }
 
