@@ -45,8 +45,7 @@ iSCAM2OM<-function(iSCAMdir, nsim=48, proyears=50, mcmc=F, Name=NULL, Source="No
   # filling dimensions
   aind<-sage:maxage # for filling all quantities (that do not include age zero)
   nafill<-length(aind)
-  #fyind<-1:(nyears-1) # for filling F and M
-  nffill<-length(fyind)
+
   ageArray<-array(rep(1:maxage,each=nsim),c(nsim,maxage,nyears))
 
   # make matrices
